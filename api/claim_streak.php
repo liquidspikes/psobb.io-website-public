@@ -138,15 +138,11 @@ $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
 $result = $stmt->execute()->fetchArray();
 $currentCycle = $result['cycle'];
 
-$stmt = $db->prepare("SELECT COALESCE(MAX(milestone), 0) as max_ms FROM streak_claims WHERE account_id = :aid AND streak_cycle = :cycle");
+$stmt = $db->prepare("SELECT COUNT(*) as cnt FROM streak_claims WHERE account_id = :aid AND streak_cycle = :cycle AND milestone = 30");
 $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
 $stmt->bindValue(':cycle', $currentCycle, SQLITE3_INTEGER);
 $result = $stmt->execute()->fetchArray();
-$maxClaimedMilestone = $result['max_ms'];
-
-if ($maxClaimedMilestone == 30) {
-    $currentCycle++;
-} else if ($maxClaimedMilestone > 0 && $streak < $maxClaimedMilestone) {
+if ($result['cnt'] > 0) {
     $currentCycle++;
 }
 
@@ -167,28 +163,24 @@ if ($result['cnt'] > 0) {
 // 6. Execute Game Payload (Drop Generation)
 // --------------------------------------------------------------------------
 $materials = [
-    '030B00' => 'Power Material',
-    '030B01' => 'Mind Material',
-    '030B03' => 'HP Material',
-    '030B04' => 'TP Material',
-    '030B05' => 'Def Material',
-    '030B02' => 'Evade Material',
-    '030B06' => 'Luck Material'
+    '030B00' /* Power Material */,
+    '030B01' /* Mind Material */,
+    '030B03' /* HP Material */,
+    '030B04' /* TP Material */,
+    '030B05' /* Def Material */,
+    '030B02' /* Evade Material */,
+    '030B06' /* Luck Material */
 ];
 
 // Map the milestone index to a dynamic reward scale
 if ($milestone === 30) {
-    $itemString = '030A02';
-    $itemName = 'Trigrinder';
+    $itemString = '030A02'; // Trigrinder
 } else if ($milestone % 2 === 0) {
-    $itemString = array_rand($materials);
-    $itemName = $materials[$itemString];
+    $itemString = $materials[array_rand($materials)];
 } else if ($milestone % 3 === 0) {
-    $itemString = '030A01';
-    $itemName = 'Digrinder';
+    $itemString = '030A01'; // Digrinder
 } else {
-    $itemString = '030A00';
-    $itemName = 'Monogrinder';
+    $itemString = '030A00'; // Monogrinder
 }
 
 // Execute the robust item parser to handle the drop securely
@@ -221,6 +213,6 @@ echo json_encode([
     "success" => true,
     "item" => $itemString,
     "milestone" => $milestone,
-    "message" => "{$itemName} dropped in-game! Keep the streak going!"
+    "message" => "{$itemString} dropped in-game! Keep the streak going!"
 ]);
 ?>

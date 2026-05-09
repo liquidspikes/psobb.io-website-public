@@ -1,0 +1,62 @@
+/* Rewards guide — matches server-status-widget / sidebar rhythm */
+.rewards-page .guide-section {
+    background: rgba(0, 20, 40, 0.75);
+    border: 1px solid rgba(0, 255, 255, 0.22);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.rewards-page .guide-section h2 {
+    margin: 0 0 1rem 0;
+    font-size: 1.15rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pso-blue);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+    padding-bottom: 0.5rem;
+}
+
+.rewards-page .guide-section h3 {
+    margin: 1.25rem 0 0.6rem 0;
+    font-size: 1rem;
+    color: rgba(224, 240, 255, 0.95);
+}
+
+.rewards-page .guide-section h3:first-of-type {
+    margin-top: 0;
+}
+
+.rewards-page .guide-section p,
+.rewards-page .guide-section li {
+    color: rgba(224, 240, 255, 0.82);
+    line-height: 1.6;
+}
+
+.rewards-page .guide-section ul {
+    margin: 0.35rem 0 0;
+    padding-left: 1.25rem;
+}
+
+.rewards-page .guide-section ul li + li {
+    margin-top: 0.35rem;
+}
+
+.rewards-page .guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rewards-page .sidebar-widget p {
+    color: rgba(224, 240, 255, 0.78);
+    line-height: 1.55;
+    font-size: 0.95rem;
+}
+
+.rewards-page .sidebar-widget strong {
+    color: rgba(255, 238, 200, 0.95);
+}

@@ -66,6 +66,7 @@ $I18N = [
         'Olga Flow (Seabed)' => 'オルガ・フロウ（海底）',
         
         // Basic Items
+        'Guilty Light' => 'ギルティライト',
         'Saber' => 'セイバー', 'Sword' => 'ソード', 'Dagger' => 'ダガー', 'Partisan' => 'パルチザン', 'Slicer' => 'スライサー',
         'Handgun' => 'ハンドガン', 'Rifle' => 'ライフル', 'Mechgun' => 'マシンガン', 'Shot' => 'ショット',
         'Cane' => 'ケイン', 'Rod' => 'ロッド', 'Wand' => 'ウォンド', 'Frame' => 'フレーム', 'Armor' => 'アーマー',
@@ -131,6 +132,31 @@ $I18N = [
         'Stats pulled automatically from server state (players, games, uptime).' => 'サーバーステータス（プレイヤー、ゲーム、稼働時間）から自動的に取得される統計。',
         'Join Our Discord' => 'Discordに参加する',
 
+        // rewards.php
+        'Rewards Guide' => '報酬ガイド',
+        'Rewards & Bounties Guide' => '報酬＆バウンティガイド',
+        'How to use site rewards and guild bounties. Most of this is claimed in the browser, so log into the website when you play if you want to grab things easily.' => 'サイトの報酬とギルドバウンティの使い方です。受け取りの多くはブラウザ側なので、プレイ中にウェブへログインしておくと楽です。',
+        'Level Unlocks (dashboard)' => 'Level Unlocks（ダッシュボード）',
+        'Log in at <a href="https://psobb.io/">PSOBB.io</a> → <a href="login.php">dashboard</a> → <strong>Level Unlocks</strong>. There you\'ll find: login streak claims, one free daily random item, and rewards every 5 levels.' => '<a href="https://psobb.io/">PSOBB.io</a> にログイン → <a href="login.php">ダッシュボード</a> → <strong>Level Unlocks</strong>。ログインストリーク、毎日1回無料のランダムアイテム、5レベルごとの報酬があります。',
+        'Login streak' => 'ログインストリーク',
+        'Log in to the game or the website each day to earn rewards. Claim your reward from the streak panel. Rewards include grinders and stat materials.' => '毎日ゲームまたはウェブサイトにログインして報酬を貯めます。ストリークパネルから報酬を受け取ってください。報酬にはグラインダーや能力マテリアルが含まれます。',
+        'Daily random item' => '毎日のランダムアイテム',
+        'Claim one random item a day just for playing.' => 'プレイしてるだけで、1日1回ランダムアイテムを受け取れます。',
+        'Every 5 levels' => '5レベルごと',
+        'At 5, 10, 15, etc. you can claim on Level Unlocks. Choose weapon, armor, shield, mag, or a mixed bundle. The drop matches your level and class; armor usually has 4 slots and bonus stats. Each milestone is once per character.' => '5・10・15…で Level Unlocks から受け取り。武器、アーマー、シールド、マグ、またはミックス束から選択。レベルとクラスに合うドロップで、アーマーはだいたい4スロットとボーナス付き。各マイルストーンはキャラごとに1回だけ。',
+        'See <a href="missions.php">Bounty Board</a> for your current guild bounty, what to do, and the reward. Complete it in-game, then claim on that page.' => '<a href="missions.php">バウンティボード</a>で、今のギルドバウンティ・やること・報酬を確認。ゲーム内で達成したらそのページで受け取り。',
+        'New bounties' => '新しいバウンティ',
+        'You only have one personal bounty at a time. After you finish or abandon it, another can show up later while you\'re online—guild mail tells you when there\'s a new one. You won\'t get one every session; check the board when you\'re done playing.' => '個人バウンティは同時に1件だけ。完了か破棄のあと、オンライン中にまた付くことがある。新着はギルド便。毎回付くわけではないので、終わったらボードを見る程度でOK。',
+        'Goals and rewards' => '目標と報酬',
+        'Goals can be things like meseta, levels, bosses, visiting areas, holding items, techs, using materials, battle wins, challenge stages, playtime, and similar. Rewards are usually gear, mats, meseta, or other items appropriate for your level.' => '目標の例: メセタ、レベル、ボス、エリア、特定アイテム、テク、素材消費、バトル勝利、チャレ、プレイ時間など。報酬はだいたい装備・マテ・メセタ・その他、レベルに合ったもの。',
+        'Leaderboard and events' => 'ランキングとイベント',
+        'Same page lists top hunters by bounty completions and active community goals. Use abandon on the board if you don\'t want your current bounty.' => '同じページにバウンティ完了数ランキングと進行中のコミュニティ目標。今のバウンティが嫌ならボードで破棄。',
+        'Open dashboard' => 'ダッシュボードを開く',
+        'Claiming rewards' => '報酬の受け取り',
+        'You must be logged into the game with a character and in an active lobby—either on Pioneer 2 or on a map—when you claim rewards. The ship lobby will not work. Applies to streak rewards, daily items, level rewards, and bounty claims.' => '報酬を受け取るときは、ゲームにキャラクターでログインし、アクティブなロビーにいる必要があります—パイオニア2またはマップ上どちらでも可。船舶ロビーでは受けられません。ストリーク、デイリー、レベル報酬、バウンティの受け取りに適用されます。',
+        'Reading missions or the leaderboard on your phone is fine. When you claim, the same requirement applies—logged into the game with a character, active lobby on Pioneer 2 or a map, not the ship lobby.' => 'スマホでミッションやランキングを読むのは問題ありません。受け取るときも同様に、ゲームにキャラでログインし、パイオニア2またはマップ上のアクティブロビーにいる必要があり、船舶ロビーではだめです。',
+        'Open Bounty Board' => 'バウンティボードを開く',
+
         // downloads.php
         'Download Clients' => 'クライアントのダウンロード',
         'Download the patched PSO Blue Burst client for your platform. Follow the instructions after download.' => 'お使いのプラットフォームにパッチ適用済みのPSO Blue Burstクライアントをダウンロードしてください。ダウンロード後は手順に従ってください。',
@@ -183,6 +209,9 @@ $I18N = [
         'Level' => 'レベル',
         'Class' => 'クラス',
         'Section ID' => 'セクションID',
+        'Rare Drop Table' => 'レアドロップ表',
+        'Enter a search parameter to populate the table.' => '検索条件を入力するとテーブルが表示されます。',
+        'Rare probabilities are calculated against other rare items that share the same drop source, not on drop chance as a whole.' => 'レアの確率は、ドロップ全体に対する率ではなく、同じドロップ元（ソース）を共有する他のレアアイテム同士での相対的比較として計算されます。',
         'Loading players...' => 'プレイヤーを読み込み中...',
         'Active Games' => 'アクティブなゲーム',
         'Game Name' => 'ゲーム名',
@@ -284,7 +313,7 @@ $I18N = [
         'The leaderboard is waiting for its first legend.' => 'リーダーボードは最初の伝説を待っています。',
         'How to Play' => '遊び方',
         'The Game Master automatically generates specially curated bounties tailored specifically to your character\'s stats and classes.' => 'ゲームマスターは、あなたのキャラクターのステータスやクラスに合わせた特別に厳選されたバウンティを自動的に生成します。',
-        'Missions are automatically assigned to your characters as you play! You can hold up to 3 active bounties per character at a time. Check back regularly or log into the game to receive your next assignment from the Hunter\'s Guild!' => 'ミッションはプレイ中にキャラクターに自動的に割り当てられます！各キャラクターは最大3つのアクティブなバウンティを同時に保持できます。定期的に確認するか、ゲームにログインしてハンターズギルドからの次の任務を受け取ってください！',
+        'From time to time, special server-wide bounties appear alongside personal hunts.' => '個人の依頼に加えて、期間限定のサーバー全体バウンティが表示されることがあります。',
 
         // forgot_password.php & reset_password.php
         'Recover Account' => 'アカウントを復元',
