@@ -6,6 +6,7 @@ require_once 'reward_tables.php';
 if (ob_get_length()) ob_clean();
 start_secure_session();
 header('Content-Type: application/json');
+verify_csrf_token($_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '');
 
 if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
     http_response_code(401);
@@ -98,6 +99,7 @@ if (!$inGame) {
 $level = $onlineCharacter['Level'] ?? 1;
 $name = $onlineCharacter['Name'] ?? 'Unknown';
 $charClass = $onlineCharacter['CharClass'] ?? 'HUmar';
+$charIndex = $onlineCharacter['BBCharacterIndex'] ?? 0;
 
 if ($level < $milestone) {
     http_response_code(400);
@@ -109,9 +111,10 @@ try {
     $db = get_db();
     
     // 2. Check if already claimed
-    $stmt = $db->prepare("SELECT id FROM rewards_claimed WHERE account_id = :aid AND character_name = :cname AND level_milestone = :lvl");
+    $stmt = $db->prepare("SELECT id FROM rewards_claimed WHERE account_id = :aid AND character_name = :cname AND character_index = :cidx AND level_milestone = :lvl");
     $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
     $stmt->bindValue(':cname', $name, SQLITE3_TEXT);
+    $stmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
     $stmt->bindValue(':lvl', $milestone, SQLITE3_INTEGER);
     $res = $stmt->execute();
     if ($res->fetchArray()) {
@@ -213,15 +216,101 @@ try {
             $dex = rand(0, 100);
             $mind = rand(0, 100);
             
-            // Scale Mag level to the player's actual milestone
-            $totalStats = $def + $pow + $dex + $mind;
-            $targetLevel = min(200, max(50, $milestone));
+            $isHunter = in_array($charClass, ['HUmar', 'HUnewearl', 'HUcast', 'HUcaseal']);
+            $isRanger = in_array($charClass, ['RAmar', 'RAmarl', 'RAcast', 'RAcaseal']);
+            $isForce = !$isHunter && !$isRanger;
             
-            $scale = $targetLevel / $totalStats;
-            $def = floor($def * $scale);
-            $pow = floor($pow * $scale);
-            $dex = floor($dex * $scale);
-            $mind = floor($mind * $scale);
+            $isCast = in_array($charClass, ['HUcast', 'HUcaseal', 'RAcast', 'RAcaseal']);
+            $isCastMindLocked = ($isCast && rand(1, 10) === 1); // 10% rare chance for CAST 0 MIND lock
+            
+            // 25% chance to roll a highly optimized class-archetype biased stat roll ("god-roll").
+            // 75% chance to roll a standard well-balanced random stat roll.
+            $isBiasedRoll = (rand(1, 100) <= 25);
+            
+            if ($isBiasedRoll) {
+                // Highly optimized "God-Rolls" must have EXACTLY the base 5 DEF
+                $def = 5;
+                
+                // Bias rolls according to class archetypes to ensure useful stat focus:
+                // - Hunters bias heavily toward POW (Physical Power)
+                // - Rangers bias heavily toward DEX (Accuracy)
+                // - Forces bias heavily toward MIND (Tech Power) — except CASTs, who stay at 0 MIND
+                if ($isHunter) {
+                    $pow = rand(50, 120);
+                } elseif ($isRanger) {
+                    $dex = rand(50, 120);
+                } elseif ($isForce) {
+                    $mind = rand(50, 120);
+                }
+            }
+            
+            // (Biased/God-Roll checks done above)
+            
+            // 10% rare chance override for CASTs to get exactly 0 MIND
+            if ($isCastMindLocked) {
+                $mind = 0;
+            }
+            
+            // Target level is player's level * 2 +/- 5 (reaching Level 200 Mag at player level 100).
+            // If the player's level is less than 10, the Mag starts at exactly level 25.
+            if ($level < 10) {
+                $targetLevel = 25;
+            } else {
+                $targetLevel = min(200, max(25, ($level * 2) + rand(-5, 5)));
+            }
+            
+            // In PSO, a Mag's DEF must always be at least 5.00 (the base starting DEF of a Level 0 Mag).
+            // We allocate 5 level points to DEF first to ensure legal stats and avoid client crashes.
+            $allocatedDef = 5;
+            $remainingLevels = $targetLevel - $allocatedDef;
+            
+            $defSurplus = max(0, $def - 5);
+            $totalRollSurplus = $defSurplus + $pow + $dex + $mind;
+            
+            if ($totalRollSurplus <= 0) {
+                // Fallback in case of extreme zero rolls
+                $def = 5;
+                $pow = $remainingLevels;
+                $dex = 0;
+                $mind = 0;
+            } else {
+                $scale = $remainingLevels / $totalRollSurplus;
+                
+                $defExtra = floor($defSurplus * $scale);
+                $powScaled = floor($pow * $scale);
+                $dexScaled = floor($dex * $scale);
+                $mindScaled = floor($mind * $scale);
+                
+                $def = 5 + $defExtra;
+                $pow = $powScaled;
+                $dex = $dexScaled;
+                $mind = $mindScaled;
+                
+                // Distribute any rounding remainder (from floor operations) to the highest-scaled stat
+                // to make sure the Mag's final Level (DEF + POW + DEX + MIND) matches the milestone exactly.
+                $currentSum = $def + $pow + $dex + $mind;
+                $deficit = $targetLevel - $currentSum;
+                
+                if ($deficit > 0) {
+                    $stats = [
+                        'pow'  => $pow,
+                        'dex'  => $dex
+                    ];
+                    if (!$isCastMindLocked) {
+                        $stats['mind'] = $mind;
+                    }
+                    arsort($stats);
+                    $highestStatName = array_key_first($stats);
+                    
+                    if ($highestStatName === 'pow') {
+                        $pow += $deficit;
+                    } elseif ($highestStatName === 'dex') {
+                        $dex += $deficit;
+                    } else {
+                        $mind += $deficit;
+                    }
+                }
+            }
             
             $sync = rand(0, 120);
             $iq = rand(0, 200);
@@ -230,14 +319,60 @@ try {
             // PB bits: 0=Farlla, 1=Estlla, 2=Golla, 3=Pilla, 4=Leilla, 5=Mylla&Youlla
             $pbBits = [0, 1, 2, 3, 4, 5];
             shuffle($pbBits);
-            $numPbs = rand(1, 3);
-            $pbFlags = 0;
-            for ($i = 0; $i < $numPbs; $i++) {
-                $pbFlags |= (1 << $pbBits[$i]);
+            
+            // Match official Mag evolution level limits for Photon Blast counts:
+            // - Level < 10: 0 PBs (baby stage)
+            // - Level 10-34: 1 PB (first evolution stage)
+            // - Level 35-49: 2 PBs (second evolution stage)
+            // - Level 50+: 3 PBs (third evolution/rare stage)
+            if ($targetLevel < 10) {
+                $numPbs = 0;
+            } elseif ($targetLevel < 35) {
+                $numPbs = 1;
+            } elseif ($targetLevel < 50) {
+                $numPbs = 2;
+            } else {
+                $numPbs = 3;
+            }
+            
+            $flags = 0;
+            $pb_nums = 0;
+            
+            if ($numPbs >= 1) {
+                // Center PB
+                $pb1 = $pbBits[0];
+                $pb_nums |= ($pb1 & 0x07);
+                $flags |= 1;
+            }
+            if ($numPbs >= 2) {
+                // Right PB
+                $pb2 = $pbBits[1];
+                $pb_nums |= (($pb2 & 0x07) << 3);
+                $flags |= 2;
+            }
+            if ($numPbs >= 3) {
+                // Left PB uses a compression algorithm because there are only 2 bits left
+                $pb3 = $pbBits[2];
+                // Calculate left_pb_num: it's the index of pb3 among the UNUSED pbs
+                $used = [];
+                $used[$pb1] = true;
+                $used[$pb2] = true;
+                
+                $left_pb_num = 0;
+                for ($z = 0; $z < 6; $z++) {
+                    if (empty($used[$z])) {
+                        if ($z == $pb3) {
+                            break;
+                        }
+                        $left_pb_num++;
+                    }
+                }
+                $pb_nums |= (($left_pb_num & 0x03) << 6);
+                $flags |= 4;
             }
             
             // Build the hex natively, completely bypassing string parsing vulnerability
-            $itemString = build_pso_mag($magIndex, $def, $pow, $dex, $mind, $sync, $iq, $chosenColorIndex, $pbFlags);
+            $itemString = build_pso_mag($magIndex, $def, $pow, $dex, $mind, $sync, $iq, $chosenColorIndex, $flags, $pb_nums);
         }
 
         // 4. Send shell-exec to newserv
@@ -265,9 +400,10 @@ try {
     $finalDisplayString = implode(" + ", $displayNames);   // readable for UI
 
     // 5. Store claim record in website DB
-    $stmt = $db->prepare("INSERT INTO rewards_claimed (account_id, character_name, level_milestone, category, item_string) VALUES (:aid, :cname, :lvl, :cat, :item)");
+    $stmt = $db->prepare("INSERT INTO rewards_claimed (account_id, character_name, character_index, level_milestone, category, item_string) VALUES (:aid, :cname, :cidx, :lvl, :cat, :item)");
     $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
     $stmt->bindValue(':cname', $name, SQLITE3_TEXT);
+    $stmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
     $stmt->bindValue(':lvl', $milestone, SQLITE3_INTEGER);
     $stmt->bindValue(':cat', $category, SQLITE3_TEXT);
     $stmt->bindValue(':item', $finalItemString, SQLITE3_TEXT);

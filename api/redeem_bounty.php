@@ -192,7 +192,7 @@ try {
         require_once 'functions.php';
     }
     
-    $dropResult = parse_and_drop_items($accId, $raw_string);
+    $dropResult = parse_and_drop_items($accId, $raw_string, $bounty['character_name']);
     
     if (!$dropResult['success']) {
         http_response_code(400);

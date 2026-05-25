@@ -46,12 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginBtn = document.querySelector('.login-nav-btn');
         if (loginBtn) loginBtn.textContent = 'Dashboard';
 
-        // MAG Feeder link - admin only
+        const signupBtn = document.querySelector('.signup-nav-btn');
+        if (signupBtn) signupBtn.style.display = 'none';
+
+        // Admin only links
         try {
             const userData = JSON.parse(userStr);
             if (userData && userData.isAdmin) {
-                const magLink = document.getElementById('nav-magfeeder-link');
-                if (magLink) magLink.style.display = '';
+                const adminDropdown = document.getElementById('nav-admin-dropdown');
+                if (adminDropdown) adminDropdown.style.display = '';
             }
         } catch (e) { }
     }
@@ -78,6 +81,33 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.news-item, .sidebar-widget, .server-status-widget').forEach(el => {
         el.style.opacity = '0'; // Initial hidden state
         observer.observe(el);
+    });
+
+    // Mobile Menu Toggle
+    const mobileMenu = document.getElementById('mobile-menu');
+    const navUl = document.querySelector('nav ul');
+    if (mobileMenu && navUl) {
+        mobileMenu.addEventListener('click', () => {
+            navUl.classList.toggle('active');
+        });
+    }
+
+    // Dropdown toggling for mobile
+    const dropBtns = document.querySelectorAll('.dropbtn');
+    dropBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                e.preventDefault();
+                const parentDropdown = btn.closest('.dropdown');
+                
+                // Close other open dropdowns
+                document.querySelectorAll('.dropdown.mobile-open').forEach(d => {
+                    if (d !== parentDropdown) d.classList.remove('mobile-open');
+                });
+                
+                parentDropdown.classList.toggle('mobile-open');
+            }
+        });
     });
 });
 
@@ -197,11 +227,14 @@ function showDashboard(user) {
 
         const adminBtn = document.getElementById('admin-panel-btn');
         const bountyBtn = document.getElementById('bounty-board-btn');
+        const lfgBtn = document.getElementById('lfg-panel-btn');
         
         if (user.isAdmin) {
             if (adminBtn) adminBtn.style.display = 'block';
+            if (lfgBtn) lfgBtn.style.display = 'block';
         } else {
             if (adminBtn) adminBtn.style.display = 'none';
+            if (lfgBtn) lfgBtn.style.display = 'none';
         }
         
         // Rewards Panel Button (all players)
@@ -544,6 +577,25 @@ function renderPlayerList(clients) {
     // Filter out players with no name (connecting)
     const activeClients = (clients || []).filter(c => c.Name);
 
+    // Dynamic Class Archetype Counter
+    let huCount = 0;
+    let raCount = 0;
+    let foCount = 0;
+    activeClients.forEach(c => {
+        if (c.Class) {
+            const upper = c.Class.toUpperCase();
+            if (upper.startsWith('HU')) huCount++;
+            else if (upper.startsWith('RA')) raCount++;
+            else if (upper.startsWith('FO')) foCount++;
+        }
+    });
+    const huEl = document.getElementById('class-hu-count');
+    const raEl = document.getElementById('class-ra-count');
+    const foEl = document.getElementById('class-fo-count');
+    if (huEl) huEl.textContent = huCount;
+    if (raEl) raEl.textContent = raCount;
+    if (foEl) foEl.textContent = foCount;
+
     if (activeClients.length === 0) {
         list.innerHTML = '<tr><td colspan="4" style="text-align:center">No players online</td></tr>';
         return;
@@ -786,22 +838,78 @@ window.confirmChangePass = async function () {
     }
 };
 
-// Mobile Menu Toggle
-document.addEventListener('DOMContentLoaded', () => {
-    const mobileMenu = document.getElementById('mobile-menu');
-    const navList = document.querySelector('nav ul');
-
-    if (mobileMenu && navList) {
-        mobileMenu.addEventListener('click', () => {
-            navList.classList.toggle('active');
-        });
-    }
-});
-
 // Enhanced to update rates from the new fields in /api/server.php
 async function updateUIRates(data) {
     const expEl = document.getElementById('rate-exp');
     const dropEl = document.getElementById('rate-drop');
     if (expEl && data.EXP) expEl.textContent = parseFloat(data.EXP) + 'x';
     if (dropEl && data.Drop) dropEl.textContent = parseFloat(data.Drop) + 'x';
+}
+
+// ==========================================================================
+// Player Guide Modal Actions & Tab Toggling
+// ==========================================================================
+window.openPlayerGuideModal = function () {
+    const modal = document.getElementById('player-guide-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Reset scroll position to top
+        const scrollBox = document.getElementById('guide-modal-content');
+        if (scrollBox) scrollBox.scrollTop = 0;
+        // Default to the first tab
+        window.switchGuideTab('tab-portal');
+        
+        // Add keyboard ESC listener
+        window.addEventListener('keydown', handleGuideEscKey);
+        
+        // Add click listener on the modal overlay itself to close it
+        modal.addEventListener('click', handleGuideOverlayClick);
+    }
+};
+
+window.closePlayerGuideModal = function () {
+    const modal = document.getElementById('player-guide-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        // Cleanup listeners
+        window.removeEventListener('keydown', handleGuideEscKey);
+        modal.removeEventListener('click', handleGuideOverlayClick);
+    }
+};
+
+window.switchGuideTab = function (tabId) {
+    // Hide all tab panes
+    const panes = document.querySelectorAll('.guide-tab-pane');
+    panes.forEach(pane => {
+        pane.style.display = 'none';
+    });
+
+    // Show the requested pane
+    const targetPane = document.getElementById(tabId);
+    if (targetPane) {
+        targetPane.style.display = 'block';
+    }
+
+    // Update active tab buttons
+    const buttons = document.querySelectorAll('.guide-tab-btn');
+    buttons.forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+};
+
+function handleGuideEscKey(e) {
+    if (e.key === 'Escape') {
+        window.closePlayerGuideModal();
+    }
+}
+
+function handleGuideOverlayClick(e) {
+    // If the click happened on the outer container (#player-guide-modal) and not inside the inner dialog
+    if (e.target.id === 'player-guide-modal') {
+        window.closePlayerGuideModal();
+    }
 }
