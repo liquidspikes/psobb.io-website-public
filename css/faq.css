@@ -1,0 +1,97 @@
+/* FAQ page — matches rewards guide panel rhythm */
+.faq-page .faq-category {
+    background: rgba(0, 20, 40, 0.75);
+    border: 1px solid rgba(0, 255, 255, 0.22);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.faq-page .faq-category h2 {
+    margin: 0 0 1rem 0;
+    font-size: 1.15rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pso-blue);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+    padding-bottom: 0.5rem;
+}
+
+.faq-page .faq-item {
+    border: 1px solid rgba(0, 255, 255, 0.12);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: rgba(0, 12, 28, 0.5);
+    overflow: hidden;
+}
+
+.faq-page .faq-item:last-child {
+    margin-bottom: 0;
+}
+
+.faq-page .faq-item[open] {
+    border-color: rgba(0, 255, 255, 0.35);
+    background: rgba(0, 24, 48, 0.65);
+}
+
+.faq-page .faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.85rem 1rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    color: rgba(224, 240, 255, 0.95);
+    line-height: 1.4;
+    user-select: none;
+}
+
+.faq-page .faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-page .faq-item summary::before {
+    content: '\f054';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 0.7rem;
+    color: var(--pso-blue);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.faq-page .faq-item[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.faq-page .faq-item summary:hover {
+    color: #fff;
+    background: rgba(0, 255, 255, 0.06);
+}
+
+.faq-page .faq-answer {
+    padding: 0 1rem 1rem 1rem;
+    border-top: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.faq-page .faq-answer p {
+    margin: 0.85rem 0 0;
+    color: rgba(224, 240, 255, 0.82);
+    line-height: 1.6;
+}
+
+.faq-page .faq-answer a {
+    color: var(--pso-blue);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.faq-page .faq-answer a:hover {
+    color: #fff;
+}
+
+.faq-page .main-header p a {
+    color: var(--pso-blue);
+}

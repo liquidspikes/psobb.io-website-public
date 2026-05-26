@@ -61,20 +61,6 @@ function get_db()
             $db->exec("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'");
         }
 
-        // Ensure display_name column exists (leaderboard alias)
-        $hasDisplayName = false;
-        $result = $db->query("PRAGMA table_info(users)");
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'display_name') {
-                $hasDisplayName = true;
-                break;
-            }
-        }
-        $result->finalize();
-        if (!$hasDisplayName) {
-            $db->exec("ALTER TABLE users ADD COLUMN display_name TEXT");
-        }
-
         // --- Auto-migration for Bounty/Missions & Streaks tables ---
         $db->exec("
             CREATE TABLE IF NOT EXISTS missions (
@@ -135,20 +121,6 @@ function get_db()
         $result->finalize();
         if (!$hasTop3) {
             $db->exec("ALTER TABLE community_events ADD COLUMN top_3_reward_item_string TEXT");
-        }
-        
-        // Ensure character_name exists in player_missions to support per-character bounties
-        $hasCharName = false;
-        $result = $db->query("PRAGMA table_info(player_missions)");
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'character_name') {
-                $hasCharName = true;
-                break;
-            }
-        }
-        $result->finalize();
-        if (!$hasCharName) {
-            $db->exec("ALTER TABLE player_missions ADD COLUMN character_name TEXT");
         }
         
         // --- Auto-migration for Community Event Participants & Game Mods ---

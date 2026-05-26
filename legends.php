@@ -1,6 +1,6 @@
 <?php
 $page_title = 'Wall of Legends - PSOBB Private Server';
-$current_page = 'stats';
+$current_page = 'legends';
 include 'includes/header.php';
 require_once 'api/db.php';
 require_once 'api/functions.php';

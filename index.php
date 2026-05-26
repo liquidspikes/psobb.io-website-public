@@ -24,7 +24,7 @@ include 'includes/header.php';
         </section>
 
         <div class="section-header">
-            <h2><?= __('Updates') ?></h2>
+            <h2><?= __('Coming Soon') ?></h2>
         </div>
 
         <div class="layout-grid">
@@ -58,7 +58,10 @@ include 'includes/header.php';
                     <p><?= __('Please Uninstall your existing client before installing this new release.') ?></p>
                 </article>
 
-
+                <article class="news-item">
+                    <h3><?= __('Server Updates') ?></h3>
+                    <p><?= __('We are currently working on the final touches for the website and server. Please check back soon for more updates!') ?></p>
+                </article>
             </section>
 
             <aside class="sidebar">
@@ -98,6 +101,7 @@ include 'includes/header.php';
                         <li><a href="downloads.php"><?= __('Download Client') ?></a></li>
                         <li><a href="stats.php"><?= __('View Full Stats') ?></a></li>
                         <li><a href="missions.php" style="color: var(--pso-orange);"><?= __('Bounty Board') ?></a></li>
+                        <li><a href="rewards.php"><?= __('Rewards Guide') ?></a></li>
                         <li><a href="https://discord.gg/28s84HJXha"><?= __('Discord Community') ?></a></li>
                     </ul>
                 </div>

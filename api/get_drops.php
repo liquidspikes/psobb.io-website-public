@@ -9,7 +9,7 @@ $cache_dir = __DIR__ . '/../scratch';
 if (!is_dir($cache_dir)) {
     @mkdir($cache_dir, 0777, true);
 }
-$cache_file = $cache_dir . '/rare_table_cache_v2.json';
+$cache_file = $cache_dir . '/rare_table_cache_v3.json';
 $cache_ttl = 86400; // 24 hours
 
 $data_json = false;
@@ -148,8 +148,10 @@ if ($data_json === false) {
                                         "episode" => $episode_num,
                                         "difficulty" => $diff,
                                         "section_id" => $section_id,
+                                        "monster_id" => $monster,
                                         "monster" => $monster_clean,
                                         "item" => $item_name,
+                                        "item_hex" => $clean_hex,
                                         "type" => $item_type,
                                         "subtype" => $item_subtype,
                                         "equippable_classes" => $item_equip_classes,
@@ -180,11 +182,11 @@ if ($data_json !== false) {
 
 // Fallback Mock Data
 $mock_drops = [
-    ["episode" => 1, "difficulty" => "Ultimate", "section_id" => "Skyly", "monster" => "Hildebear", "item" => "Sealed J-Sword", "rate" => "1/12604", "rate_percent" => 0.0079],
-    ["episode" => 1, "difficulty" => "Ultimate", "section_id" => "Redria", "monster" => "Hildebear", "item" => "Magic Stone 'Iritista'", "rate" => "1/1050", "rate_percent" => 0.095],
-    ["episode" => 1, "difficulty" => "Ultimate", "section_id" => "Viridia", "monster" => "Booma", "item" => "Agito (1975)", "rate" => "1/28807", "rate_percent" => 0.003],
-    ["episode" => 2, "difficulty" => "Ultimate", "section_id" => "Whitill", "monster" => "Ill Gill", "item" => "Syncesta", "rate" => "1/12604", "rate_percent" => 0.0079],
-    ["episode" => 4, "difficulty" => "Ultimate", "section_id" => "Purplenum", "monster" => "Kondrieu", "item" => "Heaven Striker", "rate" => "1/12", "rate_percent" => 8.33]
+    ["episode" => 1, "difficulty" => "Ultimate", "section_id" => "Skyly", "monster_id" => "HILDEBEAR", "monster" => "Hildebear", "item" => "Sealed J-Sword", "item_hex" => "000105", "rate" => "1/12604", "rate_percent" => 0.0079],
+    ["episode" => 1, "difficulty" => "Ultimate", "section_id" => "Redria", "monster_id" => "HILDEBEAR", "monster" => "Hildebear", "item" => "Magic Stone 'Iritista'", "item_hex" => "030B01", "rate" => "1/1050", "rate_percent" => 0.095],
+    ["episode" => 1, "difficulty" => "Ultimate", "section_id" => "Viridia", "monster_id" => "BOOMA", "monster" => "Booma", "item" => "Agito (1975)", "item_hex" => "000105", "rate" => "1/28807", "rate_percent" => 0.003],
+    ["episode" => 2, "difficulty" => "Ultimate", "section_id" => "Whitill", "monster_id" => "ILL_GILL", "monster" => "Ill Gill", "item" => "Syncesta", "item_hex" => "000305", "rate" => "1/12604", "rate_percent" => 0.0079],
+    ["episode" => 4, "difficulty" => "Ultimate", "section_id" => "Purplenum", "monster_id" => "KONDRIEU", "monster" => "Kondrieu", "item" => "Heaven Striker", "item_hex" => "000105", "rate" => "1/12", "rate_percent" => 8.33]
 ];
 
 for ($i=0; $i<100; $i++) {
@@ -197,12 +199,15 @@ for ($i=0; $i<100; $i++) {
     $rate = "1/" . $rate_base;
     $rate_pct = round(1 / $rate_base * 100, 4);
 
+    $monster_pick = $monsters[array_rand($monsters)];
     $mock_drops[] = [
         "episode" => $eps[array_rand($eps)],
         "difficulty" => $diffs[array_rand($diffs)],
         "section_id" => $sids[array_rand($sids)],
-        "monster" => $monsters[array_rand($monsters)],
+        "monster_id" => strtoupper(str_replace(' ', '_', $monster_pick)),
+        "monster" => $monster_pick,
         "item" => $items[array_rand($items)],
+        "item_hex" => str_pad(dechex(rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT),
         "rate" => $rate,
         "rate_percent" => $rate_pct
     ];
