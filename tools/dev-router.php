@@ -28,6 +28,22 @@ if ($route === '/') {
     return true;
 }
 
+// Explicit routes (match .htaccess specials; avoids ambiguous resolution)
+$explicit = [
+    '/faq' => 'faq.php',
+    '/downloads' => 'downloads.php',
+    '/decryption' => 'decryption.php',
+];
+if (isset($explicit[$route])) {
+    $script = $docRoot . '/' . $explicit[$route];
+    if (is_file($script)) {
+        $_SERVER['SCRIPT_NAME'] = '/' . $explicit[$route];
+        $_SERVER['PHP_SELF'] = '/' . $explicit[$route];
+        require $script;
+        return true;
+    }
+}
+
 $script = $docRoot . $route . '.php';
 if (is_file($script)) {
     $_SERVER['SCRIPT_NAME'] = $route . '.php';

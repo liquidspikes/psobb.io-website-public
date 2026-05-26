@@ -70,7 +70,6 @@ AREA_LABELS = {
         "Desert2",
         "Desert3",
         "SaintMil",
-        "(10)",
     ],
 }
 
@@ -249,6 +248,10 @@ def flatten(tables: dict[str, dict]) -> tuple[list[dict], list[dict]]:
         if isinstance(box_ranges, list) and isinstance(box_cls, list):
             labels = AREA_LABELS.get(ep_token, [f"A{i}" for i in range(10)])
             for area_i in range(min(10, len(box_ranges), len(box_cls[0]) if box_cls else 0)):
+                area_label = labels[area_i] if area_i < len(labels) else None
+                if not area_label or str(area_label).startswith("("):
+                    continue
+
                 bm = box_ranges[area_i]
                 if isinstance(bm, list) and len(bm) >= 2:
                     mlow, mhigh = int(bm[0]), int(bm[1])
@@ -271,7 +274,7 @@ def flatten(tables: dict[str, dict]) -> tuple[list[dict], list[dict]]:
                         "scenario": scen,
                         "episode_token": ep_token,
                         "area_index": area_i,
-                        "area_label": labels[area_i] if area_i < len(labels) else str(area_i),
+                        "area_label": area_label,
                         "meseta_low": mlow,
                         "meseta_high": mhigh,
                         "weights": ws,

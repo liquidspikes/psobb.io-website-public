@@ -194,6 +194,31 @@ nav a.active {
     display: block;
 }
 
+.dropdown-label {
+    display: block;
+    padding: 10px 16px 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(0, 255, 255, 0.55);
+    pointer-events: none;
+}
+
+.dropdown-label:not(:first-child) {
+    border-top: 1px solid rgba(0, 255, 255, 0.12);
+    margin-top: 4px;
+    padding-top: 12px;
+}
+
+.nav-logout-link {
+    color: #ff8888 !important;
+}
+
+.nav-logout-link:hover {
+    background-color: rgba(255, 68, 68, 0.12) !important;
+}
+
 /* Tablet/Small Desktop Optimization */
 @media (max-width: 1024px) {
     nav ul {
@@ -634,6 +659,45 @@ footer {
     border-top: 1px solid rgba(0, 255, 255, 0.2);
     margin-top: auto;
     background: rgba(0, 0, 0, 0.5);
+}
+
+.footer-sitemap {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1.5rem 2rem;
+    max-width: 960px;
+    margin: 0 auto 2rem;
+    text-align: left;
+}
+
+.footer-sitemap-col h4 {
+    margin: 0 0 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pso-blue);
+}
+
+.footer-sitemap-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.footer-sitemap-col li + li {
+    margin-top: 0.35rem;
+}
+
+.footer-sitemap-col a {
+    color: rgba(255, 255, 255, 0.65);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.footer-sitemap-col a:hover {
+    color: var(--pso-blue);
 }
 
 /* Login Page Styles */
@@ -1398,7 +1462,7 @@ footer {
 .lang-toggle:hover { text-shadow: 0 0 8px #00ffff; }
 .active-lang { color: #fff; border-bottom: 2px solid #ffaa00; }
 
-/* Rare drop tables (drops.php) */
+/* Rare drop tables (drops_new.php) */
 .drops-intro,
 .drops-note-muted {
     line-height: 1.55;
@@ -1591,6 +1655,55 @@ footer {
 .common-share {
     font-size: 0.85rem;
     line-height: 1.35;
+}
+
+.drops-matrix-wrap {
+    overflow-x: auto;
+    margin-bottom: 1.25rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+table.drops-matrix {
+    font-size: 0.82rem;
+}
+
+.drops-matrix-cell {
+    vertical-align: top;
+    line-height: 1.35;
+    max-width: 14rem;
+}
+
+.drops-matrix-sec {
+    white-space: nowrap;
+}
+
+.drops-matrix-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 50;
+    background: rgb(8, 14, 28);
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    min-width: 8rem;
+}
+
+/* Keep sticky header cells above scrolled content */
+.drops-matrix thead th {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgb(8, 14, 28);
+}
+
+/* Top-left corner cell should be on top of both sticks */
+.drops-matrix thead th.drops-matrix-sticky {
+    z-index: 60;
+}
+
+/* Ensure scrolled body cells stay under sticky headers */
+.drops-matrix tbody td {
+    position: relative;
+    z-index: 1;
 }
 
 .drops-cli-hint {

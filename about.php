@@ -221,27 +221,22 @@ include 'includes/header.php';
         }
         
         /* Crew Color Schemes */
-        .crew-card.founder-card::before { background: #ff2a6d; }
         .crew-card.dev-card::before { background: #00e676; }
         .crew-card.vibe-card::before { background: #ffaa00; }
         .crew-card.mod-card::before { background: #03a9f4; }
 
-        .crew-card.founder-card:hover { border-color: #ff2a6d; box-shadow: 0 10px 30px rgba(255, 42, 109, 0.15); }
         .crew-card.dev-card:hover { border-color: #00e676; box-shadow: 0 10px 30px rgba(0, 230, 118, 0.15); }
         .crew-card.vibe-card:hover { border-color: #ffaa00; box-shadow: 0 10px 30px rgba(255, 170, 0, 0.15); }
         .crew-card.mod-card:hover { border-color: #03a9f4; box-shadow: 0 10px 30px rgba(3, 169, 244, 0.15); }
 
-        .crew-card.founder-card .crew-avatar { color: #ff2a6d; border-color: #ff2a6d; box-shadow: 0 0 15px rgba(255, 42, 109, 0.25); }
         .crew-card.dev-card .crew-avatar { color: #00e676; border-color: #00e676; box-shadow: 0 0 15px rgba(0, 230, 118, 0.25); }
         .crew-card.vibe-card .crew-avatar { color: #ffaa00; border-color: #ffaa00; box-shadow: 0 0 15px rgba(255, 170, 0, 0.25); }
         .crew-card.mod-card .crew-avatar { color: #03a9f4; border-color: #03a9f4; box-shadow: 0 0 15px rgba(3, 169, 244, 0.25); }
 
-        .crew-card.founder-card .crew-role { color: #ff2a6d; }
         .crew-card.dev-card .crew-role { color: #00e676; }
         .crew-card.vibe-card .crew-role { color: #ffaa00; }
         .crew-card.mod-card .crew-role { color: #03a9f4; }
 
-        .crew-card.founder-card .crew-specialty { border-color: #ff2a6d; color: #ff2a6d; }
         .crew-card.dev-card .crew-specialty { border-color: #00e676; color: #00e676; }
         .crew-card.vibe-card .crew-specialty { border-color: #ffaa00; color: #ffaa00; }
         .crew-card.mod-card .crew-specialty { border-color: #03a9f4; color: #03a9f4; }
@@ -401,23 +396,6 @@ include 'includes/header.php';
                 </div>
                 <p class="crew-bio">
                     <?= __('LiquidSpikes is one of the builders of the psobb.io server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call psobb.io home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!') ?>
-                </p>
-            </div>
-
-            <!-- LucindaRie Card -->
-            <div class="crew-card founder-card">
-                <div class="crew-header">
-                    <div class="crew-avatar">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <div class="crew-info">
-                        <h3>LucindaRie</h3>
-                        <div class="crew-role"><?= __('Server Co-Founder & Creative Muse') ?></div>
-                        <div class="crew-specialty"><?= __('Preservation & Community Vibe') ?></div>
-                    </div>
-                </div>
-                <p class="crew-bio">
-                    <?= __('LucindaRie is the co-founder of psobb.io and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic.') ?>
                 </p>
             </div>
 

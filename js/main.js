@@ -9,6 +9,40 @@
  * - CSRF Header Injection for secure API interaction
  */
 
+function updateNavForSession() {
+    const userStr = sessionStorage.getItem('psobb_user');
+    const guestItems = document.getElementById('nav-account-guest');
+    const userItems = document.getElementById('nav-account-user');
+    const isLoggedIn = Boolean(userStr);
+
+    if (guestItems) guestItems.style.display = isLoggedIn ? 'none' : '';
+    if (userItems) userItems.style.display = isLoggedIn ? '' : 'none';
+
+    document.querySelectorAll('#nav-signup-link, .footer-signup-link').forEach((el) => {
+        el.style.display = isLoggedIn ? 'none' : '';
+    });
+
+    const footerLogin = document.querySelector('.footer-login-link');
+    if (footerLogin) {
+        footerLogin.textContent = isLoggedIn
+            ? (footerLogin.dataset.loggedInLabel || 'Dashboard')
+            : (footerLogin.dataset.guestLabel || 'Login');
+        footerLogin.href = '/login.php';
+    }
+
+    const adminDropdown = document.getElementById('nav-admin-dropdown');
+    if (adminDropdown) adminDropdown.style.display = 'none';
+
+    if (isLoggedIn) {
+        try {
+            const userData = JSON.parse(userStr);
+            if (userData && userData.isAdmin && adminDropdown) {
+                adminDropdown.style.display = '';
+            }
+        } catch (e) { }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     window.getCSRFToken = function() {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -38,25 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Global login UI updates
-    const userStr = sessionStorage.getItem('psobb_user');
-    if (userStr) {
-        const teamLink = document.getElementById('nav-team-link');
-        if (teamLink) teamLink.style.display = ''; // Reset display to show it
+    updateNavForSession();
 
-        const loginBtn = document.querySelector('.login-nav-btn');
-        if (loginBtn) loginBtn.textContent = 'Dashboard';
-
-        const signupBtn = document.querySelector('.signup-nav-btn');
-        if (signupBtn) signupBtn.style.display = 'none';
-
-        // Admin only links
-        try {
-            const userData = JSON.parse(userStr);
-            if (userData && userData.isAdmin) {
-                const adminDropdown = document.getElementById('nav-admin-dropdown');
-                if (adminDropdown) adminDropdown.style.display = '';
-            }
-        } catch (e) { }
+    const logoutLink = document.getElementById('nav-logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
     }
 
     // Initialize Star Stream
@@ -179,6 +202,8 @@ function checkLoginStatus() {
 }
 
 function showDashboard(user) {
+    updateNavForSession();
+
     const loginContainer = document.querySelector('.login-container-form');
     const dashboard = document.getElementById('dashboard');
 
@@ -495,6 +520,7 @@ async function submitBankSwap(characterName) {
 
 window.logout = function () {
     sessionStorage.removeItem('psobb_user');
+    updateNavForSession();
     window.location.reload();
 }
 
