@@ -1,0 +1,715 @@
+{
+  "meta": {
+    "source": "newserv/src/RareItemSet.cc zone_types_for_episode",
+    "note": "Maps area filter groups (Forest, VRT, \u2026) to enemy source ids for rare/common rows."
+  },
+  "groups": [
+    {
+      "episode_token": "Ep1",
+      "area_group": "Cave",
+      "zone": "Caves",
+      "area_labels": [
+        "Cave1",
+        "Cave2",
+        "Cave3"
+      ],
+      "enemies": [
+        "EVIL_SHARK",
+        "PAL_SHARK",
+        "GUIL_SHARK",
+        "POISON_LILY",
+        "NAR_LILY",
+        "POFUILLY_SLIME",
+        "POUILLY_SLIME",
+        "NANO_DRAGON",
+        "GRASS_ASSASSIN",
+        "PAN_ARMS",
+        "HIDOOM",
+        "MIGIUM",
+        "DE_ROL_LE_BODY",
+        "DE_ROL_LE_MINE",
+        "DE_ROL_LE"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "DarkFalz",
+      "zone": "Ruins",
+      "area_labels": [
+        "DarkFalz"
+      ],
+      "enemies": [
+        "DIMENIAN",
+        "LA_DIMENIAN",
+        "SO_DIMENIAN",
+        "CLAW",
+        "BULK",
+        "BULCLAW",
+        "DELSABER",
+        "CHAOS_SORCERER",
+        "BEE_L",
+        "BEE_R",
+        "DARK_BELRA",
+        "DARK_GUNNER",
+        "DARK_GUNNER_CONTROL",
+        "DEATH_GUNNER",
+        "CHAOS_BRINGER",
+        "DARVANT",
+        "DARK_FALZ_1",
+        "DARK_FALZ_2",
+        "DARK_FALZ_3"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "DeRolLe",
+      "zone": "Caves",
+      "area_labels": [
+        "DeRolLe"
+      ],
+      "enemies": [
+        "EVIL_SHARK",
+        "PAL_SHARK",
+        "GUIL_SHARK",
+        "POISON_LILY",
+        "NAR_LILY",
+        "POFUILLY_SLIME",
+        "POUILLY_SLIME",
+        "NANO_DRAGON",
+        "GRASS_ASSASSIN",
+        "PAN_ARMS",
+        "HIDOOM",
+        "MIGIUM",
+        "DE_ROL_LE_BODY",
+        "DE_ROL_LE_MINE",
+        "DE_ROL_LE"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "Dragon",
+      "zone": "Forest",
+      "area_labels": [
+        "Dragon"
+      ],
+      "enemies": [
+        "BOOMA",
+        "GOBOOMA",
+        "GIGOBOOMA",
+        "SAVAGE_WOLF",
+        "BARBAROUS_WOLF",
+        "RAG_RAPPY",
+        "AL_RAPPY",
+        "MONEST",
+        "MOTHMANT",
+        "HILDEBEAR",
+        "HILDEBLUE",
+        "DRAGON"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "Forest",
+      "zone": "Forest",
+      "area_labels": [
+        "Forest1",
+        "Forest2"
+      ],
+      "enemies": [
+        "BOOMA",
+        "GOBOOMA",
+        "GIGOBOOMA",
+        "SAVAGE_WOLF",
+        "BARBAROUS_WOLF",
+        "RAG_RAPPY",
+        "AL_RAPPY",
+        "MONEST",
+        "MOTHMANT",
+        "HILDEBEAR",
+        "HILDEBLUE",
+        "DRAGON"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "Mine",
+      "zone": "Mines",
+      "area_labels": [
+        "Mine1",
+        "Mine2"
+      ],
+      "enemies": [
+        "GILLCHIC",
+        "DUBCHIC",
+        "DUBWITCH",
+        "CANADINE",
+        "CANADINE_GROUP",
+        "CANANE",
+        "SINOW_BEAT",
+        "SINOW_GOLD",
+        "GARANZ",
+        "VOL_OPT_AMP",
+        "VOL_OPT_CORE",
+        "VOL_OPT_MONITOR",
+        "VOL_OPT_PILLAR",
+        "VOL_OPT_1",
+        "VOL_OPT_2"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "Ruins",
+      "zone": "Ruins",
+      "area_labels": [
+        "Ruins1",
+        "Ruins2",
+        "Ruins3"
+      ],
+      "enemies": [
+        "DIMENIAN",
+        "LA_DIMENIAN",
+        "SO_DIMENIAN",
+        "CLAW",
+        "BULK",
+        "BULCLAW",
+        "DELSABER",
+        "CHAOS_SORCERER",
+        "BEE_L",
+        "BEE_R",
+        "DARK_BELRA",
+        "DARK_GUNNER",
+        "DARK_GUNNER_CONTROL",
+        "DEATH_GUNNER",
+        "CHAOS_BRINGER",
+        "DARVANT",
+        "DARK_FALZ_1",
+        "DARK_FALZ_2",
+        "DARK_FALZ_3"
+      ]
+    },
+    {
+      "episode_token": "Ep1",
+      "area_group": "VolOpt",
+      "zone": "Mines",
+      "area_labels": [
+        "VolOpt"
+      ],
+      "enemies": [
+        "GILLCHIC",
+        "DUBCHIC",
+        "DUBWITCH",
+        "CANADINE",
+        "CANADINE_GROUP",
+        "CANANE",
+        "SINOW_BEAT",
+        "SINOW_GOLD",
+        "GARANZ",
+        "VOL_OPT_AMP",
+        "VOL_OPT_CORE",
+        "VOL_OPT_MONITOR",
+        "VOL_OPT_PILLAR",
+        "VOL_OPT_1",
+        "VOL_OPT_2"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "BarbaRay",
+      "zone": "VR Temple",
+      "area_labels": [
+        "BarbaRay"
+      ],
+      "enemies": [
+        "RAG_RAPPY",
+        "LOVE_RAPPY",
+        "EGG_RAPPY",
+        "HALLO_RAPPY",
+        "SAINT_RAPPY",
+        "DIMENIAN",
+        "LA_DIMENIAN",
+        "SO_DIMENIAN",
+        "POISON_LILY",
+        "NAR_LILY",
+        "MONEST",
+        "MOTHMANT",
+        "GRASS_ASSASSIN",
+        "HILDEBEAR",
+        "HILDEBLUE",
+        "DARK_BELRA",
+        "PIG_RAY",
+        "BARBA_RAY"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "GalGryphon",
+      "zone": "CCA",
+      "area_labels": [
+        "GalGryphon"
+      ],
+      "enemies": [
+        "MERILLIA",
+        "MERILTAS",
+        "GEE",
+        "UL_GIBBON",
+        "ZOL_GIBBON",
+        "SINOW_BERILL",
+        "SINOW_SPIGELL",
+        "GI_GUE",
+        "GIBBLES",
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GAL_GRYPHON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "GolDragon",
+      "zone": "VR Spaceship",
+      "area_labels": [
+        "GolDragon"
+      ],
+      "enemies": [
+        "SAVAGE_WOLF",
+        "BARBAROUS_WOLF",
+        "GILLCHIC",
+        "DUBCHIC",
+        "DUBWITCH",
+        "PAN_ARMS",
+        "HIDOOM",
+        "MIGIUM",
+        "DELSABER",
+        "GARANZ",
+        "CHAOS_SORCERER",
+        "BEE_L",
+        "BEE_R",
+        "GOL_DRAGON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "JunN",
+      "zone": "CCA",
+      "area_labels": [
+        "JunN/Ctrl"
+      ],
+      "enemies": [
+        "MERILLIA",
+        "MERILTAS",
+        "GEE",
+        "UL_GIBBON",
+        "ZOL_GIBBON",
+        "SINOW_BERILL",
+        "SINOW_SPIGELL",
+        "GI_GUE",
+        "GIBBLES",
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GAL_GRYPHON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "JunS",
+      "zone": "CCA",
+      "area_labels": [
+        "JunS"
+      ],
+      "enemies": [
+        "MERILLIA",
+        "MERILTAS",
+        "GEE",
+        "UL_GIBBON",
+        "ZOL_GIBBON",
+        "SINOW_BERILL",
+        "SINOW_SPIGELL",
+        "GI_GUE",
+        "GIBBLES",
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GAL_GRYPHON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "Mountain",
+      "zone": "CCA",
+      "area_labels": [
+        "Mountain"
+      ],
+      "enemies": [
+        "MERILLIA",
+        "MERILTAS",
+        "GEE",
+        "UL_GIBBON",
+        "ZOL_GIBBON",
+        "SINOW_BERILL",
+        "SINOW_SPIGELL",
+        "GI_GUE",
+        "GIBBLES",
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GAL_GRYPHON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "OlgaFlow",
+      "zone": "Seabed",
+      "area_labels": [
+        "OlgaFlow"
+      ],
+      "enemies": [
+        "DOLMOLM",
+        "DOLMDARL",
+        "SINOW_ZOA",
+        "SINOW_ZELE",
+        "RECOBOX",
+        "RECON",
+        "MORFOS",
+        "DELDEPTH",
+        "DELBITER",
+        "GAEL_OR_GIEL",
+        "OLGA_FLOW_1",
+        "OLGA_FLOW_2"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "SbLower",
+      "zone": "Seabed",
+      "area_labels": [
+        "SbLower"
+      ],
+      "enemies": [
+        "DOLMOLM",
+        "DOLMDARL",
+        "SINOW_ZOA",
+        "SINOW_ZELE",
+        "RECOBOX",
+        "RECON",
+        "MORFOS",
+        "DELDEPTH",
+        "DELBITER",
+        "GAEL_OR_GIEL",
+        "OLGA_FLOW_1",
+        "OLGA_FLOW_2"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "SbUpper",
+      "zone": "Seabed",
+      "area_labels": [
+        "SbUpper"
+      ],
+      "enemies": [
+        "DOLMOLM",
+        "DOLMDARL",
+        "SINOW_ZOA",
+        "SINOW_ZELE",
+        "RECOBOX",
+        "RECON",
+        "MORFOS",
+        "DELDEPTH",
+        "DELBITER",
+        "GAEL_OR_GIEL",
+        "OLGA_FLOW_1",
+        "OLGA_FLOW_2"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "Seaside",
+      "zone": "CCA",
+      "area_labels": [
+        "Seaside"
+      ],
+      "enemies": [
+        "MERILLIA",
+        "MERILTAS",
+        "GEE",
+        "UL_GIBBON",
+        "ZOL_GIBBON",
+        "SINOW_BERILL",
+        "SINOW_SPIGELL",
+        "GI_GUE",
+        "GIBBLES",
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GAL_GRYPHON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "SeasideNight",
+      "zone": "CCA",
+      "area_labels": [
+        "SeasideNight"
+      ],
+      "enemies": [
+        "MERILLIA",
+        "MERILTAS",
+        "GEE",
+        "UL_GIBBON",
+        "ZOL_GIBBON",
+        "SINOW_BERILL",
+        "SINOW_SPIGELL",
+        "GI_GUE",
+        "GIBBLES",
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GAL_GRYPHON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "Tower",
+      "zone": "Tower",
+      "area_labels": [
+        "Tower"
+      ],
+      "enemies": [
+        "MERICARAND",
+        "MERICAROL",
+        "MERICUS",
+        "MERIKLE",
+        "GIBBLES",
+        "GI_GUE",
+        "DELBITER",
+        "ILL_GILL",
+        "DEL_LILY",
+        "EPSILON",
+        "EPSIGARD"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "VRS",
+      "zone": "VR Spaceship",
+      "area_labels": [
+        "VRS-A",
+        "VRS-B"
+      ],
+      "enemies": [
+        "SAVAGE_WOLF",
+        "BARBAROUS_WOLF",
+        "GILLCHIC",
+        "DUBCHIC",
+        "DUBWITCH",
+        "PAN_ARMS",
+        "HIDOOM",
+        "MIGIUM",
+        "DELSABER",
+        "GARANZ",
+        "CHAOS_SORCERER",
+        "BEE_L",
+        "BEE_R",
+        "GOL_DRAGON"
+      ]
+    },
+    {
+      "episode_token": "Ep2",
+      "area_group": "VRT",
+      "zone": "VR Temple",
+      "area_labels": [
+        "VRT-A",
+        "VRT-B"
+      ],
+      "enemies": [
+        "RAG_RAPPY",
+        "LOVE_RAPPY",
+        "EGG_RAPPY",
+        "HALLO_RAPPY",
+        "SAINT_RAPPY",
+        "DIMENIAN",
+        "LA_DIMENIAN",
+        "SO_DIMENIAN",
+        "POISON_LILY",
+        "NAR_LILY",
+        "MONEST",
+        "MOTHMANT",
+        "GRASS_ASSASSIN",
+        "HILDEBEAR",
+        "HILDEBLUE",
+        "DARK_BELRA",
+        "PIG_RAY",
+        "BARBA_RAY"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "CrInterior",
+      "zone": "Crater",
+      "area_labels": [
+        "CrInterior"
+      ],
+      "enemies": [
+        "SAND_RAPPY_CRATER",
+        "DEL_RAPPY_CRATER",
+        "SATELLITE_LIZARD_CRATER",
+        "YOWIE_CRATER",
+        "BOOTA",
+        "ZE_BOOTA",
+        "BA_BOOTA",
+        "ZU_CRATER",
+        "PAZUZU_CRATER",
+        "ASTARK",
+        "DORPHON",
+        "DORPHON_ECLAIR"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "CraterE",
+      "zone": "Crater",
+      "area_labels": [
+        "CraterE"
+      ],
+      "enemies": [
+        "SAND_RAPPY_CRATER",
+        "DEL_RAPPY_CRATER",
+        "SATELLITE_LIZARD_CRATER",
+        "YOWIE_CRATER",
+        "BOOTA",
+        "ZE_BOOTA",
+        "BA_BOOTA",
+        "ZU_CRATER",
+        "PAZUZU_CRATER",
+        "ASTARK",
+        "DORPHON",
+        "DORPHON_ECLAIR"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "CraterN",
+      "zone": "Crater",
+      "area_labels": [
+        "CraterN"
+      ],
+      "enemies": [
+        "SAND_RAPPY_CRATER",
+        "DEL_RAPPY_CRATER",
+        "SATELLITE_LIZARD_CRATER",
+        "YOWIE_CRATER",
+        "BOOTA",
+        "ZE_BOOTA",
+        "BA_BOOTA",
+        "ZU_CRATER",
+        "PAZUZU_CRATER",
+        "ASTARK",
+        "DORPHON",
+        "DORPHON_ECLAIR"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "CraterS",
+      "zone": "Crater",
+      "area_labels": [
+        "CraterS"
+      ],
+      "enemies": [
+        "SAND_RAPPY_CRATER",
+        "DEL_RAPPY_CRATER",
+        "SATELLITE_LIZARD_CRATER",
+        "YOWIE_CRATER",
+        "BOOTA",
+        "ZE_BOOTA",
+        "BA_BOOTA",
+        "ZU_CRATER",
+        "PAZUZU_CRATER",
+        "ASTARK",
+        "DORPHON",
+        "DORPHON_ECLAIR"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "CraterW",
+      "zone": "Crater",
+      "area_labels": [
+        "CraterW"
+      ],
+      "enemies": [
+        "SAND_RAPPY_CRATER",
+        "DEL_RAPPY_CRATER",
+        "SATELLITE_LIZARD_CRATER",
+        "YOWIE_CRATER",
+        "BOOTA",
+        "ZE_BOOTA",
+        "BA_BOOTA",
+        "ZU_CRATER",
+        "PAZUZU_CRATER",
+        "ASTARK",
+        "DORPHON",
+        "DORPHON_ECLAIR"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "Desert",
+      "zone": "Desert",
+      "area_labels": [
+        "Desert1",
+        "Desert2",
+        "Desert3"
+      ],
+      "enemies": [
+        "SAND_RAPPY_DESERT",
+        "DEL_RAPPY_DESERT",
+        "SATELLITE_LIZARD_DESERT",
+        "YOWIE_DESERT",
+        "GORAN",
+        "PYRO_GORAN",
+        "GORAN_DETONATOR",
+        "MERISSA_A",
+        "MERISSA_AA",
+        "ZU_DESERT",
+        "PAZUZU_DESERT",
+        "GIRTABLULU",
+        "SAINT_MILION",
+        "SHAMBERTIN",
+        "KONDRIEU"
+      ]
+    },
+    {
+      "episode_token": "Ep4",
+      "area_group": "SaintMil",
+      "zone": "Desert",
+      "area_labels": [
+        "SaintMil"
+      ],
+      "enemies": [
+        "SAND_RAPPY_DESERT",
+        "DEL_RAPPY_DESERT",
+        "SATELLITE_LIZARD_DESERT",
+        "YOWIE_DESERT",
+        "GORAN",
+        "PYRO_GORAN",
+        "GORAN_DETONATOR",
+        "MERISSA_A",
+        "MERISSA_AA",
+        "ZU_DESERT",
+        "PAZUZU_DESERT",
+        "GIRTABLULU",
+        "SAINT_MILION",
+        "SHAMBERTIN",
+        "KONDRIEU"
+      ]
+    }
+  ]
+}

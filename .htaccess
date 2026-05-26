@@ -33,6 +33,9 @@ RewriteRule ^downloads/?$ downloads.php [L]
 RewriteRule ^decryption/(.+)$ - [L]
 RewriteRule ^decryption/?$ decryption.php [L]
 
+# Explicitly rewrite /faq (avoid fallback to index on some hosts)
+RewriteRule ^faq/?$ faq.php [L]
+
 # 2. Internally rewrite /file to /file.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
