@@ -37,7 +37,7 @@ function build_pso_weapon($base_hex, $special_name = '', $untekked = false, $nat
 }
 
 function build_pso_mag($magIndex, $def, $pow, $dex, $mind, $sync, $iq, $colorIndex, $flags = 0, $pb_nums = 0) {
-    $data = str_repeat("\x00", 16);
+    $data = str_repeat("\x00", 20);
     $data[0] = chr(0x02);
     $data[1] = chr($magIndex);
     
@@ -51,13 +51,13 @@ function build_pso_mag($magIndex, $def, $pow, $dex, $mind, $sync, $iq, $colorInd
     $dex100 = $dex * 100; $data[8] = chr($dex100 & 0xFF); $data[9] = chr(($dex100 >> 8) & 0xFF);
     $mind100 = $mind * 100; $data[10] = chr($mind100 & 0xFF); $data[11] = chr(($mind100 >> 8) & 0xFF);
     
-    // Sync and IQ
-    $data[12] = chr($sync & 0xFF);
-    $data[13] = chr($iq & 0xFF);
+    // Sync and IQ (offsets 16 and 17)
+    $data[16] = chr($sync & 0xFF);
+    $data[17] = chr($iq & 0xFF);
     
-    // Flags and Color
-    $data[14] = chr($flags & 0xFF);
-    $data[15] = chr($colorIndex & 0xFF);
+    // Flags and Color (offsets 18 and 19)
+    $data[18] = chr($flags & 0xFF);
+    $data[19] = chr($colorIndex & 0xFF);
     
     return strtoupper(bin2hex($data));
 }
