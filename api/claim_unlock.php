@@ -110,6 +110,52 @@ if ($level < $milestone) {
 try {
     $db = get_db();
     
+    // Self-healing/Migration: update any legacy claims for this character name under a different slot index (e.g. from old migration default 0) to the current index
+    $healStmt = $db->prepare("UPDATE rewards_claimed SET character_index = :cidx WHERE account_id = :aid AND character_name = :cname COLLATE NOCASE AND character_index != :cidx");
+    $healStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+    $healStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $healStmt->bindValue(':cname', $name, SQLITE3_TEXT);
+    $healStmt->execute();
+    
+    // Check all claims for this slot to see if the character was recreated/remade or renamed
+    $checkStmt = $db->prepare("SELECT character_name, level_milestone FROM rewards_claimed WHERE account_id = :aid AND character_index = :cidx");
+    $checkStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $checkStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+    $checkRes = $checkStmt->execute();
+    
+    $needsReset = false;
+    $needsRename = false;
+    $claimedRows = [];
+    while ($row = $checkRes->fetchArray(SQLITE3_ASSOC)) {
+        $claimedRows[] = $row;
+        // If current level is less than any claimed milestone, it's a recreation/reset
+        if ((int)$row['level_milestone'] > (int)$level) {
+            $needsReset = true;
+        }
+    }
+    
+    if (!$needsReset && !empty($claimedRows)) {
+        // If the name is different, but level did not decrease, it's a rename
+        if (strcasecmp($claimedRows[0]['character_name'], $name) !== 0) {
+            $needsRename = true;
+        }
+    }
+    
+    if ($needsReset) {
+        // Character slot was recreated — delete old claims
+        $delStmt = $db->prepare("DELETE FROM rewards_claimed WHERE account_id = :aid AND character_index = :cidx");
+        $delStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+        $delStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+        $delStmt->execute();
+    } elseif ($needsRename) {
+        // Character was renamed — update database records to the new name to preserve them
+        $updStmt = $db->prepare("UPDATE rewards_claimed SET character_name = :newName WHERE account_id = :aid AND character_index = :cidx");
+        $updStmt->bindValue(':newName', $name, SQLITE3_TEXT);
+        $updStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+        $updStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+        $updStmt->execute();
+    }
+    
     // 2. Check if already claimed
     $stmt = $db->prepare("SELECT id FROM rewards_claimed WHERE account_id = :aid AND character_name = :cname AND character_index = :cidx AND level_milestone = :lvl");
     $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
