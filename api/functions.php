@@ -25,7 +25,7 @@ function send_personal_mail($client_acc_id, $from_name, $text)
         $stmt->bindValue(':acc', $client_acc_id, SQLITE3_INTEGER);
         $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
 
-        if ($row && (int) $row['receive_system_mail'] === 0) {
+        if ($row && isset($row['receive_system_mail']) && (int) $row['receive_system_mail'] === 0) {
             return; // Player has opted out of system mails.
         }
         if ($row && strtolower(trim($row['language'])) === 'jp') {
