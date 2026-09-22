@@ -2184,12 +2184,12 @@ include 'includes/header.php';
                     <div class="hero-key-takeaways">
                         <div class="takeaway-card success">
                             <span class="takeaway-lbl">BYTE-EXACT BANKED</span>
-                            <span class="takeaway-val text-glow-green" id="takeaway-pct">7.6%</span>
-                            <span class="takeaway-sub" id="takeaway-solved-sub">207 of 2,728 Live Belt Functions</span>
+                            <span class="takeaway-val text-glow-green" id="takeaway-pct">7.7%</span>
+                            <span class="takeaway-sub" id="takeaway-solved-sub">210 of 2,729 Live Belt Functions</span>
                         </div>
                         <div class="takeaway-card highlight">
                             <span class="takeaway-lbl">PROMOTABLE NEAR</span>
-                            <span class="takeaway-val text-glow-cyan" id="takeaway-promotable">+272 fns</span>
+                            <span class="takeaway-val text-glow-cyan" id="takeaway-promotable">+270 fns</span>
                             <span class="takeaway-sub" id="takeaway-promotable-sub">17.6% In-Flight Reach</span>
                         </div>
                         <div class="takeaway-card">
@@ -2206,24 +2206,24 @@ include 'includes/header.php';
                 </div>
 
                 <div class="hero-progress-ring-card">
-                    <div class="circular-progress" id="progress-circle" style="--percentage: 7.6;">
+                    <div class="circular-progress" id="progress-circle" style="--percentage: 7.7;">
                         <div class="progress-value">
-                            <span id="progress-text">7.6%</span>
+                            <span id="progress-text">7.7%</span>
                             <span class="progress-label">BYTE-MATCHED</span>
                         </div>
                     </div>
                     <div class="hero-progress-breakdown">
                         <div class="breakdown-row">
                             <span style="color: #94a3b8;">Banked Exact:</span>
-                            <span id="hero-banked-fns" style="color: #23D160; font-weight: bold;">207 / 2,728 (7.6%)</span>
+                            <span id="hero-banked-fns" style="color: #23D160; font-weight: bold;">210 / 2,729 (7.7%)</span>
                         </div>
                         <div class="breakdown-row">
                             <span style="color: #94a3b8;">Promotable Near:</span>
-                            <span id="hero-promotable-fns" style="color: #00EDFF; font-weight: bold;">272 Candidates (10.0%)</span>
+                            <span id="hero-promotable-fns" style="color: #00EDFF; font-weight: bold;">270 Candidates (9.9%)</span>
                         </div>
                         <div class="breakdown-row">
                             <span style="color: #94a3b8;">Belt Remaining:</span>
-                            <span id="hero-remaining-belt-fns" style="color: #FFB020; font-weight: bold;">2,521 Functions</span>
+                            <span id="hero-remaining-belt-fns" style="color: #FFB020; font-weight: bold;">2,519 Functions</span>
                         </div>
                         <div class="breakdown-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;">
                             <span style="color: #94a3b8;">Ghidra Symbols:</span>
@@ -2281,22 +2281,22 @@ include 'includes/header.php';
                 <div class="roadmap-card stage-active">
                     <div class="roadmap-card-head">
                         <span class="roadmap-stage-num">PHASE 02</span>
-                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier (7.6%)</span>
+                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier (7.7%)</span>
                     </div>
                     <h3 class="roadmap-card-title">Byte-Exact C/C++ Matching (MSVC 2003)</h3>
                     <p class="roadmap-card-desc">Authoring clean, compilable C/C++ code that yields bit-identical machine code when compiled with the original compiler (MSVC 7.1 <code>cl.exe 13.10.3077 /MT /O2</code>).</p>
                     <div class="roadmap-card-tasks">
                         <div class="task-item done">
                             <i class="fas fa-check-circle"></i>
-                            <span>207 live belt functions banked and reloc-verified in <code>src/</code></span>
+                            <span>210 live belt functions banked and reloc-verified in <code>src/</code></span>
                         </div>
                         <div class="task-item active-now">
                             <i class="fas fa-arrow-right"></i>
-                            <span>272 promotable near-matches in <code>drafts/near/</code> (0 mismatches, clean relocs)</span>
+                            <span>270 promotable near-matches in <code>drafts/near/</code> (0 mismatches, clean relocs)</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-hourglass-half"></i>
-                            <span>2,521 live belt reachable functions remaining to decompile &amp; bank</span>
+                            <span>2,519 live belt reachable functions remaining to decompile &amp; bank</span>
                         </div>
                     </div>
                     <div class="roadmap-mini-meter">
@@ -2474,21 +2474,21 @@ include 'includes/header.php';
             <div class="metric-master-card">
                 <div class="metric-master-head">
                     <span class="metric-master-title"><i class="fas fa-check-double"></i> Live Belt Banked</span>
-                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">7.6%</span>
+                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">7.7%</span>
                 </div>
-                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">207</div>
+                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">210</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
                         <span>Live Belt Scope:</span>
-                        <strong id="s-belt-total-display">2,728 fns</strong>
+                        <strong id="s-belt-total-display">2,729 fns</strong>
                     </div>
                     <div class="metric-detail-row">
                         <span>Promotable Near-Matches:</span>
-                        <strong id="s-promotable-display" style="color: #00EDFF;">272 (17.6% coverage)</strong>
+                        <strong id="s-promotable-display" style="color: #00EDFF;">270 (17.6% coverage)</strong>
                     </div>
                     <div class="metric-detail-row">
                         <span>Belt Remaining to Match:</span>
-                        <strong id="s-belt-remaining-display">2,521 fns</strong>
+                        <strong id="s-belt-remaining-display">2,519 fns</strong>
                     </div>
                 </div>
             </div>
@@ -2630,7 +2630,7 @@ include 'includes/header.php';
                     </div>
                     <div class="glass-panel stat-card">
                         <span class="label">Extracted Files</span>
-                        <span class="value" id="s-extracted-files">207</span>
+                        <span class="value" id="s-extracted-files">210</span>
                     </div>
                 </div>
             </div>
