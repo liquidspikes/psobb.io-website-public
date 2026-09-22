@@ -1979,7 +1979,7 @@ include 'includes/header.php';
         border-radius: 3px;
     }
     .fill-done { width: 95.6%; background: linear-gradient(90deg, #23D160, #00EDFF); }
-    .fill-active { width: 65%; background: linear-gradient(90deg, #00EDFF, #5E69FF); }
+    .fill-active { width: 10.4%; background: linear-gradient(90deg, #00EDFF, #5E69FF); }
     .fill-next { width: 25%; background: linear-gradient(90deg, #5E69FF, #a5b4fc); }
     .fill-future { width: 0%; background: #64748b; }
 
@@ -2177,48 +2177,57 @@ include 'includes/header.php';
 
             <div class="hero-main-layout">
                 <div class="hero-headline-block">
-                    <h2>PSOBB Client Reverse-Engineering Project</h2>
+                    <h2>PSOBB Client Decompilation Project</h2>
                     <p class="hero-description-text">
-                        We are reverse-engineering the complete <strong>Phantasy Star Online Blue Burst (v125.13)</strong> client binary (<code>psobb.exe</code>) into clean, matching C++ source code. Achieving a bit-exact decompilation unlocks a fully native, standalone modern client for <strong>64-bit Windows, Linux, and Steam Deck</strong> with high framerates, widescreen UI scaling, and modern controller mapping.
+                        We are reverse-engineering the complete <strong>Phantasy Star Online Blue Burst (v125.13)</strong> client binary (<code>psobb.exe</code>) into clean, matching C++ source code. Achieving a byte-identical decompilation unlocks a standalone modern client for <strong>64-bit Windows, Linux, and Steam Deck</strong> with uncapped framerates, 4K UI scaling, and modern controller mapping.
                     </p>
                     <div class="hero-key-takeaways">
                         <div class="takeaway-card success">
-                            <span class="takeaway-lbl">CURRENT PROGRESS</span>
-                            <span class="takeaway-val text-glow-green" id="takeaway-pct">95.6%</span>
-                            <span class="takeaway-sub" id="takeaway-solved-sub">18,790 of 19,660 Functions Solved</span>
+                            <span class="takeaway-lbl">BYTE-EXACT BANKED</span>
+                            <span class="takeaway-val text-glow-green" id="takeaway-pct">6.4%</span>
+                            <span class="takeaway-sub" id="takeaway-solved-sub">171 of 2,684 Live Belt Functions</span>
                         </div>
                         <div class="takeaway-card highlight">
-                            <span class="takeaway-lbl">WORK REMAINING</span>
-                            <span class="takeaway-val text-glow-cyan" id="takeaway-remaining">870 fns</span>
-                            <span class="takeaway-sub">Final Unknown Stub Functions</span>
+                            <span class="takeaway-lbl">PROMOTABLE NEAR</span>
+                            <span class="takeaway-val text-glow-cyan" id="takeaway-promotable">+108 fns</span>
+                            <span class="takeaway-sub" id="takeaway-promotable-sub">10.4% In-Flight Reach</span>
                         </div>
                         <div class="takeaway-card">
-                            <span class="takeaway-lbl">ACTIVE FRONTIER</span>
-                            <span class="takeaway-val" style="color: #a5b4fc; font-size: 1.15rem;">Phase 2: Types</span>
-                            <span class="takeaway-sub">Trade Windows & Entity Structs</span>
+                            <span class="takeaway-lbl">GHIDRA RECONNAISSANCE</span>
+                            <span class="takeaway-val" id="takeaway-ghidra" style="color: #a5b4fc; font-size: 1.4rem;">95.6%</span>
+                            <span class="takeaway-sub">18,790 / 19,660 Symbols Mapped</span>
+                        </div>
+                        <div class="takeaway-card">
+                            <span class="takeaway-lbl">TARGET COMPILER</span>
+                            <span class="takeaway-val" style="color: #FFB020; font-size: 1.15rem;">MSVC 7.1 /MT /O2</span>
+                            <span class="takeaway-sub">Pinned cl.exe 13.10.3077</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="hero-progress-ring-card">
-                    <div class="circular-progress" id="progress-circle" style="--percentage: 95.6;">
+                    <div class="circular-progress" id="progress-circle" style="--percentage: 6.4;">
                         <div class="progress-value">
-                            <span id="progress-text">95.6%</span>
-                            <span class="progress-label">TOTAL SOLVED</span>
+                            <span id="progress-text">6.4%</span>
+                            <span class="progress-label">BYTE-MATCHED</span>
                         </div>
                     </div>
                     <div class="hero-progress-breakdown">
                         <div class="breakdown-row">
-                            <span style="color: #94a3b8;">Solved Functions:</span>
-                            <span id="hero-solved-fns" style="color: #23D160; font-weight: bold;">18,790</span>
+                            <span style="color: #94a3b8;">Banked Exact:</span>
+                            <span id="hero-banked-fns" style="color: #23D160; font-weight: bold;">171 / 2,684 (6.4%)</span>
                         </div>
                         <div class="breakdown-row">
-                            <span style="color: #94a3b8;">Remaining Functions:</span>
-                            <span id="hero-remaining-fns" style="color: #00EDFF; font-weight: bold;">870</span>
+                            <span style="color: #94a3b8;">Promotable Near:</span>
+                            <span id="hero-promotable-fns" style="color: #00EDFF; font-weight: bold;">108 Candidates (4.0%)</span>
                         </div>
                         <div class="breakdown-row">
-                            <span style="color: #94a3b8;">Total Mod DB:</span>
-                            <span id="hero-total-mods" style="color: #a5b4fc; font-weight: bold;">22,232</span>
+                            <span style="color: #94a3b8;">Belt Remaining:</span>
+                            <span id="hero-remaining-belt-fns" style="color: #FFB020; font-weight: bold;">2,405 Functions</span>
+                        </div>
+                        <div class="breakdown-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;">
+                            <span style="color: #94a3b8;">Ghidra Symbols:</span>
+                            <span id="hero-ghidra-fns" style="color: #a5b4fc; font-weight: bold;">18,790 / 19,660 (95.6%)</span>
                         </div>
                     </div>
                 </div>
@@ -2245,22 +2254,22 @@ include 'includes/header.php';
                 <div class="roadmap-card stage-done">
                     <div class="roadmap-card-head">
                         <span class="roadmap-stage-num">PHASE 01</span>
-                        <span class="roadmap-stage-tag badge-done"><i class="fas fa-check"></i> 95.6% Solved</span>
+                        <span class="roadmap-stage-tag badge-done"><i class="fas fa-check"></i> 95.6% Mapped</span>
                     </div>
-                    <h3 class="roadmap-card-title">Binary Disassembly &amp; Function Mapping</h3>
-                    <p class="roadmap-card-desc">Disassembling the entire <code>psobb.exe</code> PE binary into readable assembly, generating control flow graphs, and assigning human semantic names.</p>
+                    <h3 class="roadmap-card-title">Binary Disassembly &amp; Symbol Reconnaissance</h3>
+                    <p class="roadmap-card-desc">Ghidra control flow recovery, symbol identification, and preliminary decompiler passes across all 19,660 routines in <code>psobb.exe</code>.</p>
                     <div class="roadmap-card-tasks">
                         <div class="task-item done">
                             <i class="fas fa-check-circle"></i>
-                            <span>18,790 functions identified and decompiled into C++</span>
+                            <span>18,790 functions identified and semantically labeled in Ghidra</span>
                         </div>
                         <div class="task-item done">
                             <i class="fas fa-check-circle"></i>
-                            <span>Core game loops, math matrices, and renderer mapped</span>
+                            <span>Core game loops, math matrices, packet handlers, and renderer mapped</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-hourglass-half"></i>
-                            <span>Final 870 stub functions remaining to identify</span>
+                            <span>870 unknown stub/helper routines remaining to categorize</span>
                         </div>
                     </div>
                     <div class="roadmap-mini-meter">
@@ -2272,22 +2281,22 @@ include 'includes/header.php';
                 <div class="roadmap-card stage-active">
                     <div class="roadmap-card-head">
                         <span class="roadmap-stage-num">PHASE 02</span>
-                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier</span>
+                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier (6.4%)</span>
                     </div>
-                    <h3 class="roadmap-card-title">Type Reconstruction &amp; Memory Structs</h3>
-                    <p class="roadmap-card-desc">Replacing raw memory offsets (<code>DAT_...</code>, <code>PTR_...</code>) with true typed C++ structs for player entities, inventory items, and packet handlers.</p>
+                    <h3 class="roadmap-card-title">Byte-Exact C/C++ Matching (MSVC 2003)</h3>
+                    <p class="roadmap-card-desc">Authoring clean, compilable C/C++ code that yields bit-identical machine code when compiled with the original compiler (MSVC 7.1 <code>cl.exe 13.10.3077 /MT /O2</code>).</p>
                     <div class="roadmap-card-tasks">
                         <div class="task-item done">
                             <i class="fas fa-check-circle"></i>
-                            <span>22,232 structs, types, and variables committed</span>
+                            <span>171 live belt functions banked and reloc-verified in <code>src/</code></span>
                         </div>
                         <div class="task-item active-now">
                             <i class="fas fa-arrow-right"></i>
-                            <span>Current Focus: Trade Window state &amp; Packet 0x60 / 0xA6</span>
+                            <span>108 promotable near-matches in <code>drafts/near/</code> (0 mismatches, clean relocs)</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-hourglass-half"></i>
-                            <span>63 vTables and entity component layouts to finalize</span>
+                            <span>2,405 live belt reachable functions remaining to decompile &amp; bank</span>
                         </div>
                     </div>
                     <div class="roadmap-mini-meter">
@@ -2301,20 +2310,20 @@ include 'includes/header.php';
                         <span class="roadmap-stage-num">PHASE 03</span>
                         <span class="roadmap-stage-tag badge-next"><i class="fas fa-microchip"></i> In Testbench</span>
                     </div>
-                    <h3 class="roadmap-card-title">MSVC 2003 Matching Compilation</h3>
-                    <p class="roadmap-card-desc">Recompiling the extracted C++ source using the exact compiler used in 2004 (Microsoft Visual C++ Toolkit 2003 <code>cl.exe</code>) to match original binary assembly.</p>
+                    <h3 class="roadmap-card-title">Whole-Image Link &amp; Relocation Resolution</h3>
+                    <p class="roadmap-card-desc">Incrementally linking banked translation units with the original binary through <code>tools/build_all.py</code>, ensuring SEH handlers and 16,500 relocation slots match.</p>
                     <div class="roadmap-card-tasks">
                         <div class="task-item done">
                             <i class="fas fa-check-circle"></i>
-                            <span>MSVC 7.1 build environment configured &amp; automated</span>
+                            <span>Automated rebuild harness compiling banked translation units</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-hourglass-half"></i>
-                            <span>Resolve header forward declarations and cyclical deps</span>
+                            <span>Synthetic stub linker combining banked objects with original PE chunks</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-hourglass-half"></i>
-                            <span>Achieve 1:1 bit-exact binary matching against original</span>
+                            <span>Achieve 1:1 bit-exact whole-image link across all 11 PE sections</span>
                         </div>
                     </div>
                     <div class="roadmap-mini-meter">
@@ -2329,19 +2338,19 @@ include 'includes/header.php';
                         <span class="roadmap-stage-tag badge-future"><i class="fas fa-cubes"></i> Next Up</span>
                     </div>
                     <h3 class="roadmap-card-title">Modular Subsystem Decoupling</h3>
-                    <p class="roadmap-card-desc">Untangling the monolithic client into clean, decoupled C++ subsystems with modern interfaces for networking, rendering, audio, and UI.</p>
+                    <p class="roadmap-card-desc">Untangling monolithic client code into clean, modular C++ libraries with modern, decoupled interfaces for network, audio, renderer, and UI.</p>
                     <div class="roadmap-card-tasks">
                         <div class="task-item remaining">
                             <i class="fas fa-circle-notch"></i>
-                            <span><code>psobb-net</code>: Isolate NewServ client network protocol</span>
+                            <span><code>psobb-net</code>: Isolate NewServ/Tethealla client network protocol</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-circle-notch"></i>
-                            <span><code>psobb-render</code>: Abstract D3D8 into modern D3D11/Vulkan</span>
+                            <span><code>psobb-render</code>: Abstract legacy D3D8 into modern D3D11/Vulkan</span>
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-circle-notch"></i>
-                            <span><code>psobb-audio</code>: Integrate OpenAL-Soft / DSOAL 3D sound</span>
+                            <span><code>psobb-audio</code>: Integrate OpenAL-Soft / DSOAL 3D spatial audio</span>
                         </div>
                     </div>
                     <div class="roadmap-mini-meter">
@@ -2405,8 +2414,8 @@ include 'includes/header.php';
                         <!-- 16 blocks -->
                     </div>
                     <div class="mem-section-foot">
-                        <span>16,243 Functions • MSVC 7.1</span>
-                        <span id="text-pct" style="color: #00EDFF; font-weight: bold;">95.4%</span>
+                        <span>2,684 Live Belt • MSVC 7.1</span>
+                        <span id="text-pct" style="color: #00EDFF; font-weight: bold;">6.4% Banked (95.6% Mapped)</span>
                     </div>
                 </div>
 
@@ -2461,48 +2470,48 @@ include 'includes/header.php';
 
         <!-- Clean High-Signal Metrics Grid -->
         <div class="clean-metrics-grid">
-            <!-- Metric 1: Functions -->
+            <!-- Metric 1: Live Belt Banked C/C++ Source -->
             <div class="metric-master-card">
                 <div class="metric-master-head">
-                    <span class="metric-master-title"><i class="fas fa-code"></i> Functions Solved</span>
-                    <span class="roadmap-stage-tag badge-done">95.6%</span>
+                    <span class="metric-master-title"><i class="fas fa-check-double"></i> Live Belt Banked</span>
+                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">6.4%</span>
                 </div>
-                <div class="metric-master-val text-glow-green" id="s-solved-fns-display">18,790</div>
+                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">171</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
-                        <span>Total Scope:</span>
-                        <strong id="s-total-fns-display">19,660</strong>
+                        <span>Live Belt Scope:</span>
+                        <strong id="s-belt-total-display">2,684 fns</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Remaining Unknowns:</span>
-                        <strong id="s-remaining-fns-display" style="color: #00EDFF;">870</strong>
+                        <span>Promotable Near-Matches:</span>
+                        <strong id="s-promotable-display" style="color: #00EDFF;">108 (10.4% coverage)</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Unknown Thunks:</span>
-                        <strong id="s-unknown-thunks-display">15</strong>
+                        <span>Belt Remaining to Match:</span>
+                        <strong id="s-belt-remaining-display">2,405 fns</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Metric 2: Types & Structures -->
+            <!-- Metric 2: Ghidra Symbol Sweep & Flow -->
             <div class="metric-master-card">
                 <div class="metric-master-head">
-                    <span class="metric-master-title"><i class="fas fa-database"></i> Committed Types</span>
-                    <span class="roadmap-stage-tag badge-active">Active</span>
+                    <span class="metric-master-title"><i class="fas fa-search"></i> Symbol Reconnaissance</span>
+                    <span class="roadmap-stage-tag badge-done" id="s-ghidra-pct-tag">95.6%</span>
                 </div>
-                <div class="metric-master-val text-glow-cyan" id="s-mods-display">22,232</div>
+                <div class="metric-master-val text-glow-cyan" id="s-ghidra-solved-display">18,790</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
-                        <span>Remaining vTables:</span>
-                        <strong id="s-unknown-vtables-display">63</strong>
+                        <span>Total PE Functions:</span>
+                        <strong id="s-ghidra-total-display">19,660 routines</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Remaining Pointers:</span>
-                        <strong id="s-unknown-ptr-display">4,538</strong>
+                        <span>Ghidra Symbol Coverage:</span>
+                        <strong style="color: #23D160;">95.57% Mapped</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Strings Mapped:</span>
-                        <strong id="s-unknown-strings-display">12,115</strong>
+                        <span>Unknown Stubs Remaining:</span>
+                        <strong id="s-ghidra-remaining-display" style="color: #FFB020;">870 fns</strong>
                     </div>
                 </div>
             </div>
