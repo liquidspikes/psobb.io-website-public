@@ -320,15 +320,7 @@ function updateMetrics(state) {
             if (card) card.style.display = 'none';
         } else {
             if (card) card.style.display = 'flex';
-            if (val === 0 || val === "0") {
-                el.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 2rem; color: #23D160; text-shadow: 0 0 15px rgba(35, 209, 96, 0.6); font-family: 'Exo 2', sans-serif; font-weight: 700;">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
-                        SOLVED
-                    </div>`;
-            } else {
-                el.textContent = val;
-            }
+            el.textContent = val;
         }
     };
     
