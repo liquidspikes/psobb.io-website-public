@@ -335,10 +335,10 @@ function updateMetrics(state) {
     setStat('s-unknown-vtables', (masterObj.unknown_vtables && masterObj.unknown_vtables !== "0") ? masterObj.unknown_vtables : (state.unknown_vtables && state.unknown_vtables !== "0" ? state.unknown_vtables : "63"));
 
     const TOTAL_BELT_FNS = parseInt(String(masterObj.total_belt_fns || state.total_belt_fns || "2729").replace(/,/g, '')) || 2729;
-    let bankedFnsCount = parseInt(String(masterObj.banked_fns || state.banked_fns || state.extracted_files || "210").replace(/,/g, ''));
-    if (isNaN(bankedFnsCount) || bankedFnsCount <= 0) bankedFnsCount = 210;
-    let promotableCount = parseInt(String(masterObj.promotable_fns || state.promotable_fns || "270").replace(/,/g, ''));
-    if (isNaN(promotableCount)) promotableCount = 270;
+    let bankedFnsCount = parseInt(String(masterObj.banked_fns || state.banked_fns || state.extracted_files || "215").replace(/,/g, ''));
+    if (isNaN(bankedFnsCount) || bankedFnsCount <= 0) bankedFnsCount = 215;
+    let promotableCount = parseInt(String(masterObj.promotable_fns || state.promotable_fns || "266").replace(/,/g, ''));
+    if (isNaN(promotableCount)) promotableCount = 266;
     let remainingBeltCount = Math.max(0, TOTAL_BELT_FNS - bankedFnsCount);
     let bankedPct = Math.min(100, Math.max(0, (bankedFnsCount / TOTAL_BELT_FNS) * 100));
     let bankedPctStr = bankedPct.toFixed(1);
