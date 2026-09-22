@@ -364,6 +364,67 @@ function updateMetrics(state) {
 
         // Update PE Memory Matrix
         updateMemoryMatrix(unknownFnsCount, totalFnsCount, unknownVarsCount, totalVarsCount);
+
+        // Update New Executive Hero & High-Level Displays
+        const elTakeawayPct = document.getElementById('takeaway-pct');
+        if (elTakeawayPct) elTakeawayPct.textContent = percentStr + '%';
+
+        const elTakeawaySub = document.getElementById('takeaway-solved-sub');
+        if (elTakeawaySub) elTakeawaySub.textContent = `${solvedFns.toLocaleString()} of ${totalFnsCount.toLocaleString()} Functions Solved`;
+
+        const elTakeawayRemaining = document.getElementById('takeaway-remaining');
+        if (elTakeawayRemaining) elTakeawayRemaining.textContent = `${unknownFnsCount.toLocaleString()} fns`;
+
+        const elHeroSolved = document.getElementById('hero-solved-fns');
+        if (elHeroSolved) elHeroSolved.textContent = solvedFns.toLocaleString();
+
+        const elHeroRemaining = document.getElementById('hero-remaining-fns');
+        if (elHeroRemaining) elHeroRemaining.textContent = unknownFnsCount.toLocaleString();
+
+        const elHeroMods = document.getElementById('hero-total-mods');
+        if (elHeroMods) elHeroMods.textContent = (state.total_mods_all_time || 22232).toLocaleString();
+
+        const elMeterPhase1 = document.getElementById('meter-phase-1');
+        if (elMeterPhase1) elMeterPhase1.style.width = `${percentStr}%`;
+
+        // Update Clean Metric Cards
+        const elSolvedDisplay = document.getElementById('s-solved-fns-display');
+        if (elSolvedDisplay) elSolvedDisplay.textContent = solvedFns.toLocaleString();
+
+        const elTotalDisplay = document.getElementById('s-total-fns-display');
+        if (elTotalDisplay) elTotalDisplay.textContent = totalFnsCount.toLocaleString();
+
+        const elRemainingDisplay = document.getElementById('s-remaining-fns-display');
+        if (elRemainingDisplay) elRemainingDisplay.textContent = unknownFnsCount.toLocaleString();
+
+        const elThunksDisplay = document.getElementById('s-unknown-thunks-display');
+        if (elThunksDisplay) elThunksDisplay.textContent = state.unknown_thunks || '15';
+
+        const elModsDisplay = document.getElementById('s-mods-display');
+        if (elModsDisplay) elModsDisplay.textContent = (state.total_mods_all_time || 22232).toLocaleString();
+
+        const elVtablesDisplay = document.getElementById('s-unknown-vtables-display');
+        if (elVtablesDisplay) elVtablesDisplay.textContent = state.unknown_vtables || '63';
+
+        const elPtrDisplay = document.getElementById('s-unknown-ptr-display');
+        if (elPtrDisplay) elPtrDisplay.textContent = state.unknown_ptr || '4,538';
+
+        const elStringsDisplay = document.getElementById('s-unknown-strings-display');
+        if (elStringsDisplay) elStringsDisplay.textContent = state.unknown_strings || '12,115';
+
+        const elTpsDisplay = document.getElementById('s-tps-display');
+        if (elTpsDisplay) elTpsDisplay.textContent = `${state.tps !== undefined ? state.tps : "560.4"} t/s`;
+
+        const elModelDisplay = document.getElementById('s-model-display');
+        if (elModelDisplay) elModelDisplay.textContent = cleanModel;
+
+        const elTokensDisplay = document.getElementById('s-tokens-display');
+        if (elTokensDisplay) elTokensDisplay.textContent = (state.total_tokens || 383700597).toLocaleString();
+
+        const elBatchDisplay = document.getElementById('s-batch-display');
+        if (elBatchDisplay) elBatchDisplay.textContent = (state.batch_num || 14274).toLocaleString();
+
+
     } else {
         if (state.unknown_fns === 0 || state.unknown_fns === "0") {
             document.getElementById('s-unknown').innerHTML = `

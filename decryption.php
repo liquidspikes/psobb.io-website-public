@@ -1598,6 +1598,491 @@ include 'includes/header.php';
             grid-column: span 1 !important;
         }
     }
+
+
+    /* Executive Summary Hero Card */
+    .exec-hero-card {
+        background: linear-gradient(135deg, rgba(10, 18, 42, 0.96), rgba(15, 25, 58, 0.92));
+        border: 1px solid rgba(0, 237, 255, 0.35);
+        border-radius: 8px;
+        padding: 28px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        position: relative;
+    }
+    .hero-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        border-bottom: 1px solid rgba(0, 237, 255, 0.15);
+        padding-bottom: 14px;
+    }
+    .hero-badge-group {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .pso-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        background: rgba(35, 209, 96, 0.15);
+        border: 1px solid rgba(35, 209, 96, 0.4);
+        color: var(--accent-success);
+    }
+    .pso-status-pill .pill-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-success);
+        box-shadow: 0 0 8px var(--accent-success);
+        animation: smoothPulse 2s infinite;
+    }
+    .pso-version-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        background: rgba(0, 237, 255, 0.12);
+        border: 1px solid rgba(0, 237, 255, 0.3);
+        color: #00EDFF;
+    }
+    .pso-toolchain-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        background: rgba(94, 105, 255, 0.12);
+        border: 1px solid rgba(94, 105, 255, 0.3);
+        color: #a5b4fc;
+    }
+    .hero-updated-time {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.85rem;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .hero-main-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 30px;
+        align-items: center;
+    }
+    @media (max-width: 960px) {
+        .hero-main-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+    .hero-headline-block h2 {
+        font-family: 'Exo 2', sans-serif;
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: #fff;
+        margin: 0 0 12px 0;
+        letter-spacing: 0.5px;
+        text-shadow: 0 0 20px rgba(0, 237, 255, 0.25);
+    }
+    .hero-description-text {
+        color: #cbd5e1;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        margin: 0 0 22px 0;
+    }
+    .hero-key-takeaways {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+    }
+    .takeaway-card {
+        background: rgba(6, 11, 30, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .takeaway-card.highlight {
+        border-color: rgba(0, 237, 255, 0.4);
+        background: linear-gradient(145deg, rgba(0, 237, 255, 0.08), rgba(6, 11, 30, 0.8));
+    }
+    .takeaway-card.success {
+        border-color: rgba(35, 209, 96, 0.4);
+        background: linear-gradient(145deg, rgba(35, 209, 96, 0.08), rgba(6, 11, 30, 0.8));
+    }
+    .takeaway-lbl {
+        font-size: 0.75rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #94a3b8;
+        font-family: 'Share Tech Mono', monospace;
+    }
+    .takeaway-val {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #fff;
+    }
+    .takeaway-sub {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+
+    /* Hero Progress Ring Block */
+    .hero-progress-ring-card {
+        background: rgba(4, 8, 24, 0.8);
+        border: 1px solid rgba(0, 237, 255, 0.25);
+        border-radius: 8px;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    .hero-progress-ring-card .circular-progress {
+        width: 140px;
+        height: 140px;
+    }
+    .hero-progress-breakdown {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.85rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 12px;
+    }
+    .breakdown-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Master Roadmap & Remaining Steps Board */
+    .roadmap-section {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .roadmap-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 15px;
+        border-bottom: 1px solid rgba(0, 237, 255, 0.2);
+        padding-bottom: 16px;
+    }
+    .roadmap-title-group h2 {
+        font-family: 'Exo 2', sans-serif;
+        font-size: 1.5rem;
+        color: #fff;
+        margin: 0 0 6px 0;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .roadmap-title-group p {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+    .roadmap-legend-strip {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.8rem;
+        font-family: 'Share Tech Mono', monospace;
+        flex-wrap: wrap;
+    }
+    .roadmap-legend-strip span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .leg-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .leg-dot.completed { background: #23D160; box-shadow: 0 0 6px #23D160; }
+    .leg-dot.active { background: #00EDFF; box-shadow: 0 0 8px #00EDFF; animation: smoothPulse 2s infinite; }
+    .leg-dot.upcoming { background: #5E69FF; }
+    .leg-dot.target { background: #FFB020; }
+
+    /* Roadmap 5-Stage Step Cards */
+    .roadmap-steps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+    }
+    .roadmap-card {
+        background: rgba(8, 14, 34, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        position: relative;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .roadmap-card:hover {
+        transform: translateY(-2px);
+    }
+    .roadmap-card.stage-done {
+        border-color: rgba(35, 209, 96, 0.4);
+        background: linear-gradient(180deg, rgba(35, 209, 96, 0.06), rgba(8, 14, 34, 0.9));
+    }
+    .roadmap-card.stage-active {
+        border-color: rgba(0, 237, 255, 0.6);
+        background: linear-gradient(180deg, rgba(0, 237, 255, 0.12), rgba(8, 14, 34, 0.95));
+        box-shadow: 0 0 25px rgba(0, 237, 255, 0.15), inset 0 0 15px rgba(0, 237, 255, 0.05);
+    }
+    .roadmap-card.stage-next {
+        border-color: rgba(94, 105, 255, 0.35);
+    }
+    .roadmap-card.stage-future {
+        border-color: rgba(255, 255, 255, 0.08);
+        opacity: 0.85;
+    }
+
+    .roadmap-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .roadmap-stage-num {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.8rem;
+        letter-spacing: 2px;
+        font-weight: 700;
+        color: #94a3b8;
+    }
+    .roadmap-stage-tag {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+    .roadmap-stage-tag.badge-done {
+        background: rgba(35, 209, 96, 0.2);
+        color: #23D160;
+        border: 1px solid rgba(35, 209, 96, 0.4);
+    }
+    .roadmap-stage-tag.badge-active {
+        background: rgba(0, 237, 255, 0.2);
+        color: #00EDFF;
+        border: 1px solid rgba(0, 237, 255, 0.5);
+        animation: smoothPulse 2s infinite;
+    }
+    .roadmap-stage-tag.badge-next {
+        background: rgba(94, 105, 255, 0.2);
+        color: #a5b4fc;
+        border: 1px solid rgba(94, 105, 255, 0.4);
+    }
+    .roadmap-stage-tag.badge-future {
+        background: rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .roadmap-card-title {
+        font-family: 'Exo 2', sans-serif;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+        line-height: 1.3;
+    }
+    .roadmap-card-desc {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+    .roadmap-card-tasks {
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.85rem;
+    }
+    .task-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        line-height: 1.4;
+    }
+    .task-item.done {
+        color: #e2e8f0;
+    }
+    .task-item.done i {
+        color: #23D160;
+        margin-top: 2px;
+    }
+    .task-item.remaining {
+        color: #94a3b8;
+    }
+    .task-item.remaining i {
+        color: #FFB020;
+        margin-top: 2px;
+    }
+    .task-item.active-now {
+        color: #00EDFF;
+        font-weight: 600;
+    }
+    .task-item.active-now i {
+        color: #00EDFF;
+        margin-top: 2px;
+        animation: smoothPulse 1.5s infinite;
+    }
+    .roadmap-mini-meter {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: auto;
+    }
+    .roadmap-mini-fill {
+        height: 100%;
+        border-radius: 3px;
+    }
+    .fill-done { width: 95.6%; background: linear-gradient(90deg, #23D160, #00EDFF); }
+    .fill-active { width: 65%; background: linear-gradient(90deg, #00EDFF, #5E69FF); }
+    .fill-next { width: 25%; background: linear-gradient(90deg, #5E69FF, #a5b4fc); }
+    .fill-future { width: 0%; background: #64748b; }
+
+    /* Streamlined Clean Metrics Panels */
+    .clean-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+    }
+    .metric-master-card {
+        background: rgba(10, 16, 38, 0.85);
+        border: 1px solid rgba(0, 237, 255, 0.18);
+        border-radius: 8px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    .metric-master-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding-bottom: 10px;
+    }
+    .metric-master-title {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.85rem;
+        letter-spacing: 1.5px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .metric-master-title i {
+        color: var(--accent-primary);
+    }
+    .metric-master-val {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1;
+    }
+    .metric-master-val.text-glow-green {
+        color: #23D160;
+        text-shadow: 0 0 15px rgba(35, 209, 96, 0.5);
+    }
+    .metric-master-val.text-glow-cyan {
+        color: #00EDFF;
+        text-shadow: 0 0 15px rgba(0, 237, 255, 0.5);
+    }
+    .metric-master-val.text-glow-purple {
+        color: #a5b4fc;
+        text-shadow: 0 0 15px rgba(94, 105, 255, 0.5);
+    }
+    .metric-details-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+    .metric-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #94a3b8;
+    }
+    .metric-detail-row strong {
+        color: #f8fafc;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Collapsible Technical Forensics Drawer */
+    .forensics-drawer {
+        background: rgba(6, 11, 28, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .forensics-drawer summary {
+        padding: 14px 20px;
+        cursor: pointer;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.95rem;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+        transition: color 0.2s, background 0.2s;
+    }
+    .forensics-drawer summary:hover {
+        color: #00EDFF;
+        background: rgba(0, 237, 255, 0.05);
+    }
+    .forensics-drawer-content {
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
 </style>
 
 <div class="pso-spinner-svg">
@@ -1675,57 +2160,225 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <!-- Pipeline Phase Tracker -->
-        <div class="glass-panel tech-corners" style="padding: 24px; margin-bottom: 10px;">
-            <h2 style="font-size: 1.2rem; margin-bottom: 20px;">Orchestration Pipeline Status</h2>
-            <div class="pipeline-container" style="display: flex; justify-content: space-between; position: relative;">
-                <div class="pipeline-line" style="position: absolute; top: 35%; left: 10%; right: 10%; height: 2px; background: rgba(0, 237, 255, 0.15); z-index: 1;"></div>
-                
-                <div class="pipeline-step" id="step-1" style="z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="step-icon" style="width: 40px; height: 40px; border-radius: 50%; background: var(--panel-bg); border: 2px solid var(--accent-success); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-success); box-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">1</div>
-                    <span style="font-size: 0.9rem; text-transform: uppercase; color: var(--accent-success);">Renaming</span>
+        
+        <!-- Executive Project Overview & Current Position Hero -->
+        <div class="glass-panel exec-hero-card tech-corners">
+            <div class="hero-top-row">
+                <div class="hero-badge-group">
+                    <span class="pso-status-pill"><span class="pill-dot"></span> LIVE DECOMPILATION CLUSTER</span>
+                    <span class="pso-version-pill">TARGET: PSOBB v125.13 (PC)</span>
+                    <span class="pso-toolchain-pill">TOOLCHAIN: MSVC 2003 (CL.EXE)</span>
                 </div>
-                
-                <div class="pipeline-step" id="step-2" style="z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="step-icon" style="width: 40px; height: 40px; border-radius: 50%; background: var(--panel-bg); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(255,255,255,0.5);">2</div>
-                    <span style="font-size: 0.9rem; text-transform: uppercase; color: #94a3b8;">C++ Extraction</span>
+                <div class="hero-updated-time">
+                    <i class="fas fa-sync-alt fa-spin" style="color: var(--accent-primary);"></i>
+                    <span id="hero-live-indicator">LIVE TELEMETRY ACTIVE</span>
                 </div>
-                
-                <div class="pipeline-step" id="step-3" style="z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="step-icon" style="width: 40px; height: 40px; border-radius: 50%; background: var(--panel-bg); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(255,255,255,0.5);">3</div>
-                    <span style="font-size: 0.9rem; text-transform: uppercase; color: #94a3b8;">MSVC Recompile</span>
+            </div>
+
+            <div class="hero-main-layout">
+                <div class="hero-headline-block">
+                    <h2>PSOBB Client Reverse-Engineering Project</h2>
+                    <p class="hero-description-text">
+                        We are reverse-engineering the complete <strong>Phantasy Star Online Blue Burst (v125.13)</strong> client binary (<code>psobb.exe</code>) into clean, matching C++ source code. Achieving a bit-exact decompilation unlocks a fully native, standalone modern client for <strong>64-bit Windows, Linux, and Steam Deck</strong> with high framerates, widescreen UI scaling, and modern controller mapping.
+                    </p>
+                    <div class="hero-key-takeaways">
+                        <div class="takeaway-card success">
+                            <span class="takeaway-lbl">CURRENT PROGRESS</span>
+                            <span class="takeaway-val text-glow-green" id="takeaway-pct">95.6%</span>
+                            <span class="takeaway-sub" id="takeaway-solved-sub">18,790 of 19,660 Functions Solved</span>
+                        </div>
+                        <div class="takeaway-card highlight">
+                            <span class="takeaway-lbl">WORK REMAINING</span>
+                            <span class="takeaway-val text-glow-cyan" id="takeaway-remaining">870 fns</span>
+                            <span class="takeaway-sub">Final Unknown Stub Functions</span>
+                        </div>
+                        <div class="takeaway-card">
+                            <span class="takeaway-lbl">ACTIVE FRONTIER</span>
+                            <span class="takeaway-val" style="color: #a5b4fc; font-size: 1.15rem;">Phase 2: Types</span>
+                            <span class="takeaway-sub">Trade Windows & Entity Structs</span>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="pipeline-step" id="step-4" style="z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="step-icon" style="width: 40px; height: 40px; border-radius: 50%; background: var(--panel-bg); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(255,255,255,0.5);">4</div>
-                    <span style="font-size: 0.9rem; text-transform: uppercase; color: #94a3b8;">Modular Breakdown</span>
-                </div>
-                
-                <div class="pipeline-step" id="step-5" style="z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="step-icon" style="width: 40px; height: 40px; border-radius: 50%; background: var(--panel-bg); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(255,255,255,0.5);">5</div>
-                    <span style="font-size: 0.9rem; text-transform: uppercase; color: #94a3b8;">Git Sync</span>
+
+                <div class="hero-progress-ring-card">
+                    <div class="circular-progress" id="progress-circle" style="--percentage: 95.6;">
+                        <div class="progress-value">
+                            <span id="progress-text">95.6%</span>
+                            <span class="progress-label">TOTAL SOLVED</span>
+                        </div>
+                    </div>
+                    <div class="hero-progress-breakdown">
+                        <div class="breakdown-row">
+                            <span style="color: #94a3b8;">Solved Functions:</span>
+                            <span id="hero-solved-fns" style="color: #23D160; font-weight: bold;">18,790</span>
+                        </div>
+                        <div class="breakdown-row">
+                            <span style="color: #94a3b8;">Remaining Functions:</span>
+                            <span id="hero-remaining-fns" style="color: #00EDFF; font-weight: bold;">870</span>
+                        </div>
+                        <div class="breakdown-row">
+                            <span style="color: #94a3b8;">Total Mod DB:</span>
+                            <span id="hero-total-mods" style="color: #a5b4fc; font-weight: bold;">22,232</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Highlight Card: Circular Progress -->
-        <div class="glass-panel highlight-card tech-corners">
-            <div>
-                <h2>Binary Decompilation Progress</h2>
-                <p style="color: #94a3b8; font-size: 1.1rem; max-width: 540px; line-height: 1.5;">Tracking remaining unknown functions and symbols against the complete <code>psobb.exe</code> binary scope in real-time as the autonomous swarm executes.</p>
-                <div style="margin-top: 15px; display: flex; gap: 20px; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem;">
-                    <div><span style="color: #94a3b8;">ACTIVE SCOPE:</span> <span style="color: #00EDFF;">16,243 Functions</span></div>
-                    <div><span style="color: #94a3b8;">SYMBOL MAP:</span> <span style="color: #23D160;">21,672 Items</span></div>
+        <!-- Master Project Roadmap: Where We Are At & What Steps Are Remaining -->
+        <div class="glass-panel roadmap-section tech-corners" style="padding: 24px;">
+            <div class="roadmap-header">
+                <div class="roadmap-title-group">
+                    <h2><i class="fas fa-map-signs" style="color: var(--accent-primary);"></i> Project Roadmap: Where We Are At &amp; What Steps Are Remaining</h2>
+                    <p>Transparent progress tracking through each phase required to produce a clean, compilable, and modernized PSOBB client.</p>
+                </div>
+                <div class="roadmap-legend-strip">
+                    <span><span class="leg-dot completed"></span> Complete</span>
+                    <span><span class="leg-dot active"></span> Active Frontier</span>
+                    <span><span class="leg-dot upcoming"></span> Next Up</span>
+                    <span><span class="leg-dot target"></span> Final Goal</span>
                 </div>
             </div>
-            
-            <div class="circular-progress" id="progress-circle" style="--percentage: 0;">
-                <div class="progress-value">
-                    <span id="progress-text">0%</span>
-                    <span class="progress-label">Solved</span>
+
+            <div class="roadmap-steps-grid">
+                <!-- Step 1 -->
+                <div class="roadmap-card stage-done">
+                    <div class="roadmap-card-head">
+                        <span class="roadmap-stage-num">PHASE 01</span>
+                        <span class="roadmap-stage-tag badge-done"><i class="fas fa-check"></i> 95.6% Solved</span>
+                    </div>
+                    <h3 class="roadmap-card-title">Binary Disassembly &amp; Function Mapping</h3>
+                    <p class="roadmap-card-desc">Disassembling the entire <code>psobb.exe</code> PE binary into readable assembly, generating control flow graphs, and assigning human semantic names.</p>
+                    <div class="roadmap-card-tasks">
+                        <div class="task-item done">
+                            <i class="fas fa-check-circle"></i>
+                            <span>18,790 functions identified and decompiled into C++</span>
+                        </div>
+                        <div class="task-item done">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Core game loops, math matrices, and renderer mapped</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span>Final 870 stub functions remaining to identify</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-mini-meter">
+                        <div class="roadmap-mini-fill fill-done" id="meter-phase-1"></div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="roadmap-card stage-active">
+                    <div class="roadmap-card-head">
+                        <span class="roadmap-stage-num">PHASE 02</span>
+                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier</span>
+                    </div>
+                    <h3 class="roadmap-card-title">Type Reconstruction &amp; Memory Structs</h3>
+                    <p class="roadmap-card-desc">Replacing raw memory offsets (<code>DAT_...</code>, <code>PTR_...</code>) with true typed C++ structs for player entities, inventory items, and packet handlers.</p>
+                    <div class="roadmap-card-tasks">
+                        <div class="task-item done">
+                            <i class="fas fa-check-circle"></i>
+                            <span>22,232 structs, types, and variables committed</span>
+                        </div>
+                        <div class="task-item active-now">
+                            <i class="fas fa-arrow-right"></i>
+                            <span>Current Focus: Trade Window state &amp; Packet 0x60 / 0xA6</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span>63 vTables and entity component layouts to finalize</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-mini-meter">
+                        <div class="roadmap-mini-fill fill-active" id="meter-phase-2"></div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="roadmap-card stage-next">
+                    <div class="roadmap-card-head">
+                        <span class="roadmap-stage-num">PHASE 03</span>
+                        <span class="roadmap-stage-tag badge-next"><i class="fas fa-microchip"></i> In Testbench</span>
+                    </div>
+                    <h3 class="roadmap-card-title">MSVC 2003 Matching Compilation</h3>
+                    <p class="roadmap-card-desc">Recompiling the extracted C++ source using the exact compiler used in 2004 (Microsoft Visual C++ Toolkit 2003 <code>cl.exe</code>) to match original binary assembly.</p>
+                    <div class="roadmap-card-tasks">
+                        <div class="task-item done">
+                            <i class="fas fa-check-circle"></i>
+                            <span>MSVC 7.1 build environment configured &amp; automated</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span>Resolve header forward declarations and cyclical deps</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span>Achieve 1:1 bit-exact binary matching against original</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-mini-meter">
+                        <div class="roadmap-mini-fill fill-next" id="meter-phase-3"></div>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="roadmap-card stage-future">
+                    <div class="roadmap-card-head">
+                        <span class="roadmap-stage-num">PHASE 04</span>
+                        <span class="roadmap-stage-tag badge-future"><i class="fas fa-cubes"></i> Next Up</span>
+                    </div>
+                    <h3 class="roadmap-card-title">Modular Subsystem Decoupling</h3>
+                    <p class="roadmap-card-desc">Untangling the monolithic client into clean, decoupled C++ subsystems with modern interfaces for networking, rendering, audio, and UI.</p>
+                    <div class="roadmap-card-tasks">
+                        <div class="task-item remaining">
+                            <i class="fas fa-circle-notch"></i>
+                            <span><code>psobb-net</code>: Isolate NewServ client network protocol</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-circle-notch"></i>
+                            <span><code>psobb-render</code>: Abstract D3D8 into modern D3D11/Vulkan</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-circle-notch"></i>
+                            <span><code>psobb-audio</code>: Integrate OpenAL-Soft / DSOAL 3D sound</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-mini-meter">
+                        <div class="roadmap-mini-fill fill-future"></div>
+                    </div>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="roadmap-card stage-future">
+                    <div class="roadmap-card-head">
+                        <span class="roadmap-stage-num">PHASE 05</span>
+                        <span class="roadmap-stage-tag badge-future"><i class="fas fa-trophy"></i> Destination</span>
+                    </div>
+                    <h3 class="roadmap-card-title">Modern Native Client Release</h3>
+                    <p class="roadmap-card-desc">The ultimate goal: A pure native, modern 64-bit client running seamlessly on modern operating systems without emulation or compatibility layers.</p>
+                    <div class="roadmap-card-tasks">
+                        <div class="task-item remaining">
+                            <i class="fas fa-circle-notch"></i>
+                            <span>Native 64-bit Windows build (no DDraw/D3D8 legacy bugs)</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-circle-notch"></i>
+                            <span>Native Linux &amp; Steam Deck build (no Proton/Wine needed)</span>
+                        </div>
+                        <div class="task-item remaining">
+                            <i class="fas fa-circle-notch"></i>
+                            <span>High-FPS physics decoupling, 4K UI scaling, and controllers</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-mini-meter">
+                        <div class="roadmap-mini-fill fill-future"></div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        
 
         <!-- PSOBB PE Executable Memory Matrix & Sector Scanner -->
         <div class="glass-panel memory-matrix-panel tech-corners">
@@ -1804,69 +2457,176 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <!-- Metric Cards -->
-        <div class="stats-block">
-            <div class="glass-panel stat-card">
-                <span class="label">Functions</span>
-                <span class="value" id="s-unknown" style="color: #f8fafc;">...</span>
+        
+
+        <!-- Clean High-Signal Metrics Grid -->
+        <div class="clean-metrics-grid">
+            <!-- Metric 1: Functions -->
+            <div class="metric-master-card">
+                <div class="metric-master-head">
+                    <span class="metric-master-title"><i class="fas fa-code"></i> Functions Solved</span>
+                    <span class="roadmap-stage-tag badge-done">95.6%</span>
+                </div>
+                <div class="metric-master-val text-glow-green" id="s-solved-fns-display">18,790</div>
+                <div class="metric-details-list">
+                    <div class="metric-detail-row">
+                        <span>Total Scope:</span>
+                        <strong id="s-total-fns-display">19,660</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Remaining Unknowns:</span>
+                        <strong id="s-remaining-fns-display" style="color: #00EDFF;">870</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Unknown Thunks:</span>
+                        <strong id="s-unknown-thunks-display">15</strong>
+                    </div>
+                </div>
             </div>
-            <div class="glass-panel stat-card">
-                <span class="label">Thunks</span>
-                <span class="value" id="s-unknown-thunks" style="color: #f8fafc;">...</span>
+
+            <!-- Metric 2: Types & Structures -->
+            <div class="metric-master-card">
+                <div class="metric-master-head">
+                    <span class="metric-master-title"><i class="fas fa-database"></i> Committed Types</span>
+                    <span class="roadmap-stage-tag badge-active">Active</span>
+                </div>
+                <div class="metric-master-val text-glow-cyan" id="s-mods-display">22,232</div>
+                <div class="metric-details-list">
+                    <div class="metric-detail-row">
+                        <span>Remaining vTables:</span>
+                        <strong id="s-unknown-vtables-display">63</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Remaining Pointers:</span>
+                        <strong id="s-unknown-ptr-display">4,538</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Strings Mapped:</span>
+                        <strong id="s-unknown-strings-display">12,115</strong>
+                    </div>
+                </div>
             </div>
-            <div class="glass-panel stat-card">
-                <span class="label">Data (DAT)</span>
-                <span class="value" id="s-unknown-dat" style="color: #f8fafc;">...</span>
+
+            <!-- Metric 3: AI Swarm Telemetry -->
+            <div class="metric-master-card">
+                <div class="metric-master-head">
+                    <span class="metric-master-title"><i class="fas fa-brain"></i> Autonomous Swarm</span>
+                    <span class="roadmap-stage-tag badge-active">Live</span>
+                </div>
+                <div class="metric-master-val text-glow-purple" id="s-tps-display">560.4 t/s</div>
+                <div class="metric-details-list">
+                    <div class="metric-detail-row">
+                        <span>Active Model:</span>
+                        <strong id="s-model-display">Qwen 3.8 Flash Distributed</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Tokens Processed:</span>
+                        <strong id="s-tokens-display">383,700,597</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Swarm Loops:</span>
+                        <strong id="s-batch-display">14,274</strong>
+                    </div>
+                </div>
             </div>
-            <div class="glass-panel stat-card">
-                <span class="label">Pointers</span>
-                <span class="value" id="s-unknown-ptr" style="color: #f8fafc;">...</span>
-            </div>
-            <div class="glass-panel stat-card">
-                <span class="label">vTables</span>
-                <span class="value" id="s-unknown-vtables" style="color: #f8fafc;">...</span>
-            </div>
-            <div class="glass-panel stat-card">
-                <span class="label">Floats</span>
-                <span class="value" id="s-unknown-floats" style="color: #f8fafc;">...</span>
-            </div>
-            <div class="glass-panel stat-card">
-                <span class="label">Strings</span>
-                <span class="value" id="s-unknown-strings" style="color: #f8fafc;">...</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">Tokens Burned</span>
-                <span class="value" id="s-tokens" style="color: #5E69FF;">0</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">Tokens/sec</span>
-                <span class="value" id="s-tps" style="color: #23D160;">0.0</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">Total DB Mods</span>
-                <span class="value" id="s-mods">0</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">AI Loops</span>
-                <span class="value" id="s-batch" style="color: #5E69FF;">0</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 2;">
-                <span class="label">Recompiler Status</span>
-                <span class="value" id="s-recompiler-status" style="color: #00EDFF;">Standby</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">Compile Attempts</span>
-                <span class="value" id="s-recompiler-attempts">0</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">Compile Errors</span>
-                <span class="value" id="s-compile-errors" style="color: #FF3366;">0</span>
-            </div>
-            <div class="glass-panel stat-card" style="grid-column: span 1;">
-                <span class="label">Extracted Files</span>
-                <span class="value" id="s-extracted-files">0</span>
+
+            <!-- Metric 4: Cluster Interconnect -->
+            <div class="metric-master-card">
+                <div class="metric-master-head">
+                    <span class="metric-master-title"><i class="fas fa-network-wired"></i> Compute Cluster</span>
+                    <span class="roadmap-stage-tag badge-done">80G Link</span>
+                </div>
+                <div class="metric-master-val" style="color: #fff;" id="s-dma-display">368.4 MB/s</div>
+                <div class="metric-details-list">
+                    <div class="metric-detail-row">
+                        <span>Hardware:</span>
+                        <strong>Dual AMD Strix Halo</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>Unified Memory:</span>
+                        <strong style="color: #23D160;">256 GB LPDDR5X</strong>
+                    </div>
+                    <div class="metric-detail-row">
+                        <span>RPC Latency:</span>
+                        <strong style="color: #00EDFF;">0.11 ms</strong>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Collapsible Technical Ghidra Forensics Drawer -->
+        <details class="forensics-drawer">
+            <summary>
+                <i class="fas fa-microscope" style="color: var(--accent-primary);"></i>
+                <span>Technical PE Memory Forensics &amp; Raw Symbol Inventory (Click to Expand)</span>
+                <span style="margin-left: auto; font-size: 0.8rem; color: #64748b;">Ghidra Database Telemetry</span>
+            </summary>
+            <div class="forensics-drawer-content">
+                <div class="stats-block" style="margin: 0;">
+                    <div class="glass-panel stat-card">
+                        <span class="label">Functions Remaining</span>
+                        <span class="value" id="s-unknown" style="color: #f8fafc;">870</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Thunks</span>
+                        <span class="value" id="s-unknown-thunks" style="color: #f8fafc;">15</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Raw Data (DAT)</span>
+                        <span class="value" id="s-unknown-dat" style="color: #f8fafc;">82,913</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Pointers (PTR)</span>
+                        <span class="value" id="s-unknown-ptr" style="color: #f8fafc;">4,538</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">vTables</span>
+                        <span class="value" id="s-unknown-vtables" style="color: #f8fafc;">63</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Floats</span>
+                        <span class="value" id="s-unknown-floats" style="color: #f8fafc;">2,201</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Strings</span>
+                        <span class="value" id="s-unknown-strings" style="color: #f8fafc;">12,115</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Tokens Burned</span>
+                        <span class="value" id="s-tokens" style="color: #5E69FF;">383,700,597</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Tokens/sec</span>
+                        <span class="value" id="s-tps" style="color: #23D160;">560.4</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Total DB Mods</span>
+                        <span class="value" id="s-mods">22,232</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">AI Loops</span>
+                        <span class="value" id="s-batch" style="color: #5E69FF;">14,274</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Recompiler Status</span>
+                        <span class="value" id="s-recompiler-status" style="color: #00EDFF;">Testbench Active</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Compile Attempts</span>
+                        <span class="value" id="s-recompiler-attempts">0</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Compile Errors</span>
+                        <span class="value" id="s-compile-errors" style="color: #FF3366;">0</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Extracted Files</span>
+                        <span class="value" id="s-extracted-files">0</span>
+                    </div>
+                </div>
+            </div>
+        </details>
+
 
         <!-- Dual Strix Halo Compute Cluster Panel -->
         <div class="glass-panel cluster-panel tech-corners">
