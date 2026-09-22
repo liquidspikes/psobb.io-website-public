@@ -2184,13 +2184,13 @@ include 'includes/header.php';
                     <div class="hero-key-takeaways">
                         <div class="takeaway-card success">
                             <span class="takeaway-lbl">BYTE-EXACT BANKED</span>
-                            <span class="takeaway-val text-glow-green" id="takeaway-pct">6.4%</span>
-                            <span class="takeaway-sub" id="takeaway-solved-sub">171 of 2,684 Live Belt Functions</span>
+                            <span class="takeaway-val text-glow-green" id="takeaway-pct">7.3%</span>
+                            <span class="takeaway-sub" id="takeaway-solved-sub">198 of 2,724 Live Belt Functions</span>
                         </div>
                         <div class="takeaway-card highlight">
                             <span class="takeaway-lbl">PROMOTABLE NEAR</span>
-                            <span class="takeaway-val text-glow-cyan" id="takeaway-promotable">+108 fns</span>
-                            <span class="takeaway-sub" id="takeaway-promotable-sub">10.4% In-Flight Reach</span>
+                            <span class="takeaway-val text-glow-cyan" id="takeaway-promotable">+270 fns</span>
+                            <span class="takeaway-sub" id="takeaway-promotable-sub">17.2% In-Flight Reach</span>
                         </div>
                         <div class="takeaway-card">
                             <span class="takeaway-lbl">GHIDRA RECONNAISSANCE</span>
@@ -2474,21 +2474,21 @@ include 'includes/header.php';
             <div class="metric-master-card">
                 <div class="metric-master-head">
                     <span class="metric-master-title"><i class="fas fa-check-double"></i> Live Belt Banked</span>
-                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">6.4%</span>
+                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">7.3%</span>
                 </div>
-                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">171</div>
+                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">198</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
                         <span>Live Belt Scope:</span>
-                        <strong id="s-belt-total-display">2,684 fns</strong>
+                        <strong id="s-belt-total-display">2,724 fns</strong>
                     </div>
                     <div class="metric-detail-row">
                         <span>Promotable Near-Matches:</span>
-                        <strong id="s-promotable-display" style="color: #00EDFF;">108 (10.4% coverage)</strong>
+                        <strong id="s-promotable-display" style="color: #00EDFF;">270 (17.2% coverage)</strong>
                     </div>
                     <div class="metric-detail-row">
                         <span>Belt Remaining to Match:</span>
-                        <strong id="s-belt-remaining-display">2,405 fns</strong>
+                        <strong id="s-belt-remaining-display">2,526 fns</strong>
                     </div>
                 </div>
             </div>
