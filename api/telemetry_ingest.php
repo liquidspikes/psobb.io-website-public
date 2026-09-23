@@ -156,21 +156,25 @@ $merged = [
     'eta' => isset($master_state['eta']) ? $master_state['eta'] : 'Calculating...',
     'pipeline_phase' => isset($master_state['pipeline_phase']) ? (int)$master_state['pipeline_phase'] : 1,
     'recompiler_status' => isset($master_state['recompiler_status']) ? $master_state['recompiler_status'] : '100% Byte-Matched (All 11 PE Sections Identical)',
-    'recompiler_attempts' => isset($master_state['recompiler_attempts']) ? (int)$master_state['recompiler_attempts'] : 198,
+    'recompiler_attempts' => isset($master_state['recompiler_attempts']) ? (int)$master_state['recompiler_attempts'] : 220,
     'compile_errors' => isset($master_state['compile_errors']) ? (int)$master_state['compile_errors'] : 0,
     'last_build_output' => isset($master_state['last_build_output']) ? $master_state['last_build_output'] : '',
-    'banked_fns' => isset($master_state['banked_fns']) ? $master_state['banked_fns'] : (isset($decoded['banked_fns']) ? $decoded['banked_fns'] : 198),
-    'total_belt_fns' => isset($master_state['total_belt_fns']) ? $master_state['total_belt_fns'] : (isset($decoded['total_belt_fns']) ? $decoded['total_belt_fns'] : 2724),
-    'promotable_fns' => isset($master_state['promotable_fns']) ? $master_state['promotable_fns'] : (isset($decoded['promotable_fns']) ? $decoded['promotable_fns'] : 270),
-    'extracted_files' => isset($master_state['extracted_files']) ? (int)$master_state['extracted_files'] : 198,
-    'current_target' => isset($master_state['current_target']) ? $master_state['current_target'] : (isset($decoded['current_target']) ? $decoded['current_target'] : null),
-    'cluster' => isset($master_state['cluster']) ? $master_state['cluster'] : (isset($decoded['cluster']) ? $decoded['cluster'] : null)
+    'banked_fns' => isset($master_state['banked_fns']) ? $master_state['banked_fns'] : (isset($decoded['banked_fns']) ? $decoded['banked_fns'] : 220),
+    'total_belt_fns' => isset($master_state['total_belt_fns']) ? $master_state['total_belt_fns'] : (isset($decoded['total_belt_fns']) ? $decoded['total_belt_fns'] : 2729),
+    'promotable_fns' => isset($master_state['promotable_fns']) ? $master_state['promotable_fns'] : (isset($decoded['promotable_fns']) ? $decoded['promotable_fns'] : 266),
+    'extracted_files' => isset($master_state['extracted_files']) ? (int)$master_state['extracted_files'] : 220,
+    'banked_bytes' => isset($master_state['banked_bytes']) ? (int)$master_state['banked_bytes'] : 5246,
+    'belt_bytes' => isset($master_state['belt_bytes']) ? (int)$master_state['belt_bytes'] : 586764,
+    'in_flight_reach' => isset($master_state['in_flight_reach']) ? (int)$master_state['in_flight_reach'] : 481,
+    'call_edges' => isset($master_state['call_edges']) ? (int)$master_state['call_edges'] : 25839,
+    'call_jmp_sites' => isset($master_state['call_jmp_sites']) ? (int)$master_state['call_jmp_sites'] : 1475711,
+    'reloc_dir32' => isset($master_state['reloc_dir32']) ? (int)$master_state['reloc_dir32'] : 1296,
+    'reloc_rel32' => isset($master_state['reloc_rel32']) ? (int)$master_state['reloc_rel32'] : 128,
+    'func_ptr_words' => isset($master_state['func_ptr_words']) ? (int)$master_state['func_ptr_words'] : 1661,
+    'current_target' => isset($master_state['current_target']) ? $master_state['current_target'] : (isset($decoded['current_target']) ? $decoded['current_target'] : null)
 ];
 
 foreach ($all_states as $id => $state) {
-    if (isset($state['cluster']) && !empty($state['cluster'])) {
-        $merged['cluster'] = $state['cluster'];
-    }
     if (isset($state['current_target']) && !empty($state['current_target'])) {
         $merged['current_target'] = $state['current_target'];
     }
