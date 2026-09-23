@@ -1,5 +1,5 @@
 <?php
-$page_title = 'Agent Decryption - PSOBB Private Server';
+$page_title = 'Client Decompilation Matrix - PSOBB Private Server';
 $current_page = 'decryption';
 include 'includes/header.php';
 ?>
@@ -454,15 +454,15 @@ include 'includes/header.php';
         font-family: 'Share Tech Mono', monospace;
     }
 
-    /* Dual Strix Halo Compute Cluster Panel */
-    .cluster-panel {
+    /* MSVC 7.1 Autonomous Matching Testbench Panel */
+    .workbench-panel {
         padding: 24px;
         border: 1px solid rgba(0, 237, 255, 0.3);
         background: linear-gradient(145deg, rgba(10, 15, 38, 0.96), rgba(20, 15, 50, 0.9));
     }
 
-    /* Centerpiece PCIe DMA Laser Data Highway */
-    .dma-highway-container {
+    /* Autonomous Decompilation & Verification Pipeline */
+    .decomp-pipeline-container {
         margin: 20px 0;
         background: rgba(4, 7, 20, 0.85);
         border: 1px solid rgba(0, 237, 255, 0.25);
@@ -474,7 +474,7 @@ include 'includes/header.php';
         box-shadow: inset 0 0 30px rgba(0, 237, 255, 0.05);
     }
 
-    .dma-highway-header {
+    .decomp-pipeline-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -482,7 +482,7 @@ include 'includes/header.php';
         gap: 10px;
     }
 
-    .dma-status-badge {
+    .pipeline-status-badge {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -494,7 +494,7 @@ include 'includes/header.php';
         font-weight: bold;
     }
 
-    .dma-pulse-indicator {
+    .pipeline-pulse-indicator {
         width: 8px;
         height: 8px;
         border-radius: 50%;
@@ -503,158 +503,108 @@ include 'includes/header.php';
         animation: smoothPulse 1.5s infinite;
     }
 
-    .dma-rate-readout {
+    .pipeline-rate-readout {
         display: flex;
         align-items: baseline;
         gap: 8px;
         font-family: 'JetBrains Mono', monospace;
     }
-    .dma-rate-val {
+    .pipeline-rate-val {
         font-size: 1.3rem;
         font-weight: bold;
         color: var(--accent-success);
         text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);
     }
-    .dma-rate-sub {
+    .pipeline-rate-sub {
         font-size: 0.75rem;
-        color: #94a3b8;
+        color: #00EDFF;
         letter-spacing: 1px;
     }
 
-    /* Bus Visualizer */
-    .dma-bus-visualizer {
+    /* Pipeline Flow Stage Nodes */
+    .decomp-pipeline-flow {
         display: flex;
         align-items: center;
-        gap: 15px;
+        justify-content: space-between;
+        gap: 8px;
         position: relative;
         padding: 10px 0;
+        overflow-x: auto;
     }
 
-    .node-endpoint {
-        padding: 10px 16px;
-        background: rgba(10, 18, 42, 0.9);
-        border: 1px solid rgba(0, 237, 255, 0.3);
-        border-radius: 6px;
+    .pipeline-stage-node {
+        flex: 1;
         min-width: 140px;
+        padding: 14px 10px;
+        background: rgba(10, 18, 42, 0.9);
+        border: 1px solid rgba(0, 237, 255, 0.25);
+        border-radius: 6px;
         text-align: center;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        position: relative;
+        transition: all 0.3s ease;
     }
-    .node-endpoint.left { border-color: rgba(0, 237, 255, 0.4); }
-    .node-endpoint.right { border-color: rgba(94, 105, 255, 0.4); }
+    .pipeline-stage-node:hover {
+        border-color: rgba(0, 237, 255, 0.6);
+        box-shadow: 0 4px 20px rgba(0, 237, 255, 0.2);
+    }
+    .pipeline-stage-node.active-stage {
+        border-color: #00EDFF;
+        box-shadow: 0 0 15px rgba(0, 237, 255, 0.35);
+        background: rgba(14, 26, 60, 0.95);
+    }
+    .pipeline-stage-node.success-stage {
+        border-color: rgba(35, 209, 96, 0.5);
+    }
 
-    .endpoint-name {
+    .stage-step-num {
+        position: absolute;
+        top: 6px;
+        left: 8px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.65rem;
+        color: #64748b;
+        font-weight: bold;
+    }
+
+    .stage-node-icon {
+        font-size: 1.25rem;
+        color: #00EDFF;
+        margin-bottom: 6px;
+    }
+    .pipeline-stage-node.success-stage .stage-node-icon {
+        color: #23D160;
+    }
+
+    .stage-node-title {
         font-family: 'JetBrains Mono', monospace;
         font-weight: bold;
-        font-size: 0.95rem;
+        font-size: 0.8rem;
         color: #fff;
+        letter-spacing: 0.5px;
     }
-    .node-endpoint.left .endpoint-name { color: #00EDFF; text-shadow: 0 0 8px rgba(0, 237, 255, 0.5); }
-    .node-endpoint.right .endpoint-name { color: #5E69FF; text-shadow: 0 0 8px rgba(94, 105, 255, 0.5); }
 
-    .endpoint-role {
-        font-size: 0.7rem;
+    .stage-node-desc {
+        font-size: 0.68rem;
         color: #94a3b8;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         margin-top: 4px;
-        text-transform: uppercase;
-    }
-
-    /* Laser Channel */
-    .dma-laser-channel {
-        flex: 1;
-        height: 48px;
-        background: rgba(2, 6, 18, 0.8);
-        border: 1px solid rgba(0, 237, 255, 0.15);
-        border-radius: 24px;
-        position: relative;
+        white-space: nowrap;
         overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        box-shadow: inset 0 0 15px rgba(0, 237, 255, 0.1);
+        text-overflow: ellipsis;
     }
 
-    .laser-track {
-        height: 2px;
-        position: relative;
-        background: linear-gradient(90deg, rgba(0, 237, 255, 0.1), rgba(0, 237, 255, 0.3), rgba(0, 237, 255, 0.1));
-    }
-
-    .laser-packet {
-        position: absolute;
-        top: -3px;
-        height: 8px;
-        border-radius: 4px;
-        box-shadow: 0 0 10px currentColor;
-    }
-
-    .track-forward .packet-1 {
-        width: 35px;
-        background: #00EDFF;
-        color: #00EDFF;
-        animation: packetTravelForward 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    }
-    .track-forward .packet-2 {
-        width: 25px;
-        background: #23D160;
-        color: #23D160;
-        animation: packetTravelForward 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.8s;
-    }
-    .track-forward .packet-3 {
-        width: 30px;
-        background: #00EDFF;
-        color: #00EDFF;
-        animation: packetTravelForward 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.6s;
-    }
-
-    .track-reverse .packet-rev-1 {
-        width: 30px;
-        background: #5E69FF;
-        color: #5E69FF;
-        animation: packetTravelReverse 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.4s;
-    }
-    .track-reverse .packet-rev-2 {
-        width: 22px;
-        background: #9d4edd;
-        color: #9d4edd;
-        animation: packetTravelReverse 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.5s;
-    }
-
-    @keyframes packetTravelForward {
-        0% { left: -5%; opacity: 0; }
-        15% { opacity: 1; }
-        85% { opacity: 1; }
-        100% { left: 105%; opacity: 0; }
-    }
-
-    @keyframes packetTravelReverse {
-        0% { right: -5%; opacity: 0; }
-        15% { opacity: 1; }
-        85% { opacity: 1; }
-        100% { right: 105%; opacity: 0; }
-    }
-
-    .laser-center-badge {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(6, 12, 30, 0.95);
-        border: 1px solid rgba(0, 237, 255, 0.3);
-        padding: 3px 12px;
-        border-radius: 12px;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.75rem;
-        color: #00EDFF;
-        letter-spacing: 1px;
+    .pipeline-flow-connector {
         display: flex;
         align-items: center;
-        gap: 6px;
-        z-index: 2;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+        justify-content: center;
+        padding: 0 4px;
+        color: rgba(0, 237, 255, 0.4);
+        font-size: 0.9rem;
+        flex-shrink: 0;
     }
 
-    .dma-footer-specs {
+    .pipeline-footer-specs {
         display: flex;
         justify-content: space-around;
         flex-wrap: wrap;
@@ -665,7 +615,319 @@ include 'includes/header.php';
         border-top: 1px solid rgba(255, 255, 255, 0.06);
         padding-top: 12px;
     }
-    .dma-footer-specs span strong { color: #fff; }
+    .pipeline-footer-specs span strong { color: #fff; }
+
+    /* Live Belt Function Inventory & Matching Explorer */
+    .function-inventory-panel {
+        padding: 24px;
+        margin-bottom: 24px;
+        background: linear-gradient(145deg, rgba(8, 14, 32, 0.95), rgba(16, 24, 48, 0.9));
+        border: 1px solid rgba(0, 237, 255, 0.25);
+    }
+    .inventory-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 16px;
+        border-bottom: 1px solid rgba(0, 237, 255, 0.15);
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+    }
+    .inventory-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .inventory-search-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 260px;
+    }
+    .inventory-search-wrap i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+    .inventory-search-input {
+        width: 100%;
+        background: rgba(6, 11, 30, 0.8);
+        border: 1px solid rgba(0, 237, 255, 0.25);
+        border-radius: 4px;
+        padding: 8px 12px 8px 34px;
+        color: #f8fafc;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .inventory-search-input:focus {
+        border-color: #00EDFF;
+        box-shadow: 0 0 10px rgba(0, 237, 255, 0.25);
+    }
+    .inventory-filter-group {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .inventory-filter-btn {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #94a3b8;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-family: 'JetBrains Mono', monospace;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .inventory-filter-btn:hover {
+        border-color: rgba(0, 237, 255, 0.4);
+        color: #fff;
+    }
+    .inventory-filter-btn.active {
+        background: rgba(0, 237, 255, 0.15);
+        border-color: #00EDFF;
+        color: #00EDFF;
+        font-weight: bold;
+    }
+    .inventory-table-container {
+        overflow-x: auto;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        background: rgba(4, 7, 20, 0.6);
+        max-height: 520px;
+        position: relative;
+    }
+    .inventory-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        text-align: left;
+    }
+    .inventory-table th {
+        background: rgba(10, 18, 42, 0.95);
+        color: #94a3b8;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(0, 237, 255, 0.2);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        white-space: nowrap;
+    }
+    .inventory-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+    }
+    .inventory-table tr:hover td {
+        background: rgba(0, 237, 255, 0.04);
+    }
+    .inv-addr {
+        font-family: 'JetBrains Mono', monospace;
+        color: #00EDFF;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+    .inv-name {
+        font-family: 'JetBrains Mono', monospace;
+        color: #f8fafc;
+        font-weight: 500;
+    }
+    .inv-badge-c {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        background: rgba(35, 209, 96, 0.15);
+        color: #23D160;
+        border: 1px solid rgba(35, 209, 96, 0.3);
+    }
+    .inv-badge-cpp {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        background: rgba(0, 237, 255, 0.15);
+        color: #00EDFF;
+        border: 1px solid rgba(0, 237, 255, 0.3);
+    }
+    .inv-badge-match {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        background: rgba(35, 209, 96, 0.15);
+        color: #23D160;
+        border: 1px solid rgba(35, 209, 96, 0.4);
+        white-space: nowrap;
+    }
+    .inv-inspect-btn {
+        background: rgba(94, 105, 255, 0.15);
+        border: 1px solid rgba(94, 105, 255, 0.4);
+        color: #a5b4fc;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: 'JetBrains Mono', monospace;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .inv-inspect-btn:hover {
+        background: rgba(94, 105, 255, 0.3);
+        color: #fff;
+        border-color: #5E69FF;
+    }
+    .inventory-pagination-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 14px;
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+    .pagination-btn-group {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .page-nav-btn {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #94a3b8;
+        padding: 5px 12px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', monospace;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .page-nav-btn:hover:not(:disabled) {
+        border-color: #00EDFF;
+        color: #fff;
+    }
+    .page-nav-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+
+    /* Function Detail Modal */
+    .fn-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(3, 7, 18, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .fn-modal-card {
+        background: linear-gradient(145deg, #0a0f28, #121938);
+        border: 1px solid rgba(0, 237, 255, 0.4);
+        border-radius: 8px;
+        max-width: 720px;
+        width: 100%;
+        box-shadow: 0 0 40px rgba(0, 237, 255, 0.2);
+        overflow: hidden;
+        animation: modalFadeIn 0.25s ease-out;
+    }
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .fn-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        background: rgba(0, 237, 255, 0.08);
+        border-bottom: 1px solid rgba(0, 237, 255, 0.2);
+    }
+    .fn-modal-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+    .fn-modal-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: color 0.2s;
+    }
+    .fn-modal-close:hover {
+        color: #fff;
+    }
+    .fn-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+    }
+    .fn-meta-box {
+        background: rgba(6, 11, 30, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        padding: 10px;
+    }
+    .fn-meta-box .lbl {
+        font-size: 0.72rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 4px;
+    }
+    .fn-meta-box .val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #f8fafc;
+    }
+    .fn-code-box {
+        background: #040714;
+        border: 1px solid rgba(0, 237, 255, 0.2);
+        border-radius: 4px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        color: #a5b4fc;
+        overflow-x: auto;
+        white-space: pre-wrap;
+    }
+    .fn-desc-box {
+        background: rgba(15, 23, 42, 0.5);
+        border-left: 3px solid #00EDFF;
+        border-radius: 0 4px 4px 0;
+        padding: 12px 16px;
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        line-height: 1.5;
+    }
 
     /* Synaptic Neural Frequency Equalizer in Live Cognitive Stream */
     .console-header-bar {
@@ -866,7 +1128,7 @@ include 'includes/header.php';
         min-width: 0;
     }
 
-    .stream-cluster-strip {
+    .stream-decomp-strip {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -877,10 +1139,10 @@ include 'includes/header.php';
         font-family: 'Share Tech Mono', monospace;
         font-size: 0.8rem;
     }
-    .cluster-mini-item { display: flex; align-items: center; gap: 6px; }
-    .cluster-mini-item .c-lbl { color: #64748b; }
-    .cluster-mini-item .c-val { color: #00EDFF; font-weight: bold; }
-    .cluster-mini-divider { color: rgba(255, 255, 255, 0.15); }
+    .decomp-mini-item { display: flex; align-items: center; gap: 6px; }
+    .decomp-mini-item .c-lbl { color: #64748b; }
+    .decomp-mini-item .c-val { color: #00EDFF; font-weight: bold; }
+    .decomp-mini-divider { color: rgba(255, 255, 255, 0.15); }
 
     .stream-theater-right {
         display: flex;
@@ -1453,12 +1715,12 @@ include 'includes/header.php';
             justify-content: center;
         }
 
-        .dma-bus-visualizer {
+        .decomp-pipeline-flow {
             flex-direction: column;
             gap: 10px;
         }
-        .dma-laser-channel {
-            width: 100%;
+        .pipeline-flow-connector i {
+            transform: rotate(90deg);
         }
 
         .decryption-dashboard .highlight-card {
@@ -2092,10 +2354,10 @@ include 'includes/header.php';
 
 <main class="container" style="margin-top: 90px;">
     <div class="main-header" style="margin-bottom: 1.5rem;">
-        <h1><div class="pulse-ring"></div> Agent Decryption Matrix</h1>
+        <h1><div class="pulse-ring"></div> Client Decompilation Matrix</h1>
         <p style="color: #94a3b8; font-family: 'Exo 2', sans-serif; font-size: 1.1rem; max-width: 850px; margin-top: 10px; line-height: 1.6;">
             <strong>[PIONEER 2 LAB TRANSMISSION]</strong><br>
-            Attention Hunters. Our autonomous analytics network is deployed to reverse-engineer the foundational architecture of the Pioneer project's archives, actively decompiling the <strong>Phantasy Star Online Blue Burst Client / Tethealla 125.13 binary</strong> into clean, idiomatic C++ using Microsoft Visual C++ Toolkit 2003 (<span style="color: #00EDFF;">CL.EXE</span>). What you are witnessing below is a live feed from the central AI cluster as it maps unknown structures, isolates legacy networking protocols, and stabilizes the combat data grid.
+            Attention Hunters. Our autonomous analytics network is deployed to reverse-engineer the foundational architecture of the Pioneer project's archives, actively decompiling the <strong>Phantasy Star Online Blue Burst Client / Tethealla 125.13 binary</strong> into clean, idiomatic C++ using Microsoft Visual C++ Toolkit 2003 (<span style="color: #00EDFF;">CL.EXE</span>). What you are witnessing below is a live telemetry feed from the decompilation testbench as it compiles clean C++ candidates against Microsoft Visual C++ 2003, verifies COFF relocations, and gates byte-level match integrity.
         </p>
     </div>
 
@@ -2147,16 +2409,16 @@ include 'includes/header.php';
         <!-- Live Status Subheader -->
         <div class="agent-status-header" style="display: flex; justify-content: flex-end; gap: 40px; margin-bottom: -10px; flex-wrap: wrap;">
             <div style="text-align: right;">
-                <span style="color: #5E69FF; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; display: block;">AGENT STATUS</span>
-                <span id="m-status" style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: #23D160; text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">Initializing...</span>
+                <span style="color: #5E69FF; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; display: block;">BANKED MATCHES</span>
+                <span id="m-status" style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: #23D160; text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">220 / 2,729 (8.06%)</span>
             </div>
             <div style="text-align: right;">
-                <span style="color: #5E69FF; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; display: block;">AI ENGINE</span>
-                <span id="m-model" style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: #00EDFF; text-shadow: 0 0 10px rgba(0, 237, 255, 0.4);">Detecting...</span>
+                <span style="color: #5E69FF; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; display: block;">IN-FLIGHT REACH</span>
+                <span id="m-model" style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: #00EDFF; text-shadow: 0 0 10px rgba(0, 237, 255, 0.4);">481 Functions (17.6%)</span>
             </div>
             <div style="text-align: right;">
-                <span style="color: #5E69FF; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; display: block;">EST. TIME REMAINING</span>
-                <span id="m-eta" style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: var(--accent-success); text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">Calculating...</span>
+                <span style="color: #5E69FF; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; display: block;">BUILD INTEGRITY</span>
+                <span id="m-eta" style="font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: bold; color: var(--accent-success); text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">MSVC 7.1 (0 Drift)</span>
             </div>
         </div>
 
@@ -2165,7 +2427,7 @@ include 'includes/header.php';
         <div class="glass-panel exec-hero-card tech-corners">
             <div class="hero-top-row">
                 <div class="hero-badge-group">
-                    <span class="pso-status-pill"><span class="pill-dot"></span> LIVE DECOMPILATION CLUSTER</span>
+                    <span class="pso-status-pill"><span class="pill-dot"></span> LIVE DECOMPILATION PIPELINE</span>
                     <span class="pso-version-pill">TARGET: PSOBB v125.13 (PC)</span>
                     <span class="pso-toolchain-pill">TOOLCHAIN: MSVC 2003 (CL.EXE)</span>
                 </div>
@@ -2184,8 +2446,8 @@ include 'includes/header.php';
                     <div class="hero-key-takeaways">
                         <div class="takeaway-card success">
                             <span class="takeaway-lbl">BYTE-EXACT BANKED</span>
-                            <span class="takeaway-val text-glow-green" id="takeaway-pct">7.9%</span>
-                            <span class="takeaway-sub" id="takeaway-solved-sub">215 of 2,729 Live Belt Functions</span>
+                            <span class="takeaway-val text-glow-green" id="takeaway-pct">8.1%</span>
+                            <span class="takeaway-sub" id="takeaway-solved-sub">220 of 2,729 Live Belt Functions</span>
                         </div>
                         <div class="takeaway-card highlight">
                             <span class="takeaway-lbl">PROMOTABLE NEAR</span>
@@ -2208,14 +2470,14 @@ include 'includes/header.php';
                 <div class="hero-progress-ring-card">
                     <div class="circular-progress" id="progress-circle" style="--percentage: 7.9;">
                         <div class="progress-value">
-                            <span id="progress-text">7.9%</span>
+                            <span id="progress-text">8.1%</span>
                             <span class="progress-label">BYTE-MATCHED</span>
                         </div>
                     </div>
                     <div class="hero-progress-breakdown">
                         <div class="breakdown-row">
                             <span style="color: #94a3b8;">Banked Exact:</span>
-                            <span id="hero-banked-fns" style="color: #23D160; font-weight: bold;">215 / 2,729 (7.9%)</span>
+                            <span id="hero-banked-fns" style="color: #23D160; font-weight: bold;">220 / 2,729 (8.1%)</span>
                         </div>
                         <div class="breakdown-row">
                             <span style="color: #94a3b8;">Promotable Near:</span>
@@ -2223,7 +2485,7 @@ include 'includes/header.php';
                         </div>
                         <div class="breakdown-row">
                             <span style="color: #94a3b8;">Belt Remaining:</span>
-                            <span id="hero-remaining-belt-fns" style="color: #FFB020; font-weight: bold;">2,514 Functions</span>
+                            <span id="hero-remaining-belt-fns" style="color: #FFB020; font-weight: bold;">2,509 Functions</span>
                         </div>
                         <div class="breakdown-row" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;">
                             <span style="color: #94a3b8;">Ghidra Symbols:</span>
@@ -2281,14 +2543,14 @@ include 'includes/header.php';
                 <div class="roadmap-card stage-active">
                     <div class="roadmap-card-head">
                         <span class="roadmap-stage-num">PHASE 02</span>
-                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier (7.9%)</span>
+                        <span class="roadmap-stage-tag badge-active"><i class="fas fa-bolt"></i> Active Frontier (8.1%)</span>
                     </div>
                     <h3 class="roadmap-card-title">Byte-Exact C/C++ Matching (MSVC 2003)</h3>
                     <p class="roadmap-card-desc">Authoring clean, compilable C/C++ code that yields bit-identical machine code when compiled with the original compiler (MSVC 7.1 <code>cl.exe 13.10.3077 /MT /O2</code>).</p>
                     <div class="roadmap-card-tasks">
                         <div class="task-item done">
                             <i class="fas fa-check-circle"></i>
-                            <span>215 live belt functions banked and reloc-verified in <code>src/</code></span>
+                            <span>220 live belt functions banked and reloc-verified in <code>src/</code></span>
                         </div>
                         <div class="task-item active-now">
                             <i class="fas fa-arrow-right"></i>
@@ -2296,7 +2558,7 @@ include 'includes/header.php';
                         </div>
                         <div class="task-item remaining">
                             <i class="fas fa-hourglass-half"></i>
-                            <span>2,514 live belt reachable functions remaining to decompile &amp; bank</span>
+                            <span>2,509 live belt reachable functions remaining to decompile &amp; bank</span>
                         </div>
                     </div>
                     <div class="roadmap-mini-meter">
@@ -2414,8 +2676,8 @@ include 'includes/header.php';
                         <!-- 16 blocks -->
                     </div>
                     <div class="mem-section-foot">
-                        <span>2,684 Live Belt • MSVC 7.1</span>
-                        <span id="text-pct" style="color: #00EDFF; font-weight: bold;">6.4% Banked (95.6% Mapped)</span>
+                        <span>2,729 Live Belt • MSVC 7.1</span>
+                        <span id="text-pct" style="color: #00EDFF; font-weight: bold;">8.1% Banked (95.6% Mapped)</span>
                     </div>
                 </div>
 
@@ -2474,9 +2736,9 @@ include 'includes/header.php';
             <div class="metric-master-card">
                 <div class="metric-master-head">
                     <span class="metric-master-title"><i class="fas fa-check-double"></i> Live Belt Banked</span>
-                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">7.9%</span>
+                    <span class="roadmap-stage-tag badge-active" id="s-banked-pct-tag">8.1%</span>
                 </div>
-                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">215</div>
+                <div class="metric-master-val text-glow-green" id="s-banked-fns-display">220</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
                         <span>Live Belt Scope:</span>
@@ -2488,7 +2750,7 @@ include 'includes/header.php';
                     </div>
                     <div class="metric-detail-row">
                         <span>Belt Remaining to Match:</span>
-                        <strong id="s-belt-remaining-display">2,514 fns</strong>
+                        <strong id="s-belt-remaining-display">2,509 fns</strong>
                     </div>
                 </div>
             </div>
@@ -2516,48 +2778,48 @@ include 'includes/header.php';
                 </div>
             </div>
 
-            <!-- Metric 3: AI Swarm Telemetry -->
+            <!-- Metric 3: Code Footprint & Byte Volume -->
             <div class="metric-master-card">
                 <div class="metric-master-head">
-                    <span class="metric-master-title"><i class="fas fa-brain"></i> Autonomous Swarm</span>
-                    <span class="roadmap-stage-tag badge-active">Live</span>
+                    <span class="metric-master-title"><i class="fas fa-layer-group"></i> Code Footprint &amp; Volume</span>
+                    <span class="roadmap-stage-tag badge-done">Verified</span>
                 </div>
-                <div class="metric-master-val text-glow-purple" id="s-tps-display">560.4 t/s</div>
+                <div class="metric-master-val text-glow-purple" id="s-footprint-display">5,211 B</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
-                        <span>Active Model:</span>
-                        <strong id="s-model-display">Qwen 3.8 Flash Distributed</strong>
+                        <span>Live Belt Code Scope:</span>
+                        <strong style="color: #00EDFF;">~573 KB (586,764 B)</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Tokens Processed:</span>
-                        <strong id="s-tokens-display">383,700,597</strong>
+                        <span>Post-Belt CRT / OS:</span>
+                        <strong style="color: #94a3b8;">~4,380 KB (Carved)</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Swarm Loops:</span>
-                        <strong id="s-batch-display">14,274</strong>
+                        <span>Average Function Size:</span>
+                        <strong id="s-avg-fn-size" style="color: #23D160;">24.2 Bytes / fn</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Metric 4: Cluster Interconnect -->
+            <!-- Metric 4: Toolchain Match Gate -->
             <div class="metric-master-card">
                 <div class="metric-master-head">
-                    <span class="metric-master-title"><i class="fas fa-network-wired"></i> Compute Cluster</span>
-                    <span class="roadmap-stage-tag badge-done">80G Link</span>
+                    <span class="metric-master-title"><i class="fas fa-shield-alt"></i> Toolchain Match Gate</span>
+                    <span class="roadmap-stage-tag badge-done">Strict Parity</span>
                 </div>
-                <div class="metric-master-val" style="color: #fff;" id="s-dma-display">368.4 MB/s</div>
+                <div class="metric-master-val text-glow-green" id="s-gate-display">0 DRIFT</div>
                 <div class="metric-details-list">
                     <div class="metric-detail-row">
-                        <span>Hardware:</span>
-                        <strong>Dual AMD Strix Halo</strong>
+                        <span>Target Compiler:</span>
+                        <strong>MSVC 7.1 (cl.exe 13.10)</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>Unified Memory:</span>
-                        <strong style="color: #23D160;">256 GB LPDDR5X</strong>
+                        <span>Compiler Flags:</span>
+                        <strong style="color: #23D160;">/MT /O2 (Release)</strong>
                     </div>
                     <div class="metric-detail-row">
-                        <span>RPC Latency:</span>
-                        <strong style="color: #00EDFF;">0.11 ms</strong>
+                        <span>Relocation Parity:</span>
+                        <strong style="color: #00EDFF;">DIR32 / REL32 (100%)</strong>
                     </div>
                 </div>
             </div>
@@ -2601,20 +2863,28 @@ include 'includes/header.php';
                         <span class="value" id="s-unknown-strings" style="color: #f8fafc;">12,115</span>
                     </div>
                     <div class="glass-panel stat-card">
-                        <span class="label">Tokens Burned</span>
-                        <span class="value" id="s-tokens" style="color: #5E69FF;">383,700,597</span>
+                        <span class="label">Cross-Function Edges</span>
+                        <span class="value" id="s-call-edges" style="color: #5E69FF;">25,839</span>
                     </div>
                     <div class="glass-panel stat-card">
-                        <span class="label">Tokens/sec</span>
-                        <span class="value" id="s-tps" style="color: #23D160;">560.4</span>
+                        <span class="label">Call / Jump Sites</span>
+                        <span class="value" id="s-call-sites" style="color: #00EDFF;">1,475,711</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Relocations (DIR32)</span>
+                        <span class="value" id="s-reloc-dir32" style="color: #23D160;">1,296 words</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Relocations (REL32)</span>
+                        <span class="value" id="s-reloc-rel32" style="color: #FFB020;">128 spans</span>
+                    </div>
+                    <div class="glass-panel stat-card">
+                        <span class="label">Func-Pointer Words</span>
+                        <span class="value" id="s-func-ptr-words" style="color: #f8fafc;">1,661</span>
                     </div>
                     <div class="glass-panel stat-card">
                         <span class="label">Total DB Mods</span>
                         <span class="value" id="s-mods">22,232</span>
-                    </div>
-                    <div class="glass-panel stat-card">
-                        <span class="label">AI Loops</span>
-                        <span class="value" id="s-batch" style="color: #5E69FF;">14,274</span>
                     </div>
                     <div class="glass-panel stat-card">
                         <span class="label">Recompiler Status</span>
@@ -2630,170 +2900,326 @@ include 'includes/header.php';
                     </div>
                     <div class="glass-panel stat-card">
                         <span class="label">Extracted Files</span>
-                        <span class="value" id="s-extracted-files">215</span>
+                        <span class="value" id="s-extracted-files">220</span>
                     </div>
                 </div>
             </div>
         </details>
 
 
-        <!-- Dual Strix Halo Compute Cluster Panel -->
-        <div class="glass-panel cluster-panel tech-corners">
+        <!-- PSOBB MSVC 7.1 Autonomous Matching Testbench & Pipeline -->
+        <div class="glass-panel workbench-panel tech-corners">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid rgba(0, 237, 255, 0.15); padding-bottom: 16px; margin-bottom: 20px;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-                        <h2 style="font-size: 1.4rem; margin: 0; color: #fff; letter-spacing: 2px;">DUAL AMD STRIX HALO COMPUTE CLUSTER</h2>
+                        <h2 style="font-size: 1.4rem; margin: 0; color: #fff; letter-spacing: 2px;">MSVC 7.1 AUTONOMOUS MATCHING TESTBENCH</h2>
                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: rgba(35, 209, 96, 0.15); border: 1px solid rgba(35, 209, 96, 0.4); color: var(--accent-success); text-transform: uppercase;">
                             <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-success); box-shadow: 0 0 8px var(--accent-success); animation: smoothPulse 2s infinite;"></span>
-                            2 Nodes Online
+                            CL.EXE 13.10.3077 PINNED // GATE PASSING
                         </span>
                     </div>
-                    <p style="color: #94a3b8; font-size: 0.95rem; margin: 0;">256 GB Unified LPDDR5X Memory • 80 Gbps Dual USB4 PCIe DMA • Distributed <code>rpc-tensor</code> Split</p>
+                    <p style="color: #94a3b8; font-size: 0.95rem; margin: 0;">Automated C++ Byte-Matching Pipeline • COFF Relocation Validation (DIR32 / REL32) • Whole-Image PE Link Gate</p>
                 </div>
                 <div style="display: flex; gap: 20px; text-align: right;">
                     <div>
-                        <span style="color: #5E69FF; font-size: 0.75rem; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; display: block;">INFERENCE SPEED</span>
-                        <span id="cluster-tps" style="font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; font-weight: bold; color: var(--accent-success); text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">25.9 t/s</span>
+                        <span style="color: #5E69FF; font-size: 0.75rem; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; display: block;">TARGET COMPILER</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: bold; color: var(--accent-success); text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">MSVC 7.1</span>
                     </div>
                     <div>
-                        <span style="color: #5E69FF; font-size: 0.75rem; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; display: block;">TIME TO FIRST TOKEN</span>
-                        <span id="cluster-ttft" style="font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; font-weight: bold; color: #00EDFF; text-shadow: 0 0 10px rgba(0, 237, 255, 0.4);">4.96s</span>
+                        <span style="color: #5E69FF; font-size: 0.75rem; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; display: block;">FLAGS &amp; RUNTIME</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: bold; color: #00EDFF; text-shadow: 0 0 10px rgba(0, 237, 255, 0.4);">/MT /O2</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Cluster Specs Grid -->
+            <!-- Testbench Specs Grid -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
                 <div style="background: rgba(6, 11, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 14px;">
-                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">ACTIVE MODEL</span>
-                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">Qwen 3.8 Flash Next</span>
-                    <span style="color: #5E69FF; font-size: 0.8rem; display: block; margin-top: 2px;">176B Parameters (Q4_K_M)</span>
+                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">LIVE BELT SCOPE</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">2,729 Functions</span>
+                    <span style="color: #5E69FF; font-size: 0.8rem; display: block; margin-top: 2px;">0x00401000 - 0x00482B0C</span>
                 </div>
                 <div style="background: rgba(6, 11, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 14px;">
-                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">CONTEXT SCOPE</span>
-                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">262,144 Tokens</span>
-                    <span style="color: var(--accent-success); font-size: 0.8rem; display: block; margin-top: 2px;">Full Binary Scope</span>
+                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">VERIFICATION STANDARD</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">1:1 Byte-Exact Match</span>
+                    <span style="color: var(--accent-success); font-size: 0.8rem; display: block; margin-top: 2px;">COFF .obj Disassembly Parity</span>
                 </div>
                 <div style="background: rgba(6, 11, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 14px;">
-                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">DMA INTERCONNECT</span>
-                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">80 Gbps Dual 40G USB4</span>
-                    <span id="cluster-dma-rate" style="color: #00EDFF; font-size: 0.8rem; display: block; margin-top: 2px;">PCIe DMA Stream Active</span>
+                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">RELOCATION PARITY</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">DIR32 &amp; REL32</span>
+                    <span style="color: #00EDFF; font-size: 0.8rem; display: block; margin-top: 2px;">Data Pointers &amp; Call Displacements</span>
                 </div>
                 <div style="background: rgba(6, 11, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 14px;">
-                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">AGGREGATE MEMORY</span>
-                    <span id="cluster-mem-text" style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">107.4 / 256 GB</span>
+                    <span style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">IN-FLIGHT COVERAGE</span>
+                    <span id="workbench-banked-text" style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #fff; font-weight: bold;">481 / 2,729 (17.6%)</span>
                     <div style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; margin-top: 6px; overflow: hidden;">
-                        <div id="cluster-mem-bar" style="width: 42%; height: 100%; background: linear-gradient(90deg, #5E69FF, #00EDFF); border-radius: 3px;"></div>
+                        <div style="width: 17.6%; height: 100%; background: linear-gradient(90deg, #23D160, #00EDFF); border-radius: 3px;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Centerpiece Animated PCIe DMA Laser Data Highway -->
-            <div class="dma-highway-container">
-                <div class="dma-highway-header">
-                    <div class="dma-status-badge">
-                        <span class="dma-pulse-indicator"></span>
-                        <span>80 Gbps DUAL USB4 PCIe DMA BUS ACTIVE</span>
+            <!-- Centerpiece Function Matching Pipeline Visualizer -->
+            <div class="decomp-pipeline-container">
+                <div class="decomp-pipeline-header">
+                    <div class="pipeline-status-badge">
+                        <span class="pipeline-pulse-indicator"></span>
+                        <span>CONTINUOUS FUNCTION MATCHING PIPELINE</span>
                     </div>
-                    <div class="dma-rate-readout">
-                        <span class="dma-rate-val" id="dma-bus-speed">368.4 MB/s</span>
-                        <span class="dma-rate-sub">RPC-TENSOR PIPELINE</span>
-                    </div>
-                </div>
-
-                <div class="dma-bus-visualizer">
-                    <div class="node-endpoint left">
-                        <div class="endpoint-name">bosgame1</div>
-                        <div class="endpoint-role">MASTER (LAYERS 0-47)</div>
-                    </div>
-
-                    <div class="dma-laser-channel">
-                        <div class="laser-track track-forward">
-                            <div class="laser-packet packet-1"></div>
-                            <div class="laser-packet packet-2"></div>
-                            <div class="laser-packet packet-3"></div>
-                        </div>
-                        <div class="laser-center-badge">
-                            <i class="fas fa-bolt"></i> <span>/dev/tbstream0 ⇄ /dev/tbstream1</span>
-                        </div>
-                        <div class="laser-track track-reverse">
-                            <div class="laser-packet packet-rev-1"></div>
-                            <div class="laser-packet packet-rev-2"></div>
-                        </div>
-                    </div>
-
-                    <div class="node-endpoint right">
-                        <div class="endpoint-name">bosgame2</div>
-                        <div class="endpoint-role">WORKER (LAYERS 48-95)</div>
+                    <div class="pipeline-rate-readout">
+                        <span class="pipeline-rate-val">220 BANKED</span>
+                        <span class="pipeline-rate-sub" id="workbench-near-text">+266 NEAR DRAFTS</span>
                     </div>
                 </div>
 
-                <div class="dma-footer-specs">
-                    <span><i class="fas fa-wave-square"></i> RPC Latency: <strong>0.11 ms</strong></span>
-                    <span><i class="fas fa-memory"></i> Unified LPDDR5X: <strong>256 GB</strong></span>
-                    <span><i class="fas fa-network-wired"></i> Interconnect: <strong>80 Gbps Full Duplex</strong></span>
-                    <span><i class="fas fa-microchip"></i> Partition: <strong>48 / 48 Layer Split</strong></span>
+                <div class="decomp-pipeline-flow">
+                    <div class="pipeline-stage-node">
+                        <div class="stage-step-num">01</div>
+                        <div class="stage-node-icon"><i class="fas fa-search"></i></div>
+                        <div class="stage-node-title">GHIDRA RECON</div>
+                        <div class="stage-node-desc">PE VA Disassembly &amp; Reachability</div>
+                    </div>
+
+                    <div class="pipeline-flow-connector">
+                        <i class="fas fa-chevron-right flow-arrow"></i>
+                    </div>
+
+                    <div class="pipeline-stage-node">
+                        <div class="stage-step-num">02</div>
+                        <div class="stage-node-icon"><i class="fas fa-code"></i></div>
+                        <div class="stage-node-title">CLEAN C++ SOURCE</div>
+                        <div class="stage-node-desc">Idiomatic Types &amp; SEH Blocks</div>
+                    </div>
+
+                    <div class="pipeline-flow-connector">
+                        <i class="fas fa-chevron-right flow-arrow"></i>
+                    </div>
+
+                    <div class="pipeline-stage-node active-stage">
+                        <div class="stage-step-num">03</div>
+                        <div class="stage-node-icon"><i class="fas fa-cogs"></i></div>
+                        <div class="stage-node-title">MSVC 7.1 COMPILER</div>
+                        <div class="stage-node-desc">cl.exe 13.10.3077 /MT /O2</div>
+                    </div>
+
+                    <div class="pipeline-flow-connector">
+                        <i class="fas fa-chevron-right flow-arrow"></i>
+                    </div>
+
+                    <div class="pipeline-stage-node">
+                        <div class="stage-step-num">04</div>
+                        <div class="stage-node-icon"><i class="fas fa-microchip"></i></div>
+                        <div class="stage-node-title">COFF VERIFICATION</div>
+                        <div class="stage-node-desc">DIR32 / REL32 Parity Engine</div>
+                    </div>
+
+                    <div class="pipeline-flow-connector">
+                        <i class="fas fa-chevron-right flow-arrow"></i>
+                    </div>
+
+                    <div class="pipeline-stage-node success-stage">
+                        <div class="stage-step-num">05</div>
+                        <div class="stage-node-icon"><i class="fas fa-check-double"></i></div>
+                        <div class="stage-node-title">IMAGE BUILD GATE</div>
+                        <div class="stage-node-desc">Banked to src/ (0 Byte Drift)</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-footer-specs">
+                    <span><i class="fas fa-file-code"></i> Target PE: <strong>PsoBB.exe (v125.13)</strong></span>
+                    <span><i class="fas fa-layer-group"></i> Section: <strong>.text (sec0, raw 0x400)</strong></span>
+                    <span><i class="fas fa-link"></i> Relocations: <strong>DIR32 &amp; REL32 Validated</strong></span>
+                    <span><i class="fas fa-shield-alt"></i> Gate Policy: <strong>Zero-Tolerance Byte Drift</strong></span>
                 </div>
             </div>
 
-            <!-- Nodes Sub-Grid -->
+            <!-- Deep Dive Technical Cards -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 15px;">
-                <!-- Node 1 -->
+                <!-- Toolchain Spec Card -->
                 <div style="background: rgba(6, 11, 30, 0.8); border: 1px solid rgba(0, 237, 255, 0.2); border-radius: 6px; padding: 18px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding-bottom: 8px;">
-                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #00EDFF; font-size: 1rem;">NODE 1: bosgame1</span>
-                        <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: rgba(0, 237, 255, 0.15); color: #00EDFF; font-weight: bold;">MASTER LEADER</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #00EDFF; font-size: 1rem;"><i class="fas fa-toolbox" style="margin-right: 6px;"></i> PINNED MSVC 7.1 TOOLCHAIN</span>
+                        <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: rgba(0, 237, 255, 0.15); color: #00EDFF; font-weight: bold;">VERIFIED</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem;">
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Compute:</span>
-                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">AMD Ryzen AI Max+ 395 (32T)</span>
+                            <span style="color: #94a3b8;">Compiler Binary:</span>
+                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">CL.EXE (v13.10.3077)</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Graphics:</span>
-                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">AMD Radeon 8060S (49.6 GB VRAM)</span>
+                            <span style="color: #94a3b8;">Codegen Passes:</span>
+                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">C1.DLL / C1XX.DLL / C2.DLL</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Unified Memory:</span>
-                            <span id="n1-mem" style="color: var(--accent-success); font-family: 'JetBrains Mono', monospace;">53.7 / 128 GB</span>
+                            <span style="color: #94a3b8;">Runtime Library:</span>
+                            <span style="color: var(--accent-success); font-family: 'JetBrains Mono', monospace;">/MT (Static Multithreaded)</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Thermals / Power:</span>
-                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;"><span id="n1-temp">53°C</span> • <span id="n1-watts">29.3W</span></span>
+                            <span style="color: #94a3b8;">Optimizations:</span>
+                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">/O2 (Fast Code, Inlining, FPO)</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">CPU / GPU Load:</span>
-                            <span style="color: #00EDFF; font-family: 'JetBrains Mono', monospace;"><span id="n1-cpu-load">0.5%</span> CPU • <span id="n1-gpu-busy">0%</span> GPU</span>
+                            <span style="color: #94a3b8;">Target Architecture:</span>
+                            <span style="color: #00EDFF; font-family: 'JetBrains Mono', monospace;">x86 IA-32 / Win32 PE</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Node 2 -->
+                <!-- Verification Spec Card -->
                 <div style="background: rgba(6, 11, 30, 0.8); border: 1px solid rgba(94, 105, 255, 0.2); border-radius: 6px; padding: 18px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding-bottom: 8px;">
-                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #5E69FF; font-size: 1rem;">NODE 2: bosgame2</span>
-                        <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: rgba(94, 105, 255, 0.15); color: #5E69FF; font-weight: bold;">RPC WORKER</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #5E69FF; font-size: 1rem;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> PE COFF VERIFICATION CRITERIA</span>
+                        <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: rgba(94, 105, 255, 0.15); color: #5E69FF; font-weight: bold;">STRICT GATE</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem;">
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Compute:</span>
-                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">AMD Ryzen AI Max+ 395 (32T)</span>
+                            <span style="color: #94a3b8;">Data Relocations:</span>
+                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">DIR32 (0x06) Absolute VA</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Graphics:</span>
-                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">AMD Radeon 8060S (49.6 GB VRAM)</span>
+                            <span style="color: #94a3b8;">Call Displacements:</span>
+                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">REL32 (0x14) PC-Relative</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Unified Memory:</span>
-                            <span id="n2-mem" style="color: var(--accent-success); font-family: 'JetBrains Mono', monospace;">53.7 / 128 GB</span>
+                            <span style="color: #94a3b8;">Floating Point:</span>
+                            <span style="color: var(--accent-success); font-family: 'JetBrains Mono', monospace;">x87 FPU Precision Parity</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">Thermals / Power:</span>
-                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;"><span id="n2-temp">53°C</span> • <span id="n2-watts">29.3W</span></span>
+                            <span style="color: #94a3b8;">Exception Model:</span>
+                            <span style="color: #fff; font-family: 'JetBrains Mono', monospace;">Win32 FS:[0] SEH Handlers</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8;">CPU / GPU Load:</span>
-                            <span style="color: #5E69FF; font-family: 'JetBrains Mono', monospace;"><span id="n2-cpu-load">3.8%</span> CPU • <span id="n2-gpu-busy">0%</span> GPU</span>
+                            <span style="color: #94a3b8;">Match Tolerance:</span>
+                            <span style="color: #5E69FF; font-family: 'JetBrains Mono', monospace;">0 Byte Drift on Banked Units</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Belt Function Inventory & Matching Explorer -->
+        <div class="glass-panel tech-corners function-inventory-panel" id="function-inventory-panel">
+            <div class="inventory-header-row">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                        <h2 style="font-size: 1.35rem; margin: 0; color: #fff; letter-spacing: 1.5px;">
+                            <i class="fas fa-database" style="color: #00EDFF; margin-right: 8px;"></i>LIVE BELT FUNCTION INVENTORY
+                        </h2>
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: rgba(35, 209, 96, 0.15); border: 1px solid rgba(35, 209, 96, 0.4); color: var(--accent-success); text-transform: uppercase;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-success); box-shadow: 0 0 8px var(--accent-success);"></span>
+                            <span id="inv-count-pill">220 BANKED MATCHES</span>
+                        </span>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">
+                        Interactive registry of 1:1 byte-matched C / C++ functions in the game belt (<code>0x00401000..0x00482B0C</code>). Filter by address, symbol name, or reverse-engineering description.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 15px; text-align: right;">
+                    <div>
+                        <span style="color: #5E69FF; font-size: 0.72rem; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; display: block;">TOTAL CODE BYTES</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: bold; color: #23D160; text-shadow: 0 0 10px rgba(35, 209, 96, 0.4);">5,211 B</span>
+                    </div>
+                    <div>
+                        <span style="color: #5E69FF; font-size: 0.72rem; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; display: block;">AVG FUNCTION</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: bold; color: #00EDFF; text-shadow: 0 0 10px rgba(0, 237, 255, 0.4);">24.2 Bytes</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="inventory-controls">
+                <div class="inventory-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="inv-search-input" class="inventory-search-input" placeholder="Search address (0x0040...), symbol, or RE description..." oninput="handleInventorySearch()">
+                </div>
+                <div class="inventory-filter-group">
+                    <button class="inventory-filter-btn active" data-filter="all" onclick="setInventoryFilter('all')">ALL (220)</button>
+                    <button class="inventory-filter-btn" data-filter="c" onclick="setInventoryFilter('c')">C SOURCE (194)</button>
+                    <button class="inventory-filter-btn" data-filter="cpp" onclick="setInventoryFilter('cpp')">C++ SOURCE (26)</button>
+                </div>
+                <div style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #94a3b8;">
+                    <span id="inv-filtered-count">Showing 220 functions</span>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="inventory-table-container">
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>VIRTUAL ADDR</th>
+                            <th>GHIDRA SYMBOL / FUNCTION</th>
+                            <th>SOURCE FILE</th>
+                            <th>SIZE</th>
+                            <th>FLAGS</th>
+                            <th>MATCH STATUS</th>
+                            <th style="text-align: right;">INSPECT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 30px; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">
+                                <i class="fas fa-circle-notch fa-spin" style="margin-right: 8px; color: #00EDFF;"></i> Loading live function inventory...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div class="inventory-pagination-row">
+                <div id="inv-page-info">Showing 1 to 15 of 220 functions</div>
+                <div class="pagination-btn-group">
+                    <button id="inv-prev-btn" class="page-nav-btn" onclick="prevInventoryPage()"><i class="fas fa-chevron-left"></i> Prev</button>
+                    <span id="inv-page-display" style="font-family: 'JetBrains Mono', monospace; padding: 0 8px; color: #f8fafc;">Page 1 / 15</span>
+                    <button id="inv-next-btn" class="page-nav-btn" onclick="nextInventoryPage()">Next <i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Function Inspection Modal -->
+        <div id="fn-modal" class="fn-modal-overlay" style="display: none;" onclick="closeFnModal(event)">
+            <div class="fn-modal-card" onclick="event.stopPropagation()">
+                <div class="fn-modal-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #00EDFF; font-size: 1.1rem;" id="fn-modal-addr">0x00401000</span>
+                        <span class="inv-badge-match" id="fn-modal-status">100% Byte-Matched</span>
+                    </div>
+                    <button class="fn-modal-close" onclick="closeFnModal()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="fn-modal-body">
+                    <div>
+                        <span style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 2px;">RECONSTRUCTED SYMBOL</span>
+                        <h3 style="margin: 0; color: #fff; font-family: 'JetBrains Mono', monospace; word-break: break-all;" id="fn-modal-name">InitFloatConstants_00a38230</h3>
+                    </div>
+
+                    <div class="fn-meta-grid">
+                        <div class="fn-meta-box">
+                            <span class="lbl">SOURCE FILE</span>
+                            <span class="val" id="fn-modal-file" style="color: #23D160;">FUN_00401000.c</span>
+                        </div>
+                        <div class="fn-meta-box">
+                            <span class="lbl">SIZE (BYTES)</span>
+                            <span class="val" id="fn-modal-size" style="color: #00EDFF;">32 Bytes (0x20)</span>
+                        </div>
+                        <div class="fn-meta-box">
+                            <span class="lbl">COMPILER FLAGS</span>
+                            <span class="val" id="fn-modal-flags" style="color: #FFB020;">/MT /O2</span>
+                        </div>
+                        <div class="fn-meta-box">
+                            <span class="lbl">VERDICT / PROVENANCE</span>
+                            <span class="val" id="fn-modal-verdict" style="color: #a5b4fc;">reject-tethealla</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px;">PROTOTYPE</span>
+                        <pre class="fn-code-box" id="fn-modal-proto">void FUN_00401000(void)</pre>
+                    </div>
+
+                    <div>
+                        <span style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px;">REVERSE ENGINEERING NOTES</span>
+                        <div class="fn-desc-box" id="fn-modal-desc">
+                            Writes the IEEE-754 trio 1.0f (0x3f800000), 8.0f (0x41000000), 1.5f (0x3fc00000) into G_00a38230 / G_00a38234 / G_00a38238.
                         </div>
                     </div>
                 </div>
@@ -2833,25 +3259,30 @@ include 'includes/header.php';
                 </div>
 
                 <div class="stream-theater-center">
-                    <div class="stream-cluster-strip">
-                        <div class="cluster-mini-item">
-                            <span class="c-lbl">CLUSTER TPS:</span>
-                            <span class="c-val" id="stream-hud-tps">--</span>
+                    <div class="stream-decomp-strip">
+                        <div class="decomp-mini-item">
+                            <span class="c-lbl">BANKED:</span>
+                            <span class="c-val" id="stream-hud-banked" style="color: #23D160;">220 / 2,729</span>
                         </div>
-                        <div class="cluster-mini-divider">•</div>
-                        <div class="cluster-mini-item">
-                            <span class="c-lbl">TTFT:</span>
-                            <span class="c-val" id="stream-hud-ttft">--</span>
+                        <div class="decomp-mini-divider">•</div>
+                        <div class="decomp-mini-item">
+                            <span class="c-lbl">RATIO:</span>
+                            <span class="c-val" id="stream-hud-ratio">8.06%</span>
                         </div>
-                        <div class="cluster-mini-divider">•</div>
-                        <div class="cluster-mini-item">
-                            <span class="c-lbl">USB4 DMA:</span>
-                            <span class="c-val" id="stream-hud-dma" style="color: #23D160;">80G LINK</span>
+                        <div class="decomp-mini-divider">•</div>
+                        <div class="decomp-mini-item">
+                            <span class="c-lbl">NEAR DRAFTS:</span>
+                            <span class="c-val" id="stream-hud-near" style="color: #00EDFF;">+266 fns</span>
                         </div>
-                        <div class="cluster-mini-divider">•</div>
-                        <div class="cluster-mini-item">
-                            <span class="c-lbl">STRIX HALO VRAM:</span>
-                            <span class="c-val" id="stream-hud-mem">--</span>
+                        <div class="decomp-mini-divider">•</div>
+                        <div class="decomp-mini-item">
+                            <span class="c-lbl">BUILD GATE:</span>
+                            <span class="c-val" id="stream-hud-gate" style="color: #23D160;">PASSING</span>
+                        </div>
+                        <div class="decomp-mini-divider">•</div>
+                        <div class="decomp-mini-item">
+                            <span class="c-lbl">TOOLCHAIN:</span>
+                            <span class="c-val" style="color: #FFB020;">MSVC 7.1</span>
                         </div>
                     </div>
                 </div>
