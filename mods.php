@@ -276,16 +276,16 @@ async function fetchMods() {
                             // Update the average text
                             container.querySelector('.rating-text').textContent = `${data.average.toFixed(1)} (${data.count})`;
                         } else {
-                            alert(data.error || 'Failed to rate mod');
+                            alert(data.error || '<?= addslashes(__('Failed to rate mod')) ?>');
                         }
                     } catch(ex) {
-                        alert('Connection error while rating mod');
+                        alert('<?= addslashes(__('Connection error while rating mod')) ?>');
                     }
                 });
             });
         }
     } catch (e) {
-        document.getElementById('mods-list').innerHTML = '<p style="color:#ff4444;">Failed to load mods.</p>';
+        document.getElementById('mods-list').innerHTML = '<p style="color:#ff4444;"><?= addslashes(__('Failed to load mods.')) ?></p>';
     }
 }
 

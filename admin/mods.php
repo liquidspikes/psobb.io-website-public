@@ -116,7 +116,7 @@ include '../includes/header.php';
                                 <?php if ($m['status'] !== 'approved'): ?>
                                     <button type="submit" name="action" value="approve" class="dl-btn" style="background: rgba(0,200,81,0.2); border-color: #00C851; color: #00C851; padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;"><i class="fas fa-check"></i> Approve</button>
                                 <?php endif; ?>
-                                <button type="submit" name="action" value="reject" class="dl-btn" style="background: rgba(255,68,68,0.2); border-color: #ff4444; color: #ff4444; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Are you sure you want to delete this mod?');"><i class="fas fa-times"></i> Reject/Delete</button>
+                                <button type="submit" name="action" value="reject" class="dl-btn" style="background: rgba(255,68,68,0.2); border-color: #ff4444; color: #ff4444; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('<?= addslashes(__('Are you sure you want to delete this mod?')) ?>');"><i class="fas fa-times"></i> <?= __('Reject/Delete') ?></button>
                             </form>
                         </td>
                     </tr>

@@ -280,14 +280,14 @@ async function createToken() {
 }
 
 async function revokeToken(id) {
-    if (!confirm('Revoke this token? It will stop working immediately.')) return;
+    if (!confirm('<?= addslashes(__('Revoke this token? It will stop working immediately.')) ?>')) return;
     const data = await api('revoke', { id });
     if (data.success) { toast('Token revoked', 'success'); loadTokens(); }
     else toast(data.error ?? 'Failed to revoke', 'error');
 }
 
 async function deleteToken(id) {
-    if (!confirm('Permanently delete this token record? This cannot be undone.')) return;
+    if (!confirm('<?= addslashes(__('Permanently delete this token record? This cannot be undone.')) ?>')) return;
     const data = await api('delete', { id });
     if (data.success) { toast('Token deleted', 'success'); loadTokens(); }
     else toast(data.error ?? 'Failed to delete', 'error');

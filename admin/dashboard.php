@@ -406,19 +406,20 @@ async function refreshPlayerList() {
 
 async function kickUser(id, name) {
     if (!id) {
-        alert("Cannot determine User ID for " + name);
+        alert('<?= addslashes(__('Cannot determine User ID for ')) ?>' + name);
         return;
     }
-    if(!confirm(`Kick ${name} (ID: ${id})?`)) return;
+    if(!confirm('<?= addslashes(__('Kick ')) ?>' + name + ' (ID: ' + id + ')?')) return;
     await execCommand(`kick ${id}`);
 }
 
 async function deleteAccount(id, name) {
     if (!id && !name) {
-        alert("Cannot determine account info to delete.");
+        alert('<?= addslashes(__('Cannot determine account info to delete.')) ?>');
         return;
     }
-    const confirmMsg = `WARNING: Are you sure you want to permanently delete the account "${name}" (ID: ${id})?\n\nThis will completely delete the account and all of its characters from both the game server and the website database. This action is IRREVERSIBLE.`;
+    const template = '<?= addslashes(__('WARNING: Are you sure you want to permanently delete the account "%s" (ID: %s)? This will completely delete the account and all of its characters from both the game server and the website database. This action is IRREVERSIBLE.')) ?>';
+    const confirmMsg = template.replace('%s', name).replace('%s', id);
     if (!confirm(confirmMsg)) return;
 
     try {
@@ -430,13 +431,13 @@ async function deleteAccount(id, name) {
         });
         const data = await res.json();
         if (data.success) {
-            alert(data.message || "Account deleted successfully.");
+            alert(data.message || '<?= addslashes(__('Account deleted successfully.')) ?>');
             refreshAccountsList();
         } else {
-            alert(data.error || "Failed to delete account.");
+            alert(data.error || '<?= addslashes(__('Failed to delete account.')) ?>');
         }
     } catch (err) {
-        alert("Connection error occurred while attempting deletion.");
+        alert('<?= addslashes(__('Connection error occurred while attempting deletion.')) ?>');
     }
 }
 

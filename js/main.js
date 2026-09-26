@@ -6,7 +6,11 @@
  * - Session Management (Login, Logout, Dashboard State)
  * - Server Telemetry Fetching (Player counts, Active Games)
  * - DOM manipulation and layout animation (Intersection Observers)
- * - CSRF Header Injection for secure API interaction */
+ */
+
+function _t(str) {
+    return (typeof window.__ === 'function') ? window.__(str) : str;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Detect PWA Standalone Mode
@@ -194,17 +198,17 @@ async function handleLogin(e) {
                     if (img) img.src = 'api/captcha.php?' + Math.random();
                 }
             }
-            throw new Error(data.error || 'Login failed');
+            throw new Error(data.error || _t('Login failed'));
         }
     } catch (error) {
         if (errorEl) {
-            errorEl.textContent = error.message;
+            errorEl.textContent = _t(error.message);
             errorEl.style.display = 'block';
         } else {
-            alert(error.message);
+            alert(_t(error.message));
         }
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Login';
+        submitBtn.textContent = _t('Login');
     }
 }
 
@@ -233,7 +237,7 @@ function showDashboard(user) {
         // Handle Discord Redirect Flags
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('error') === 'session_expired') {
-            alert("Security Error: Your PHP Session was lost during transit. Please log out and explicitly log back in to refresh your Secure Session token.");
+            alert(_t("Security Error: Your PHP Session was lost during transit. Please log out and explicitly log back in to refresh your Secure Session token."));
             window.history.replaceState({}, document.title, window.location.pathname);
         } else if (urlParams.get('discord_linked') === '1') {
             user.discord_id = 'linked';
@@ -1246,7 +1250,7 @@ window.confirmDelete = async function () {
     const btn = document.getElementById('btn-confirm-delete');
 
     if (!password) {
-        errorEl.textContent = "Please enter your password.";
+        errorEl.textContent = _t("Please enter your password.");
         errorEl.style.display = 'block';
         return;
     }
@@ -1265,14 +1269,14 @@ window.confirmDelete = async function () {
     }
 
     if (!username) {
-        errorEl.textContent = "Could not determine username. Please re-login.";
+        errorEl.textContent = _t("Could not determine username. Please re-login.");
         errorEl.style.display = 'block';
         return;
     }
 
     // Attempt deletion
     btn.disabled = true;
-    btn.textContent = "Deleting...";
+    btn.textContent = _t("Deleting...");
 
     try {
         const response = await fetch('/api/delete_account.php', {
@@ -1288,19 +1292,19 @@ window.confirmDelete = async function () {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            alert("Account deleted successfully.");
+            alert(_t("Account deleted successfully."));
             logout();
         } else {
-            errorEl.textContent = data.error || "Deletion failed.";
+            errorEl.textContent = data.error || _t("Deletion failed.");
             errorEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = "Confirm Delete";
+            btn.textContent = _t("Confirm Delete");
         }
     } catch (e) {
-        errorEl.textContent = "Connection error.";
+        errorEl.textContent = _t("Connection error.");
         errorEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = "Confirm Delete";
+        btn.textContent = _t("Confirm Delete");
     }
 };
 
@@ -1520,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Trigger App Installation
 window.installPortalApp = async function () {
     if (!window.deferredPrompt) {
-        alert('The installation prompt is not ready. If you are using an iOS device, please use "Add to Home Screen" from Safari\'s share menu.');
+        alert(_t('The installation prompt is not ready. If you are using an iOS device, please use "Add to Home Screen" from Safari\'s share menu.'));
         return;
     }
     window.deferredPrompt.prompt();

@@ -11,6 +11,8 @@
 (function() {
     'use strict';
 
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
+
     // Shared utilities
     function getCSRFToken() {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -192,7 +194,7 @@
 
     // Abandon a bounty from the portal
     window.portalAbandonBounty = async function(pmId, btnEl) {
-        if (!confirm('Abandon this bounty? You can accept it again later from the Guild Board.')) return;
+        if (!confirm(_t('Abandon this bounty? You can accept it again later from the Guild Board.'))) return;
         
         btnEl.disabled = true;
         btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -209,12 +211,12 @@
             if (response.ok && data.success) {
                 window.portalLoadBounties();
             } else {
-                alert(data.error || 'Failed to abandon bounty.');
+                alert(data.error || _t('Failed to abandon bounty.'));
                 btnEl.disabled = false;
                 btnEl.innerHTML = '<i class="fas fa-times"></i>';
             }
         } catch (e) {
-            alert('Connection error: ' + e.message);
+            alert(_t('Connection error: ') + e.message);
             btnEl.disabled = false;
             btnEl.innerHTML = '<i class="fas fa-times"></i>';
         }
@@ -503,7 +505,7 @@
 
     // Delete LFG post
     window.portalLfgDelete = async function(id) {
-        if (!confirm('Close your LFG listing?')) return;
+        if (!confirm(_t('Close your LFG listing?'))) return;
         try {
             const response = await fetch('/api/lfg_requests.php', {
                 method: 'DELETE',
@@ -519,7 +521,7 @@
     // Join game warp
     window.portalLfgJoin = async function(lobbyId) {
         if (!lfgActiveChar) return;
-        if (!confirm('Warp to this game? Your client will transition immediately.')) return;
+        if (!confirm(_t('Warp to this game? Your client will transition immediately.'))) return;
         try {
             const response = await fetch('/api/lfg_join.php', {
                 method: 'POST',
@@ -544,10 +546,10 @@
                     alertEl.style.background = 'rgba(255,68,68,0.1)';
                     alertEl.style.border = '1px solid rgba(255,68,68,0.3)';
                     alertEl.style.color = '#ff4444';
-                    alertEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${escapeHtml(data.error || 'Warp failed.')}`;
+                    alertEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${escapeHtml(data.error || _t('Warp failed.'))}`;
                 }
             }
-        } catch (e) { alert('Warp error: ' + e.message); }
+        } catch (e) { alert(_t('Warp error: ') + e.message); }
     };
 
     // =========================================================================

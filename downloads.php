@@ -59,7 +59,7 @@ include 'includes/header.php';
                 <strong style="display:block; margin-bottom:5px; color:#4fc3f7;"><?= __('Steam Deck (Desktop Mode):') ?></strong>
                 <code
                     style="display:block; background:#222; padding:5px; font-size:0.85em; user-select:all; cursor:pointer;"
-                    onclick="navigator.clipboard.writeText(this.innerText); alert('Copied to clipboard!');">curl -sL https://psobb.io/install-deck.sh | bash</code>
+                    onclick="navigator.clipboard.writeText(this.innerText); alert('<?= addslashes(__('Copied to clipboard!')) ?>');">curl -sL https://psobb.io/install-deck.sh | bash</code>
                 <small style="display:block; margin-top:5px; color:#aaa;"><?= __('(Click command to copy)') ?></small>
             </div>
             <small><?= __('Ubuntu 20.04+ or SteamOS') ?></small>

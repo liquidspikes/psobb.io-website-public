@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Delete LFG post action
      */
     window.deleteLfgPost = async function(id) {
-        if (!confirm('Are you sure you want to close and remove your LFG listing?')) return;
+        if (!confirm('<?= addslashes(__('Are you sure you want to close and remove your LFG listing?')) ?>')) return;
 
         try {
             const response = await fetch('/api/lfg_requests.php', {
@@ -613,10 +613,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 showAlert(data.message, 'success');
                 pollLfgTerminal();
             } else {
-                showAlert(data.error || 'Failed to remove listing.', 'error');
+                showAlert(data.error || '<?= addslashes(__('Failed to remove listing.')) ?>', 'error');
             }
         } catch (e) {
-            showAlert('Connection error: ' + e.message, 'error');
+            showAlert('<?= addslashes(__('Connection error: ')) ?>' + e.message, 'error');
         }
     }
 
@@ -625,11 +625,11 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     window.joinActiveGame = async function(lobbyId) {
         if (!myActiveChar) {
-            showAlert('Warp failed: You must be online in-game to teleport.', 'error');
+            showAlert('<?= addslashes(__('Warp failed: You must be online in-game to teleport.')) ?>', 'error');
             return;
         }
 
-        if (!confirm('Initiate Browser-to-Game warp? Your game client will instantly transition to this party!')) return;
+        if (!confirm('<?= addslashes(__('Initiate Browser-to-Game warp? Your game client will instantly transition to this party!')) ?>')) return;
 
         try {
             const response = await fetch('/api/lfg_join.php', {
@@ -647,10 +647,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok && data.success) {
                 showAlert('🚀 TELEPORT MATRIX ACTIVE! ' + data.message, 'success');
             } else {
-                showAlert('Warp rejected by game gateway: ' + (data.error || 'Unknown server error.'), 'error');
+                showAlert('<?= addslashes(__('Warp rejected by game gateway: ')) ?>' + (data.error || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
             }
         } catch (e) {
-            showAlert('Teleport connection lost: ' + e.message, 'error');
+            showAlert('<?= addslashes(__('Teleport connection lost: ')) ?>' + e.message, 'error');
         }
     }
 
@@ -659,11 +659,11 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     window.leaveCurrentGroup = async function() {
         if (!myActiveChar) {
-            showAlert('Leave failed: Character is offline.', 'error');
+            showAlert('<?= addslashes(__('Leave failed: Character is offline.')) ?>', 'error');
             return;
         }
 
-        if (!confirm('Are you sure you want to leave your active game group? Your character will warp back to a public lobby.')) return;
+        if (!confirm('<?= addslashes(__('Are you sure you want to leave your active game group? Your character will warp back to a public lobby.')) ?>')) return;
 
         try {
             const response = await fetch('/api/lfg_leave.php', {
@@ -682,10 +682,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncCharacterState();
                 pollLfgTerminal();
             } else {
-                showAlert('Leave group rejected: ' + (data.error || 'Unknown server error.'), 'error');
+                showAlert('<?= addslashes(__('Leave group rejected: ')) ?>' + (data.error || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
             }
         } catch (e) {
-            showAlert('Leave group connection lost: ' + e.message, 'error');
+            showAlert('<?= addslashes(__('Leave group connection lost: ')) ?>' + e.message, 'error');
         }
     }
 

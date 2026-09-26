@@ -581,7 +581,7 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                         <form method="POST" style="margin:0;">
                             <input type="hidden" name="action" value="launch_curated_event">
                             <input type="hidden" name="event_index" value="<?php echo $idx; ?>">
-                            <button type="submit" class="dl-btn" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.1); padding:6px; font-size:0.85rem;" onclick="return confirm('Are you sure you want to deactivate the active event and launch <?php echo htmlspecialchars(addslashes($event['title'])); ?>?');">Launch Event</button>
+                            <button type="submit" class="dl-btn" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.1); padding:6px; font-size:0.85rem;" onclick="return confirm('<?php echo htmlspecialchars(addslashes(sprintf(__('Are you sure you want to deactivate the active event and launch %s?'), $event['title']))); ?>');"><?= __('Launch Event') ?></button>
                         </form>
                     </div>
                 <?php endforeach; ?>

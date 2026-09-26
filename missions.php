@@ -743,7 +743,7 @@ if ($account_id) {
                         throw new Error(data.error || '<?= __('Failed to abandon quest.') ?>');
                     }
                 } catch(e) {
-                    alert("Error: " + e.message);
+                    alert('<?= addslashes(__('Error: ')) ?>' + e.message);
                     btnEl.disabled = false;
                     btnEl.textContent = '<?= __('Abandon Quest') ?>';
                 }

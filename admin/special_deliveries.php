@@ -465,7 +465,7 @@ async function create() {
 }
 
 async function revoke(id) {
-    if (!confirm('Revoke this delivery? The player will no longer be able to claim it.')) return;
+    if (!confirm('<?= addslashes(__('Revoke this delivery? The player will no longer be able to claim it.')) ?>')) return;
     const data = await api('revoke', { id });
     if (data.success) { toast('Delivery revoked', 'success'); load(); }
     else toast(data.error ?? 'Failed', 'error');

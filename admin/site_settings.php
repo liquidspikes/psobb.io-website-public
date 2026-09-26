@@ -1090,7 +1090,7 @@ document.getElementById('btn-add-crew').addEventListener('click', () => {
 
 // Reset crew button
 document.getElementById('btn-reset-crew').addEventListener('click', () => {
-    if (confirm('Reset Command Deck crew to standard default template?')) {
+    if (confirm('<?= addslashes(__('Reset Command Deck crew to standard default template?')) ?>')) {
         initialCrew = JSON.parse(JSON.stringify(defaultCrewTemplate));
         renderCrewCards(initialCrew);
     }

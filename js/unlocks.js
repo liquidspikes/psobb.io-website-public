@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .then(data => {
                         if (data.error) {
                             overlay.style.display = 'none';
-                            alert(data.error);
+                            alert(typeof window.__ === 'function' ? window.__(data.error) : data.error);
                         } else {
                             // Show text + fireworks
                             thankYouText.style.animation = 'textDrop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
