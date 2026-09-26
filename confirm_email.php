@@ -3,7 +3,8 @@
  * PSOBB: Confirm Account Recovery Email
  * 
  * Validates the confirmation token sent to the user's email address.
- * Activates and links the email to the user's game account.
+ * Activates and links the email to the user's game account (for legacy accounts
+ * linking for the first time or users changing their email address).
  */
 $page_title = 'Confirm Recovery Email - PSOBB Private Server';
 include 'includes/header.php';
@@ -14,6 +15,7 @@ require_once 'api/db.php';
 $token = preg_replace('/[^a-f0-9]/i', '', trim($_GET['token'] ?? ''));
 
 $status = 'error'; // 'success', 'already_confirmed', 'expired', 'invalid', 'no_token', 'conflict'
+$isEmailChange = false;
 $confirmedEmail = '';
 $targetUsername = '';
 $errorMessage = '';
@@ -67,12 +69,17 @@ if (empty($token)) {
                 $updTok->bindValue(':t', $token, SQLITE3_TEXT);
                 $updTok->execute();
 
-                // 2. Update users table with verified email
-                $uStmt = $db->prepare("SELECT id, language FROM users WHERE account_id = :aid OR username = :u");
+                // 2. Fetch existing user row to check if this was a change vs first-time link
+                $uStmt = $db->prepare("SELECT id, email, language FROM users WHERE account_id = :aid OR username = :u");
                 $uStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
                 $uStmt->bindValue(':u', $username, SQLITE3_TEXT);
                 $userRow = $uStmt->execute()->fetchArray(SQLITE3_ASSOC);
 
+                $oldEmail = strtolower(trim($userRow['email'] ?? ''));
+                $isLegacyOld = empty($oldEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $oldEmail);
+                $isEmailChange = !$isLegacyOld && !empty($oldEmail) && strcasecmp($oldEmail, $newEmail) !== 0;
+
+                // 3. Update users table with verified email
                 if ($userRow) {
                     $updUser = $db->prepare("UPDATE users SET email = :e WHERE id = :id");
                     $updUser->bindValue(':e', $newEmail, SQLITE3_TEXT);
@@ -86,7 +93,7 @@ if (empty($token)) {
                     $insUser->execute();
                 }
 
-                // 3. Update session if user is logged into this account
+                // 4. Update session if user is logged into this account
                 if (!empty($_SESSION['user']) && (int)($_SESSION['user']['account_id'] ?? 0) === $accountId) {
                     $_SESSION['user']['email'] = $newEmail;
                     $_SESSION['user']['has_email'] = true;
@@ -95,16 +102,42 @@ if (empty($token)) {
                     unset($_SESSION['user']['pending_email']);
                 }
 
-                // 4. Send Confirmation Completed Notification
+                // 5. Send Confirmation Notification(s)
                 $lang_pref = $userRow['language'] ?? ($_COOKIE['psobb_lang'] ?? 'en');
-                if ($lang_pref === 'jp') {
-                    $subject = "リカバリー用メールアドレス設定完了 - PSOBB.IO";
-                    $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレス ($newEmail) の確認が完了し、正常に連携されました。\n\n今後はパスワードを忘れた場合でも、以下のパスワード再設定ページから再設定が可能です：\nhttps://psobb.io/forgot_password.php\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\nPSOBB.IO チーム";
+
+                if ($isEmailChange) {
+                    // Send to new email
+                    if ($lang_pref === 'jp') {
+                        $subject = "リカバリー用メールアドレス変更完了 - PSOBB.IO";
+                        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスが $newEmail に正常に変更されました。\n\n今後はパスワードを忘れた場合でも、パスワード再設定ページから再設定が可能です：\nhttps://psobb.io/forgot_password.php\n\n良い狩りを！\nPSOBB.IO チーム";
+                    } else {
+                        $subject = "Recovery Email Updated - PSOBB.IO";
+                        $msg = "Hello $username,\n\nYour recovery email address has been successfully updated to $newEmail for your PSOBB.IO account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\nhttps://psobb.io/forgot_password.php\n\nHappy Hunting,\nPSOBB.IO Team";
+                    }
+                    @send_email($newEmail, $subject, $msg);
+
+                    // Send security notice to old email
+                    if (!empty($oldEmail)) {
+                        if ($lang_pref === 'jp') {
+                            $oldSubject = "セキュリティ通知: リカバリー用メールアドレス変更 - PSOBB.IO";
+                            $oldMsg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスが $newEmail に変更されました。\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\nPSOBB.IO チーム";
+                        } else {
+                            $oldSubject = "Security Notice: Recovery Email Changed - PSOBB.IO";
+                            $oldMsg = "Hello $username,\n\nThe recovery email address for your PSOBB.IO account ($username) has been changed to $newEmail.\n\nIf you did not authorize this change, please contact an administrator immediately.\n\nPSOBB.IO Team";
+                        }
+                        @send_email($oldEmail, $oldSubject, $oldMsg);
+                    }
                 } else {
-                    $subject = "Recovery Email Confirmed - PSOBB.IO";
-                    $msg = "Hello $username,\n\nYour recovery email address ($newEmail) has been successfully verified and linked to your PSOBB.IO account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\nhttps://psobb.io/forgot_password.php\n\nIf you did not make this change, please contact an administrator immediately.\n\nHappy Hunting,\nPSOBB.IO Team";
+                    // First-time link confirmation
+                    if ($lang_pref === 'jp') {
+                        $subject = "リカバリー用メールアドレス設定完了 - PSOBB.IO";
+                        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレス ($newEmail) の確認が完了し、正常に連携されました。\n\n今後はパスワードを忘れた場合でも、パスワード再設定ページから再設定が可能です：\nhttps://psobb.io/forgot_password.php\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\nPSOBB.IO チーム";
+                    } else {
+                        $subject = "Recovery Email Confirmed - PSOBB.IO";
+                        $msg = "Hello $username,\n\nYour recovery email address ($newEmail) has been successfully verified and linked to your PSOBB.IO account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\nhttps://psobb.io/forgot_password.php\n\nIf you did not make this change, please contact an administrator immediately.\n\nHappy Hunting,\nPSOBB.IO Team";
+                    }
+                    @send_email($newEmail, $subject, $msg);
                 }
-                @send_email($newEmail, $subject, $msg);
 
                 $status = 'success';
                 $confirmedEmail = $newEmail;
@@ -126,10 +159,12 @@ if (empty($token)) {
                     <i class="fas fa-check-circle" style="color: #00C851; font-size: 3.5rem; text-shadow: 0 0 20px rgba(0, 200, 81, 0.5);"></i>
                 </div>
                 <h2 style="color: #00C851; text-align: center; margin-top: 0; margin-bottom: 0.75rem; font-family: 'Share Tech Mono', monospace; font-size: 1.5rem;">
-                    <?= __('Recovery Email Confirmed!') ?>
+                    <?= $isEmailChange ? __('Recovery Email Updated!') : __('Recovery Email Confirmed!') ?>
                 </h2>
                 <p style="text-align: center; color: #ccc; line-height: 1.6; margin-bottom: 1.5rem; font-size: 0.95rem;">
-                    <?= __('Your recovery email address has been successfully verified and linked to your account.') ?>
+                    <?= $isEmailChange 
+                        ? __('Your recovery email address has been successfully updated and verified.') 
+                        : __('Your recovery email address has been successfully verified and linked to your account.') ?>
                 </p>
                 <div style="background: rgba(0, 200, 81, 0.08); border: 1px solid rgba(0, 200, 81, 0.25); border-radius: 6px; padding: 14px 18px; margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">

@@ -538,14 +538,21 @@ window.loadAccountEmail = async function () {
             banner.style.display = (isLegacyAcc && !isPendingConf) ? 'block' : 'none';
         }
         if (input) {
-            input.value = email || pending || '';
+            input.value = pending || email || '';
         }
         if (badge) {
             if (isPendingConf) {
-                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
-                badge.style.background = 'rgba(255, 170, 0, 0.2)';
-                badge.style.border = '1px solid #ffaa00';
-                badge.style.color = '#ffaa00';
+                if (email && !isLegacyAcc) {
+                    badge.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Change Pending';
+                    badge.style.background = 'rgba(255, 170, 0, 0.2)';
+                    badge.style.border = '1px solid #ffaa00';
+                    badge.style.color = '#ffaa00';
+                } else {
+                    badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                    badge.style.background = 'rgba(255, 170, 0, 0.2)';
+                    badge.style.border = '1px solid #ffaa00';
+                    badge.style.color = '#ffaa00';
+                }
             } else if (isLegacyAcc || !email) {
                 badge.innerHTML = '<i class="fas fa-exclamation-circle"></i> No Email Linked';
                 badge.style.background = 'rgba(255, 170, 0, 0.2)';
@@ -559,7 +566,11 @@ window.loadAccountEmail = async function () {
             }
         }
         if (isPendingConf && pending && msgEl) {
-            msgEl.textContent = 'Confirmation link sent to ' + pending + '. Check your inbox to activate.';
+            if (email && !isLegacyAcc) {
+                msgEl.textContent = 'Current email: ' + email + ' — Confirmation link sent to: ' + pending + '. Check your inbox to confirm this change.';
+            } else {
+                msgEl.textContent = 'Confirmation link sent to ' + pending + '. Check your inbox to activate.';
+            }
             msgEl.style.color = '#ffaa00';
             msgEl.style.display = 'block';
         }
@@ -629,7 +640,11 @@ window.saveAccountEmail = async function () {
                 msgEl.style.display = 'block';
             }
             if (badge) {
-                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                if (data.is_change) {
+                    badge.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Change Pending';
+                } else {
+                    badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                }
                 badge.style.background = 'rgba(255, 170, 0, 0.2)';
                 badge.style.border = '1px solid #ffaa00';
                 badge.style.color = '#ffaa00';

@@ -2,9 +2,10 @@
 /**
  * PSOBB API: Set / Update Account Recovery Email
  * 
- * Allows an authenticated user to request linking a real recovery email address.
- * Generates a secure confirmation token and sends a confirmation link to the email.
- * The email is only confirmed and linked once the confirmation link is clicked.
+ * Allows an authenticated user to link a recovery email (for legacy in-game accounts)
+ * or change their existing recovery email.
+ * Generates a secure confirmation token and sends a confirmation link to the new email.
+ * The email is only updated and activated once the confirmation link is clicked.
  */
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -79,8 +80,23 @@ try {
     $currStmt->bindValue(':u', $username, SQLITE3_TEXT);
     $userRow = $currStmt->execute()->fetchArray(SQLITE3_ASSOC);
 
-    if ($userRow && strcasecmp(trim($userRow['email'] ?? ''), $email) === 0) {
-        echo json_encode(["success" => false, "error" => "This email address is already linked to your account."]);
+    $currentEmail = strtolower(trim($userRow['email'] ?? ''));
+    $isLegacyCurrent = empty($currentEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $currentEmail);
+    $isChange = !$isLegacyCurrent && !empty($currentEmail);
+
+    if (!$isLegacyCurrent && strcasecmp($currentEmail, $email) === 0) {
+        // If there was a pending unconfirmed request, cancel it
+        $del = $db->prepare("DELETE FROM email_confirmations WHERE account_id = :aid AND confirmed_at IS NULL");
+        $del->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+        $del->execute();
+
+        echo json_encode([
+            "success" => true,
+            "pending" => false,
+            "is_change" => false,
+            "email" => $currentEmail,
+            "message" => "This email address is already active on your account."
+        ]);
         exit;
     }
 
@@ -120,20 +136,36 @@ try {
     $confirmLink = "$protocol://$host/confirm_email.php?token=$token";
 
     $lang_pref = $userRow['language'] ?? ($_COOKIE['psobb_lang'] ?? 'en');
-    if ($lang_pref === 'jp') {
-        $subject = "リカバリー用メールアドレスの確認 - PSOBB.IO";
-        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスとして、このアドレス ($email) を登録するリクエストを受け付けました。\n\n以下のリンクをクリックして、メールアドレスの登録を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。メールアドレスは変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+
+    if ($isChange) {
+        if ($lang_pref === 'jp') {
+            $subject = "登録メールアドレス変更の確認 - PSOBB.IO";
+            $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスを以下のアドレスに変更するリクエストを受け付けました：\n$email\n\n以下のリンクをクリックして、メールアドレスの変更を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。現在の登録メールアドレス ($currentEmail) は変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+        } else {
+            $subject = "Confirm Your PSOBB.IO Email Change";
+            $msg = "Hello $username,\n\nYou requested to change the recovery email for your PSOBB.IO account ($username) from $currentEmail to: $email.\n\nPlease click the link below to confirm this change:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this change, please ignore this email. Your current recovery email ($currentEmail) will remain active.\n\nHappy Hunting,\nPSOBB.IO Team";
+        }
+        $responseMsg = "Confirmation link sent to $email! Please check your inbox and click the link to confirm your email change.";
     } else {
-        $subject = "Confirm Your Recovery Email - PSOBB.IO";
-        $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your PSOBB.IO account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\nPSOBB.IO Team";
+        if ($lang_pref === 'jp') {
+            $subject = "リカバリー用メールアドレスの確認 - PSOBB.IO";
+            $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスとして、このアドレス ($email) を登録するリクエストを受け付けました。\n\n以下のリンクをクリックして、メールアドレスの登録を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。メールアドレスは変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+        } else {
+            $subject = "Confirm Your Recovery Email - PSOBB.IO";
+            $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your PSOBB.IO account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\nPSOBB.IO Team";
+        }
+        $responseMsg = "Confirmation email sent! Please check your inbox and click the confirmation link to finish linking your email.";
     }
+
     @send_email($email, $subject, $msg);
 
     echo json_encode([
         "success" => true,
         "pending" => true,
+        "is_change" => $isChange,
         "email" => $email,
-        "message" => "Confirmation email sent! Please check your inbox and click the confirmation link to finish linking your email."
+        "current_email" => $isChange ? $currentEmail : '',
+        "message" => $responseMsg
     ]);
 } catch (Exception $e) {
     http_response_code(500);
