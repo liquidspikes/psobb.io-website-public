@@ -66,16 +66,133 @@ $SMTP_FROM = $_ENV['SMTP_FROM'] ?? 'noreply@psobb.io';
 $GEMINI_API_KEY = $_ENV['GEMINI_API_KEY'] ?? '';
 $GEMINI_MODEL = $_ENV['GEMINI_MODEL'] ?? 'gemini-3.5-flash';
 
-// Discord Server & Invite Configuration
-// Configurable via environment variables ($DISCORD_SERVER, $DISCORD_INVITE_URL),
-// centralized config/theme.json, or defaults to the community server
-$siteConfigPath = __DIR__ . '/../config/theme.json';
-$siteThemeConfig = file_exists($siteConfigPath) ? json_decode(@file_get_contents($siteConfigPath), true) : [];
-$DISCORD_SERVER     = $_ENV['DISCORD_SERVER'] ?? $_SERVER['DISCORD_SERVER'] ?? (getenv('DISCORD_SERVER') ?: null)
-                      ?? $_ENV['DISCORD_INVITE_URL'] ?? $_SERVER['DISCORD_INVITE_URL'] ?? (getenv('DISCORD_INVITE_URL') ?: null)
-                      ?? $siteThemeConfig['discord_server'] ?? $siteThemeConfig['discord_invite_url'] ?? 'https://discord.gg/28s84HJXha';
+// 2. Persistent Site Configuration (config/site.json & config/theme.json)
+$siteConfigPath = __DIR__ . '/../config/site.json';
+$SITE_CONFIG = file_exists($siteConfigPath) ? json_decode(@file_get_contents($siteConfigPath), true) : [];
+if (!is_array($SITE_CONFIG)) {
+    $SITE_CONFIG = [];
+}
+
+$themeConfigPath = __DIR__ . '/../config/theme.json';
+$siteThemeConfig = file_exists($themeConfigPath) ? json_decode(@file_get_contents($themeConfigPath), true) : [];
+if (!is_array($siteThemeConfig)) {
+    $siteThemeConfig = [];
+}
+
+// Server Identity & Global Branding
+$SERVER_NAME     = $_ENV['SERVER_NAME'] ?? $SITE_CONFIG['server_name'] ?? 'PSOBB.IO';
+$SERVER_ADDRESS  = $_ENV['SERVER_ADDRESS'] ?? $SITE_CONFIG['server_address'] ?? 'psobb.io';
+$SERVER_TAGLINE  = $_ENV['SERVER_TAGLINE'] ?? $SITE_CONFIG['server_tagline'] ?? 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.';
+
+// Rates & Telemetry Defaults
+$EXP_RATE        = $_ENV['EXP_RATE'] ?? $SITE_CONFIG['exp_rate'] ?? '1x';
+$DROP_RATE       = $_ENV['DROP_RATE'] ?? $SITE_CONFIG['drop_rate'] ?? '1x';
+$MESETA_RATE     = $_ENV['MESETA_RATE'] ?? $SITE_CONFIG['meseta_rate'] ?? '1x';
+
+// Discord Server & Community Invite
+$DISCORD_SERVER  = $_ENV['DISCORD_SERVER'] ?? $_SERVER['DISCORD_SERVER'] ?? (getenv('DISCORD_SERVER') ?: null)
+                   ?? $_ENV['DISCORD_INVITE_URL'] ?? $_SERVER['DISCORD_INVITE_URL'] ?? (getenv('DISCORD_INVITE_URL') ?: null)
+                   ?? $SITE_CONFIG['discord_server'] ?? $siteThemeConfig['discord_server'] ?? 'https://discord.gg/28s84HJXha';
 $DISCORD_INVITE_URL = $DISCORD_SERVER;
 $DISCORD_SERVER_ID  = $_ENV['DISCORD_SERVER_ID'] ?? $_SERVER['DISCORD_SERVER_ID'] ?? (getenv('DISCORD_SERVER_ID') ?: null) ?? $siteThemeConfig['discord_server_id'] ?? '';
+
+if (!function_exists('get_site_config')) {
+    /**
+     * Retrieve the persistent site configuration array.
+     */
+    function get_site_config(): array {
+        global $SITE_CONFIG;
+        $cfgPath = __DIR__ . '/../config/site.json';
+        $defaults = [
+            'server_name'          => 'PSOBB.IO',
+            'server_address'       => 'psobb.io',
+            'server_tagline'       => 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.',
+            'exp_rate'             => '1x',
+            'drop_rate'            => '1x',
+            'meseta_rate'          => '1x',
+            'discord_server'       => 'https://discord.gg/28s84HJXha',
+            'enable_registration'  => true,
+            'enable_bounties'      => true,
+            'enable_lfg'           => true,
+            'enable_mods'          => true,
+            'enable_quest_editor'  => true,
+            'enable_discord_oauth' => true,
+            'client_windows_url'   => '/downloads/PSOBBIO-Setup_1.25.13b.exe',
+            'client_mac_url'       => '/downloads/PSOBBIO_125.13.dmg',
+            'client_raw_url'       => '/downloads/PSOBBIO-Linux_1.25.13.zip',
+        ];
+        if (!empty($SITE_CONFIG)) {
+            return array_merge($defaults, $SITE_CONFIG);
+        }
+        if (file_exists($cfgPath)) {
+            $json = json_decode(@file_get_contents($cfgPath), true);
+            if (is_array($json)) {
+                return array_merge($defaults, $json);
+            }
+        }
+        return $defaults;
+    }
+}
+
+if (!function_exists('get_server_name')) {
+    function get_server_name(): string {
+        global $SERVER_NAME;
+        return $SERVER_NAME ?: 'PSOBB.IO';
+    }
+}
+
+if (!function_exists('get_server_address')) {
+    function get_server_address(): string {
+        global $SERVER_ADDRESS;
+        return $SERVER_ADDRESS ?: 'psobb.io';
+    }
+}
+
+if (!function_exists('get_server_tagline')) {
+    function get_server_tagline(): string {
+        global $SERVER_TAGLINE;
+        return $SERVER_TAGLINE ?: 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.';
+    }
+}
+
+if (!function_exists('is_feature_enabled')) {
+    /**
+     * Check if a modular site feature is enabled.
+     * Supports: 'registration', 'bounties', 'lfg', 'mods', 'quest_editor', 'discord_oauth'
+     */
+    function is_feature_enabled(string $feature): bool {
+        $feature = strtolower(trim($feature));
+        $envKey = 'ENABLE_' . strtoupper($feature);
+        if (isset($_ENV[$envKey])) {
+            return filter_var($_ENV[$envKey], FILTER_VALIDATE_BOOLEAN);
+        }
+        $cfg = get_site_config();
+        $cfgKey = 'enable_' . $feature;
+        if (isset($cfg[$cfgKey])) {
+            return (bool)$cfg[$cfgKey];
+        }
+        return true;
+    }
+}
+
+if (!function_exists('get_client_download_url')) {
+    /**
+     * Retrieve the download URL for a client platform ('windows', 'mac', 'raw')
+     */
+    function get_client_download_url(string $platform): string {
+        $cfg = get_site_config();
+        $key = 'client_' . strtolower(trim($platform)) . '_url';
+        if (!empty($cfg[$key])) {
+            return $cfg[$key];
+        }
+        $defaults = [
+            'windows' => '/downloads/PSOBBIO-Setup_1.25.13b.exe',
+            'mac'     => '/downloads/PSOBBIO_125.13.dmg',
+            'raw'     => '/downloads/PSOBBIO-Linux_1.25.13.zip',
+        ];
+        return $defaults[strtolower($platform)] ?? '#';
+    }
+}
 
 if (!function_exists('get_discord_server')) {
     /**

@@ -16,7 +16,7 @@ start_secure_session();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : 'PSOBB Private Server'; ?></title>
+    <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : (htmlspecialchars(get_server_name()) . ' Private Server'); ?></title>
     <meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?? '' ?>">
     <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
     <link rel="manifest" href="/manifest.json">
@@ -43,7 +43,7 @@ start_secure_session();
 <body>
     <div class="scan-lines"></div>
     <header class="animate-fade-in">
-        <a href="/" class="logo-text" style="text-decoration:none;">PSOBB.IO</a>
+        <a href="/" class="logo-text" style="text-decoration:none;"><?= htmlspecialchars(get_server_name()) ?></a>
         <?php if (!empty($_SESSION['user']) && $current_page !== 'login'): ?>
             <a href="/login.php" class="header-portal-btn" style="border: 1px solid #00ffff; color: #00ffff; background: rgba(0, 255, 255, 0.1); padding: 5px 12px; box-shadow: 0 0 5px rgba(0, 255, 255, 0.2); font-family: 'Share Tech Mono', monospace; font-weight: bold; font-size: 0.8rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; margin-left: 15px; transition: all 0.2s;"><i class="fas fa-arrow-left"></i> <?= __('Back to Portal') ?></a>
         <?php endif; ?>
@@ -66,10 +66,14 @@ start_secure_session();
                         <a href="/drops.php"
                             class="<?php echo ($current_page == 'drops') ? 'active' : ''; ?>"><?= __('Drop Chart') ?></a>
 
+                        <?php if (is_feature_enabled('bounties')): ?>
                         <a href="/missions.php" class="<?php echo ($current_page == 'missions') ? 'active' : ''; ?>"
                             style="color: var(--pso-orange);"><?= __('Bounty Board') ?></a>
+                        <?php endif; ?>
+                        <?php if (is_feature_enabled('lfg')): ?>
                         <a href="/lfg.php" class="<?php echo ($current_page == 'lfg') ? 'active' : ''; ?>"
                             style="color: #00ffff;"><?= __('Looking for Group') ?></a>
+                        <?php endif; ?>
                         <a href="/top_hunters.php"
                             class="<?php echo ($current_page == 'top_hunters') ? 'active' : ''; ?>"><?= __('Top Hunters') ?></a>
                         <a href="/stats.php"
@@ -94,10 +98,14 @@ start_secure_session();
                         class="dropbtn <?php echo in_array($current_page, ['mods', 'quest-editor']) ? 'active' : ''; ?>"><?= __('Development') ?>
                         <i class="fas fa-caret-down"></i></a>
                     <div class="dropdown-content">
+                        <?php if (is_feature_enabled('mods')): ?>
                         <a href="/mods.php"
                             class="<?php echo ($current_page == 'mods') ? 'active' : ''; ?>"><?= __('Client Mods') ?></a>
+                        <?php endif; ?>
+                        <?php if (is_feature_enabled('quest_editor')): ?>
                         <a href="/quest-editor"
                             class="<?php echo ($current_page == 'quest-editor') ? 'active' : ''; ?>"><?= __('Quest Editor') ?></a>
+                        <?php endif; ?>
                         <a href="/development.php"
                             class="<?php echo ($current_page == 'development') ? 'active' : ''; ?>"><?= __('Dev Resources') ?></a>
                     </div>
@@ -105,7 +113,7 @@ start_secure_session();
 
                 <li class="dropdown" id="nav-admin-dropdown" style="display: none;">
                     <a href="javascript:void(0)"
-                        class="dropbtn <?php echo in_array($current_page, ['dashboard', 'telemetry', 'mission_manager', 'bot_tokens', 'special_deliveries']) ? 'active' : ''; ?>"
+                        class="dropbtn <?php echo in_array($current_page, ['dashboard', 'telemetry', 'mission_manager', 'bot_tokens', 'special_deliveries', 'site_settings', 'theme_manager']) ? 'active' : ''; ?>"
                         style="color: #ff5555;"><?= __('Admin') ?> <i class="fas fa-caret-down"></i></a>
                     <div class="dropdown-content">
                         <a href="/admin/dashboard.php"
@@ -118,14 +126,18 @@ start_secure_session();
                             class="<?php echo ($current_page == 'special_deliveries') ? 'active' : ''; ?>"><i class="fas fa-gift" style="color:#fb923c;margin-right:.35rem;"></i><?= __('Special Deliveries') ?></a>
                         <a href="/admin/bot_tokens.php"
                             class="<?php echo ($current_page == 'bot_tokens') ? 'active' : ''; ?>"><?= __('Bot Tokens') ?></a>
+                        <a href="/admin/site_settings.php"
+                            class="<?php echo ($current_page == 'site_settings') ? 'active' : ''; ?>"><i class="fas fa-sliders-h" style="color:#00ffff;margin-right:.35rem;"></i><?= __('Site Settings') ?></a>
                         <a href="/admin/theme_manager.php"
                             class="<?php echo ($current_page == 'theme_manager') ? 'active' : ''; ?>"><i class="fas fa-palette" style="color:var(--pso-blue);margin-right:.35rem;"></i><?= __('Theme Manager') ?></a>
                     </div>
                 </li>
 
+                <?php if (is_feature_enabled('registration')): ?>
                 <li><a href="/register.php"
                         class="<?php echo ($current_page == 'register') ? 'signup-nav-btn active' : 'signup-nav-btn'; ?>"><?= __('Sign Up') ?></a>
                 </li>
+                <?php endif; ?>
                 <li><a href="/login.php"
                         class="<?php echo ($current_page == 'login') ? 'login-nav-btn active' : 'login-nav-btn'; ?>"><?= __('Login') ?></a>
                 </li>

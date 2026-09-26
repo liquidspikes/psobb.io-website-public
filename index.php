@@ -16,7 +16,7 @@ include 'includes/header.php';
             <div class="logo-wrapper animate-fade-in delay-1">
                 <img src="img/header_logo.png" alt="PSOBB.io - Phantasy Star Online Blue Burst" class="hero-logo">
             </div>
-            <p class="hero-subtitle animate-fade-in delay-2"><?= __('Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.') ?></p>
+            <p class="hero-subtitle animate-fade-in delay-2"><?= htmlspecialchars(get_server_tagline()) ?></p>
             <div class="cta-group animate-fade-in delay-3">
                 <a href="downloads.php" class="dl-btn"><?= __('Play Now') ?></a>
                 <a href="<?= htmlspecialchars(get_discord_server()) ?>" target="_blank" class="discord-btn"><?= __('Join Discord') ?></a>
@@ -71,10 +71,10 @@ include 'includes/header.php';
 
                     <h4><?= __('Rates') ?></h4>
                     <div class="rate-row">
-                        <span><?= __('EXP:') ?></span> <span id="rate-exp">1x</span>
+                        <span><?= __('EXP:') ?></span> <span id="rate-exp"><?= htmlspecialchars($EXP_RATE) ?></span>
                     </div>
                     <div class="rate-row">
-                        <span><?= __('Drop:') ?></span> <span id="rate-drop">1x</span>
+                        <span><?= __('Drop:') ?></span> <span id="rate-drop"><?= htmlspecialchars($DROP_RATE) ?></span>
                     </div>
                 </div>
 
@@ -83,7 +83,9 @@ include 'includes/header.php';
                     <ul class="sidebar-links">
                         <li><a href="downloads.php"><?= __('Download Client') ?></a></li>
                         <li><a href="stats.php"><?= __('View Full Stats') ?></a></li>
+                        <?php if (is_feature_enabled('bounties')): ?>
                         <li><a href="missions.php" style="color: var(--pso-orange);"><?= __('Bounty Board') ?></a></li>
+                        <?php endif; ?>
                         <li><a href="<?= htmlspecialchars(get_discord_server()) ?>" target="_blank"><?= __('Discord Community') ?></a></li>
                     </ul>
                 </div>

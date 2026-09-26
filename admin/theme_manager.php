@@ -34,9 +34,39 @@ $discordServer = $config['discord_server'] ?? $config['discord_invite_url'] ?? g
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+.admin-subnav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    background: rgba(0, 15, 30, 0.7);
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 255, 0.15);
+}
+.admin-subnav a {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--pso-text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.admin-subnav a:hover {
+    background: rgba(0, 255, 255, 0.1);
+    color: var(--pso-blue);
+}
+.admin-subnav a.active {
+    background: var(--pso-blue);
+    color: #000;
 }
 .preset-grid {
     display: grid;
@@ -171,6 +201,16 @@ $discordServer = $config['discord_server'] ?? $config['discord_invite_url'] ?? g
         <div style="display:flex; gap:10px;">
             <a href="dashboard.php" class="dl-btn" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> <?= __('Dashboard') ?></a>
         </div>
+    </div>
+
+    <!-- Admin Subnav -->
+    <div class="admin-subnav">
+        <a href="site_settings.php"><i class="fas fa-sliders-h"></i> <?= __('Site Settings') ?></a>
+        <a href="theme_manager.php" class="active"><i class="fas fa-palette"></i> <?= __('Theme Manager') ?></a>
+        <a href="telemetry.php"><i class="fas fa-chart-line"></i> <?= __('Telemetry') ?></a>
+        <a href="mission_manager.php"><i class="fas fa-crosshairs"></i> <?= __('Mission Manager') ?></a>
+        <a href="special_deliveries.php"><i class="fas fa-gift"></i> <?= __('Special Deliveries') ?></a>
+        <a href="bot_tokens.php"><i class="fas fa-robot"></i> <?= __('Bot Tokens') ?></a>
     </div>
 
     <!-- Banner Alerts -->

@@ -16,6 +16,13 @@ $username = strtolower(trim($input['username'] ?? ''));
 $password = trim($input['password'] ?? '');
 $email = trim($input['email'] ?? '');
 
+// Registration Feature Check
+if (!is_feature_enabled('registration')) {
+    http_response_code(403);
+    echo json_encode(['error' => __('Registration is currently disabled by the server administrator.')]);
+    exit;
+}
+
 // Validation
 if (empty($username) || empty($password) || empty($email)) {
     http_response_code(400);
@@ -121,10 +128,12 @@ try {
     exit;
 }
 
+$srvName = get_server_name();
+$srvAddr = get_server_address();
 if ($lang_pref === 'jp') {
-    send_email($email, "PSOBB.IOへようこそ", "$username さん、\n\nPSOBB.IOへようこそ！アカウントが正常に作成されました。\n\nアカウント情報は以下の通りです：\nユーザー名: $username\nギルドカード: $accountIdInt\n\nアカウント管理はこちら: https://psobb.io/login.php\n\n良い狩りを！\nPSOBB.IO チーム");
+    send_email($email, "{$srvName}へようこそ", "$username さん、\n\n{$srvName}へようこそ！アカウントが正常に作成されました。\n\nアカウント情報は以下の通りです：\nユーザー名: $username\nギルドカード: $accountIdInt\n\nアカウント管理はこちら: https://{$srvAddr}/login.php\n\n良い狩りを！\n{$srvName} チーム");
 } else {
-    send_email($email, "Welcome to PSOBB.IO", "Hello $username,\n\nWelcome to PSOBB.IO! Your account has been created successfully.\n\nHere are your account details:\nUsername: $username\nGuild Card: $accountIdInt\n\nYou can manage your account at: https://psobb.io/login.php\n\nHappy Hunting,\nPSOBB.IO Team");
+    send_email($email, "Welcome to {$srvName}", "Hello $username,\n\nWelcome to {$srvName}! Your account has been created successfully.\n\nHere are your account details:\nUsername: $username\nGuild Card: $accountIdInt\n\nYou can manage your account at: https://{$srvAddr}/login.php\n\nHappy Hunting,\n{$srvName} Team");
 }
 
 echo json_encode(['success' => true, 'message' => 'Account created successfully!']);

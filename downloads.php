@@ -25,7 +25,7 @@ include 'includes/header.php';
                 <span><i class="fas fa-hdd"></i> 851 MB</span>
                 <span><i class="fas fa-code-branch"></i> v1.25.13b</span>
             </div>
-            <a href="/downloads/PSOBBIO-Setup_1.25.13b.exe" class="dl-btn" download><i class="fas fa-download"></i>
+            <a href="<?= htmlspecialchars(get_client_download_url('windows')) ?>" class="dl-btn" download><i class="fas fa-download"></i>
                 <?= __('Download') ?></a>
             <small><?= __('Requires Windows 10 or later') ?></small>
             <div style="font-size: 0.8em; margin-top: 10px; opacity: 0.8;">
@@ -42,7 +42,7 @@ include 'includes/header.php';
                 <span><i class="fas fa-hdd"></i> 1.89 GB</span>
                 <span><i class="fas fa-code-branch"></i> v1.25.13</span>
             </div>
-            <a href="/downloads/PSOBBIO_125.13.dmg" class="dl-btn" download><i class="fas fa-download"></i> <?= __('Download') ?></a>
+            <a href="<?= htmlspecialchars(get_client_download_url('mac')) ?>" class="dl-btn" download><i class="fas fa-download"></i> <?= __('Download') ?></a>
             <small><?= __('Requires Macbook Pro or Macbook Air M2 or higher') ?></small>
         </div>
 
@@ -76,7 +76,7 @@ include 'includes/header.php';
             <span><i class="fas fa-code-branch"></i> v1.25.13</span>
         </div>
         <div>
-            <a href="/downloads/PSOBBIO-Linux_1.25.13.zip" class="dl-btn warning-btn" download><i class="fas fa-file-download"></i> <?= __('Download Raw Client Files') ?></a>
+            <a href="<?= htmlspecialchars(get_client_download_url('raw')) ?>" class="dl-btn warning-btn" download><i class="fas fa-file-download"></i> <?= __('Download Raw Client Files') ?></a>
         </div>
     </div>
 
@@ -91,7 +91,7 @@ include 'includes/header.php';
             <li><?= __('Launch the game when you are ready!') ?></li>
             <li><?= __('Happy hunting on Ragol!') ?></li>
         </ol>
-        <p><?= __('<strong>Note:</strong> Patches from newserv/system/patch-pc applied. Server address: <code>psobb.io</code>') ?></p>
+        <p><?= sprintf(__('<strong>Note:</strong> Patches from newserv/system/patch-pc applied. Server address: %s'), '<code>' . htmlspecialchars(get_server_address()) . '</code>') ?></p>
     </div>
 </main>
 

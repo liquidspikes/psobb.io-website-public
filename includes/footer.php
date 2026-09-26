@@ -6,7 +6,7 @@
         <?php else: ?>
         <p><?= __('Stats update every 30 seconds.') ?></p>
         <?php endif; ?>
-        <p>&copy; 2026 <?= __('psobb.io private server') ?><br>
+        <p>&copy; <?= date('Y') ?> <?= htmlspecialchars(get_server_name()) ?> <?= __('private server') ?><br>
         <span style="font-size: 0.8em; opacity: 0.7;">
             <?= sprintf(__('Server %s created by %s'), '<a href="https://github.com/fuzziqersoftware/newserv" target="_blank" style="color: inherit; text-decoration: underline;">newserv</a>', '<a href="http://fuzziqersoftware.com" target="_blank" style="color: inherit; text-decoration: underline;">fuzziqersoftware</a>') ?>
         </span>
