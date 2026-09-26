@@ -269,11 +269,11 @@ function showDashboard(user) {
         document.getElementById('dash-username').textContent = lastPlayer;
         document.getElementById('dash-account-id').textContent = user.AccountID;
 
-        document.getElementById('dash-team').textContent = user.BBTeamID ? 'Team #' + user.BBTeamID : 'None';
+        document.getElementById('dash-team').textContent = user.BBTeamID ? _t('Team') + ' #' + user.BBTeamID : _t('None');
 
         const playtimeEl = document.getElementById('dash-playtime');
         if (playtimeEl) {
-            playtimeEl.textContent = user.total_play_time_hours ? `${user.total_play_time_hours} hrs` : '--';
+            playtimeEl.textContent = user.total_play_time_hours ? `${user.total_play_time_hours} ${_t('hrs')}` : '--';
         }
 
         // PWA Install check
@@ -396,7 +396,7 @@ window.claimDelivery = async function(id) {
     if (!btn) return;
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Claiming…';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + _t('Claiming…');
 
     try {
         const res  = await fetch('/api/redeem_special_delivery.php', {
@@ -424,20 +424,20 @@ window.claimDelivery = async function(id) {
             }, 500);
         } else if (data.offline) {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-hand-holding"></i> Claim';
+            btn.innerHTML = '<i class="fas fa-hand-holding"></i> ' + _t('Claim');
             msg.style.display = 'block';
             msg.style.color = '#fbbf24';
-            msg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> You must be logged into the game to claim this item.';
+            msg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + _t('You must be logged into the game to claim this item.');
         } else {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-hand-holding"></i> Claim';
+            btn.innerHTML = '<i class="fas fa-hand-holding"></i> ' + _t('Claim');
             msg.style.display = 'block';
             msg.style.color = '#f87171';
             msg.innerHTML = '<i class="fas fa-times-circle"></i> ' + escHtml(data.error ?? 'Claim failed. Please try again.');
         }
     } catch (e) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-hand-holding"></i> Claim';
+        btn.innerHTML = '<i class="fas fa-hand-holding"></i> ' + _t('Claim');
     }
 };
 
@@ -453,14 +453,14 @@ window.saveDisplayName = async function () {
     const name = input.value.trim();
 
     if (!name) {
-        msgEl.textContent = 'Please enter a display name.';
+        msgEl.textContent = _t('Please enter a display name.');
         msgEl.style.color = '#ff4444';
         msgEl.style.display = 'block';
         return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.textContent = _t('Saving...');
     msgEl.style.display = 'none';
 
     try {
@@ -479,21 +479,21 @@ window.saveDisplayName = async function () {
             msgEl.textContent = '✓ ' + data.message;
             msgEl.style.color = '#00C851';
             msgEl.style.display = 'block';
-            btn.textContent = 'Saved!';
-            setTimeout(() => { btn.disabled = false; btn.textContent = 'Save'; }, 2000);
+            btn.textContent = _t('Saved!');
+            setTimeout(() => { btn.disabled = false; btn.textContent = _t('Save'); }, 2000);
         } else {
-            msgEl.textContent = data.error || 'Failed to update.';
+            msgEl.textContent = data.error || _t('Failed to update.');
             msgEl.style.color = '#ff4444';
             msgEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = 'Save';
+            btn.textContent = _t('Save');
         }
     } catch (e) {
-        msgEl.textContent = 'Connection error.';
+        msgEl.textContent = _t('Connection error.');
         msgEl.style.color = '#ff4444';
         msgEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Save';
+        btn.textContent = _t('Save');
     }
 };
 
@@ -564,23 +564,23 @@ window.loadAccountEmail = async function () {
         if (badge) {
             if (isPendingConf) {
                 if (email && !isLegacyAcc) {
-                    badge.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Change Pending';
+                    badge.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> ' + _t('Change Pending');
                     badge.style.background = 'rgba(255, 170, 0, 0.2)';
                     badge.style.border = '1px solid #ffaa00';
                     badge.style.color = '#ffaa00';
                 } else {
-                    badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                    badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> ' + _t('Confirmation Pending');
                     badge.style.background = 'rgba(255, 170, 0, 0.2)';
                     badge.style.border = '1px solid #ffaa00';
                     badge.style.color = '#ffaa00';
                 }
             } else if (isLegacyAcc || !email) {
-                badge.innerHTML = '<i class="fas fa-exclamation-circle"></i> No Email Linked';
+                badge.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + _t('No Email Linked');
                 badge.style.background = 'rgba(255, 170, 0, 0.2)';
                 badge.style.border = '1px solid #ffaa00';
                 badge.style.color = '#ffaa00';
             } else {
-                badge.innerHTML = '<i class="fas fa-check-circle"></i> Linked';
+                badge.innerHTML = '<i class="fas fa-check-circle"></i> ' + _t('Linked');
                 badge.style.background = 'rgba(0, 200, 81, 0.2)';
                 badge.style.border = '1px solid #00C851';
                 badge.style.color = '#00C851';
@@ -588,20 +588,20 @@ window.loadAccountEmail = async function () {
         }
         if (isPendingConf && pending && msgEl) {
             if (email && !isLegacyAcc) {
-                msgEl.textContent = 'Current email: ' + email + ' — Confirmation link sent to: ' + pending + '. Check your inbox to confirm this change.';
+                msgEl.textContent = _t('Current email:') + ' ' + email + ' — ' + _t('Confirmation link sent to:') + ' ' + pending + '. ' + _t('Check your inbox to confirm this change.');
             } else {
-                msgEl.textContent = 'Confirmation link sent to ' + pending + '. Check your inbox to activate.';
+                msgEl.textContent = _t('Confirmation link sent to') + ' ' + pending + '. ' + _t('Check your inbox to activate.');
             }
             msgEl.style.color = '#ffaa00';
             msgEl.style.display = 'block';
         }
         if (btn) {
             if (isPendingConf) {
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Link';
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Resend Link');
             } else if (isLegacyAcc || !email) {
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link';
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send Link');
             } else {
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Update Email';
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Update Email');
             }
         }
     }
@@ -619,7 +619,7 @@ window.saveAccountEmail = async function () {
 
     if (!email) {
         if (msgEl) {
-            msgEl.textContent = 'Please enter an email address.';
+            msgEl.textContent = _t('Please enter an email address.');
             msgEl.style.color = '#ff4444';
             msgEl.style.display = 'block';
         }
@@ -630,7 +630,7 @@ window.saveAccountEmail = async function () {
 
     if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
         if (msgEl) {
-            msgEl.textContent = 'Please enter a valid email address.';
+            msgEl.textContent = _t('Please enter a valid email address.');
             msgEl.style.color = '#ff4444';
             msgEl.style.display = 'block';
         }
@@ -638,7 +638,7 @@ window.saveAccountEmail = async function () {
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Link...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + _t('Sending Link...');
     if (msgEl) msgEl.style.display = 'none';
 
     try {
@@ -662,9 +662,9 @@ window.saveAccountEmail = async function () {
             }
             if (badge) {
                 if (data.is_change) {
-                    badge.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Change Pending';
+                    badge.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> ' + _t('Change Pending');
                 } else {
-                    badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                    badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> ' + _t('Confirmation Pending');
                 }
                 badge.style.background = 'rgba(255, 170, 0, 0.2)';
                 badge.style.border = '1px solid #ffaa00';
@@ -673,7 +673,7 @@ window.saveAccountEmail = async function () {
             if (banner) {
                 banner.style.display = 'none';
             }
-            btn.innerHTML = '<i class="fas fa-check"></i> Link Sent!';
+            btn.innerHTML = '<i class="fas fa-check"></i> ' + _t('Link Sent!');
 
             const userStr = sessionStorage.getItem('psobb_user');
             if (userStr) {
@@ -687,16 +687,16 @@ window.saveAccountEmail = async function () {
 
             setTimeout(() => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Link';
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Resend Link');
             }, 2500);
         } else {
             if (msgEl) {
-                msgEl.textContent = data.error || 'Failed to send confirmation email.';
+                msgEl.textContent = data.error || _t('Failed to send confirmation email.');
                 msgEl.style.color = '#ff4444';
                 msgEl.style.display = 'block';
             }
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link';
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send Link');
         }
     } catch (e) {
         if (msgEl) {
@@ -705,7 +705,7 @@ window.saveAccountEmail = async function () {
             msgEl.style.display = 'block';
         }
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link';
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send Link');
     }
 };
 
@@ -741,7 +741,7 @@ window.confirmPromptEmail = async function () {
 
     if (!email) {
         if (err) {
-            err.textContent = 'Please enter an email address.';
+            err.textContent = _t('Please enter an email address.');
             err.style.display = 'block';
         }
         return;
@@ -751,7 +751,7 @@ window.confirmPromptEmail = async function () {
 
     if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
         if (err) {
-            err.textContent = 'Please enter a valid email address.';
+            err.textContent = _t('Please enter a valid email address.');
             err.style.display = 'block';
         }
         return;
@@ -760,7 +760,7 @@ window.confirmPromptEmail = async function () {
     if (err) err.style.display = 'none';
     if (succ) succ.style.display = 'none';
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Link...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + _t('Sending Link...');
 
     try {
         const csrfToken = window.getCSRFToken ? window.getCSRFToken() : '';
@@ -780,7 +780,7 @@ window.confirmPromptEmail = async function () {
                 succ.textContent = '✓ ' + (data.message || 'Confirmation link sent! Please check your inbox.');
                 succ.style.display = 'block';
             }
-            btn.innerHTML = '<i class="fas fa-check"></i> Link Sent!';
+            btn.innerHTML = '<i class="fas fa-check"></i> ' + _t('Link Sent!');
 
             sessionStorage.setItem('psobb_email_prompt_dismissed', '1');
             const userStr = sessionStorage.getItem('psobb_user');
@@ -797,7 +797,7 @@ window.confirmPromptEmail = async function () {
             if (settingsInput) settingsInput.value = data.email;
             const badge = document.getElementById('email-status-badge');
             if (badge) {
-                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> ' + _t('Confirmation Pending');
                 badge.style.background = 'rgba(255, 170, 0, 0.2)';
                 badge.style.border = '1px solid #ffaa00';
                 badge.style.color = '#ffaa00';
@@ -808,23 +808,23 @@ window.confirmPromptEmail = async function () {
             setTimeout(() => {
                 closePromptEmailModal(false);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation Link';
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send Confirmation Link');
             }, 3000);
         } else {
             if (err) {
-                err.textContent = data.error || 'Failed to send confirmation link.';
+                err.textContent = data.error || _t('Failed to send confirmation link.');
                 err.style.display = 'block';
             }
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation Link';
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send Confirmation Link');
         }
     } catch (e) {
         if (err) {
-            err.textContent = 'Connection error. Please try again.';
+            err.textContent = _t('Connection error. Please try again.');
             err.style.display = 'block';
         }
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation Link';
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send Confirmation Link');
     }
 };
 
@@ -832,7 +832,7 @@ async function loadActiveCharacterSectionId(accountId) {
     const secIdContainer = document.getElementById('section-id-change-container');
     if (!secIdContainer) return;
 
-    secIdContainer.innerHTML = '<p>Checking for online characters...</p>';
+    secIdContainer.innerHTML = '<p>' + _t('Checking for online characters...') + '</p>';
 
     try {
         const response = await fetch('/api/summary.php');
@@ -884,7 +884,7 @@ async function loadActiveCharacterSectionId(accountId) {
                         </label>
                     `).join('')}
                 </div>
-                <button id="btn-change-secid" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 12px; font-weight: bold; font-family: 'Share Tech Mono', 'Segoe UI', sans-serif;">Change Section ID</button>
+                <button id="btn-change-secid" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 12px; font-weight: bold; font-family: 'Share Tech Mono', 'Segoe UI', sans-serif;">${_t('Change Section ID')}</button>
                 <div id="secid-message" style="margin-top: 10px; display: none; font-weight: bold;"></div>
             </div>
         `;
@@ -897,7 +897,7 @@ async function loadActiveCharacterSectionId(accountId) {
         }
 
     } catch (e) {
-        secIdContainer.innerHTML = '<p style="color: #ff4444;">Failed to load active character data.</p>';
+        secIdContainer.innerHTML = '<p style="color: #ff4444;">' + _t('Failed to load active character data.') + '</p>';
     }
 }
 
@@ -907,7 +907,7 @@ async function submitSectionIdChange(characterName) {
     const btn = document.getElementById('btn-change-secid');
 
     btn.disabled = true;
-    btn.textContent = "Processing...";
+    btn.textContent = _t("Processing...");
     msgEl.style.display = 'none';
 
     try {
@@ -926,7 +926,7 @@ async function submitSectionIdChange(characterName) {
             msgEl.textContent = data.message;
             msgEl.style.color = '#00C851';
             msgEl.style.display = 'block';
-            btn.textContent = "Success";
+            btn.textContent = _t("Success");
 
             // Reload the character data after 2 seconds
             setTimeout(() => {
@@ -937,18 +937,18 @@ async function submitSectionIdChange(characterName) {
                 }
             }, 2500);
         } else {
-            msgEl.textContent = data.error || "Failed to change Section ID.";
+            msgEl.textContent = data.error || _t("Failed to change Section ID.");
             msgEl.style.color = '#ff4444';
             msgEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = "Change Section ID";
+            btn.textContent = _t("Change Section ID");
         }
     } catch (e) {
-        msgEl.textContent = "Connection error: " + e.message;
+        msgEl.textContent = _t("Connection error: ") + e.message;
         msgEl.style.color = '#ff4444';
         msgEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = "Change Section ID";
+        btn.textContent = _t("Change Section ID");
     }
 }
 
@@ -956,7 +956,7 @@ async function loadCharacterBankSwitcher(accountId) {
     const bankContainer = document.getElementById('bank-swap-container');
     if (!bankContainer) return;
 
-    bankContainer.innerHTML = '<p>Checking for online characters...</p>';
+    bankContainer.innerHTML = '<p>' + _t('Checking for online characters...') + '</p>';
 
     try {
         const response = await fetch('/api/summary.php');
@@ -982,7 +982,7 @@ async function loadCharacterBankSwitcher(accountId) {
                     <option value="-1" style="background:#111; color:#fff;">Shared Bank</option>
                     ${Array.from({ length: 20 }, (_, i) => `<option value="${i}" style="background:#111; color:#fff;">Slot ${i + 1} Character Bank</option>`).join('')}
                 </select>
-                <button id="btn-swap-bank" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 12px; font-weight: bold; font-family: 'Share Tech Mono', 'Segoe UI', sans-serif;">Swap Bank In-Game</button>
+                <button id="btn-swap-bank" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 12px; font-weight: bold; font-family: 'Share Tech Mono', 'Segoe UI', sans-serif;">${_t('Swap Bank In-Game')}</button>
                 <div id="bank-message" style="margin-top: 10px; display: none; font-weight: bold;"></div>
             </div>
         `;
@@ -995,7 +995,7 @@ async function loadCharacterBankSwitcher(accountId) {
         }
 
     } catch (e) {
-        bankContainer.innerHTML = '<p style="color: #ff4444;">Failed to load active character data for bank swapping.</p>';
+        bankContainer.innerHTML = '<p style="color: #ff4444;">' + _t('Failed to load active character data for bank swapping.') + '</p>';
     }
 }
 
@@ -1005,7 +1005,7 @@ async function submitBankSwap(characterName) {
     const btn = document.getElementById('btn-swap-bank');
 
     btn.disabled = true;
-    btn.textContent = "Processing...";
+    btn.textContent = _t("Processing...");
     msgEl.style.display = 'none';
 
     try {
@@ -1028,7 +1028,7 @@ async function submitBankSwap(characterName) {
             msgEl.style.color = '#ff4444';
             msgEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = "Swap Bank In-Game";
+            btn.textContent = _t("Swap Bank In-Game");
             return;
         }
 
@@ -1036,26 +1036,26 @@ async function submitBankSwap(characterName) {
             msgEl.textContent = data.message;
             msgEl.style.color = '#00C851';
             msgEl.style.display = 'block';
-            btn.textContent = "Success";
+            btn.textContent = _t("Success");
 
             setTimeout(() => {
                 btn.disabled = false;
-                btn.textContent = "Swap Bank In-Game";
+                btn.textContent = _t("Swap Bank In-Game");
                 msgEl.style.display = 'none';
             }, 3000);
         } else {
-            msgEl.textContent = data.error || "Failed to swap bank.";
+            msgEl.textContent = data.error || _t("Failed to swap bank.");
             msgEl.style.color = '#ff4444';
             msgEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = "Swap Bank In-Game";
+            btn.textContent = _t("Swap Bank In-Game");
         }
     } catch (e) {
-        msgEl.textContent = "Connection error: " + e.message;
+        msgEl.textContent = _t("Connection error: ") + e.message;
         msgEl.style.color = '#ff4444';
         msgEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = "Swap Bank In-Game";
+        btn.textContent = _t("Swap Bank In-Game");
     }
 }
 
@@ -1164,7 +1164,7 @@ function renderPlayerList(clients) {
     if (foEl) foEl.textContent = foCount;
 
     if (activeClients.length === 0) {
-        list.innerHTML = '<tr><td colspan="4" style="text-align:center">No players online</td></tr>';
+        list.innerHTML = '<tr><td colspan="4" style="text-align:center">' + _t('No players online') + '</td></tr>';
         return;
     }
 
@@ -1189,7 +1189,7 @@ function renderGameList(games) {
     const activeGames = games || [];
 
     if (activeGames.length === 0) {
-        list.innerHTML = '<tr><td colspan="5" style="text-align:center">No active games</td></tr>';
+        list.innerHTML = '<tr><td colspan="5" style="text-align:center">' + _t('No active games') + '</td></tr>';
         return;
     }
 
@@ -1339,17 +1339,17 @@ window.confirmChangePass = async function () {
     succEl.style.display = 'none';
 
     if (!oldPass || !newPass) {
-        errEl.textContent = "Please fill in all fields.";
+        errEl.textContent = _t("Please fill in all fields.");
         errEl.style.display = 'block';
         return;
     }
     if (newPass !== confirmPass) {
-        errEl.textContent = "New passwords do not match.";
+        errEl.textContent = _t("New passwords do not match.");
         errEl.style.display = 'block';
         return;
     }
     if (newPass.includes(' ')) {
-        errEl.textContent = "No spaces allowed.";
+        errEl.textContent = _t("No spaces allowed.");
         errEl.style.display = 'block';
         return;
     }
@@ -1365,7 +1365,7 @@ window.confirmChangePass = async function () {
     }
 
     btn.disabled = true;
-    btn.textContent = "Updating...";
+    btn.textContent = _t("Updating...");
 
     try {
         const response = await fetch('/api/change_password.php', {
@@ -1384,24 +1384,24 @@ window.confirmChangePass = async function () {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            succEl.textContent = "Password Changed! Logging out...";
+            succEl.textContent = _t("Password Changed! Logging out...");
             succEl.style.display = 'block';
-            btn.textContent = "Success";
+            btn.textContent = _t("Success");
             setTimeout(() => {
                 closeChangePassModal();
                 logout();
             }, 1000);
         } else {
-            errEl.textContent = data.error || "Update failed.";
+            errEl.textContent = data.error || _t("Update failed.");
             errEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = "Update";
+            btn.textContent = _t("Update");
         }
     } catch (e) {
-        errEl.textContent = "Connection error.";
+        errEl.textContent = _t("Connection error.");
         errEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = "Update";
+        btn.textContent = _t("Update");
     }
 };
 
@@ -1658,9 +1658,9 @@ function renderCharacterProfile() {
     const onlineBadge = document.getElementById('char-profile-online');
     if (onlineBadge) {
         if (c.online) {
-            onlineBadge.innerHTML = '<span style="color: #00ffc8; text-shadow: 0 0 5px rgba(0,255,200,0.5);"><i class="fas fa-circle animate-pulse"></i> ONLINE</span>';
+            onlineBadge.innerHTML = '<span style="color: #00ffc8; text-shadow: 0 0 5px rgba(0,255,200,0.5);"><i class="fas fa-circle animate-pulse"></i> ' + _t('ONLINE') + '</span>';
         } else {
-            onlineBadge.innerHTML = '<span style="color: #666;"><i class="far fa-circle"></i> OFFLINE</span>';
+            onlineBadge.innerHTML = '<span style="color: #666;"><i class="far fa-circle"></i> ' + _t('OFFLINE') + '</span>';
         }
     }
 
@@ -1920,7 +1920,7 @@ window.triggerBankSwap = async function () {
     const targetBankIdx = parseInt(targetSelect.value);
 
     swapBtn.disabled = true;
-    swapBtn.textContent = 'SWAPPING...';
+    swapBtn.textContent = _t('SWAPPING...');
     swapResult.style.display = 'none';
 
     try {
@@ -1944,7 +1944,7 @@ window.triggerBankSwap = async function () {
             swapResult.style.display = 'block';
             setTimeout(() => window.loadCharSlot(window.activeSlot), 2000);
         } else {
-            throw new Error(data.error || 'Failed to swap bank.');
+            throw new Error(data.error || _t('Failed to swap bank.'));
         }
     } catch (e) {
         swapResult.style.color = '#ff4444';
@@ -1952,7 +1952,7 @@ window.triggerBankSwap = async function () {
         swapResult.style.display = 'block';
     } finally {
         swapBtn.disabled = false;
-        swapBtn.textContent = 'Swap Bank in Game';
+        swapBtn.textContent = _t('Swap Bank in Game');
     }
 };
 
@@ -2399,13 +2399,13 @@ window.sendWebToGameMessage = async function () {
 
     if (!charName) {
         statusMsg.style.color = '#ff4444';
-        statusMsg.textContent = '⚠️ Please select a character.';
+        statusMsg.textContent = '⚠️ ' + _t('Please select a character.');
         statusMsg.style.display = 'block';
         return;
     }
     if (!msg) {
         statusMsg.style.color = '#ff4444';
-        statusMsg.textContent = '⚠️ Message cannot be empty.';
+        statusMsg.textContent = '⚠️ ' + _t('Message cannot be empty.');
         statusMsg.style.display = 'block';
         return;
     }
@@ -2445,7 +2445,7 @@ window.sendWebToGameMessage = async function () {
         statusMsg.style.display = 'block';
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + _t('Send');
     }
 };
 
@@ -3096,10 +3096,10 @@ function renderMilestones(milestones, inGame) {
     summaryBar.style.cssText = 'display:flex; gap:12px; margin-bottom:1rem; flex-wrap:wrap;';
     summaryBar.innerHTML = `
         <span style="font-family:'Share Tech Mono',monospace; font-size:0.8rem; padding:4px 10px; border-radius:4px; background:rgba(0,255,136,0.15); border:1px solid rgba(0,255,136,0.3); color:#00ff88;">
-            <i class="fas fa-gift"></i> ${unclaimed.length} Available
+            <i class="fas fa-gift"></i> ${unclaimed.length} ${_t('Available')}
         </span>
         <span style="font-family:'Share Tech Mono',monospace; font-size:0.8rem; padding:4px 10px; border-radius:4px; background:rgba(170,102,204,0.15); border:1px solid rgba(170,102,204,0.3); color:#aa66cc;">
-            <i class="fas fa-check"></i> ${claimed.length} Claimed
+            <i class="fas fa-check"></i> ${claimed.length} ${_t('Claimed')}
         </span>
     `;
     container.appendChild(summaryBar);
@@ -3111,9 +3111,9 @@ function renderMilestones(milestones, inGame) {
             const disabledStr = !inGame ? 'disabled' : '';
             const glowClass = (m.level % 25 === 0) ? 'milestone-major' : '';
             card.innerHTML = `
-                <div class="milestone-level" ${glowClass ? 'style="color:#ffaa00; text-shadow:0 0 10px rgba(255,170,0,0.5);"' : ''}>Level ${m.level}</div>
+                <div class="milestone-level" ${glowClass ? 'style="color:#ffaa00; text-shadow:0 0 10px rgba(255,170,0,0.5);"' : ''}>${_t('Level')} ${m.level}</div>
                 <button class="open-claim-btn" data-level="${m.level}" ${disabledStr}>
-                    <i class="fas fa-gift"></i> Claim Reward
+                    <i class="fas fa-gift"></i> ${_t('Claim Reward')}
                 </button>
             `;
             container.appendChild(card);
@@ -3121,14 +3121,14 @@ function renderMilestones(milestones, inGame) {
     } else {
         const allDone = document.createElement('p');
         allDone.style.cssText = 'color:#00ff88; font-family:"Share Tech Mono",monospace; text-align:center; padding:1rem;';
-        allDone.innerHTML = '<i class="fas fa-check-circle"></i> All available milestones claimed! Keep leveling for more.';
+        allDone.innerHTML = '<i class="fas fa-check-circle"></i> ' + _t('All available milestones claimed! Keep leveling for more.');
         container.appendChild(allDone);
     }
 
     if (claimed.length > 0) {
         const toggle = document.createElement('button');
         toggle.style.cssText = 'background:rgba(170,102,204,0.1); border:1px solid rgba(170,102,204,0.3); color:#aa66cc; padding:8px 16px; border-radius:6px; font-family:"Share Tech Mono",monospace; font-size:0.8rem; cursor:pointer; width:100%; margin-top:1rem; transition:all 0.3s;';
-        toggle.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${claimed.length} Claimed Milestones`;
+        toggle.innerHTML = `<i class="fas fa-chevron-down"></i> ` + _t('Show %d Claimed Milestones').replace('%d', claimed.length);
 
         const claimedContainer = document.createElement('div');
         claimedContainer.style.cssText = 'display:none; margin-top:0.75rem;';

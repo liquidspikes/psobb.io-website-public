@@ -181,7 +181,7 @@
             }
         } catch (e) {
             btnEl.disabled = false;
-            btnEl.innerHTML = '<i class="fas fa-gift"></i> Claim';
+            btnEl.innerHTML = '<i class="fas fa-gift"></i> ' + _t('Claim');
             if (alertEl) {
                 alertEl.style.display = 'block';
                 alertEl.style.background = 'rgba(255,68,68,0.1)';
@@ -299,17 +299,17 @@
                 if (postBtn) {
                     if (inGame) {
                         postBtn.disabled = false;
-                        postBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Post';
+                        postBtn.innerHTML = '<i class="fas fa-plus-circle"></i> ' + _t('Post');
                     } else {
                         postBtn.disabled = true;
-                        postBtn.innerHTML = '<i class="fas fa-lock"></i> Need Party';
+                        postBtn.innerHTML = '<i class="fas fa-lock"></i> ' + _t('Need Party');
                     }
                 }
             } else {
-                panel.innerHTML = `<div style="color:#ffaa00; font-size:0.8rem; text-align:center;"><i class="fas fa-exclamation-triangle"></i> OFFLINE<br><span style="font-size:0.7rem; color:#888;">Log in-game to use LFG.</span></div>`;
+                panel.innerHTML = `<div style="color:#ffaa00; font-size:0.8rem; text-align:center;"><i class="fas fa-exclamation-triangle"></i> ${_t('OFFLINE')}<br><span style="font-size:0.7rem; color:#888;">${_t('Log in-game to use LFG.')}</span></div>`;
                 if (postBtn) {
                     postBtn.disabled = true;
-                    postBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Offline';
+                    postBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + _t('Offline');
                 }
             }
         } catch (e) {
@@ -453,7 +453,7 @@
                 alertEl.style.background = 'rgba(255,170,0,0.1)';
                 alertEl.style.border = '1px solid rgba(255,170,0,0.3)';
                 alertEl.style.color = '#ffaa00';
-                alertEl.innerHTML = '<i class="fas fa-info-circle"></i> Please enter a description.';
+                alertEl.innerHTML = '<i class="fas fa-info-circle"></i> ' + _t('Please enter a description.');
                 setTimeout(() => alertEl.style.display = 'none', 3000);
             }
             return;
@@ -480,7 +480,7 @@
                     alertEl.style.background = 'rgba(0,255,136,0.1)';
                     alertEl.style.border = '1px solid rgba(0,255,136,0.3)';
                     alertEl.style.color = '#00ff88';
-                    alertEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message || 'Posted!'}`;
+                    alertEl.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message || _t('Posted!')}`;
                     setTimeout(() => alertEl.style.display = 'none', 4000);
                 }
                 portalLfgPoll();
@@ -498,7 +498,7 @@
         } finally {
             if (btn && lfgActiveChar && lfgActiveChar.inGame) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-plus-circle"></i> Post';
+                btn.innerHTML = '<i class="fas fa-plus-circle"></i> ' + _t('Post');
             }
         }
     };
