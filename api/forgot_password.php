@@ -6,10 +6,17 @@ require_once 'db.php';
 if (ob_get_length()) ob_clean();
 header('Content-Type: application/json');
 
-$input = json_decode(file_get_contents('php://input'), true);
-$email = trim($input['email'] ?? '');
+$input = json_decode(file_get_contents('php://input'), true) ?? [];
+$rawEmail = (string)($input['email'] ?? '');
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+if (preg_match('/[\r\n]/', $rawEmail)) {
+    echo json_encode(['error' => 'Invalid email address']);
+    exit;
+}
+
+$email = strtolower(trim($rawEmail));
+
+if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) {
     echo json_encode(['error' => 'Invalid email address']);
     exit;
 }

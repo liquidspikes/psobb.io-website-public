@@ -567,7 +567,9 @@ window.saveAccountEmail = async function () {
         return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    const cleanEmail = email.replace(/[\r\n]/g, '').trim();
+
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
         if (msgEl) {
             msgEl.textContent = 'Please enter a valid email address.';
             msgEl.style.color = '#ff4444';
@@ -581,14 +583,15 @@ window.saveAccountEmail = async function () {
     if (msgEl) msgEl.style.display = 'none';
 
     try {
+        const csrfToken = window.getCSRFToken ? window.getCSRFToken() : '';
         const response = await fetch('/api/set_account_email.php', {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': window.getCSRFToken()
+                'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify({ email: email })
+            body: JSON.stringify({ email: cleanEmail, csrf_token: csrfToken })
         });
         const data = await response.json();
 
@@ -703,7 +706,9 @@ window.confirmPromptEmail = async function () {
         return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    const cleanEmail = email.replace(/[\r\n]/g, '').trim();
+
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
         if (err) {
             err.textContent = 'Please enter a valid email address.';
             err.style.display = 'block';
@@ -717,14 +722,15 @@ window.confirmPromptEmail = async function () {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Linking...';
 
     try {
+        const csrfToken = window.getCSRFToken ? window.getCSRFToken() : '';
         const response = await fetch('/api/set_account_email.php', {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': window.getCSRFToken()
+                'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify({ email: email })
+            body: JSON.stringify({ email: cleanEmail, csrf_token: csrfToken })
         });
         const data = await response.json();
 

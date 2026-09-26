@@ -342,6 +342,15 @@ function send_email($to, $subject, $message)
     global $BREVO_API_KEY, $SMTP_FROM;
     $from = $SMTP_FROM ?: 'pso@psobb.io';
 
+    // Strip any CRLF characters from headers to prevent email header injection
+    $to = preg_replace('/[\r\n]/', '', trim((string)$to));
+    $from = preg_replace('/[\r\n]/', '', trim((string)$from));
+    $subject = preg_replace('/[\r\n]/', '', trim((string)$subject));
+
+    // Normalize body line endings for standard RFC compliance
+    $message = str_replace(["\r\n", "\r"], "\n", (string)$message);
+    $message = str_replace("\n", "\r\n", $message);
+
     // Log intent
     $logEntry = "[" . date('Y-m-d H:i:s') . "] To: $to | Subject: $subject";
 

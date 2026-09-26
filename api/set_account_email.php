@@ -13,7 +13,9 @@ require_once 'db.php';
 if (ob_get_length()) ob_clean();
 start_secure_session();
 header('Content-Type: application/json');
-verify_csrf_token($_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '');
+
+$input = json_decode(file_get_contents('php://input'), true) ?? [];
+verify_csrf_token($_SERVER['HTTP_X_CSRF_TOKEN'] ?? $input['csrf_token'] ?? $_POST['csrf_token'] ?? '');
 
 // 1. Verify Authentication
 if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
@@ -26,8 +28,16 @@ $accountId = (int)$_SESSION['user']['account_id'];
 $username = strtolower(trim($_SESSION['user']['username'] ?? ''));
 
 // 2. Parse & Validate Input
-$input = json_decode(file_get_contents('php://input'), true);
-$email = strtolower(trim($input['email'] ?? ''));
+$rawEmail = (string)($input['email'] ?? '');
+
+// Strict CRLF Injection Prevention: reject any carriage returns or line feeds
+if (preg_match('/[\r\n]/', $rawEmail)) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "error" => "Email address cannot contain carriage returns or newlines."]);
+    exit;
+}
+
+$email = strtolower(trim($rawEmail));
 
 if (empty($email)) {
     http_response_code(400);
@@ -35,7 +45,7 @@ if (empty($email)) {
     exit;
 }
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) {
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100 || !preg_match('/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/', $email)) {
     http_response_code(400);
     echo json_encode(["success" => false, "error" => "Invalid email address format."]);
     exit;

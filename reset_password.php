@@ -2,7 +2,7 @@
 $page_title = 'Reset Password - PSOBB Private Server';
 include 'includes/header.php';
 
-$token = $_GET['token'] ?? '';
+$token = preg_replace('/[^a-f0-9]/i', '', trim($_GET['token'] ?? ''));
 ?>
 
 <main class="container">

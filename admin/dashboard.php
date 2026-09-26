@@ -560,7 +560,9 @@ async function confirmAdminEditEmail() {
         return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    const cleanEmail = email.replace(/[\r\n]/g, '').trim();
+
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
         err.textContent = 'Please enter a valid email address.';
         err.style.display = 'block';
         return;
@@ -570,17 +572,19 @@ async function confirmAdminEditEmail() {
     btn.textContent = 'Saving...';
 
     try {
+        const csrfToken = window.getCSRFToken ? window.getCSRFToken() : '';
         const res = await fetch('/api/admin_update_email.php', {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': window.getCSRFToken()
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({
                 account_id: _currentEditAid ? parseInt(_currentEditAid) : null,
                 username: _currentEditUser,
-                email: email
+                email: cleanEmail,
+                csrf_token: csrfToken
             })
         });
 

@@ -6,11 +6,12 @@ require_once 'db.php';
 if (ob_get_length()) ob_clean();
 header('Content-Type: application/json');
 
-$input = json_decode(file_get_contents('php://input'), true);
-$token = trim($input['token'] ?? '');
+$input = json_decode(file_get_contents('php://input'), true) ?? [];
+// Strip any CRLF, whitespace, or non-hex characters from token to prevent line-wrapping breakage
+$token = preg_replace('/[^a-f0-9]/i', '', trim($input['token'] ?? ''));
 $password = trim($input['password'] ?? '');
 
-if (!$token || !$password) {
+if (!$token || !$password || strlen($token) !== 64) {
     echo json_encode(['error' => 'Missing token or password']);
     exit;
 }

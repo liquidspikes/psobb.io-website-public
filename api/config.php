@@ -156,7 +156,8 @@ function start_secure_session() {
  * @return void
  */
 function verify_csrf_token($token) {
-    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], trim($token))) {
+    $cleanToken = preg_replace('/[\r\n]/', '', trim((string)$token));
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $cleanToken)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Invalid or missing CSRF token.']);
         exit;
