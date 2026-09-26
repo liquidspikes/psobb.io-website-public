@@ -106,6 +106,36 @@ function get_theme_presets() {
                 '--pso-purple' => '#82b1ff',
                 '--pso-bg-gradient' => 'radial-gradient(circle at top center, #181818 0%, #080808 60%, #000000 100%)',
             ]
+        ],
+        'seabed' => [
+            'id' => 'seabed',
+            'name' => 'Seabed Research Lab',
+            'desc' => 'Deep ocean subterranean facility with bioluminescent turquoise and indigo abyss.',
+            'primary_color' => '#00e5ff',
+            'vars' => [
+                '--pso-blue' => '#00e5ff',
+                '--pso-dark' => '#030c17',
+                '--pso-panel' => 'rgba(4, 21, 39, 0.92)',
+                '--pso-text' => '#e1f5fe',
+                '--pso-orange' => '#00b0ff',
+                '--pso-purple' => '#651fff',
+                '--pso-bg-gradient' => 'radial-gradient(circle at top center, #022b42 0%, #030c17 60%, #010408 100%)',
+            ]
+        ],
+        'mines' => [
+            'id' => 'mines',
+            'name' => 'Mines & Machine',
+            'desc' => 'High-voltage industrial hazard yellow, molten slag orange, and mechanical gunmetal.',
+            'primary_color' => '#ffea00',
+            'vars' => [
+                '--pso-blue' => '#ffea00',
+                '--pso-dark' => '#0f1115',
+                '--pso-panel' => 'rgba(23, 26, 32, 0.94)',
+                '--pso-text' => '#fffde7',
+                '--pso-orange' => '#ff5722',
+                '--pso-purple' => '#00e676',
+                '--pso-bg-gradient' => 'radial-gradient(circle at top center, #2e2608 0%, #0f1115 60%, #050608 100%)',
+            ]
         ]
     ];
 }
