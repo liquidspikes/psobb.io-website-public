@@ -14,3 +14,4 @@ db/*.log
 api/*.log
 db/.cron_player_state.json
 api/agent_state.json
+scratch/

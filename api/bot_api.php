@@ -124,7 +124,8 @@ if ($action === 'link') {
 }
 
 
-function bot_parse_item_data($bytes) {
+if (!function_exists('bot_parse_item_data')) {
+    function bot_parse_item_data($bytes) {
     if (strlen($bytes) < 20) return null;
     $data1 = substr($bytes, 0, 12);
     $data2 = substr($bytes, 16, 4);
@@ -222,9 +223,11 @@ function bot_parse_item_data($bytes) {
         $item['count'] = unpack('V', $data2)[1];
     }
     return $item;
+    }
 }
 
-function bot_parse_psochar($charData, $slot, $CLASS_MAP, $SECID_MAP) {
+if (!function_exists('bot_parse_psochar')) {
+    function bot_parse_psochar($charData, $slot, $CLASS_MAP, $SECID_MAP) {
     if (!$charData || strlen($charData) < 0x399C) return null;
 
     // --- Inventory (offset 8, size 844) ---
@@ -335,6 +338,7 @@ function bot_parse_psochar($charData, $slot, $CLASS_MAP, $SECID_MAP) {
         'bank_meseta'    => $bankMeseta,
         'quest_progress' => $questProgress,
     ];
+    }
 }
 
 if ($action === 'get_player') {

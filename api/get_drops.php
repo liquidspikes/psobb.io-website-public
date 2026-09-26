@@ -34,6 +34,25 @@ if ($data_json === false) {
     $ctx = stream_context_create(['http' => ['timeout' => 15]]);
     $res = @file_get_contents($url, false, $ctx);
     
+    if ($res === false) {
+        // Fall back to local table file if available on server/dev system
+        $local_paths = [
+            '/opt/newserv/system/tables/rare-table-v4.json',
+            __DIR__ . '/../../newserv/system/tables/rare-table-v4.json',
+            __DIR__ . '/../newserv/system/tables/rare-table-v4.json'
+        ];
+        foreach ($local_paths as $lp) {
+            if (file_exists($lp)) {
+                $raw = @file_get_contents($lp);
+                if ($raw) {
+                    $res = preg_replace('#//.*#', '', $raw);
+                    $res = preg_replace('/,\s*([\]\}])/', '$1', $res);
+                    break;
+                }
+            }
+        }
+    }
+    
     if ($res !== false) {
         // Fix non-standard hex syntax: Newserv's JSON might contain unquoted hex values like 0x010203
         // Standard json_decode() will fail on these, so we wrap them in quotes first.
@@ -63,8 +82,13 @@ if ($data_json === false) {
             $item_subtypes = [];
             $item_subtype_file = __DIR__ . '/item_subtypes.json';
             if (file_exists($item_subtype_file)) {
-                $item_subtypes = json_decode(file_get_contents($item_subtype_file), true);
-                if (!is_array($item_subtypes)) $item_subtypes = [];
+                $raw_subtypes = json_decode(file_get_contents($item_subtype_file), true);
+                if (is_array($raw_subtypes)) {
+                    foreach ($raw_subtypes as $name => $st) {
+                        $item_subtypes[strtolower(trim($name))] = $st;
+                        $item_subtypes[preg_replace('/[^a-z0-9]/', '', strtolower($name))] = $st;
+                    }
+                }
             }
 
             $item_equips = [];
@@ -74,6 +98,7 @@ if ($data_json === false) {
                 if (is_array($raw_equips)) {
                     foreach ($raw_equips as $name => $classes) {
                         $item_equips[strtolower(trim($name))] = $classes;
+                        $item_equips[preg_replace('/[^a-z0-9]/', '', strtolower($name))] = $classes;
                     }
                 }
             }
@@ -110,7 +135,7 @@ if ($data_json === false) {
                                     if (is_int($item_hex_raw)) {
                                         $clean_hex = strtoupper(dechex($item_hex_raw));
                                     } else {
-                                        $clean_hex = str_replace('0x', '', strtoupper((string)$item_hex_raw));
+                                        $clean_hex = strtoupper(str_replace(['0x', '0X'], '', (string)$item_hex_raw));
                                     }
                                     $clean_hex = str_pad($clean_hex, 6, '0', STR_PAD_LEFT);
                                     
@@ -139,9 +164,11 @@ if ($data_json === false) {
                                     $canonical_en = $hex_to_name[$clean_hex] ?? $item_name;
                                     $canonical_key = strtolower(trim($canonical_en));
                                     $display_key = strtolower(trim($item_name));
+                                    $norm_canonical = preg_replace('/[^a-z0-9]/', '', $canonical_key);
+                                    $norm_display = preg_replace('/[^a-z0-9]/', '', $display_key);
 
-                                    $item_subtype = $item_subtypes[$canonical_key] ?? $item_subtypes[$display_key] ?? 'Other';
-                                    $item_equip_classes = $item_equips[$canonical_key] ?? $item_equips[$display_key] ?? null;
+                                    $item_subtype = $item_subtypes[$canonical_key] ?? $item_subtypes[$display_key] ?? $item_subtypes[$norm_canonical] ?? $item_subtypes[$norm_display] ?? 'Other';
+                                    $item_equip_classes = $item_equips[$canonical_key] ?? $item_equips[$display_key] ?? $item_equips[$norm_canonical] ?? $item_equips[$norm_display] ?? null;
                                     
                                     // Clean up Monster Name (e.g. Box-Cave1 -> Cave 1 Box, HILDEBEAR -> Hildebear)
                                     $monster_clean = str_replace('_', ' ', $monster);
