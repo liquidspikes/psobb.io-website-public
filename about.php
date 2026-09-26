@@ -513,7 +513,7 @@ include 'includes/header.php';
         </div>
 
         <div class="discord-btn-container animate-fade-in">
-            <a href="https://discord.gg/28s84HJXha" target="_blank" class="discord-btn"><i class="fab fa-discord"></i> <?= __('Join Our Discord') ?></a>
+            <a href="<?= htmlspecialchars(get_discord_server()) ?>" target="_blank" class="discord-btn"><i class="fab fa-discord"></i> <?= __('Join Our Discord') ?></a>
         </div>
     </main>
 

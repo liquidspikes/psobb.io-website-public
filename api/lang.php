@@ -837,6 +837,8 @@ $I18N = [
         'Dark Falz Void' => 'ダークファルス・ヴォイド',
         'Episode IV Crater' => 'エピソード4 クレーター',
         'Monochrome OLED' => 'モノクローム OLED',
+        'Discord Server / Invite URL' => 'Discordサーバー / 招待URL',
+        'Sitewide community invite link for Join Discord buttons (index, about, etc.)' => 'サイト全体のDiscord参加ボタン用招待リンク（トップ、アバウトなど）',
     ],
     'ru' => [
         '(Click command to copy)' => '(Нажмите на команду для копирования)',
@@ -1775,6 +1777,8 @@ $I18N = [
         'Dark Falz Void' => 'Бездна Dark Falz',
         'Episode IV Crater' => 'Кратер Ep. IV',
         'Monochrome OLED' => 'Монохром OLED',
+        'Discord Server / Invite URL' => 'Сервер Discord / Ссылка-приглашение',
+        'Sitewide community invite link for Join Discord buttons (index, about, etc.)' => 'Ссылка-приглашение для кнопок входа в Discord по всему сайту (главная, о нас и т.д.)',
     ]
 ];
 

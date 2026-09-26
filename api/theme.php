@@ -129,6 +129,8 @@ function get_site_theme_config() {
     $defaults = [
         'default_preset' => 'classic',
         'allow_user_customization' => true,
+        'discord_server' => 'https://discord.gg/28s84HJXha',
+        'discord_invite_url' => 'https://discord.gg/28s84HJXha',
         'custom_overrides' => []
     ];
 

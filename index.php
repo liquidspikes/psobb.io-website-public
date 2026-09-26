@@ -19,7 +19,7 @@ include 'includes/header.php';
             <p class="hero-subtitle animate-fade-in delay-2"><?= __('Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.') ?></p>
             <div class="cta-group animate-fade-in delay-3">
                 <a href="downloads.php" class="dl-btn"><?= __('Play Now') ?></a>
-                <a href="https://discord.gg/28s84HJXha" class="discord-btn"><?= __('Join Discord') ?></a>
+                <a href="<?= htmlspecialchars(get_discord_server()) ?>" target="_blank" class="discord-btn"><?= __('Join Discord') ?></a>
             </div>
         </section>
 
@@ -84,7 +84,7 @@ include 'includes/header.php';
                         <li><a href="downloads.php"><?= __('Download Client') ?></a></li>
                         <li><a href="stats.php"><?= __('View Full Stats') ?></a></li>
                         <li><a href="missions.php" style="color: var(--pso-orange);"><?= __('Bounty Board') ?></a></li>
-                        <li><a href="https://discord.gg/28s84HJXha"><?= __('Discord Community') ?></a></li>
+                        <li><a href="<?= htmlspecialchars(get_discord_server()) ?>" target="_blank"><?= __('Discord Community') ?></a></li>
                     </ul>
                 </div>
             </aside>

@@ -1,6 +1,8 @@
 {
     "default_preset": "classic",
     "allow_user_customization": true,
+    "discord_server": "https://discord.gg/28s84HJXha",
+    "discord_invite_url": "https://discord.gg/28s84HJXha",
     "custom_overrides": {
         "--pso-blue": "#00ffff",
         "--pso-dark": "#0a0a10",
@@ -10,5 +12,5 @@
         "--pso-purple": "#9d4edd",
         "--pso-bg-gradient": "radial-gradient(circle at top center, #1a0b2e 0%, #050a14 60%, #000000 100%)"
     },
-    "updated_at": "2026-09-26T12:00:00Z"
+    "updated_at": "2026-09-26T19:33:34+00:00"
 }

@@ -62,9 +62,18 @@ if ($action === 'save_global_theme') {
         }
     }
 
+    $discordServer = trim($data['discord_server'] ?? $data['discord_invite_url'] ?? '');
+    if (!empty($discordServer)) {
+        $cleanDiscord = strip_tags($discordServer);
+    } else {
+        $cleanDiscord = 'https://discord.gg/28s84HJXha';
+    }
+
     $newConfig = [
         'default_preset' => $preset,
         'allow_user_customization' => $allowUser,
+        'discord_server' => $cleanDiscord,
+        'discord_invite_url' => $cleanDiscord,
         'custom_overrides' => $customOverrides
     ];
 

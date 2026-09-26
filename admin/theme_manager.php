@@ -19,6 +19,7 @@ $activeThemeInfo = get_active_theme_vars();
 $currentPresetId = $config['default_preset'] ?? 'classic';
 $allowUserCustomization = !empty($config['allow_user_customization']);
 $customOverrides = $config['custom_overrides'] ?? [];
+$discordServer = $config['discord_server'] ?? $config['discord_invite_url'] ?? get_discord_server();
 ?>
 
 <style>
@@ -287,6 +288,14 @@ $customOverrides = $config['custom_overrides'] ?? [];
                         </span>
                     </label>
                 </div>
+
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.15);">
+                    <label style="display:block; margin-bottom: 6px; font-weight: 500; font-size: 0.95rem;">
+                        <i class="fab fa-discord" style="color: #5865F2; margin-right: 5px;"></i> <?= __('Discord Server / Invite URL') ?>
+                    </label>
+                    <input type="url" class="color-text-input" style="width: 100%; box-sizing: border-box;" id="text-discord-server" name="discord_server" value="<?= htmlspecialchars($discordServer) ?>" placeholder="https://discord.gg/...">
+                    <small style="color: #888; display: block; margin-top: 4px;"><?= __('Sitewide community invite link for Join Discord buttons (index, about, etc.)') ?></small>
+                </div>
             </div>
 
             <!-- Live Component Preview Column -->
@@ -444,6 +453,8 @@ document.getElementById('theme-manager-form').addEventListener('submit', async f
         csrf_token: formData.get('csrf_token'),
         default_preset: formData.get('default_preset'),
         allow_user_customization: formData.get('allow_user_customization') ? true : false,
+        discord_server: formData.get('discord_server') || '',
+        discord_invite_url: formData.get('discord_server') || '',
         custom_overrides: overrides
     };
 

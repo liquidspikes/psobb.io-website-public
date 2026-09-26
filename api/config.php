@@ -50,6 +50,42 @@ $SMTP_FROM = $_ENV['SMTP_FROM'] ?? 'noreply@psobb.io';
 $GEMINI_API_KEY = $_ENV['GEMINI_API_KEY'] ?? '';
 $GEMINI_MODEL = $_ENV['GEMINI_MODEL'] ?? 'gemini-3.5-flash';
 
+// Discord Server & Invite Configuration
+// Configurable via environment variables ($DISCORD_SERVER, $DISCORD_INVITE_URL),
+// centralized config/theme.json, or defaults to the community server
+$siteConfigPath = __DIR__ . '/../config/theme.json';
+$siteThemeConfig = file_exists($siteConfigPath) ? json_decode(@file_get_contents($siteConfigPath), true) : [];
+$DISCORD_SERVER     = $_ENV['DISCORD_SERVER'] ?? $_SERVER['DISCORD_SERVER'] ?? (getenv('DISCORD_SERVER') ?: null)
+                      ?? $_ENV['DISCORD_INVITE_URL'] ?? $_SERVER['DISCORD_INVITE_URL'] ?? (getenv('DISCORD_INVITE_URL') ?: null)
+                      ?? $siteThemeConfig['discord_server'] ?? $siteThemeConfig['discord_invite_url'] ?? 'https://discord.gg/28s84HJXha';
+$DISCORD_INVITE_URL = $DISCORD_SERVER;
+$DISCORD_SERVER_ID  = $_ENV['DISCORD_SERVER_ID'] ?? $_SERVER['DISCORD_SERVER_ID'] ?? (getenv('DISCORD_SERVER_ID') ?: null) ?? $siteThemeConfig['discord_server_id'] ?? '';
+
+if (!function_exists('get_discord_server')) {
+    /**
+     * Retrieve the configured Discord server invite URL across all templates.
+     */
+    function get_discord_server(): string {
+        global $DISCORD_SERVER, $DISCORD_INVITE_URL;
+        if (!empty($DISCORD_SERVER)) {
+            return $DISCORD_SERVER;
+        }
+        if (!empty($DISCORD_INVITE_URL)) {
+            return $DISCORD_INVITE_URL;
+        }
+        return 'https://discord.gg/28s84HJXha';
+    }
+}
+
+if (!function_exists('get_discord_invite_url')) {
+    /**
+     * Alias for get_discord_server()
+     */
+    function get_discord_invite_url(): string {
+        return get_discord_server();
+    }
+}
+
 // Discord OAuth2 Configuration
 $DISCORD_CLIENT_ID = $_ENV['DISCORD_CLIENT_ID'] ?? '';
 $DISCORD_CLIENT_SECRET = $_ENV['DISCORD_CLIENT_SECRET'] ?? '';
