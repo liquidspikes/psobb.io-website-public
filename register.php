@@ -13,7 +13,7 @@ include 'includes/header.php';
             <form id="register-form">
                 <div class="form-group">
                     <label for="username"><?= __('Username') ?></label>
-                    <input type="text" id="username" name="username" required maxlength="16" pattern="[a-zA-Z0-9_-]+" title="Letters, numbers, dashes/underscores only. Max 16 chars.">
+                    <input type="text" id="username" name="username" required maxlength="16" pattern="[a-zA-Z0-9_-]+" title="<?= __('Letters, numbers, dashes/underscores only. Max 16 chars.') ?>">
                 </div>
 
                 <div class="form-group">
@@ -85,12 +85,12 @@ document.getElementById('register-form').addEventListener('submit', async functi
         const data = await response.json();
         
         if (response.ok && data.success) {
-            succBox.textContent = data.message + " Redirecting to login...";
+            succBox.textContent = (data.message || '') + " <?= __('Redirecting to login...') ?>";
             succBox.style.display = 'block';
             this.reset();
             setTimeout(() => window.location.href = 'login', 2000);
         } else {
-            errBox.textContent = data.error || "Registration failed.";
+            errBox.textContent = data.error || "<?= __('Registration failed.') ?>";
             errBox.style.display = 'block';
             btn.disabled = false;
             btn.textContent = originalText;

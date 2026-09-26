@@ -7,6 +7,7 @@
  * a meta tag for frontend AJAX scripts to utilize securely.
  */
 require_once __DIR__ . '/../api/config.php';
+require_once __DIR__ . '/../api/theme.php';
 start_secure_session();
 ?>
 <!DOCTYPE html>
@@ -24,6 +25,7 @@ start_secure_session();
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css?v=<?php echo time(); ?>">
+    <?= render_theme_css() ?>
     <script src="/js/main.js?v=<?php echo time(); ?>" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
@@ -116,6 +118,8 @@ start_secure_session();
                             class="<?php echo ($current_page == 'special_deliveries') ? 'active' : ''; ?>"><i class="fas fa-gift" style="color:#fb923c;margin-right:.35rem;"></i><?= __('Special Deliveries') ?></a>
                         <a href="/admin/bot_tokens.php"
                             class="<?php echo ($current_page == 'bot_tokens') ? 'active' : ''; ?>"><?= __('Bot Tokens') ?></a>
+                        <a href="/admin/theme_manager.php"
+                            class="<?php echo ($current_page == 'theme_manager') ? 'active' : ''; ?>"><i class="fas fa-palette" style="color:var(--pso-blue);margin-right:.35rem;"></i><?= __('Theme Manager') ?></a>
                     </div>
                 </li>
 
@@ -132,6 +136,26 @@ start_secure_session();
                     <a href="/api/set_lang.php?lang=jp" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'jp' ? 'active-lang' : '' ?>" title="日本語">JP</a>
                     <span style="opacity: 0.4; margin: 0 2px;">|</span>
                     <a href="/api/set_lang.php?lang=ru" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'ru' ? 'active-lang' : '' ?>" title="Русский">RU</a>
+                </li>
+                <li class="dropdown theme-toggle-nav">
+                    <a href="javascript:void(0)" class="dropbtn" title="<?= __('Theme') ?>" style="padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-palette" style="color: var(--pso-blue);"></i> <i class="fas fa-caret-down" style="font-size: 0.7rem;"></i>
+                    </a>
+                    <div class="dropdown-content theme-dropdown-menu" style="min-width: 190px; right: 0; left: auto;">
+                        <?php 
+                        $themePresets = get_theme_presets();
+                        $activeThemeInfo = get_active_theme_vars();
+                        $currentThemeId = $activeThemeInfo['preset_id'];
+                        foreach ($themePresets as $tId => $tData): 
+                        ?>
+                            <a href="/api/set_theme.php?theme=<?= urlencode($tId) ?>" class="<?= $currentThemeId === $tId ? 'active' : '' ?>" style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: <?= htmlspecialchars($tData['primary_color']) ?>; box-shadow: 0 0 6px <?= htmlspecialchars($tData['primary_color']) ?>;"></span>
+                                <?= __($tData['name']) ?>
+                            </a>
+                        <?php endforeach; ?>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 4px 0;"></div>
+                        <a href="/api/set_theme.php?theme=default" style="font-size: 0.8rem; opacity: 0.8;"><?= __('Reset to Server Default') ?></a>
+                    </div>
                 </li>
             </ul>
         </nav>

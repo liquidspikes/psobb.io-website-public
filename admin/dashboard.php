@@ -76,6 +76,7 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
             <div style="font-size:0.9rem; opacity:0.7;">Logged in as <?php echo htmlspecialchars($_SESSION['user']['username']); ?> (ID: <?php echo $_SESSION['user']['account_id']; ?>)</div>
         </div>
         <div style="display:flex; flex-wrap: wrap; gap: 10px;">
+            <a href="theme_manager.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; border-color:var(--pso-blue); color:var(--pso-blue);"><i class="fas fa-palette" style="margin-right:5px;"></i> Theme Manager</a>
             <a href="mods.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; background: var(--pso-blue); color: #000;">Manage Mods</a>
             <a href="mission_manager.php" class="dl-btn success-btn" style="text-decoration:none; display:flex; align-items:center;">Manage Missions</a>
             <a href="telemetry.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; border-color:#00ffcc; color:#00ffcc;">Telemetry</a>

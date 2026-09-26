@@ -24,11 +24,11 @@ include 'includes/header.php';
     <div class="lfg-terminal-header animate-float">
         <div class="terminal-grid">
             <div>
-                <h1 class="terminal-title"><i class="fas fa-satellite-dish"></i> LFG COORDINATION PORTAL</h1>
-                <p class="terminal-status"><span class="pulse-dot"></span> LIVE SATELLITE FEED // ACTIVE COORDINATION SESSION</p>
+                <h1 class="terminal-title"><i class="fas fa-satellite-dish"></i> <?= __('LFG COORDINATION PORTAL') ?></h1>
+                <p class="terminal-status"><span class="pulse-dot"></span> <?= __('LIVE SATELLITE FEED // ACTIVE COORDINATION SESSION') ?></p>
             </div>
             <div id="character-sync-panel" class="char-sync-glass">
-                <p style="margin: 0; color: #888; font-size: 0.85em;">SYNCHRONIZING IN-GAME STATS...</p>
+                <p style="margin: 0; color: #888; font-size: 0.85em;"><?= __('SYNCHRONIZING IN-GAME STATS...') ?></p>
             </div>
         </div>
     </div>
@@ -40,42 +40,42 @@ include 'includes/header.php';
         <!-- Control Panel Column (Create Listing) -->
         <div class="terminal-controls-col">
             <div class="lfg-glass-panel">
-                <h2 class="panel-section-title"><i class="fas fa-plus-circle"></i> CREATE LFG POST</h2>
+                <h2 class="panel-section-title"><i class="fas fa-plus-circle"></i> <?= __('CREATE LFG POST') ?></h2>
                 
                 <form id="lfg-post-form" style="margin-top: 1rem;">
                     <div class="terminal-form-group">
-                        <label for="lfg-description">MISSION / COMMENT</label>
-                        <textarea id="lfg-description" name="description" placeholder="e.g. Seeking high-level group to run TTF on Ultimate. Section ID hunting Skyly rares!" required maxlength="250"></textarea>
+                        <label for="lfg-description"><?= __('MISSION / COMMENT') ?></label>
+                        <textarea id="lfg-description" name="description" placeholder="<?= __('e.g. Seeking high-level group to run TTF on Ultimate. Section ID hunting Skyly rares!') ?>" required maxlength="250"></textarea>
                     </div>
 
                     <div class="terminal-form-group">
-                        <label for="lfg-bounty">LINK ACTIVE BOUNTY <span class="badge-optional">OPTIONAL</span></label>
+                        <label for="lfg-bounty"><?= __('LINK ACTIVE BOUNTY') ?> <span class="badge-optional"><?= __('OPTIONAL') ?></span></label>
                         <select id="lfg-bounty" name="bounty_id">
-                            <option value="">-- No Bounty Linked --</option>
+                            <option value=""><?= __('-- No Bounty Linked --') ?></option>
                         </select>
-                        <p style="font-size: 0.75em; color: #888; margin-top: 4px; line-height: 1.3;">Link an in-progress Hunter's Guild Bounty. Other players will see the objective and rewards.</p>
+                        <p style="font-size: 0.75em; color: #888; margin-top: 4px; line-height: 1.3;"><?= __('Link an in-progress Hunter\'s Guild Bounty. Other players will see the objective and rewards.') ?></p>
                     </div>
 
                     <div class="terminal-form-group">
-                        <label>CLASSES SOUGHT</label>
+                        <label><?= __('CLASSES SOUGHT') ?></label>
                         <div class="archetype-checklist">
                             <label class="archetype-check-label">
                                 <input type="checkbox" name="looking_for[]" value="HU" checked>
-                                <span class="check-custom hu">HU</span> (Hunters)
+                                <span class="check-custom hu">HU</span> <?= __('(Hunters)') ?>
                             </label>
                             <label class="archetype-check-label">
                                 <input type="checkbox" name="looking_for[]" value="RA" checked>
-                                <span class="check-custom ra">RA</span> (Rangers)
+                                <span class="check-custom ra">RA</span> <?= __('(Rangers)') ?>
                             </label>
                             <label class="archetype-check-label">
                                 <input type="checkbox" name="looking_for[]" value="FO" checked>
-                                <span class="check-custom fo">FO</span> (Forces)
+                                <span class="check-custom fo">FO</span> <?= __('(Forces)') ?>
                             </label>
                         </div>
                     </div>
 
                     <button type="submit" id="submit-post-btn" class="dl-btn warning-btn" style="width: 100%; margin-top: 1rem; border-color: #ffaa00;">
-                        <i class="fas fa-plus-circle"></i> CREATE LFG POST
+                        <i class="fas fa-plus-circle"></i> <?= __('CREATE LFG POST') ?>
                     </button>
                 </form>
             </div>
@@ -85,8 +85,8 @@ include 'includes/header.php';
         <div class="terminal-feeds-col">
             <!-- Active Hunter Coordination Feed -->
             <div class="lfg-glass-panel">
-                <h2 class="panel-section-title"><i class="fas fa-users"></i> GROUPS <span id="request-count-badge" class="count-badge">0</span></h2>
-                <p style="font-size: 0.85em; color: #ffaa00; margin-top: 4px; margin-bottom: 1.5rem;"><i class="fas fa-info-circle"></i> live postings from online hunters. Warp directly into active parties or coordinate lobby games.</p>
+                <h2 class="panel-section-title"><i class="fas fa-users"></i> <?= __('GROUPS') ?> <span id="request-count-badge" class="count-badge">0</span></h2>
+                <p style="font-size: 0.85em; color: #ffaa00; margin-top: 4px; margin-bottom: 1.5rem;"><i class="fas fa-info-circle"></i> <?= __('live postings from online hunters. Warp directly into active parties or coordinate lobby games.') ?></p>
 
                 <div id="lfg-listings-grid" class="feeds-grid">
                     <!-- Loaded dynamically -->

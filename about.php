@@ -501,12 +501,12 @@ include 'includes/header.php';
             <div class="tech-spec-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); max-width: 800px; margin: 1.8rem auto 0 auto;">
                 <div class="tech-card">
                     <i class="fas fa-code-branch"></i>
-                    <h4>newserv Emulator</h4>
+                    <h4><?= __('newserv Emulator') ?></h4>
                     <p><?= __('Powered by') ?> <a href="https://github.com/fuzziqersoftware/newserv" target="_blank" style="color: var(--pso-blue); text-decoration: underline;">newserv</a> <?= __('- the advanced open-source PSO server emulator.') ?></p>
                 </div>
                 <div class="tech-card">
                     <i class="fas fa-database"></i>
-                    <h4>SQLite Database</h4>
+                    <h4><?= __('SQLite Database') ?></h4>
                     <p><?= __('Lightweight, high-performance local database for secure player telemetry, custom quest flags, and community event progress.') ?></p>
                 </div>
             </div>

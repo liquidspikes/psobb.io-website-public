@@ -258,16 +258,16 @@ if ($account_id) {
                                             <span class="hud-breakdown-header"><?= __('Target Boss Points') ?></span>
                                             <div class="hud-breakdown-badges">
                                                 <div class="hud-badge-pill border-orange">
-                                                    <span class="hud-pill-name">Vol Opt (Ep1)</span>
-                                                    <span class="hud-pill-val color-orange">+1 Pt</span>
+                                                    <span class="hud-pill-name"><?= __('Vol Opt (Ep1)') ?></span>
+                                                    <span class="hud-pill-val color-orange">+5 <?= __('Pts') ?></span>
                                                 </div>
                                                 <div class="hud-badge-pill border-orange">
-                                                    <span class="hud-pill-name">Gol Dragon (Ep2)</span>
-                                                    <span class="hud-pill-val color-orange">+2 Pts</span>
+                                                    <span class="hud-pill-name"><?= __('Gol Dragon (Ep2)') ?></span>
+                                                    <span class="hud-pill-val color-orange">+10 <?= __('Pts') ?></span>
                                                 </div>
                                                 <div class="hud-badge-pill border-orange">
-                                                    <span class="hud-pill-name">Shambertin (Ep4)</span>
-                                                    <span class="hud-pill-val color-orange">+3 Pts</span>
+                                                    <span class="hud-pill-name"><?= __('Shambertin (Ep4)') ?></span>
+                                                    <span class="hud-pill-val color-orange">+15 <?= __('Pts') ?></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -275,16 +275,16 @@ if ($account_id) {
                                             <span class="hud-breakdown-header"><?= __('Difficulty Modifiers') ?></span>
                                             <div class="hud-breakdown-badges">
                                                 <div class="hud-badge-pill border-cyan">
-                                                    <span class="hud-pill-name">Hard</span>
-                                                    <span class="hud-pill-val color-cyan">+1</span>
-                                                </div>
-                                                <div class="hud-badge-pill border-cyan">
-                                                    <span class="hud-pill-name">VHard</span>
+                                                    <span class="hud-pill-name"><?= __('Hard') ?></span>
                                                     <span class="hud-pill-val color-cyan">+2</span>
                                                 </div>
                                                 <div class="hud-badge-pill border-cyan">
-                                                    <span class="hud-pill-name">Ultimate</span>
-                                                    <span class="hud-pill-val color-cyan">+3</span>
+                                                    <span class="hud-pill-name"><?= __('VHard') ?></span>
+                                                    <span class="hud-pill-val color-cyan">+5</span>
+                                                </div>
+                                                <div class="hud-badge-pill border-cyan">
+                                                    <span class="hud-pill-name"><?= __('Ultimate') ?></span>
+                                                    <span class="hud-pill-val color-cyan">+10</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -378,7 +378,7 @@ if ($account_id) {
                                     </h4>
                                     
                                     <div class="contribution-readout" style="font-size: 0.78rem; margin-bottom: 10px; line-height: 1.45;">
-                                        <strong><?= __('Current Tier:') ?></strong> <span style="color:#00ffcc; font-weight:bold;"><?= $num_rares ?>x Rare Drop<?= $num_rares > 1 ? 's' : '' ?></span> + <span style="color:#ffaa00; font-weight:bold;"><?= number_format($meseta_val) ?> Meseta</span>
+                                        <strong><?= __('Current Tier:') ?></strong> <span style="color:#00ffcc; font-weight:bold;"><?= $num_rares ?>x <?= __('Rare Drop') ?><?= $num_rares > 1 ? 's' : '' ?></span> + <span style="color:#ffaa00; font-weight:bold;"><?= number_format($meseta_val) ?> <?= __('Meseta') ?></span>
                                         <?php if ($is_top_3): ?>
                                             <span style="display:block; margin-top:2px; color:#ffd700; font-weight:bold;">🏆 <?= __('Leaderboard Champion prize!') ?></span>
                                         <?php endif; ?>

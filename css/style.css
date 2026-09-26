@@ -44,7 +44,7 @@ body {
     color: var(--pso-text);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow-x: hidden;
-    background-image: radial-gradient(circle at top center, #1a0b2e 0%, #050a14 60%, #000000 100%);
+    background-image: var(--pso-bg-gradient, radial-gradient(circle at top center, #1a0b2e 0%, #050a14 60%, #000000 100%));
     min-height: 100vh;
     position: relative;
 }

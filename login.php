@@ -292,8 +292,7 @@ if (isset($_SESSION['user']['username'])) {
 
                 <div id="viewer-loader" style="text-align: center; padding: 2rem; display: none;">
                     <i class="fas fa-spinner fa-spin fa-2x" style="color: #00ffff;"></i>
-                    <p style="margin-top: 10px; font-family: 'Share Tech Mono', monospace; color: #aaa;">SYNCHRONIZING
-                        TELEMETRY...</p>
+                    <p style="margin-top: 10px; font-family: 'Share Tech Mono', monospace; color: #aaa;"><?= __('SYNCHRONIZING TELEMETRY...') ?></p>
                 </div>
 
                 <div id="viewer-content-pane">
@@ -546,33 +545,33 @@ if (isset($_SESSION['user']['username'])) {
                                     <div class="streak-nodes">
                                         <div class="streak-node" data-day="7" data-milestone="7">
                                             <div class="streak-node-dot"></div>
-                                            <div class="streak-node-label">7 Days</div>
-                                            <div class="streak-node-reward">Random Mat</div>
+                                            <div class="streak-node-label"><?= __('7 Days') ?></div>
+                                            <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                         </div>
                                         <div class="streak-node" data-day="30" data-milestone="30">
                                             <div class="streak-node-dot"></div>
-                                            <div class="streak-node-label">30 Days</div>
-                                            <div class="streak-node-reward">Random Mat</div>
+                                            <div class="streak-node-label"><?= __('30 Days') ?></div>
+                                            <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                         </div>
                                         <div class="streak-node" data-day="90" data-milestone="90">
                                             <div class="streak-node-dot"></div>
-                                            <div class="streak-node-label">90 Days</div>
-                                            <div class="streak-node-reward">Random Mat</div>
+                                            <div class="streak-node-label"><?= __('90 Days') ?></div>
+                                            <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                         </div>
                                         <div class="streak-node" data-day="180" data-milestone="180">
                                             <div class="streak-node-dot"></div>
-                                            <div class="streak-node-label">180 Days</div>
-                                            <div class="streak-node-reward">Random Mat</div>
+                                            <div class="streak-node-label"><?= __('180 Days') ?></div>
+                                            <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                         </div>
                                         <div class="streak-node" data-day="270" data-milestone="270">
                                             <div class="streak-node-dot"></div>
-                                            <div class="streak-node-label">270 Days</div>
-                                            <div class="streak-node-reward">Random Mat</div>
+                                            <div class="streak-node-label"><?= __('270 Days') ?></div>
+                                            <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                         </div>
                                         <div class="streak-node" data-day="365" data-milestone="365">
                                             <div class="streak-node-dot"></div>
-                                            <div class="streak-node-label">365 Days</div>
-                                            <div class="streak-node-reward">Yahoo! Mag</div>
+                                            <div class="streak-node-label"><?= __('365 Days') ?></div>
+                                            <div class="streak-node-reward"><?= __('Yahoo! Mag') ?></div>
                                         </div>
                                     </div>
                                 </div>
@@ -590,12 +589,12 @@ if (isset($_SESSION['user']['username'])) {
                                 <p style="margin:0; font-size:0.9rem; color:rgba(255,255,255,0.7);">
                                     <?= __('Active Character detected:') ?> <strong id="char-name"
                                         style="color:#fff;">--</strong> (<span id="char-class"
-                                        style="color:#00ffff;">--</span>) Lvl <strong id="char-level"
+                                        style="color:#00ffff;">--</span>) <?= __('Lv.') ?> <strong id="char-level"
                                         style="color:#ffaa00;">--</strong></p>
                             </div>
                             <div id="milestones-container" class="milestones-grid" style="margin-top: 1rem;">
                                 <p id="loading-text" style="color:#aaa; font-family:'Share Tech Mono', monospace;">
-                                    Synchronizing character rewards...</p>
+                                    <?= __('Synchronizing character rewards...') ?></p>
                             </div>
                         </div>
                     </div>
@@ -1303,7 +1302,7 @@ if (isset($_SESSION['user']['username'])) {
             <!-- Drop Animation Overlay -->
             <div id="drop-animation-overlay" class="drop-overlay" style="display: none;">
                 <div id="countdown-text" class="countdown-text"></div>
-                <div class="thank-you-text" id="thank-you-text">THANK YOU FOR PLAYING!</div>
+                <div class="thank-you-text" id="thank-you-text"><?= __('THANK YOU FOR PLAYING!') ?></div>
                 <div class="drop-item-box" id="drop-item-box">
                     <div class="drop-box-core">
                         <div class="face front"></div>

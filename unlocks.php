@@ -149,7 +149,7 @@ include 'includes/header.php';
     <!-- Drop Animation Overlay -->
     <div id="drop-animation-overlay" class="drop-overlay" style="display: none;">
         <div id="countdown-text" class="countdown-text"></div>
-        <div class="thank-you-text" id="thank-you-text">THANK YOU FOR PLAYING!</div>
+        <div class="thank-you-text" id="thank-you-text"><?= __('THANK YOU FOR PLAYING!') ?></div>
         <div class="drop-item-box" id="drop-item-box">
             <div class="drop-box-core">
                 <div class="face front"></div>

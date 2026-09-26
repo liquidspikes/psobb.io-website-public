@@ -29,7 +29,7 @@ include 'includes/header.php';
                 </div>
                 <div class="status-row">
                     <span><?= __('Uptime:') ?></span>
-                    <span id="uptime-stats">Loading...</span>
+                    <span id="uptime-stats"><?= __('Loading...') ?></span>
                 </div>
                 <div class="status-row">
                     <span><?= __('Server Name:') ?></span>

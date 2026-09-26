@@ -60,10 +60,10 @@ while ($row = $cb_res->fetchArray(SQLITE3_ASSOC)) {
 
             <aside class="sidebar">
                 <div class="sidebar-widget">
-                    <h3>Quick Links</h3>
+                    <h3><?= __('Quick Links') ?></h3>
                     <ul class="sidebar-links">
-                        <li><a href="stats.php">Back to Stats</a></li>
-                        <li><a href="missions.php" style="color: var(--pso-orange);">Active Bounty Board</a></li>
+                        <li><a href="stats.php"><?= __('Back to Stats') ?></a></li>
+                        <li><a href="missions.php" style="color: var(--pso-orange);"><?= __('Active Bounty Board') ?></a></li>
                     </ul>
                 </div>
             </aside>
