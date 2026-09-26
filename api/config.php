@@ -470,17 +470,24 @@ function start_secure_session() {
  * 
  * If the token is missing or invalid, execution is halted immediately and a 
  * 403 Forbidden HTTP status is returned.
+ * CRLF (\r\n) and whitespace characters are sanitized from both the provided token
+ * and the active session token to prevent CRLF injection, header tampering, or false mismatches.
  *
- * @param string $token The CSRF token extracted from the request headers or body.
- * @return void
+ * @param string|null $token The CSRF token extracted from the request headers or body.
+ * @return bool Returns true if valid, terminates execution with 403 on failure.
  */
-function verify_csrf_token($token) {
-    $cleanToken = preg_replace('/[\r\n]/', '', trim((string)$token));
-    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $cleanToken)) {
+function verify_csrf_token($token = null): bool {
+    if ($token === null || $token === '') {
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
+    }
+    $cleanToken = preg_replace('/[\r\n\t ]/', '', trim((string)$token));
+    $cleanSession = preg_replace('/[\r\n\t ]/', '', trim((string)($_SESSION['csrf_token'] ?? '')));
+    if (empty($cleanSession) || !hash_equals($cleanSession, $cleanToken)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Invalid or missing CSRF token.']);
         exit;
     }
+    return true;
 }
 
 /**

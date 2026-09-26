@@ -222,8 +222,8 @@ try {
             $stmt = $db->prepare("INSERT INTO tekker_tokens
                 (token_id, owner_id, stat_native, stat_abeast, stat_machine, stat_dark, stat_hit, is_claimed)
                 VALUES (:t,:o,:n,:a,:m,:d,:h,0)");
-            $stmt->bindValue(':t', trim($in['token_id'] ?? ''), SQLITE3_TEXT);
-            $stmt->bindValue(':o', trim($in['owner_id'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':t', preg_replace('/[\r\n\t ]/', '', trim($in['token_id'] ?? '')), SQLITE3_TEXT);
+            $stmt->bindValue(':o', preg_replace('/[\r\n\t ]/', '', trim($in['owner_id'] ?? '')), SQLITE3_TEXT);
             $stmt->bindValue(':n', (int)($in['stat_native'] ?? 0), SQLITE3_INTEGER);
             $stmt->bindValue(':a', (int)($in['stat_abeast'] ?? 0), SQLITE3_INTEGER);
             $stmt->bindValue(':m', (int)($in['stat_machine'] ?? 0), SQLITE3_INTEGER);
@@ -234,24 +234,26 @@ try {
             break;
         }
         case 'getToken': {
+            $cleanT = preg_replace('/[\r\n\t ]/', '', trim($in['tokenId'] ?? ''));
             $stmt = $db->prepare("SELECT * FROM tekker_tokens WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :t");
-            $stmt->bindValue(':t', trim($in['tokenId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':t', $cleanT, SQLITE3_TEXT);
             $r = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
             if ($r) {
-                $r['token_id'] = trim($r['token_id']);
-                $r['owner_id'] = trim($r['owner_id']);
+                $r['token_id'] = preg_replace('/[\r\n\t ]/', '', trim($r['token_id']));
+                $r['owner_id'] = preg_replace('/[\r\n\t ]/', '', trim($r['owner_id']));
             }
             $result = $r ? $r : null;
             break;
         }
         case 'getUnclaimedTokens': {
+            $cleanO = preg_replace('/[\r\n\t ]/', '', trim($in['ownerId'] ?? ''));
             $stmt = $db->prepare("SELECT * FROM tekker_tokens WHERE trim(owner_id, char(13)||char(10)||' '||char(9)) = :o AND is_claimed = 0 ORDER BY created_at DESC");
-            $stmt->bindValue(':o', trim($in['ownerId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':o', $cleanO, SQLITE3_TEXT);
             $res = $stmt->execute();
             $rows = [];
             while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-                $row['token_id'] = trim($row['token_id']);
-                $row['owner_id'] = trim($row['owner_id']);
+                $row['token_id'] = preg_replace('/[\r\n\t ]/', '', trim($row['token_id']));
+                $row['owner_id'] = preg_replace('/[\r\n\t ]/', '', trim($row['owner_id']));
                 $rows[] = $row;
             }
             $result = $rows;
@@ -261,44 +263,49 @@ try {
             $res = $db->query("SELECT * FROM tekker_tokens ORDER BY created_at DESC");
             $rows = [];
             while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-                $row['token_id'] = trim($row['token_id']);
-                $row['owner_id'] = trim($row['owner_id']);
+                $row['token_id'] = preg_replace('/[\r\n\t ]/', '', trim($row['token_id']));
+                $row['owner_id'] = preg_replace('/[\r\n\t ]/', '', trim($row['owner_id']));
                 $rows[] = $row;
             }
             $result = $rows;
             break;
         }
         case 'transferToken': {
+            $cleanT = preg_replace('/[\r\n\t ]/', '', trim($in['tokenId'] ?? ''));
+            $cleanO = preg_replace('/[\r\n\t ]/', '', trim($in['newOwnerId'] ?? ''));
             $stmt = $db->prepare("UPDATE tekker_tokens SET owner_id = :o WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :t");
-            $stmt->bindValue(':o', trim($in['newOwnerId'] ?? ''), SQLITE3_TEXT);
-            $stmt->bindValue(':t', trim($in['tokenId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':o', $cleanO, SQLITE3_TEXT);
+            $stmt->bindValue(':t', $cleanT, SQLITE3_TEXT);
             $stmt->execute();
             $result = ['ok' => true];
             break;
         }
         case 'markTokenClaimed': {
+            $cleanT = preg_replace('/[\r\n\t ]/', '', trim($in['tokenId'] ?? ''));
             $stmt = $db->prepare("UPDATE tekker_tokens SET is_claimed = 1, claimed_by = :c, claimed_at = datetime('now') WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :t");
             $stmt->bindValue(':c', trim($in['claimerId'] ?? ''), SQLITE3_TEXT);
-            $stmt->bindValue(':t', trim($in['tokenId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':t', $cleanT, SQLITE3_TEXT);
             $stmt->execute();
             $result = ['ok' => true];
             break;
         }
         case 'deleteToken': {
+            $cleanT = preg_replace('/[\r\n\t ]/', '', trim($in['tokenId'] ?? ''));
             $stmt = $db->prepare("DELETE FROM tekker_tokens WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :t");
-            $stmt->bindValue(':t', trim($in['tokenId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':t', $cleanT, SQLITE3_TEXT);
             $stmt->execute();
             $result = ['ok' => true, 'deleted' => $db->changes()];
             break;
         }
         case 'setTokenClaimed': {
+            $cleanT = preg_replace('/[\r\n\t ]/', '', trim($in['tokenId'] ?? ''));
             if (!empty($in['claimed'])) {
                 $stmt = $db->prepare("UPDATE tekker_tokens SET is_claimed = 1, claimed_by = :c, claimed_at = datetime('now') WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :t");
                 $stmt->bindValue(':c', trim($in['claimerId'] ?? ''), SQLITE3_TEXT);
             } else {
                 $stmt = $db->prepare("UPDATE tekker_tokens SET is_claimed = 0, claimed_by = NULL, claimed_at = NULL WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :t");
             }
-            $stmt->bindValue(':t', trim($in['tokenId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':t', $cleanT, SQLITE3_TEXT);
             $stmt->execute();
             $result = ['ok' => true];
             break;

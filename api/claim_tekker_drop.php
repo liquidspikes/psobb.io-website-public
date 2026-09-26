@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt->bindValue(':uid', $accountId, SQLITE3_INTEGER);
     $res = $stmt->execute();
     $userRow = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
-    $discordId = $userRow ? trim($userRow['discord_id'] ?? '') : null;
+    $discordId = $userRow ? preg_replace('/[\r\n\t ]/', '', trim($userRow['discord_id'] ?? '')) : null;
 
     if (empty($discordId)) {
         echo json_encode([
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $tokens = [];
     while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
         $tokens[] = [
-            'token_id'     => trim($row['token_id']),
+            'token_id'     => preg_replace('/[\r\n\t ]/', '', trim($row['token_id'])),
             'stat_native'  => (int)$row['stat_native'],
             'stat_abeast'  => (int)$row['stat_abeast'],
             'stat_machine' => (int)$row['stat_machine'],
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindValue(':uid', $accountId, SQLITE3_INTEGER);
     $res = $stmt->execute();
     $userRow = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
-    $discordId = $userRow ? trim($userRow['discord_id'] ?? '') : null;
+    $discordId = $userRow ? preg_replace('/[\r\n\t ]/', '', trim($userRow['discord_id'] ?? '')) : null;
 
     if (empty($discordId)) {
         http_response_code(400);
@@ -165,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fetch and lock tokens
     $tokens = [];
     foreach ($tokenIds as $tid) {
-        $tid = trim($tid);
+        $tid = preg_replace('/[\r\n\t ]/', '', trim($tid));
         $stmt = $db->prepare("
             SELECT token_id, stat_native, stat_abeast, stat_machine, stat_dark, stat_hit
             FROM tekker_tokens
@@ -342,13 +342,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $db->exec("BEGIN TRANSACTION;");
     try {
         foreach ($tokenIds as $tid) {
+            $cleanTid = preg_replace('/[\r\n\t ]/', '', trim($tid));
             $upd = $db->prepare("
                 UPDATE tekker_tokens 
                 SET is_claimed = 1, claimed_by = :claimed_by, claimed_at = datetime('now') 
                 WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :tokenId
             ");
             $upd->bindValue(':claimed_by', $accountId, SQLITE3_INTEGER);
-            $upd->bindValue(':tokenId', trim($tid), SQLITE3_TEXT);
+            $upd->bindValue(':tokenId', $cleanTid, SQLITE3_TEXT);
             $upd->execute();
         }
         $db->exec("COMMIT;");

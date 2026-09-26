@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.getCSRFToken = function () {
         const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
+        return meta ? (meta.getAttribute('content') || '').replace(/[\r\n\t ]/g, '') : '';
     };
 
     fetchServerStats();
@@ -3977,7 +3977,7 @@ window.updateTekkerSelection = function () {
 window.submitTekkerClaim = async function () {
     const checkboxes = Array.from(document.querySelectorAll('.tekker-select-cb'));
     const checked = checkboxes.filter(cb => cb.checked);
-    const tokenIds = checked.map(cb => cb.value);
+    const tokenIds = checked.map(cb => (cb.value || '').replace(/[\r\n\t ]/g, ''));
     
     const w1 = document.getElementById('tekker-weapon-1').value;
     const w2 = document.getElementById('tekker-weapon-2').value;
