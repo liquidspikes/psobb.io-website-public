@@ -427,6 +427,47 @@ function verify_csrf_token($token) {
     }
 }
 
+/**
+ * Encodes a command into a JSON payload formatted specifically for NewServ's /y/shell-exec API.
+ * 
+ * NewServ parses incoming JSON using phosg::JSON, which strictly rejects \uXXXX sequences
+ * with XXXX > 0x00FF ("non-ascii unicode character sequence in string").
+ * Standard PHP json_encode() turns multi-byte UTF-8 Cyrillic into \u04XX, causing NewServ
+ * to throw HTTP 400 and fail to execute in-game chat and announcements.
+ * 
+ * By representing each non-ASCII byte (> 127) as \u00XX, phosg unescapes them directly
+ * back into raw bytes without error, allowing Cyrillic and international UTF-8 text
+ * to pass through to NewServ's command processor and into the game client.
+ *
+ * @param string $cmd The raw shell command (e.g. 'announce Привет' or 'on <id> c <msg>')
+ * @return string JSON payload: {"command":"..."}
+ */
+if (!function_exists('json_encode_newserv_cmd')) {
+    function json_encode_newserv_cmd(string $cmd): string {
+        $escaped = '';
+        $len = strlen($cmd);
+        for ($i = 0; $i < $len; $i++) {
+            $ord = ord($cmd[$i]);
+            if ($ord > 127) {
+                $escaped .= sprintf('\\u%04x', $ord);
+            } elseif ($cmd[$i] === '\\') {
+                $escaped .= '\\\\';
+            } elseif ($cmd[$i] === '"') {
+                $escaped .= '\\"';
+            } elseif ($cmd[$i] === "\n") {
+                $escaped .= '\\n';
+            } elseif ($cmd[$i] === "\r") {
+                $escaped .= '\\r';
+            } elseif ($cmd[$i] === "\t") {
+                $escaped .= '\\t';
+            } else {
+                $escaped .= $cmd[$i];
+            }
+        }
+        return '{"command":"' . $escaped . '"}';
+    }
+}
+
 // Load Localization
 require_once __DIR__ . '/lang.php';
 ?>

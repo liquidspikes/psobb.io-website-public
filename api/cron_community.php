@@ -133,7 +133,7 @@ function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
     }
 
     // Broadcast
-    $exec_payload = json_encode(["command" => "announce-mail " . $message]);
+    $exec_payload = json_encode_newserv_cmd("announce-mail " . $message);
     $exec_options = [
         'http' => [
             'header'  => "Content-type: application/json\r\n",

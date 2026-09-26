@@ -82,7 +82,7 @@ $chatCmd = 'on ' . $accountIdHex . ' c ' . $messageText;
 function run_shell_command($cmd) {
     global $NEWSERV_API_URL;
     $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
+    $body = json_encode_newserv_cmd($cmd);
     $opts = [
         'http' => [
             'method' => 'POST',
