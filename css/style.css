@@ -589,6 +589,14 @@ footer {
 
 .login-container.dashboard-active {
     max-width: 1200px;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+#dashboard {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .dashboard-content-grid {
@@ -1382,6 +1390,11 @@ footer {
     border-radius: 4px;
     white-space: nowrap;
     transition: all 0.3s ease;
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .guide-tab-btn:hover {
@@ -1496,9 +1509,9 @@ footer {
 /* Premium Cyberpunk SPA Player Portal Styles */
 .portal-tabs-nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 2rem;
-    overflow-x: auto;
     padding-bottom: 8px;
     border-bottom: 2px solid rgba(0, 255, 255, 0.15);
 }
@@ -1515,9 +1528,12 @@ footer {
     font-size: 0.95rem;
     white-space: nowrap;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    flex: 1 1 auto;
+    text-align: center;
 }
 
 .portal-tab-btn:hover {
@@ -1907,41 +1923,41 @@ input:checked + .slider:before {
 /* Dashboard Tab System */
 .dashboard-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 1.5rem;
     border-bottom: 2px solid rgba(0, 255, 255, 0.15);
-    padding-bottom: 10px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-}
-.dashboard-tabs::-webkit-scrollbar {
-    height: 4px;
-}
-.dashboard-tabs::-webkit-scrollbar-thumb {
-    background: var(--pso-blue);
-    border-radius: 2px;
+    padding-bottom: 12px;
 }
 .tab-btn {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     border-color: rgba(0, 255, 255, 0.3);
     background: rgba(0, 10, 20, 0.6);
     color: rgba(255, 255, 255, 0.7);
-    padding: 10px 18px;
+    padding: 10px 16px;
     font-size: 0.9rem;
     font-family: 'Share Tech Mono', monospace;
     font-weight: bold;
     white-space: nowrap;
+    text-align: center;
+    border-radius: 4px;
     transition: all 0.2s ease-in-out;
 }
 .tab-btn:hover {
     border-color: var(--pso-blue);
     color: #fff;
-    background: rgba(0, 255, 255, 0.08);
+    background: rgba(0, 255, 255, 0.1);
+    transform: translateY(-1px);
 }
 .tab-btn.active {
     border-color: var(--pso-blue);
-    background: rgba(0, 255, 255, 0.15);
+    background: rgba(0, 255, 255, 0.18);
     color: var(--pso-blue);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.25);
 }
 .dashboard-tab-pane {
     display: none;
@@ -1959,12 +1975,15 @@ input:checked + .slider:before {
 /* Character Slots Selection */
 .character-slots-bar {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 1.5rem;
-    overflow-x: auto;
     padding-bottom: 5px;
 }
 .slot-btn {
+    flex: 1 1 auto;
+    min-width: 110px;
+    text-align: center;
     border-color: rgba(255,255,255,0.15);
     background: rgba(0,0,0,0.4);
     color: rgba(255,255,255,0.6);
@@ -1973,6 +1992,7 @@ input:checked + .slider:before {
     font-family: 'Share Tech Mono', monospace;
     font-weight: 600;
     transition: all 0.2s;
+    border-radius: 4px;
 }
 .slot-btn:hover {
     border-color: rgba(0,255,255,0.5);
@@ -3127,19 +3147,31 @@ body.pwa-standalone .logo-text {
 
 /* ---- Medium screens (tablets, small laptops) ---- */
 @media (max-width: 768px) {
-    /* Tab bar: compact with smaller text */
+    /* Tab bar: compact responsive wrap */
     .dashboard-tabs {
-        gap: 4px;
+        gap: 6px;
         margin-bottom: 1rem;
-        padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
+        padding-bottom: 10px;
     }
     .tab-btn {
-        padding: 8px 12px;
+        flex: 1 1 calc(25% - 6px);
+        min-width: 105px;
+        padding: 8px 10px;
         font-size: 0.78rem;
+        gap: 6px;
     }
     .tab-btn i {
-        margin-right: 4px;
+        margin-right: 0;
+    }
+
+    .character-slots-bar {
+        gap: 6px;
+    }
+    .slot-btn {
+        flex: 1 1 calc(25% - 6px);
+        min-width: 100px;
+        padding: 7px 10px;
+        font-size: 0.8rem;
     }
 
     /* Hero card: tighter */
@@ -3218,14 +3250,32 @@ body.pwa-standalone .logo-text {
 
 /* ---- Small screens (phones) ---- */
 @media (max-width: 480px) {
-    /* Tab bar: icon-only with text hidden */
+    /* Tab bar: 2-column touch-friendly grid with icons and legible text */
+    .dashboard-tabs {
+        gap: 6px;
+    }
     .tab-btn {
-        padding: 8px 10px;
-        font-size: 0;
+        flex: 1 1 calc(50% - 6px);
+        min-width: 120px;
+        padding: 8px 6px;
+        font-size: 0.76rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .tab-btn i {
-        font-size: 1.1rem;
+        font-size: 0.85rem;
         margin-right: 0;
+    }
+
+    .character-slots-bar {
+        gap: 6px;
+    }
+    .slot-btn {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 110px;
+        padding: 7px 8px;
+        font-size: 0.78rem;
     }
 
     /* Server telemetry: 2x2 is fine, but reduce padding */

@@ -1421,7 +1421,7 @@ if (isset($_SESSION['user']['username'])) {
                     </h2>
 
                     <div
-                        style="display: flex; gap: 5px; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                         <button class="guide-tab-btn active" onclick="switchGuideTab('tab-portal')"
                             data-tab="tab-portal"><?= __('PORTAL MANAGEMENT') ?></button>
                         <button class="guide-tab-btn" onclick="switchGuideTab('tab-lfg')"
