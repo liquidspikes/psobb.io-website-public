@@ -3,14 +3,12 @@
  * Provides fast caching for static assets and handles basic offline fallbacks.
  */
 
-const CACHE_NAME = 'psobb-portal-cache-v1';
+const CACHE_NAME = 'psobb-portal-cache-v2';
 const ASSETS_TO_CACHE = [
   '/login.php',
   '/css/style.css',
-  '/css/character_viewer.css',
   '/css/missions.css',
   '/js/main.js',
-  '/js/character_viewer.js',
   '/js/character_3d_viewer.js',
   '/img/favicon.svg',
   '/img/steam_icon.png',

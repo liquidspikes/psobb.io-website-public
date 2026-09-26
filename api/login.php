@@ -98,7 +98,7 @@ try {
         // Supplementary Web Data
         // ----------------------------------------------------------------------
         // Fetch external integrations (like Discord OAuth limits) from the local SQLite DB
-        $stmt = $db->prepare("SELECT discord_id, language, receive_system_mail, receive_discord_streak_msg FROM users WHERE username = :username");
+        $stmt = $db->prepare("SELECT email, discord_id, language, receive_system_mail, receive_discord_streak_msg FROM users WHERE username = :username");
         $stmt->bindValue(':username', $username, SQLITE3_TEXT);
         $res = $stmt->execute();
         $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
@@ -114,18 +114,29 @@ try {
             $ins->bindValue(':e', $username . "_legacy@psobb.io", SQLITE3_TEXT);
             $ins->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
             $ins->execute();
+            $dbEmail = $username . "_legacy@psobb.io";
         } else {
             // Self-healing: ensure account_id in SQLite is perfectly in sync with NewServ's active AccountID
             $upd = $db->prepare("UPDATE users SET account_id = :aid WHERE username = :username");
             $upd->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
             $upd->bindValue(':username', $username, SQLITE3_TEXT);
             $upd->execute();
+            $dbEmail = $row['email'] ?? ($username . "_legacy@psobb.io");
         }
 
+        $isLegacyEmail = empty($dbEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $dbEmail);
+        $cleanEmail = $isLegacyEmail ? '' : $dbEmail;
+
+        $user_account['email'] = $cleanEmail;
+        $user_account['is_legacy_email'] = $isLegacyEmail;
+        $user_account['has_email'] = !$isLegacyEmail;
         $user_account['discord_id'] = $discord_id;
         $user_account['receive_system_mail'] = $receive_system_mail;
         $user_account['receive_discord_streak_msg'] = $receive_discord_streak_msg;
 
+        $_SESSION['user']['email'] = $cleanEmail;
+        $_SESSION['user']['is_legacy_email'] = $isLegacyEmail;
+        $_SESSION['user']['has_email'] = !$isLegacyEmail;
         $_SESSION['user']['receive_system_mail'] = $receive_system_mail;
         $_SESSION['user']['receive_discord_streak_msg'] = $receive_discord_streak_msg;
         

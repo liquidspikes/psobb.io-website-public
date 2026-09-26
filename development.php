@@ -158,8 +158,8 @@ include 'includes/header.php';
                 </a>
 
                 <a href="/decryption.php" class="resource-card">
-                    <h3><i class="fas fa-microchip"></i> Data Decryption</h3>
-                    <p>Live telemetry from our autonomous Ghidra agents as they reverse-engineer and document the game's binary executable.</p>
+                    <h3><i class="fas fa-microchip"></i> Decompilation Matrix</h3>
+                    <p>Live telemetry from our autonomous decompilation pipeline as it byte-matches C++ source against original MSVC 2003 machine code.</p>
                 </a>
             </div>
         </div>

@@ -47,10 +47,29 @@ function sanitize_model_name($name) {
 if (isset($decoded['model'])) {
     $decoded['model'] = sanitize_model_name($decoded['model']);
 }
+function sanitize_incoming_paths($val) {
+    if (!is_string($val)) return $val;
+    // 1. Specific known root prefixes
+    $val = preg_replace('/[A-Za-z]:[\\\/]Users[\\\/][^\\\/]+[\\\/]AppData[\\\/]Local[\\\/]hermes[\\\/]profiles[\\\/][^\\\/]+[\\\/]cache[\\\/]scratch[\\\/]/i', 'scratch/', $val);
+    $val = preg_replace('/[A-Za-z]:[\\\/]Users[\\\/][^\\\/]+[\\\/]AppData[\\\/]Local[\\\/]hermes[\\\/]/i', 'hermes/', $val);
+    $val = preg_replace('/[A-Za-z]:[\\\/]Users[\\\/][^\\\/]+[\\\/]/i', '', $val);
+    $val = preg_replace('/[A-Za-z]:[\\\/]psobb-decomp[\\\/]/i', '', $val);
+    $val = preg_replace('/[A-Za-z]:[\\\/]PSODecryption[\\\/]/i', '', $val);
+    $val = preg_replace('/\/home\/[^\/]+\//i', '', $val);
+    // 2. Generic Windows drive letter paths: C:\... or S:\... -> basename or clean relative path
+    $val = preg_replace_callback('/[A-Za-z]:[\\\/][A-Za-z0-9_.\-\\\/]+/i', function($m) {
+        $clean = str_replace('\\', '/', $m[0]);
+        $base = basename($clean);
+        return $base ?: $m[0];
+    }, $val);
+    // 3. Normalize residual backslashes in path segments
+    $val = preg_replace('/\\\\([A-Za-z0-9_.\-]+)/', '/$1', $val);
+    return $val;
+}
+
 array_walk_recursive($decoded, function(&$val) {
     if (is_string($val)) {
-        $val = str_ireplace('/home/alexzimmerman/models/qwen3.8-flash-next/', '', $val);
-        $val = str_ireplace('/home/alexzimmerman/', '', $val);
+        $val = sanitize_incoming_paths($val);
     }
 });
 
@@ -171,7 +190,8 @@ $merged = [
     'reloc_dir32' => isset($master_state['reloc_dir32']) ? (int)$master_state['reloc_dir32'] : 1296,
     'reloc_rel32' => isset($master_state['reloc_rel32']) ? (int)$master_state['reloc_rel32'] : 128,
     'func_ptr_words' => isset($master_state['func_ptr_words']) ? (int)$master_state['func_ptr_words'] : 1661,
-    'current_target' => isset($master_state['current_target']) ? $master_state['current_target'] : (isset($decoded['current_target']) ? $decoded['current_target'] : null)
+    'current_target' => isset($master_state['current_target']) ? $master_state['current_target'] : (isset($decoded['current_target']) ? $decoded['current_target'] : null),
+    'cluster' => isset($master_state['cluster']) ? $master_state['cluster'] : null
 ];
 
 foreach ($all_states as $id => $state) {

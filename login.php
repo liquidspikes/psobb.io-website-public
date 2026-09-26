@@ -128,6 +128,20 @@ if (isset($_SESSION['user']['username'])) {
 
             <!-- Tab 1: Hub -->
             <div id="tab-hub" class="dashboard-tab-pane active">
+                <!-- Legacy Account Email Alert Banner -->
+                <div id="legacy-email-banner" style="display:none; margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(255, 170, 0, 0.15) 0%, rgba(255, 68, 68, 0.08) 100%); border: 1px solid rgba(255, 170, 0, 0.5); border-radius: 8px; padding: 1rem 1.25rem; box-shadow: 0 0 15px rgba(255, 170, 0, 0.1);" class="animate-fade-in">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap: 15px; flex-wrap: wrap;">
+                        <div style="display:flex; align-items:center; gap: 12px;">
+                            <i class="fas fa-exclamation-triangle" style="color: #ffaa00; font-size: 1.5rem;"></i>
+                            <div>
+                                <strong style="color: #ffaa00; display:block; font-family:'Share Tech Mono', monospace; font-size: 1rem;"><?= __('Account Security: No Recovery Email Linked') ?></strong>
+                                <span style="font-size: 0.85rem; color: #ddd;"><?= __('Your game account does not have a recovery email. Link an email to enable password recovery if you ever forget your password.') ?></span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="switchDashboardTab('tab-settings'); focusEmailInput();" class="dl-btn" style="padding: 6px 16px; border-color: #ffaa00; background: rgba(255,170,0,0.2); color: #ffaa00; font-size: 0.85rem; white-space: nowrap;"><i class="fas fa-link"></i> <?= __('Link Email Now') ?></button>
+                    </div>
+                </div>
+
                 <div class="dashboard-content-grid"
                     style="display: grid; grid-template-columns: minmax(320px, 1fr) 1.5fr; gap: 1.5rem;">
                     <!-- Left side: Hunter's License Card & PWA card -->
@@ -746,6 +760,28 @@ if (isset($_SESSION['user']['username'])) {
                             </label>
                         </div>
 
+                        <!-- Account Recovery Email -->
+                        <div
+                            style="padding: 15px; border: 1px solid rgba(0, 255, 255, 0.2); background: rgba(0, 10, 20, 0.4); border-radius: 8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-wrap:wrap; gap:5px;">
+                                <h4 style="margin: 0; color: #00ffff; font-family:'Share Tech Mono',monospace;">
+                                    <i class="fas fa-envelope-open-text" style="margin-right: 6px;"></i><?= __('Recovery Email Address') ?>
+                                </h4>
+                                <span id="email-status-badge" style="font-size:0.75rem; padding: 2px 8px; border-radius: 4px; font-family:'Share Tech Mono',monospace;">--</span>
+                            </div>
+                            <p style="font-size:0.8rem; color:#aaa; margin:0 0 10px 0;">
+                                <?= __('Required for password recovery via /forgot_password. If you created your account in-game, link your email here so you can recover your password.') ?>
+                            </p>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="email" id="account-email-input"
+                                    placeholder="<?= __('Enter email address (e.g. hunter@example.com)') ?>" maxlength="100"
+                                    style="flex: 1; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.3); color: #fff; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
+                                <button onclick="saveAccountEmail()" id="btn-save-email" class="dl-btn"
+                                    style="padding: 8px 16px; border-color: #00ffff; background: rgba(0,255,255,0.15); color: #00ffff; white-space: nowrap;"><i class="fas fa-save"></i> <?= __('Save') ?></button>
+                            </div>
+                            <div id="email-message" style="margin-top: 6px; font-size: 0.85em; display: none;"></div>
+                        </div>
+
                         <!-- Display alias name -->
                         <div
                             style="padding: 15px; border: 1px solid rgba(0, 255, 255, 0.2); background: rgba(0, 10, 20, 0.4); border-radius: 8px;">
@@ -1330,6 +1366,44 @@ if (isset($_SESSION['user']['username'])) {
                             style="background: rgba(255,255,255,0.1); border-color: #555;"><?= __('Cancel') ?></button>
                         <button onclick="confirmDelete()" id="btn-confirm-delete" class="dl-btn"
                             style="background: rgba(255,0,0,0.1); border-color: #ff4444; color: #ff4444;"><?= __('Confirm Delete') ?></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prompt Link Email on Login Modal -->
+            <div id="prompt-email-modal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+                <div
+                    style="background: #181818; padding: 2rem; border-radius: 8px; border: 1px solid #ffaa00; max-width: 460px; width: 92%; box-shadow: 0 0 30px rgba(255, 170, 0, 0.25);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; border-bottom:1px solid rgba(255,170,0,0.25); padding-bottom:10px;">
+                        <i class="fas fa-shield-alt animate-pulse" style="color: #ffaa00; font-size:1.5rem;"></i>
+                        <h3 style="color: #ffaa00; margin:0; font-family:'Share Tech Mono',monospace;">
+                            <?= __('Account Security: Set Recovery Email') ?>
+                        </h3>
+                    </div>
+
+                    <p style="font-size:0.9rem; color:#eee; line-height:1.5; margin-bottom:10px;">
+                        <?= __('Your account does not have a recovery email on file.') ?>
+                    </p>
+                    <p style="font-size:0.85rem; color:#aaa; line-height:1.5; margin-bottom:1.25rem; background:rgba(255,170,0,0.08); border-left:3px solid #ffaa00; padding:8px 12px; border-radius:0 4px 4px 0;">
+                        <i class="fas fa-info-circle" style="color:#ffaa00; margin-right:4px;"></i>
+                        <?= __('This email will be used exclusively for password recovery via /forgot_password if you ever lose or forget your account password.') ?>
+                    </p>
+
+                    <label for="pem-email-input" style="font-size:0.8rem; color:#ccc; display:block; margin-bottom:5px; font-family:'Share Tech Mono',monospace;">
+                        <?= __('Your Email Address') ?>
+                    </label>
+                    <input type="email" id="pem-email-input" placeholder="<?= __('hunter@example.com') ?>" maxlength="100"
+                        style="width: 100%; padding: 10px; background: #000; border: 1px solid #555; color: #fff; border-radius:4px; box-sizing:border-box; font-family:'Share Tech Mono',monospace; font-size:0.95rem;">
+
+                    <div id="pem-error" style="color: #ff4444; display: none; margin-top: 10px; font-size:0.85rem; font-weight:bold;"></div>
+                    <div id="pem-success" style="color: #00C851; display: none; margin-top: 10px; font-size:0.85rem; font-weight:bold;"></div>
+
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem;">
+                        <button type="button" onclick="closePromptEmailModal(true)" class="dl-btn"
+                            style="background: rgba(255,255,255,0.08); border-color: #555; color:#aaa; font-size:0.85rem;"><?= __('Remind Me Later') ?></button>
+                        <button type="button" onclick="confirmPromptEmail()" id="btn-confirm-pem" class="dl-btn"
+                            style="background: rgba(255, 170, 0, 0.2); border-color: #ffaa00; color: #ffaa00; font-size:0.85rem; font-weight:bold;"><i class="fas fa-link"></i> <?= __('Link Recovery Email') ?></button>
                     </div>
                 </div>
             </div>

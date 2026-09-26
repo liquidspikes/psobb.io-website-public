@@ -380,7 +380,24 @@ $I18N = [
         'You must link your Discord account in order to view and redeem Tekker Challenge tokens.' => 'テッカーチャレンジのトークンを表示・交換するには、Discordアカウントを連携する必要があります。',
         'Go to Settings & Link Discord' => '設定へ進みDiscordを連携する',
         'No Unclaimed Tokens' => '未請求のトークンはありません',
-        'You have no unclaimed reward tokens. Play the Tekker Challenge minigame on our Discord server to earn some!' => '未請求の報酬トークンはありません。Discordサーバーのテッカーチャレンジミニゲームをプレイしてトークンを獲得しましょう！'
+        'You have no unclaimed reward tokens. Play the Tekker Challenge minigame on our Discord server to earn some!' => '未請求の報酬トークンはありません。Discordサーバーのテッカーチャレンジミニゲームをプレイしてトークンを獲得しましょう！',
+
+        // Account Email & Recovery
+        'Account Security: No Recovery Email Linked' => 'アカウントセキュリティ: リカバリー用メールアドレス未登録',
+        'Your game account does not have a recovery email. Link an email to enable password recovery if you ever forget your password.' => 'お使いのゲームアカウントには復旧用メールアドレスが登録されていません。パスワードを忘れた場合に復旧できるよう、メールアドレスを登録してください。',
+        'Link Email Now' => '今すぐメールを登録',
+        'Recovery Email Address' => 'リカバリー用メールアドレス',
+        'Required for password recovery via /forgot_password. If you created your account in-game, link your email here so you can recover your password.' => 'パスワードを紛失した際の復旧（/forgot_password）に必要です。ゲーム内で作成されたアカウントの場合は、アクセスを失わないようにここでメールアドレスを紐付けてください。',
+        'Enter email address (e.g. hunter@example.com)' => 'メールアドレスを入力 (例: hunter@example.com)',
+        'No Email Linked' => 'メール未登録',
+        'Email Linked' => 'メール登録済み',
+        'Link Email' => 'メールを登録',
+        'Account Security: Set Recovery Email' => 'アカウントセキュリティ: リカバリー用メールアドレスの設定',
+        'Your account does not have a recovery email on file.' => 'お使いのアカウントには復旧用メールアドレスが登録されていません。',
+        'This email will be used exclusively for password recovery via /forgot_password if you ever lose or forget your account password.' => 'このメールアドレスは、パスワードを紛失または忘れた際に /forgot_password から再設定を行うために使用されます。',
+        'Your Email Address' => 'あなたのメールアドレス',
+        'Remind Me Later' => '後で通知',
+        'Link Recovery Email' => 'リカバリー用メールを登録'
     ]
 ];
 

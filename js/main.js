@@ -245,6 +245,9 @@ function showDashboard(user) {
             installCard.style.display = 'block';
         }
 
+        // Initialize recovery email
+        loadAccountEmail();
+
         // Initialize display name alias
         loadDisplayName();
 
@@ -444,6 +447,302 @@ window.saveDisplayName = async function () {
         msgEl.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Save';
+    }
+};
+
+window.focusEmailInput = function () {
+    const input = document.getElementById('account-email-input');
+    if (input) {
+        input.focus();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+};
+
+window.loadAccountEmail = async function () {
+    const input = document.getElementById('account-email-input');
+    const badge = document.getElementById('email-status-badge');
+    const banner = document.getElementById('legacy-email-banner');
+    const btn = document.getElementById('btn-save-email');
+    if (!input && !banner) return;
+
+    const userStr = sessionStorage.getItem('psobb_user');
+    let cachedEmail = '';
+    let isLegacy = false;
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            if (user.is_legacy_email || user.has_email === false) {
+                isLegacy = true;
+            } else if (user.email) {
+                cachedEmail = user.email;
+            }
+        } catch (e) { }
+    }
+
+    renderEmailStatus(cachedEmail, isLegacy);
+
+    try {
+        const res = await fetch('/api/get_account_email.php', { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.success) {
+            renderEmailStatus(data.email || '', data.is_legacy);
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    user.email = data.email || '';
+                    user.is_legacy_email = data.is_legacy;
+                    user.has_email = data.has_email;
+                    sessionStorage.setItem('psobb_user', JSON.stringify(user));
+                } catch (e) { }
+            }
+        }
+    } catch (e) { /* silent */ }
+
+    function renderEmailStatus(email, isLegacyAcc) {
+        if (banner) {
+            banner.style.display = isLegacyAcc ? 'block' : 'none';
+        }
+        if (input) {
+            input.value = email || '';
+        }
+        if (badge) {
+            if (isLegacyAcc || !email) {
+                badge.innerHTML = '<i class="fas fa-exclamation-circle"></i> No Email Linked';
+                badge.style.background = 'rgba(255, 170, 0, 0.2)';
+                badge.style.border = '1px solid #ffaa00';
+                badge.style.color = '#ffaa00';
+            } else {
+                badge.innerHTML = '<i class="fas fa-check-circle"></i> Linked';
+                badge.style.background = 'rgba(0, 200, 81, 0.2)';
+                badge.style.border = '1px solid #00C851';
+                badge.style.color = '#00C851';
+            }
+        }
+        if (btn) {
+            btn.innerHTML = (isLegacyAcc || !email) ? '<i class="fas fa-link"></i> Link Email' : '<i class="fas fa-save"></i> Save';
+        }
+
+        if (isLegacyAcc || !email) {
+            // Automatically prompt on login if no valid recovery email is specified
+            const promptDismissed = sessionStorage.getItem('psobb_email_prompt_dismissed');
+            if (!promptDismissed) {
+                setTimeout(() => {
+                    openPromptEmailModal();
+                }, 400);
+            }
+        }
+    }
+};
+
+window.saveAccountEmail = async function () {
+    const input = document.getElementById('account-email-input');
+    const btn = document.getElementById('btn-save-email');
+    const msgEl = document.getElementById('email-message');
+    const badge = document.getElementById('email-status-badge');
+    const banner = document.getElementById('legacy-email-banner');
+    if (!input) return;
+
+    const email = input.value.trim();
+
+    if (!email) {
+        if (msgEl) {
+            msgEl.textContent = 'Please enter an email address.';
+            msgEl.style.color = '#ff4444';
+            msgEl.style.display = 'block';
+        }
+        return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+        if (msgEl) {
+            msgEl.textContent = 'Please enter a valid email address.';
+            msgEl.style.color = '#ff4444';
+            msgEl.style.display = 'block';
+        }
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    if (msgEl) msgEl.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/set_account_email.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.getCSRFToken()
+            },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            if (msgEl) {
+                msgEl.textContent = '✓ ' + data.message;
+                msgEl.style.color = '#00C851';
+                msgEl.style.display = 'block';
+            }
+            if (badge) {
+                badge.innerHTML = '<i class="fas fa-check-circle"></i> Linked';
+                badge.style.background = 'rgba(0, 200, 81, 0.2)';
+                badge.style.border = '1px solid #00C851';
+                badge.style.color = '#00C851';
+            }
+            if (banner) {
+                banner.style.display = 'none';
+            }
+            btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+
+            const userStr = sessionStorage.getItem('psobb_user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    user.email = data.email;
+                    user.has_email = true;
+                    user.is_legacy_email = false;
+                    sessionStorage.setItem('psobb_user', JSON.stringify(user));
+                } catch (e) { }
+            }
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save';
+            }, 2000);
+        } else {
+            if (msgEl) {
+                msgEl.textContent = data.error || 'Failed to update email.';
+                msgEl.style.color = '#ff4444';
+                msgEl.style.display = 'block';
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Save';
+        }
+    } catch (e) {
+        if (msgEl) {
+            msgEl.textContent = 'Connection error.';
+            msgEl.style.color = '#ff4444';
+            msgEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Save';
+    }
+};
+
+window.openPromptEmailModal = function () {
+    const modal = document.getElementById('prompt-email-modal');
+    if (!modal) return;
+    const input = document.getElementById('pem-email-input');
+    const err = document.getElementById('pem-error');
+    const succ = document.getElementById('pem-success');
+    if (err) err.style.display = 'none';
+    if (succ) succ.style.display = 'none';
+    modal.style.display = 'flex';
+    if (input) input.focus();
+};
+
+window.closePromptEmailModal = function (rememberDismissal = false) {
+    const modal = document.getElementById('prompt-email-modal');
+    if (modal) modal.style.display = 'none';
+    if (rememberDismissal) {
+        sessionStorage.setItem('psobb_email_prompt_dismissed', '1');
+    }
+};
+
+window.confirmPromptEmail = async function () {
+    const input = document.getElementById('pem-email-input');
+    const btn = document.getElementById('btn-confirm-pem');
+    const err = document.getElementById('pem-error');
+    const succ = document.getElementById('pem-success');
+    if (!input) return;
+
+    const email = input.value.trim();
+
+    if (!email) {
+        if (err) {
+            err.textContent = 'Please enter an email address.';
+            err.style.display = 'block';
+        }
+        return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+        if (err) {
+            err.textContent = 'Please enter a valid email address.';
+            err.style.display = 'block';
+        }
+        return;
+    }
+
+    if (err) err.style.display = 'none';
+    if (succ) succ.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Linking...';
+
+    try {
+        const response = await fetch('/api/set_account_email.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.getCSRFToken()
+            },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            if (succ) {
+                succ.textContent = '✓ ' + data.message;
+                succ.style.display = 'block';
+            }
+            btn.innerHTML = '<i class="fas fa-check"></i> Linked!';
+
+            sessionStorage.setItem('psobb_email_prompt_dismissed', '1');
+            const userStr = sessionStorage.getItem('psobb_user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    user.email = data.email;
+                    user.has_email = true;
+                    user.is_legacy_email = false;
+                    sessionStorage.setItem('psobb_user', JSON.stringify(user));
+                } catch (e) { }
+            }
+
+            const settingsInput = document.getElementById('account-email-input');
+            if (settingsInput) settingsInput.value = data.email;
+            const badge = document.getElementById('email-status-badge');
+            if (badge) {
+                badge.innerHTML = '<i class="fas fa-check-circle"></i> Linked';
+                badge.style.background = 'rgba(0, 200, 81, 0.2)';
+                badge.style.border = '1px solid #00C851';
+                badge.style.color = '#00C851';
+            }
+            const banner = document.getElementById('legacy-email-banner');
+            if (banner) banner.style.display = 'none';
+
+            setTimeout(() => {
+                closePromptEmailModal(false);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-link"></i> Link Recovery Email';
+            }, 1200);
+        } else {
+            if (err) {
+                err.textContent = data.error || 'Failed to update email.';
+                err.style.display = 'block';
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-link"></i> Link Recovery Email';
+        }
+    } catch (e) {
+        if (err) {
+            err.textContent = 'Connection error.';
+            err.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-link"></i> Link Recovery Email';
     }
 };
 

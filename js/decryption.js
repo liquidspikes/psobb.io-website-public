@@ -1,5 +1,26 @@
 const API_URL = "/api/agent_state.json";
 
+function sanitizePaths(text) {
+    if (!text || typeof text !== 'string') return text;
+    // 0. Strip ANSI escape codes
+    text = text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\[[0-9;]+m/g, '');
+    // 1. Specific known root prefixes
+    text = text.replace(/[A-Za-z]:[\\\/]Users[\\\/][^\\\/]+[\\\/]AppData[\\\/]Local[\\\/]hermes[\\\/]profiles[\\\/][^\\\/]+[\\\/]cache[\\\/]scratch[\\\/]/gi, 'scratch/');
+    text = text.replace(/[A-Za-z]:[\\\/]Users[\\\/][^\\\/]+[\\\/]AppData[\\\/]Local[\\\/]hermes[\\\/]/gi, 'hermes/');
+    text = text.replace(/[A-Za-z]:[\\\/]Users[\\\/][^\\\/]+[\\\/]/gi, '');
+    text = text.replace(/[A-Za-z]:[\\\/]psobb-decomp[\\\/]/gi, '');
+    text = text.replace(/[A-Za-z]:[\\\/]PSODecryption[\\\/]/gi, '');
+    text = text.replace(/\/home\/[^\/]+\//gi, '');
+    // 2. Generic Windows drive letter paths: C:\... or S:\... -> basename or clean relative path
+    text = text.replace(/[A-Za-z]:[\\\/][A-Za-z0-9_.\-\\\/]+/gi, function(match) {
+        const parts = match.split(/[\\\/]/);
+        return parts[parts.length - 1] || match;
+    });
+    // 3. Normalize residual backslashes in path segments
+    text = text.replace(/\\([A-Za-z0-9_.\-]+)/g, '/$1');
+    return text;
+}
+
 // Estimated total functions for base binary (used to calculate %)
 const TOTAL_FUNCTIONS = 8500; 
 let agentFeedLengths = {};
@@ -539,7 +560,7 @@ function updateImpacts(mods) {
         const div = document.createElement('div');
         div.className = "impact-row";
         
-        let cleanedDetails = (mod.details || '').replace(/^{|}$/g, '').replace(/',/g, "' ");
+        let cleanedDetails = sanitizePaths(mod.details || '').replace(/^{|}$/g, '').replace(/',/g, "' ");
         if (cleanedDetails.length > 150) {
             cleanedDetails = cleanedDetails.substring(0, 150) + "...";
         }
@@ -642,7 +663,7 @@ function updateTerminalFeed(agents) {
             const div = document.createElement('div');
             div.className = `log-entry ${entry.type}`;
             
-            let content = (entry.content || '').replace(/^\[Agent [^\]]+\] /, '').replace(/\n/g, "<br>");
+            let content = sanitizePaths(entry.content || '').replace(/^\[Agent [^\]]+\] /, '').replace(/\n/g, "<br>");
             div.innerHTML = `<span class="log-time">[${entry.timestamp || ''}]</span> ${content}`;
             
             container.appendChild(div);
@@ -823,7 +844,7 @@ function renderStreamRenames(mods) {
         const agentId = mod.agent_id ? (mod.agent_id === 'master' ? 'COMMANDER' : `AGENT ${mod.agent_id}`) : 'AGENT 1';
 
         // Extract or synthesize architectural description
-        let desc = mod.description || '';
+        let desc = sanitizePaths(mod.description || '');
         if (!desc && mod.details) {
             if (rawAction.includes('prototype')) {
                 desc = `Verified calling convention and upgraded parameter types to human-readable Hungarian notations for ${newSym}.`;

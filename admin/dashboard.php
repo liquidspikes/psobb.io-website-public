@@ -193,7 +193,13 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
 
         <!-- All Accounts -->
         <div class="admin-card" style="grid-column: span 3;">
-            <h3>All Registered Accounts</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; border:none; padding:0;">All Registered Accounts</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="admin-account-search" placeholder="Filter by user, ID, email..." oninput="filterAccountsList()" style="padding:6px 12px; font-size:0.85rem; border:1px solid #444; background:#111; color:#fff; border-radius:4px; min-width:220px;">
+                    <button onclick="refreshAccountsList()" class="dl-btn" style="font-size:0.8rem; padding:6px 14px;">Refresh List</button>
+                </div>
+            </div>
             <div style="overflow-x: auto; max-height: 400px;">
                 <table style="width:100%; min-width: 600px; border-collapse: collapse;">
                     <thead>
@@ -217,6 +223,32 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
         </div>
     </div>
 </main>
+
+<!-- Admin Edit Email Modal -->
+<div id="admin-edit-email-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background: #181818; padding: 2rem; border-radius: 8px; border: 1px solid #00ffff; max-width: 440px; width: 90%; box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);">
+        <h3 style="color: #00ffff; margin-top:0; font-family:'Share Tech Mono',monospace; border-bottom:1px solid rgba(0,255,255,0.2); padding-bottom:8px;">
+            <i class="fas fa-user-edit" style="margin-right:8px;"></i>Edit Account Email
+        </h3>
+        <p style="font-size:0.85rem; color:#ccc; margin: 12px 0;">
+            Update recovery email for <strong id="aee-username" style="color:#00ffff;"></strong> (Account ID: <span id="aee-account-id" style="font-family:monospace; color:#fff;"></span>).
+        </p>
+
+        <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:5px;">Recovery Email Address</label>
+        <input type="email" id="aee-email-input" placeholder="player@example.com" maxlength="100"
+            style="width: 100%; padding: 10px; background: #000; border: 1px solid #444; color: #fff; border-radius:4px; box-sizing:border-box; font-family:'Share Tech Mono',monospace;">
+
+        <div id="aee-error" style="color: #ff4444; display: none; margin-top: 10px; font-size:0.85rem; font-weight:bold;"></div>
+        <div id="aee-success" style="color: #00C851; display: none; margin-top: 10px; font-size:0.85rem; font-weight:bold;"></div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem;">
+            <button type="button" onclick="closeAdminEditEmailModal()" class="dl-btn"
+                style="background: rgba(255,255,255,0.1); border-color: #555;">Cancel</button>
+            <button type="button" onclick="confirmAdminEditEmail()" id="btn-confirm-aee" class="dl-btn"
+                style="background: rgba(0, 255, 255, 0.15); border-color: #00ffff; color: white;">Save Email</button>
+        </div>
+    </div>
+</div>
 
 <script>
 async function sendAnnouncement(e) {
@@ -409,43 +441,173 @@ async function refreshAccountsList() {
     try {
         const res = await fetch('/api/admin_get_accounts.php', { credentials: 'same-origin' });
         const data = await res.json();
-        const tbody = document.getElementById('admin-accounts-list');
-        tbody.innerHTML = '';
 
-        if (!data.success || !data.accounts || data.accounts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8">No accounts found.</td></tr>';
+        if (!data.success || !data.accounts) {
+            const tbody = document.getElementById('admin-accounts-list');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8">No accounts found.</td></tr>';
             return;
         }
 
-        data.accounts.forEach(a => {
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-            
-            let flagsStr = a.Flags ? '0x' + a.Flags.toString(16).toUpperCase() : 'None';
-            let name = a.WebUsername || (a.BBLicenses && a.BBLicenses[0] ? a.BBLicenses[0].UserName : 'Unknown');
-            let email = a.WebEmail || '-';
-            let discordId = a.WebDiscordID || '-';
-            let created = a.WebCreatedAt ? new Date(a.WebCreatedAt).toLocaleString() : '-';
-            let lastChar = a.LastPlayerName || '-';
-
-            row.innerHTML = `
-                <td style="padding:0.5rem; font-family:monospace;">${a.AccountID || '-'}</td>
-                <td style="padding:0.5rem;">${name}</td>
-                <td style="padding:0.5rem;">${email}</td>
-                <td style="padding:0.5rem; font-family:monospace;">${discordId}</td>
-                <td style="padding:0.5rem;">${created}</td>
-                <td style="padding:0.5rem; font-family:monospace;">${flagsStr}</td>
-                <td style="padding:0.5rem;">${lastChar}</td>
-                <td style="padding:0.5rem;">
-                    <button class="action-btn" onclick="deleteAccount('${a.AccountID}', '${name.replace(/'/g, "\\'")}')">Delete</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+        window._adminAllAccounts = data.accounts;
+        filterAccountsList();
     } catch (e) {
         console.error(e);
         const tbody = document.getElementById('admin-accounts-list');
         if (tbody) tbody.innerHTML = '<tr><td colspan="8">Error loading accounts.</td></tr>';
+    }
+}
+
+function renderFilteredAccounts(accounts) {
+    const tbody = document.getElementById('admin-accounts-list');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!accounts || accounts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8">No matching accounts found.</td></tr>';
+        return;
+    }
+
+    accounts.forEach(a => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+        
+        let flagsStr = a.Flags ? '0x' + a.Flags.toString(16).toUpperCase() : 'None';
+        let name = a.WebUsername || (a.BBLicenses && a.BBLicenses[0] ? a.BBLicenses[0].UserName : 'Unknown');
+        let email = a.WebEmail || '-';
+        let isLegacyEmail = typeof email === 'string' && email.toLowerCase().endsWith('_legacy@psobb.io');
+        let emailDisplay = isLegacyEmail ? `<span style="color:#ffaa00;" title="${email}">${email}</span> <span style="font-size:0.75rem; background:rgba(255,170,0,0.2); border:1px solid #ffaa00; padding:1px 4px; border-radius:3px; color:#ffaa00;">Legacy</span>` : email;
+        let discordId = a.WebDiscordID || '-';
+        let created = a.WebCreatedAt ? new Date(a.WebCreatedAt).toLocaleString() : '-';
+        let lastChar = a.LastPlayerName || '-';
+
+        row.innerHTML = `
+            <td style="padding:0.5rem; font-family:monospace;">${a.AccountID || '-'}</td>
+            <td style="padding:0.5rem;">${name}</td>
+            <td style="padding:0.5rem;">${emailDisplay}</td>
+            <td style="padding:0.5rem; font-family:monospace;">${discordId}</td>
+            <td style="padding:0.5rem;">${created}</td>
+            <td style="padding:0.5rem; font-family:monospace;">${flagsStr}</td>
+            <td style="padding:0.5rem;">${lastChar}</td>
+            <td style="padding:0.5rem; white-space:nowrap;">
+                <button class="dl-btn" style="padding:0.25rem 0.5rem; font-size:0.75rem; border-color:#00ffff; color:#00ffff; background:rgba(0,255,255,0.1); margin-right:4px;" onclick="openAdminEditEmailModal('${a.AccountID}', '${name.replace(/'/g, "\\'")}', '${(a.WebEmail || '').replace(/'/g, "\\'")}')"><i class="fas fa-envelope"></i> Edit Email</button>
+                <button class="action-btn" onclick="deleteAccount('${a.AccountID}', '${name.replace(/'/g, "\\'")}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function filterAccountsList() {
+    const searchInput = document.getElementById('admin-account-search');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const all = window._adminAllAccounts || [];
+    if (!query) {
+        renderFilteredAccounts(all);
+        return;
+    }
+    const filtered = all.filter(a => {
+        const id = String(a.AccountID || '');
+        const name = (a.WebUsername || (a.BBLicenses && a.BBLicenses[0] ? a.BBLicenses[0].UserName : '')).toLowerCase();
+        const email = (a.WebEmail || '').toLowerCase();
+        const discord = (a.WebDiscordID || '').toLowerCase();
+        return id.includes(query) || name.includes(query) || email.includes(query) || discord.includes(query);
+    });
+    renderFilteredAccounts(filtered);
+}
+
+let _currentEditAid = null;
+let _currentEditUser = null;
+
+function openAdminEditEmailModal(accountId, username, currentEmail) {
+    _currentEditAid = accountId;
+    _currentEditUser = username;
+
+    document.getElementById('aee-account-id').textContent = accountId || 'N/A';
+    document.getElementById('aee-username').textContent = username || 'Unknown';
+    
+    const isLegacy = currentEmail && currentEmail.toLowerCase().endsWith('_legacy@psobb.io');
+    document.getElementById('aee-email-input').value = isLegacy ? '' : (currentEmail || '');
+    
+    const err = document.getElementById('aee-error');
+    const succ = document.getElementById('aee-success');
+    err.style.display = 'none';
+    succ.style.display = 'none';
+    
+    const modal = document.getElementById('admin-edit-email-modal');
+    modal.style.display = 'flex';
+    document.getElementById('aee-email-input').focus();
+}
+
+function closeAdminEditEmailModal() {
+    const modal = document.getElementById('admin-edit-email-modal');
+    if (modal) modal.style.display = 'none';
+    _currentEditAid = null;
+    _currentEditUser = null;
+}
+
+async function confirmAdminEditEmail() {
+    const email = document.getElementById('aee-email-input').value.trim();
+    const btn = document.getElementById('btn-confirm-aee');
+    const err = document.getElementById('aee-error');
+    const succ = document.getElementById('aee-success');
+
+    err.style.display = 'none';
+    succ.style.display = 'none';
+
+    if (!email) {
+        err.textContent = 'Please enter an email address.';
+        err.style.display = 'block';
+        return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+        err.textContent = 'Please enter a valid email address.';
+        err.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+        const res = await fetch('/api/admin_update_email.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.getCSRFToken()
+            },
+            body: JSON.stringify({
+                account_id: _currentEditAid ? parseInt(_currentEditAid) : null,
+                username: _currentEditUser,
+                email: email
+            })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            succ.textContent = '✓ ' + data.message;
+            succ.style.display = 'block';
+            btn.textContent = 'Saved!';
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = 'Save Email';
+                closeAdminEditEmailModal();
+                refreshAccountsList();
+            }, 1200);
+        } else {
+            err.textContent = data.error || 'Failed to update email.';
+            err.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Save Email';
+        }
+    } catch (e) {
+        err.textContent = 'Connection error.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Save Email';
     }
 }
 

@@ -245,8 +245,10 @@ objective/reward text.
 | `register.php` | POST | 🔓 | JSON `username`, `password`, `email` | Create website + NewServ account |
 | `delete_account.php` | POST | 🛡️ | `csrf_token` | Delete the logged-in user's account |
 | `change_password.php` | POST | 🛡️ | `csrf_token`, password fields | Change password (synced to NewServ) |
-| `forgot_password.php` | POST | 🔓 | email/username | Email a reset token |
+| `forgot_password.php` | POST | 🔓 | email | Email a reset token |
 | `reset_password.php` | POST | 🔓 | token, new password | Complete a password reset |
+| `get_account_email.php` | GET | 🔑 | — | Get user's current recovery email & legacy status |
+| `set_account_email.php` | POST | 🛡️ | `csrf_token`, JSON `email` | Link or update account recovery email |
 | `captcha.php` | GET | 🔓 | — | Render a CAPTCHA image into the session |
 
 ---
@@ -364,6 +366,7 @@ All require 👑 admin; mutations also require CSRF.
 | `admin_get_claimed_characters.php` | GET | Claimed-character report |
 | `admin_reset_claim.php` | POST | Reset a character claim |
 | `admin_delete_account.php` | POST | Delete an account |
+| `admin_update_email.php` | POST | Modify/assign recovery email for any account |
 | `admin_change_*` / `change_password.php` | POST | Admin credential changes |
 | `admin_bot_tokens.php` | GET/POST | Create / list / revoke `bot_tokens` for the bot API |
 | `admin_exec.php` | POST | Run a shell/`/y/shell-exec` command (admin only) |

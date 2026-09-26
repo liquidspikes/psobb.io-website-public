@@ -48,6 +48,7 @@ $SMTP_FROM = $_ENV['SMTP_FROM'] ?? 'noreply@psobb.io';
 
 // Integrations
 $GEMINI_API_KEY = $_ENV['GEMINI_API_KEY'] ?? '';
+$GEMINI_MODEL = $_ENV['GEMINI_MODEL'] ?? 'gemini-3.5-flash';
 
 // Discord OAuth2 Configuration
 $DISCORD_CLIENT_ID = $_ENV['DISCORD_CLIENT_ID'] ?? '';

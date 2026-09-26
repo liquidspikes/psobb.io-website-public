@@ -15,6 +15,7 @@ if (php_sapi_name() !== 'cli') {
 
 $db = get_db();
 
+
 // Ensure only one instance of the daemon runs at a time
 $lock_file = fopen(__DIR__ . '/../db/.cron_missions.lock', 'c');
 if (!flock($lock_file, LOCK_EX | LOCK_NB)) {
@@ -1062,7 +1063,7 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
   \"goal_target\": \"{$selected_target_id}\"
 }";
         
-        $gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" . $GEMINI_API_KEY;
+        $gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/" . $GEMINI_MODEL . ":generateContent?key=" . $GEMINI_API_KEY;
         $payload = json_encode([
             "contents" => [["parts" => [["text" => $prompt]]]],
             "generationConfig" => [
@@ -1076,11 +1077,12 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
                 'header'  => "Content-type: application/json\r\n",
                 'method'  => 'POST',
                 'content' => $payload,
-                'timeout' => 2
+                'timeout' => 15
             ]
         ];
         $context  = stream_context_create($options);
         $result = @file_get_contents($gemini_url, false, $context);
+
         
         if ($result) {
             $json_res = json_decode($result, true);

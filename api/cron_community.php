@@ -78,7 +78,7 @@ if (empty($active_community_events)) {
  * Helper function to trigger Gemini AI for milestones and broadcast to NewServ.
  */
 function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
-    global $GEMINI_API_KEY, $NEWSERV_API_URL, $db;
+    global $GEMINI_API_KEY, $NEWSERV_API_URL, $db, $GEMINI_MODEL;
     
     $prompt = "You are 'Mission Control', the official AI game master for PSOBB. Keep your response extremely brief (under 50 words, maximum 2 sentences). ";
     $prompt .= "The server is currently running a Global Community Event titled '{$ce['title']}' where players work together to {$ce['goal_type']}. ";
@@ -107,10 +107,11 @@ function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
         'http' => [
             'header'  => "Content-type: application/json\r\n",
             'method'  => 'POST',
-            'content' => json_encode($payload)
+            'content' => json_encode($payload),
+            'timeout' => 15
         ]
     ];
-    $gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" . $GEMINI_API_KEY;
+    $gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/" . $GEMINI_MODEL . ":generateContent?key=" . $GEMINI_API_KEY;
     $api_response = @file_get_contents($gemini_url, false, stream_context_create($g_options));
 
     $message = "";
