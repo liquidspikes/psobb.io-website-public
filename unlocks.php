@@ -11,8 +11,8 @@ include 'includes/header.php';
 
     <main class="container">
         <div class="main-header" style="margin-bottom: 2rem;">
-            <h1>Level Unlocks</h1>
-            <p>Claim exclusive rewards for reaching level milestones!</p>
+            <h1><?= __('Level Unlocks') ?></h1>
+            <p><?= __('Claim exclusive rewards for reaching level milestones!') ?></p>
         </div>
 
         <div class="layout-grid">
@@ -21,42 +21,42 @@ include 'includes/header.php';
 
                 <!-- Daily Reward Section -->
                 <div id="daily-reward-section" style="display: none; margin-bottom: 2rem;">
-                    <h2 style="margin-bottom: 1rem;">🎁 Daily Reward</h2>
+                    <h2 style="margin-bottom: 1rem;">🎁 <?= __('Daily Reward') ?></h2>
                     <div class="streak-container" style="border-color: rgba(0, 200, 200, 0.4);">
-                        <p style="color: rgba(255,255,255,0.85); margin-bottom: 0.5rem;">Claim a free random item every day just for playing!</p>
+                        <p style="color: rgba(255,255,255,0.85); margin-bottom: 0.5rem;"><?= __('Claim a free random item every day just for playing!') ?></p>
                         <p style="color: #ffaa00; margin-bottom: 1.2rem; font-size: 0.9rem; font-family: 'Share Tech Mono', monospace; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-exclamation-triangle animate-pulse"></i> <span>Log into the game first</span>
+                            <i class="fas fa-exclamation-triangle animate-pulse"></i> <span><?= __('Log into the game first') ?></span>
                         </p>
                         <button id="daily-claim-btn" class="streak-claim-btn" style="width: 100%; padding: 0.8rem; font-size: 1rem;">
-                            🎲 Claim Daily Reward
+                            🎲 <?= __('Claim Daily Reward') ?>
                         </button>
                         <div id="daily-result" style="margin-top: 1rem; display: none; text-align: center; color: #00ff88; font-family: 'Share Tech Mono', monospace;"></div>
                     </div>
                 </div>
 
                 <div id="character-info" class="server-status-widget" style="display: none; margin-bottom: 2rem;">
-                    <h3>Active Character</h3>
+                    <h3><?= __('Active Character') ?></h3>
                     <div class="status-row">
-                        <span>Name:</span>
+                        <span><?= __('Name:') ?></span>
                         <span id="char-name" class="highlight-text"></span>
                     </div>
                     <div class="status-row">
-                        <span>Class:</span>
+                        <span><?= __('Class:') ?></span>
                         <span id="char-class" class="highlight-text"></span>
                     </div>
                     <div class="status-row">
-                        <span>Level:</span>
+                        <span><?= __('Level:') ?></span>
                         <span id="char-level" class="highlight-text"></span>
                     </div>
                 </div>
 
                 <!-- Daily Streak Section -->
                 <div id="streak-section" style="display: none; margin-bottom: 2rem;">
-                    <h2 style="margin-bottom: 1rem;">🔥 Daily Login Streak</h2>
+                    <h2 style="margin-bottom: 1rem;">🔥 <?= __('Daily Login Streak') ?></h2>
                     <div class="streak-container">
                         <div class="streak-info">
                             <span id="streak-count" class="streak-number">0</span>
-                            <span class="streak-label">consecutive days</span>
+                            <span class="streak-label"><?= __('consecutive days') ?></span>
                         </div>
                         <div class="streak-bar-wrapper">
                             <div class="streak-bar">
@@ -65,33 +65,33 @@ include 'includes/header.php';
                             <div class="streak-nodes">
                                 <div class="streak-node" data-day="7" data-milestone="7">
                                     <div class="streak-node-dot"></div>
-                                    <div class="streak-node-label">7 Days</div>
-                                    <div class="streak-node-reward">Random Mat</div>
+                                    <div class="streak-node-label"><?= __('7 Days') ?></div>
+                                    <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                 </div>
                                 <div class="streak-node" data-day="30" data-milestone="30">
                                     <div class="streak-node-dot"></div>
-                                    <div class="streak-node-label">30 Days</div>
-                                    <div class="streak-node-reward">Random Mat</div>
+                                    <div class="streak-node-label"><?= __('30 Days') ?></div>
+                                    <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                 </div>
                                 <div class="streak-node" data-day="90" data-milestone="90">
                                     <div class="streak-node-dot"></div>
-                                    <div class="streak-node-label">90 Days</div>
-                                    <div class="streak-node-reward">Random Mat</div>
+                                    <div class="streak-node-label"><?= __('90 Days') ?></div>
+                                    <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                 </div>
                                 <div class="streak-node" data-day="180" data-milestone="180">
                                     <div class="streak-node-dot"></div>
-                                    <div class="streak-node-label">180 Days</div>
-                                    <div class="streak-node-reward">Random Mat</div>
+                                    <div class="streak-node-label"><?= __('180 Days') ?></div>
+                                    <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                 </div>
                                 <div class="streak-node" data-day="270" data-milestone="270">
                                     <div class="streak-node-dot"></div>
-                                    <div class="streak-node-label">270 Days</div>
-                                    <div class="streak-node-reward">Random Mat</div>
+                                    <div class="streak-node-label"><?= __('270 Days') ?></div>
+                                    <div class="streak-node-reward"><?= __('Random Mat') ?></div>
                                 </div>
                                 <div class="streak-node" data-day="365" data-milestone="365">
                                     <div class="streak-node-dot"></div>
-                                    <div class="streak-node-label">365 Days</div>
-                                    <div class="streak-node-reward">Yahoo! Mag</div>
+                                    <div class="streak-node-label"><?= __('365 Days') ?></div>
+                                    <div class="streak-node-reward"><?= __('Yahoo! Mag') ?></div>
                                 </div>
                             </div>
                         </div>
@@ -100,27 +100,27 @@ include 'includes/header.php';
                 </div>
 
 
-                <h2>Available Milestones</h2>
+                <h2><?= __('Available Milestones') ?></h2>
                 <div id="milestones-container" class="milestones-grid">
-                    <p id="loading-text">Loading your character data...</p>
+                    <p id="loading-text"><?= __('Loading your character data...') ?></p>
                 </div>
             </section>
 
             <aside class="sidebar">
                 <div class="sidebar-widget">
-                    <h3>How it Works</h3>
+                    <h3><?= __('How it Works') ?></h3>
                     <p style="margin-bottom: 1rem; color: var(--text-muted);">
-                        You must be <strong>logged into the game</strong> with the character you want to claim rewards on.
+                        <?= __('You must be <strong>logged into the game</strong> with the character you want to claim rewards on.') ?>
                     </p>
                     <p style="margin-bottom: 1rem; color: var(--text-muted);">
-                        Every 5 levels, you unlock a new reward crate! Choose carefully, each milestone can only be claimed once per character.
+                        <?= __('Every 5 levels, you unlock a new reward crate! Choose carefully, each milestone can only be claimed once per character.') ?>
                     </p>
                     <p style="color: var(--text-muted);">
-                        Weapons and armors are automatically curated based on your level and class. Armors come with 4 slots and high stats!
+                        <?= __('Weapons and armors are automatically curated based on your level and class. Armors come with 4 slots and high stats!') ?>
                     </p>
                     <div class="widget-divider"></div>
                     <ul class="sidebar-links">
-                        <li><a href="stats.php">View Server Stats</a></li>
+                        <li><a href="stats.php"><?= __('View Server Stats') ?></a></li>
                     </ul>
                 </div>
             </aside>
@@ -131,15 +131,15 @@ include 'includes/header.php';
     <div id="claim-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2 id="modal-title" style="font-family: 'Share Tech Mono', 'Segoe UI', monospace; color: var(--pso-blue);">Claim Level <span id="modal-level"></span> Reward</h2>
-            <p style="margin-top: 1rem; margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.7);">Select your preferred reward category below. The item will be dropped instantly beside your character in-game!</p>
+            <h2 id="modal-title" style="font-family: 'Share Tech Mono', 'Segoe UI', monospace; color: var(--pso-blue);"><?= __('Claim Level') ?> <span id="modal-level"></span> <?= __('Reward') ?></h2>
+            <p style="margin-top: 1rem; margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.7);"><?= __('Select your preferred reward category below. The item will be dropped instantly beside your character in-game!') ?></p>
             
             <div class="reward-options">
-                <button class="dl-btn claim-category-btn" data-category="Weapon" style="width: 100%; border-color: #ff4444; background: rgba(255, 68, 68, 0.15); color: #ffaaaa;">Weapon</button>
-                <button class="dl-btn claim-category-btn" data-category="Armor" style="width: 100%; border-color: #33b5e5; background: rgba(51, 181, 229, 0.15); color: #aaddff;">Armor / Frame</button>
-                <button class="dl-btn claim-category-btn" data-category="Shield" style="width: 100%; border-color: #33b5e5; background: rgba(51, 181, 229, 0.15); color: #aaddff;">Shield / Barrier</button>
-                <button class="dl-btn claim-category-btn" data-category="Mag" style="width: 100%; border-color: #00c8c8; background: rgba(0, 200, 200, 0.15); color: #80f0f0;">Rare Mag (1x)</button>
-                <button class="dl-btn claim-category-btn" data-category="Random" style="width: 100%; border-color: #00C851; background: rgba(0, 200, 81, 0.15); color: #aaffaa;">Random / Utility (3x drops)</button>
+                <button class="dl-btn claim-category-btn" data-category="Weapon" style="width: 100%; border-color: #ff4444; background: rgba(255, 68, 68, 0.15); color: #ffaaaa;"><?= __('Weapon') ?></button>
+                <button class="dl-btn claim-category-btn" data-category="Armor" style="width: 100%; border-color: #33b5e5; background: rgba(51, 181, 229, 0.15); color: #aaddff;"><?= __('Armor / Frame') ?></button>
+                <button class="dl-btn claim-category-btn" data-category="Shield" style="width: 100%; border-color: #33b5e5; background: rgba(51, 181, 229, 0.15); color: #aaddff;"><?= __('Shield / Barrier') ?></button>
+                <button class="dl-btn claim-category-btn" data-category="Mag" style="width: 100%; border-color: #00c8c8; background: rgba(0, 200, 200, 0.15); color: #80f0f0;"><?= __('Rare Mag (1x)') ?></button>
+                <button class="dl-btn claim-category-btn" data-category="Random" style="width: 100%; border-color: #00C851; background: rgba(0, 200, 81, 0.15); color: #aaffaa;"><?= __('Random / Utility (3x drops)') ?></button>
             </div>
             
             <div id="modal-error" style="color: #ff4444; margin-top: 1rem; display: none;"></div>

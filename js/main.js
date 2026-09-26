@@ -3640,7 +3640,8 @@ function startDailyCountdown(btn, resetTimestamp, serverTime) {
 // ---- Tekker Token Redemption Store ------------------------------------------
 function getLang() {
     const match = document.cookie.match(/(?:^|; )psobb_lang=([^;]*)/);
-    return (match && match[1] === 'jp') ? 'jp' : 'en';
+    if (match && ['jp', 'ru'].includes(match[1])) return match[1];
+    return 'en';
 }
 
 const tekkerI18n = {
@@ -3679,6 +3680,24 @@ const tekkerI18n = {
         tierInfo: "{count}個のトークン — 最大 {stars}★ の武器をアンロック",
         noSelected: "選択なし",
         combinedLabel: "結合ステータス"
+    },
+    ru: {
+        choice1: "Выбор оружия 1",
+        choice2: "Выбор оружия 2",
+        choice3: "Выбор оружия 3",
+        redeem: "Обменять жетон",
+        noAttr: "Без атрибутов",
+        earned: "Получено",
+        loadError: "Не удалось загрузить жетоны с сервера.",
+        connError: "Произошла ошибка соединения.",
+        select3: "Необходимо выбрать ровно 3 оружия",
+        errorPrefix: "Ошибка:",
+        successPrefix: "Успех:",
+        dropping: "ВЫПАДЕНИЕ!",
+        maxSelect: "Можно выбрать максимум 3 жетона.",
+        tierInfo: "Жетонов: {count} — Оружие до {stars}★ разблокировано",
+        noSelected: "Нет",
+        combinedLabel: "Общие характеристики"
     }
 };
 

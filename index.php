@@ -56,7 +56,7 @@ include 'includes/header.php';
                     </div>
                     <div class="status-row">
                         <span class="status-label"><?= __('Uptime:') ?></span>
-                        <span class="status-val" id="uptime">Loading...</span>
+                        <span class="status-val" id="uptime"><?= __('Loading...') ?></span>
                     </div>
                     <div class="status-row">
                         <span class="status-label"><?= __('Players:') ?></span>

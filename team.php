@@ -11,26 +11,26 @@ include 'includes/header.php';
 
     <main class="container">
         <div class="main-header" style="margin-bottom: 2rem;">
-            <h1>Team Management</h1>
+            <h1><?= __('Team Management') ?></h1>
         </div>
 
         <div class="layout-grid">
             <section class="main-content">
                 <div id="auth-warning" style="display: none;" class="server-status-widget">
-                    <h3 style="margin-top: 0; color: #ffca28;"><i class="fas fa-exclamation-triangle"></i> Not Logged In</h3>
-                    <p style="color: #ccc;">You must be logged in to view your team information.</p>
-                    <a href="/login.php" class="dl-btn" style="margin-top: 10px;">Login Here</a>
+                    <h3 style="margin-top: 0; color: #ffca28;"><i class="fas fa-exclamation-triangle"></i> <?= __('Not Logged In') ?></h3>
+                    <p style="color: #ccc;"><?= __('You must be logged in to view your team information.') ?></p>
+                    <a href="/login.php" class="dl-btn" style="margin-top: 10px;"><?= __('Login Here') ?></a>
                 </div>
 
                 <div id="no-team-message" style="display: none;" class="server-status-widget">
-                    <h3 style="margin-top: 0; color: var(--pso-blue);"><i class="fas fa-users-slash"></i> No Team Found</h3>
-                    <p style="color: #ccc;">You are not currently a member of a team.</p>
-                    <p style="font-size: 0.9em; color: rgba(255,255,255,0.5);">Join a team in-game at the Hunter's Guild counter.</p>
+                    <h3 style="margin-top: 0; color: var(--pso-blue);"><i class="fas fa-users-slash"></i> <?= __('No Team Found') ?></h3>
+                    <p style="color: #ccc;"><?= __('You are not currently a member of a team.') ?></p>
+                    <p style="font-size: 0.9em; color: rgba(255,255,255,0.5);"><?= __('Join a team in-game at the Hunter\'s Guild counter.') ?></p>
                 </div>
 
                 <div id="team-loading" class="server-status-widget" style="text-align: center; padding: 3rem;">
                     <i class="fas fa-circle-notch fa-spin fa-3x" style="color: var(--pso-blue); margin-bottom: 1rem;"></i>
-                    <p>Fetching team data from Pioneer 2...</p>
+                    <p><?= __('Fetching team data from Pioneer 2...') ?></p>
                 </div>
 
                 <div id="team-dashboard" style="display: none;">
@@ -39,56 +39,56 @@ include 'includes/header.php';
                             <i class="fas fa-shield-alt"></i>
                         </div>
                         <h3 id="display-team-name" style="font-size: 1.8rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(0,255,255,0.2); padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-users" style="color: var(--pso-blue); font-size: 1.4rem;"></i> <span>Team Name</span>
+                            <i class="fas fa-users" style="color: var(--pso-blue); font-size: 1.4rem;"></i> <span><?= __('Team Name') ?></span>
                         </h3>
                         <div class="status-row">
-                            <span><i class="fas fa-user-tag" style="width: 20px; color: var(--pso-purple);"></i> Your Role:</span>
+                            <span><i class="fas fa-user-tag" style="width: 20px; color: var(--pso-purple);"></i> <?= __('Your Role:') ?></span>
                             <span id="display-role" style="font-weight: bold; color: #fff; background: rgba(157, 78, 221, 0.2); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(157, 78, 221, 0.5);">--</span>
                         </div>
                         <div class="status-row">
-                            <span><i class="fas fa-hashtag" style="width: 20px; color: #aaa;"></i> Team ID:</span>
+                            <span><i class="fas fa-hashtag" style="width: 20px; color: #aaa;"></i> <?= __('Team ID:') ?></span>
                             <span id="display-team-id" style="font-family: monospace; color: #aaa;">--</span>
                         </div>
                         <div class="status-row">
-                            <span><i class="fas fa-user-friends" style="width: 20px; color: #00C851;"></i> Members:</span>
+                            <span><i class="fas fa-user-friends" style="width: 20px; color: #00C851;"></i> <?= __('Members:') ?></span>
                             <span id="display-members" style="font-weight: bold; color: #00C851;">--</span>
                         </div>
                         <div class="status-row">
-                            <span><i class="fas fa-star" style="width: 20px; color: #ffca28;"></i> Your Contributed Points:</span>
+                            <span><i class="fas fa-star" style="width: 20px; color: #ffca28;"></i> <?= __('Your Contributed Points:') ?></span>
                             <span id="display-my-points" style="color: #ffca28; font-weight: bold;">--</span>
                         </div>
                         <div class="status-row" style="border-bottom: none; padding-bottom: 0;">
-                            <span><i class="fas fa-coins" style="width: 20px; color: var(--pso-blue);"></i> Total Unspent Points:</span>
+                            <span><i class="fas fa-coins" style="width: 20px; color: var(--pso-blue);"></i> <?= __('Total Unspent Points:') ?></span>
                             <span id="display-unspent-points" style="color: var(--pso-blue); font-weight: bold; font-size: 1.1em; text-shadow: 0 0 5px rgba(0,255,255,0.5);">--</span>
                         </div>
                     </div>
 
                     <div id="team-rewards-section" class="server-status-widget" style="margin-bottom: 2rem;">
                         <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem;">
-                            <i class="fas fa-gift" style="color: var(--pso-purple);"></i> Available Rewards
+                            <i class="fas fa-gift" style="color: var(--pso-purple);"></i> <?= __('Available Rewards') ?>
                         </h3>
                         <div id="next-unlocks-list">
-                            <p>Loading rewards...</p>
+                            <p><?= __('Loading rewards...') ?></p>
                         </div>
                     </div>
 
                     <div id="master-view-section" style="display: none;">
                         <h2 style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-clipboard-list" style="color: var(--pso-blue);"></i> Team Roster <span style="font-size: 0.5em; vertical-align: middle; background: rgba(0,255,255,0.1); color: var(--pso-blue); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(0,255,255,0.3); font-weight: normal; margin-left: 10px;">Master / Leader View</span>
+                            <i class="fas fa-clipboard-list" style="color: var(--pso-blue);"></i> <?= __('Team Roster') ?> <span style="font-size: 0.5em; vertical-align: middle; background: rgba(0,255,255,0.1); color: var(--pso-blue); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(0,255,255,0.3); font-weight: normal; margin-left: 10px;"><?= __('Master / Leader View') ?></span>
                         </h2>
                         <div class="table-responsive">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Account ID</th>
-                                        <th>Name</th>
-                                        <th>Role</th>
-                                        <th>Points</th>
+                                        <th><?= __('Account ID') ?></th>
+                                        <th><?= __('Name') ?></th>
+                                        <th><?= __('Role') ?></th>
+                                        <th><?= __('Points') ?></th>
                                     </tr>
                                 </thead>
                                 <tbody id="roster-list">
                                     <tr>
-                                        <td colspan="4">Loading roster...</td>
+                                        <td colspan="4"><?= __('Loading roster...') ?></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -99,16 +99,16 @@ include 'includes/header.php';
 
             <aside class="sidebar">
                 <div class="sidebar-widget animate-fade-in">
-                    <h3>Team FAQ</h3>
+                    <h3><?= __('Team FAQ') ?></h3>
                     <p style="font-size: 0.9em; line-height: 1.4; color: #ccc;">
-                        <strong>Q: How do I earn Team Points?</strong><br>
-                        A: Complete Team Quests at the Hunter's Guild or trade rare items to the Team Point attendant in the episode 4 lobby.<br><br>
-                        <strong>Q: Can I manage my team here?</strong><br>
-                        A: Currently, this page provides a read-only overview of your team's status and points. Use the game client to promote members or buy rewards.
+                        <strong><?= __('Q: How do I earn Team Points?') ?></strong><br>
+                        <?= __('A: Complete Team Quests at the Hunter\'s Guild or trade rare items to the Team Point attendant in the episode 4 lobby.') ?><br><br>
+                        <strong><?= __('Q: Can I manage my team here?') ?></strong><br>
+                        <?= __('A: Currently, this page provides a read-only overview of your team\'s status and points. Use the game client to promote members or buy rewards.') ?>
                     </p>
                     <div class="widget-divider"></div>
                     <ul class="sidebar-links">
-                        <li><a href="/login.php">Dashboard</a></li>
+                        <li><a href="/login.php"><?= __('Dashboard') ?></a></li>
                     </ul>
                 </div>
             </aside>

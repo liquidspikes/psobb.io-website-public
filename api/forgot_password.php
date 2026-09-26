@@ -63,6 +63,9 @@ $lang_pref = $row['language'] ?? 'en';
 if ($lang_pref === 'jp') {
     $subject = "パスワード再設定リクエスト - PSOBB.IO";
     $message = "$username さん、\n\nPSOBB.IOアカウントのパスワード再設定リクエストを受け付けました。\n\n以下のリンクをクリックして新しいパスワードを設定してください：\n$link\n\nこのリンクは1時間有効です。\n\n心当たりがない場合は、このメールを無視してください。";
+} elseif ($lang_pref === 'ru') {
+    $subject = "Запрос на сброс пароля - PSOBB.IO";
+    $message = "Здравствуйте, $username,\n\nМы получили запрос на сброс пароля для вашей учетной записи PSOBB.IO.\n\nПерейдите по ссылке ниже, чтобы подтвердить ваш email и установить новый пароль:\n$link\n\nЭта ссылка действительна в течение 1 часа.\n\nЕсли вы не отправляли этот запрос, просто проигнорируйте это письмо.";
 } else {
     $subject = "Password Reset Request - PSOBB.IO";
     $message = "Hello $username,\n\nWe received a request to reset your password for your PSOBB.IO account.\n\nClick the link below to verify your email and set a new password:\n$link\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.";

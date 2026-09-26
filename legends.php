@@ -24,23 +24,23 @@ while ($row = $cb_res->fetchArray(SQLITE3_ASSOC)) {
 
     <main class="container">
         <div class="main-header" style="margin-bottom: 2rem;">
-            <h1>Wall of Legends</h1>
-            <p style="color: #aaa;">Historic catalog of recently slayed bounties and claimed prestige.</p>
+            <h1><?= __('Wall of Legends') ?></h1>
+            <p style="color: #aaa;"><?= __('Historic catalog of recently slayed bounties and claimed prestige.') ?></p>
         </div>
 
         <div class="layout-grid">
             <section class="main-content">
                 <?php if (empty($completed_bounties)): ?>
-                    <p style="text-align: center; margin: 3rem; opacity: 0.5;">No bounties have been resolved yet.</p>
+                    <p style="text-align: center; margin: 3rem; opacity: 0.5;"><?= __('No bounties have been resolved yet.') ?></p>
                 <?php else: ?>
                     <div class="table-responsive">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Hunter</th>
-                                    <th>Directive</th>
-                                    <th>Reward Drop</th>
-                                    <th>Timestamp</th>
+                                    <th><?= __('Hunter') ?></th>
+                                    <th><?= __('Directive') ?></th>
+                                    <th><?= __('Reward Drop') ?></th>
+                                    <th><?= __('Timestamp') ?></th>
                                 </tr>
                             </thead>
                             <tbody>

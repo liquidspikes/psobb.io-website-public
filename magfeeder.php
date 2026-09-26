@@ -11,8 +11,8 @@ include 'includes/header.php';
 
     <main class="container">
         <div class="main-header" style="margin-bottom: 2rem;">
-            <h1>🧲 MAG Feeder</h1>
-            <p>Feed your MAG remotely while you play!</p>
+            <h1>🧲 <?= __('MAG Feeder') ?></h1>
+            <p><?= __('Feed your MAG remotely while you play!') ?></p>
         </div>
 
         <div class="layout-grid">
@@ -21,25 +21,25 @@ include 'includes/header.php';
 
                 <div id="mag-login-prompt" style="display: none; margin-bottom: 2rem;">
                     <div class="server-status-widget">
-                        <h3>⚠️ Not Available</h3>
-                        <p style="color: var(--text-secondary); margin-top: 0.5rem;">You must be logged in and actively in a game to use the MAG feeder.</p>
-                        <a href="/login.php" class="dl-btn" style="margin-top: 1rem; display: inline-block;">Login</a>
+                        <h3>⚠️ <?= __('Not Available') ?></h3>
+                        <p style="color: var(--text-secondary); margin-top: 0.5rem;"><?= __('You must be logged in and actively in a game to use the MAG feeder.') ?></p>
+                        <a href="/login.php" class="dl-btn" style="margin-top: 1rem; display: inline-block;"><?= __('Login') ?></a>
                     </div>
                 </div>
 
                 <!-- Character Info -->
                 <div id="mag-char-info" class="server-status-widget" style="display: none; margin-bottom: 1.5rem;">
-                    <h3>Active Character</h3>
+                    <h3><?= __('Active Character') ?></h3>
                     <div class="status-row">
-                        <span>Name:</span>
+                        <span><?= __('Name:') ?></span>
                         <span id="mag-char-name" class="highlight-text"></span>
                     </div>
                     <div class="status-row">
-                        <span>Class:</span>
+                        <span><?= __('Class:') ?></span>
                         <span id="mag-char-class" class="highlight-text"></span>
                     </div>
                     <div class="status-row">
-                        <span>Level:</span>
+                        <span><?= __('Level:') ?></span>
                         <span id="mag-char-level" class="highlight-text"></span>
                     </div>
                 </div>
@@ -47,9 +47,9 @@ include 'includes/header.php';
                 <!-- MAG Display -->
                 <div id="mag-display" style="display: none; margin-bottom: 2rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h2>Your MAG</h2>
+                        <h2><?= __('Your MAG') ?></h2>
                         <button id="mag-refresh-btn" class="dl-btn" style="font-size: 0.85rem; padding: 8px 16px;" onclick="loadMagData()">
-                            🔄 Refresh
+                            🔄 <?= __('Refresh') ?>
                         </button>
                     </div>
                     <div id="mag-card-container"></div>
@@ -58,11 +58,11 @@ include 'includes/header.php';
                 <!-- Hunger Timer -->
                 <div id="hunger-timer-section" style="display: none; margin-bottom: 2rem;">
                     <div class="server-status-widget" id="hunger-timer-widget">
-                        <h3 id="hunger-label">🍖 MAG is Hungry!</h3>
+                        <h3 id="hunger-label">🍖 <?= __('MAG is Hungry!') ?></h3>
                         <div id="hunger-timer-bar-wrapper" style="margin-top: 1rem;">
                             <div style="background: rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; height: 28px; position: relative;">
                                 <div id="hunger-timer-fill" style="height: 100%; background: linear-gradient(90deg, #00ff88, #00ccff); border-radius: 8px; transition: width 1s linear; width: 100%;"></div>
-                                <span id="hunger-timer-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Ready to feed!</span>
+                                <span id="hunger-timer-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);"><?= __('Ready to feed!') ?></span>
                             </div>
                         </div>
                     </div>
@@ -70,11 +70,11 @@ include 'includes/header.php';
 
                 <!-- Feed Items Grid -->
                 <div id="feed-items-section" style="display: none; margin-bottom: 2rem;">
-                    <h2 style="margin-bottom: 1rem;">📦 Feed Items</h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Tap an item to feed it to your MAG</p>
+                    <h2 style="margin-bottom: 1rem;">📦 <?= __('Feed Items') ?></h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;"><?= __('Tap an item to feed it to your MAG') ?></p>
                     <div id="feed-items-grid" class="mag-feed-grid"></div>
                     <div id="no-feed-items" style="display: none; color: var(--text-secondary); text-align: center; padding: 2rem;">
-                        No feedable items in your inventory.<br>Stock up on Monomates, Fluids, and Atomizers!
+                        <?= __('No feedable items in your inventory.<br>Stock up on Monomates, Fluids, and Atomizers!') ?>
                     </div>
                 </div>
 

@@ -141,6 +141,9 @@ try {
         if ($lang_pref === 'jp') {
             $subject = "登録メールアドレス変更の確認 - PSOBB.IO";
             $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスを以下のアドレスに変更するリクエストを受け付けました：\n$email\n\n以下のリンクをクリックして、メールアドレスの変更を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。現在の登録メールアドレス ($currentEmail) は変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+        } elseif ($lang_pref === 'ru') {
+            $subject = "Подтверждение смены email - PSOBB.IO";
+            $msg = "Здравствуйте, $username,\n\nВы запросили смену email для восстановления вашей учетной записи PSOBB.IO ($username) с $currentEmail на: $email.\n\nПожалуйста, перейдите по ссылке ниже для подтверждения смены email:\n$confirmLink\n\nСсылка действительна в течение 24 часов.\n\nЕсли вы не запрашивали это действие, проигнорируйте это письмо. Ваш текущий адрес ($currentEmail) останется активным.\n\nУдачной охоты!\nКоманда PSOBB.IO";
         } else {
             $subject = "Confirm Your PSOBB.IO Email Change";
             $msg = "Hello $username,\n\nYou requested to change the recovery email for your PSOBB.IO account ($username) from $currentEmail to: $email.\n\nPlease click the link below to confirm this change:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this change, please ignore this email. Your current recovery email ($currentEmail) will remain active.\n\nHappy Hunting,\nPSOBB.IO Team";
@@ -150,6 +153,9 @@ try {
         if ($lang_pref === 'jp') {
             $subject = "リカバリー用メールアドレスの確認 - PSOBB.IO";
             $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスとして、このアドレス ($email) を登録するリクエストを受け付けました。\n\n以下のリンクをクリックして、メールアドレスの登録を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。メールアドレスは変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+        } elseif ($lang_pref === 'ru') {
+            $subject = "Подтверждение email для восстановления - PSOBB.IO";
+            $msg = "Здравствуйте, $username,\n\nВы запросили привязку адреса ($email) в качестве email для восстановления учетной записи PSOBB.IO ($username).\n\nПожалуйста, перейдите по ссылке ниже для активации адреса:\n$confirmLink\n\nСсылка действительна в течение 24 часов.\n\nЕсли вы не запрашивали это действие, проигнорируйте это письмо.\n\nУдачной охоты!\nКоманда PSOBB.IO";
         } else {
             $subject = "Confirm Your Recovery Email - PSOBB.IO";
             $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your PSOBB.IO account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\nPSOBB.IO Team";

@@ -4,7 +4,7 @@ require_once __DIR__ . '/db.php';
 start_secure_session();
 
 $lang = $_GET['lang'] ?? 'en';
-if (in_array($lang, ['en', 'jp'])) {
+if (in_array($lang, ['en', 'jp', 'ru'])) {
     setcookie('psobb_lang', $lang, time() + 31536000, '/');
     
     // Sync with DB if logged in

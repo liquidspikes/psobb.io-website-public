@@ -10,7 +10,7 @@ require_once __DIR__ . '/../api/config.php';
 start_secure_session();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= htmlspecialchars($PSO_LANG ?? 'en') ?>">
 
 <head>
     <meta charset="UTF-8">
@@ -128,13 +128,12 @@ start_secure_session();
                         class="<?php echo ($current_page == 'login') ? 'login-nav-btn active' : 'login-nav-btn'; ?>"><?= __('Login') ?></a>
                 </li>
                 <li class="lang-toggle-nav">
-                    <?php if (($_COOKIE['psobb_lang'] ?? 'en') === 'jp'): ?>
-                        <a href="/api/set_lang.php?lang=en" class="lang-toggle" title="Switch to English"><i
-                                class="fas fa-globe-americas"></i> EN</a>
-                    <?php else: ?>
-                        <a href="/api/set_lang.php?lang=jp" class="lang-toggle" title="日本語に切り替える"><i
-                                class="fas fa-globe-asia"></i> JP</a>
-                    <?php endif; ?>
+                    <i class="fas fa-globe" style="margin-right: 4px; opacity: 0.7;"></i>
+                    <a href="/api/set_lang.php?lang=en" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'en' ? 'active-lang' : '' ?>" title="English">EN</a>
+                    <span style="opacity: 0.4; margin: 0 2px;">|</span>
+                    <a href="/api/set_lang.php?lang=jp" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'jp' ? 'active-lang' : '' ?>" title="日本語">JP</a>
+                    <span style="opacity: 0.4; margin: 0 2px;">|</span>
+                    <a href="/api/set_lang.php?lang=ru" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'ru' ? 'active-lang' : '' ?>" title="Русский">RU</a>
                 </li>
             </ul>
         </nav>
