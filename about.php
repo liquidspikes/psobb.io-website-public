@@ -1,5 +1,29 @@
 <?php
-$page_title = 'About Us - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$aboutCfg = get_about_config();
+$serverName = get_server_name();
+
+$heroTitle = $aboutCfg['hero_title'] ?? ('About ' . $serverName);
+if (strpos($heroTitle, '%s') !== false) {
+    $heroTitle = sprintf(__($heroTitle), $serverName);
+} else {
+    $heroTitle = __($heroTitle);
+}
+
+$heroSubtitle = !empty($aboutCfg['hero_subtitle']) ? __($aboutCfg['hero_subtitle']) : '';
+
+$commandDeckTitle = $aboutCfg['command_deck_title'] ?? ($serverName . ' Command Deck');
+if (strpos($commandDeckTitle, '%s') !== false) {
+    $commandDeckTitle = sprintf(__($commandDeckTitle), $serverName);
+} else {
+    $commandDeckTitle = __($commandDeckTitle);
+}
+
+$showFeatures = !empty($aboutCfg['show_features']);
+$showTechSpecs = !empty($aboutCfg['show_tech_specs']);
+$crewMembers = $aboutCfg['crew'] ?? [];
+
+$page_title = $heroTitle . ' - ' . $serverName . ' Private Server';
 $current_page = 'about';
 include 'includes/header.php';
 ?>
@@ -309,10 +333,13 @@ include 'includes/header.php';
 
     <main class="container">
         <section class="about-hero animate-fade-in">
-            <h1><?= __('About psobb.io') ?></h1>
-            <p><?= __('Welcome to the ultimate custom Phantasy Star Online Blue Burst server. Our mission is to seamlessly bridge classic 2004 Sega dreamscape nostalgia with bleeding-edge modern web capabilities, automated game services, and advanced AI integration.') ?></p>
+            <h1><?= htmlspecialchars($heroTitle) ?></h1>
+            <?php if (!empty($heroSubtitle)): ?>
+            <p><?= htmlspecialchars($heroSubtitle) ?></p>
+            <?php endif; ?>
         </section>
 
+        <?php if ($showFeatures): ?>
         <!-- Features Grid Section -->
         <h2 class="about-section-title animate-fade-in"><i class="fas fa-cubes"></i> <?= __('Server Features') ?></h2>
         <div class="features-grid animate-fade-in">
@@ -382,115 +409,42 @@ include 'includes/header.php';
             </div>
 
         </div>
+        <?php endif; ?>
 
-        <!-- Pioneer Crew Section -->
-        <h2 class="about-section-title animate-fade-in"><i class="fas fa-terminal"></i> <?= __('psobb.io Command Deck') ?></h2>
+        <?php if (!empty($crewMembers)): ?>
+        <!-- Command Deck Section -->
+        <h2 class="about-section-title animate-fade-in"><i class="fas fa-terminal"></i> <?= htmlspecialchars($commandDeckTitle) ?></h2>
         <div class="crew-grid animate-fade-in">
-            
-            <!-- LiquidSpikes Card -->
-            <div class="crew-card admin-card">
+            <?php foreach ($crewMembers as $member): 
+                $themeClass = htmlspecialchars($member['theme'] ?? 'admin-card');
+                $iconClass  = htmlspecialchars($member['icon'] ?? 'fas fa-user-astronaut');
+            ?>
+            <div class="crew-card <?= $themeClass ?>">
                 <div class="crew-header">
                     <div class="crew-avatar">
-                        <i class="fas fa-crown"></i>
+                        <i class="<?= $iconClass ?>"></i>
                     </div>
                     <div class="crew-info">
-                        <h3>LiquidSpikes</h3>
-                        <div class="crew-role"><?= __('Root Administrator & System Architect') ?></div>
-                        <div class="crew-specialty"><?= __('Core Backend & Web Integration') ?></div>
+                        <h3><?= htmlspecialchars($member['name']) ?></h3>
+                        <?php if (!empty($member['role'])): ?>
+                        <div class="crew-role"><?= htmlspecialchars(__($member['role'])) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($member['specialty'])): ?>
+                        <div class="crew-specialty"><?= htmlspecialchars(__($member['specialty'])) ?></div>
+                        <?php endif; ?>
                     </div>
                 </div>
+                <?php if (!empty($member['bio'])): ?>
                 <p class="crew-bio">
-                    <?= __('LiquidSpikes is one of the builders of the psobb.io server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call psobb.io home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!') ?>
+                    <?= htmlspecialchars(__($member['bio'])) ?>
                 </p>
+                <?php endif; ?>
             </div>
-
-            <!-- LucindaRie Card -->
-            <div class="crew-card founder-card">
-                <div class="crew-header">
-                    <div class="crew-avatar">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <div class="crew-info">
-                        <h3>LucindaRie</h3>
-                        <div class="crew-role"><?= __('Server Co-Founder & Creative Muse') ?></div>
-                        <div class="crew-specialty"><?= __('Preservation & Community Vibe') ?></div>
-                    </div>
-                </div>
-                <p class="crew-bio">
-                    <?= __('LucindaRie is the co-founder of psobb.io and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic.') ?>
-                </p>
-            </div>
-
-            <!-- Oman Computar / Repflez Card -->
-            <div class="crew-card dev-card">
-                <div class="crew-header">
-                    <div class="crew-avatar">
-                        <i class="fas fa-code"></i>
-                    </div>
-                    <div class="crew-info">
-                        <h3>Oman Computar / Repflez</h3>
-                        <div class="crew-role"><?= __('Contributor & newserv Pioneer') ?></div>
-                        <div class="crew-specialty"><?= __('Core Server Development') ?></div>
-                    </div>
-                </div>
-                <p class="crew-bio">
-                    <?= __('Oman Computar (also known as Repflez) is an expert contributor to the open-source newserv server emulator and has worked extensively on several legacy Phantasy Star Online projects. His deep understanding of custom server logic and network packets has been vital to our server development and core engine refinement.') ?>
-                </p>
-            </div>
-
-            <!-- Pixelated Card -->
-            <div class="crew-card vibe-card">
-                <div class="crew-header">
-                    <div class="crew-avatar">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <div class="crew-info">
-                        <h3>Pixelated</h3>
-                        <div class="crew-role"><?= __('Community & Discord Developer') ?></div>
-                        <div class="crew-specialty"><?= __('Vibe Coding Beast') ?></div>
-                    </div>
-                </div>
-                <p class="crew-bio">
-                    <?= __('Pixelated is our resident vibe-coding beast, dropping awesome client-side mods like custom HD texture packs and camera controls inside our Discord, alongside plenty of legendary memes. Pixelated keeps our community connected, entertained, and equipped with cool gaming utilities. As Pixelated famously said: "I am Optimizer Prime, wrangler of clankers".') ?>
-                </p>
-            </div>
-
-            <!-- Hooty7734 Card -->
-            <div class="crew-card mod-card">
-                <div class="crew-header">
-                    <div class="crew-avatar">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="crew-info">
-                        <h3>Hooty7734</h3>
-                        <div class="crew-role"><?= __('Discord Administrator & Moderator') ?></div>
-                        <div class="crew-specialty"><?= __('Community Management') ?></div>
-                    </div>
-                </div>
-                <p class="crew-bio">
-                    <?= __('Hooty7734 is our seasoned Discord Admin, bringing years of dedicated experience from managing and moderating other large online communities. He works to keep our community spaces safe, welcoming, and organized for all hunters who join our ranks.') ?>
-                </p>
-            </div>
-
-            <!-- Hex Card -->
-            <div class="crew-card ai-card">
-                <div class="crew-header">
-                    <div class="crew-avatar">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="crew-info">
-                        <h3>Hex</h3>
-                        <div class="crew-role"><?= __('AI Mission Coordinator & Guild Assistant') ?></div>
-                        <div class="crew-specialty"><?= __('Automated Bounties & Discord AI') ?></div>
-                    </div>
-                </div>
-                <p class="crew-bio">
-                    <?= __('psobb.io\'s resident artificial intelligence. Hex coordinates the Hunter\'s Guild Bounty Board and drives our Discord Mission Control bot. While highly intelligent and incredibly fast, she is notoriously glitchy and famously sarcastic—frequently breaking the fourth wall, complaining about server lag, and mocking hunters who fail to dodge basic boss sweeps. Engage at your own risk!') ?>
-                </p>
-            </div>
-
+            <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
+        <?php if ($showTechSpecs): ?>
         <!-- Tech Stack Section -->
         <div class="tech-spec-section animate-fade-in">
             <h2 class="about-section-title" style="margin-bottom: 1rem; border-bottom: none;"><i class="fas fa-server"></i> <?= __('Server Tech Specs') ?></h2>
@@ -511,6 +465,7 @@ include 'includes/header.php';
                 </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <div class="discord-btn-container animate-fade-in">
             <a href="<?= htmlspecialchars(get_discord_server()) ?>" target="_blank" class="discord-btn"><i class="fab fa-discord"></i> <?= __('Join Our Discord') ?></a>

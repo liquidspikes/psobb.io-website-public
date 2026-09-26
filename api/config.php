@@ -107,6 +107,7 @@ if (!function_exists('get_site_config')) {
             'server_name'          => 'PSOBB.IO',
             'server_address'       => 'psobb.io',
             'server_tagline'       => 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.',
+            'hero_logo_url'        => '/img/header_logo.png',
             'exp_rate'             => '1x',
             'drop_rate'            => '1x',
             'meseta_rate'          => '1x',
@@ -216,6 +217,98 @@ if (!function_exists('get_discord_invite_url')) {
      */
     function get_discord_invite_url(): string {
         return get_discord_server();
+    }
+}
+
+if (!function_exists('get_hero_logo_url')) {
+    /**
+     * Retrieve the configured homepage hero logo or banner image URL.
+     */
+    function get_hero_logo_url(): string {
+        $cfg = get_site_config();
+        return !empty($cfg['hero_logo_url']) ? $cfg['hero_logo_url'] : '/img/header_logo.png';
+    }
+}
+
+if (!function_exists('get_about_config')) {
+    /**
+     * Retrieve the About page and Command Deck configuration array.
+     */
+    function get_about_config(): array {
+        $aboutPath = __DIR__ . '/../config/about.json';
+        $serverName = get_server_name();
+
+        $defaults = [
+            'hero_title'         => 'About ' . $serverName,
+            'hero_subtitle'      => 'Welcome to the ultimate custom Phantasy Star Online Blue Burst server. Our mission is to seamlessly bridge classic 2004 Sega dreamscape nostalgia with bleeding-edge modern web capabilities, automated game services, and advanced AI integration.',
+            'command_deck_title' => $serverName . ' Command Deck',
+            'show_features'      => true,
+            'show_tech_specs'    => true,
+            'crew' => [
+                [
+                    'id'        => 'liquidspikes',
+                    'name'      => 'LiquidSpikes',
+                    'role'      => 'Root Administrator & System Architect',
+                    'specialty' => 'Core Backend & Web Integration',
+                    'icon'      => 'fas fa-crown',
+                    'theme'     => 'admin-card',
+                    'bio'       => 'LiquidSpikes is one of the builders of the psobb.io server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call psobb.io home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!'
+                ],
+                [
+                    'id'        => 'lucindarie',
+                    'name'      => 'LucindaRie',
+                    'role'      => 'Server Co-Founder & Creative Muse',
+                    'specialty' => 'Preservation & Community Vibe',
+                    'icon'      => 'fas fa-heart',
+                    'theme'     => 'founder-card',
+                    'bio'       => 'LucindaRie is the co-founder of psobb.io and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic.'
+                ],
+                [
+                    'id'        => 'oman_repflez',
+                    'name'      => 'Oman Computar / Repflez',
+                    'role'      => 'Contributor & newserv Pioneer',
+                    'specialty' => 'Core Server Development',
+                    'icon'      => 'fas fa-code',
+                    'theme'     => 'dev-card',
+                    'bio'       => 'Oman Computar (also known as Repflez) is an expert contributor to the open-source newserv server emulator and has worked extensively on several legacy Phantasy Star Online projects. His deep understanding of custom server logic and network packets has been vital to our server development and core engine refinement.'
+                ],
+                [
+                    'id'        => 'pixelated',
+                    'name'      => 'Pixelated',
+                    'role'      => 'Community & Discord Developer',
+                    'specialty' => 'Vibe Coding Beast',
+                    'icon'      => 'fas fa-bolt',
+                    'theme'     => 'vibe-card',
+                    'bio'       => 'Pixelated is our resident vibe-coding beast, dropping awesome client-side mods like custom HD texture packs and camera controls inside our Discord, alongside plenty of legendary memes. Pixelated keeps our community connected, entertained, and equipped with cool gaming utilities. As Pixelated famously said: "I am Optimizer Prime, wrangler of clankers".'
+                ],
+                [
+                    'id'        => 'hooty7734',
+                    'name'      => 'Hooty7734',
+                    'role'      => 'Discord Administrator & Moderator',
+                    'specialty' => 'Community Management',
+                    'icon'      => 'fas fa-users',
+                    'theme'     => 'mod-card',
+                    'bio'       => 'Hooty7734 is our seasoned Discord Admin, bringing years of dedicated experience from managing and moderating other large online communities. He works to keep our community spaces safe, welcoming, and organized for all hunters who join our ranks.'
+                ],
+                [
+                    'id'        => 'hex',
+                    'name'      => 'Hex',
+                    'role'      => 'AI Mission Coordinator & Guild Assistant',
+                    'specialty' => 'Automated Bounties & Discord AI',
+                    'icon'      => 'fas fa-robot',
+                    'theme'     => 'ai-card',
+                    'bio'       => "psobb.io's resident artificial intelligence. Hex coordinates the Hunter's Guild Bounty Board and drives our Discord Mission Control bot. While highly intelligent and incredibly fast, she is notoriously glitchy and famously sarcastic—frequently breaking the fourth wall, complaining about server lag, and mocking hunters who fail to dodge basic boss sweeps. Engage at your own risk!"
+                ]
+            ]
+        ];
+
+        if (file_exists($aboutPath)) {
+            $json = json_decode(@file_get_contents($aboutPath), true);
+            if (is_array($json)) {
+                return array_merge($defaults, $json);
+            }
+        }
+        return $defaults;
     }
 }
 

@@ -38,6 +38,7 @@ $cleanString = function($val, $default = '', $max = 250) {
 $serverName    = $cleanString($data['server_name'] ?? null, $currentConfig['server_name'] ?? 'PSOBB.IO', 60);
 $serverAddress = $cleanString($data['server_address'] ?? null, $currentConfig['server_address'] ?? 'psobb.io', 120);
 $serverTagline = $cleanString($data['server_tagline'] ?? null, $currentConfig['server_tagline'] ?? '', 250);
+$heroLogoUrl   = $cleanString($data['hero_logo_url'] ?? null, $currentConfig['hero_logo_url'] ?? '/img/header_logo.png', 250);
 $expRate       = $cleanString($data['exp_rate'] ?? null, '1x', 15);
 $dropRate      = $cleanString($data['drop_rate'] ?? null, '1x', 15);
 $mesetaRate    = $cleanString($data['meseta_rate'] ?? null, '1x', 15);
@@ -58,6 +59,7 @@ $newConfig = [
     'server_name'          => $serverName ?: 'PSOBB.IO',
     'server_address'       => $serverAddress ?: 'psobb.io',
     'server_tagline'       => $serverTagline,
+    'hero_logo_url'        => $heroLogoUrl ?: '/img/header_logo.png',
     'exp_rate'             => $expRate ?: '1x',
     'drop_rate'            => $dropRate ?: '1x',
     'meseta_rate'          => $mesetaRate ?: '1x',
@@ -80,6 +82,39 @@ if (!is_dir($dir)) {
     @mkdir($dir, 0755, true);
 }
 $saved = @file_put_contents($cfgPath, json_encode($newConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+// Handle About page / Command Deck configuration
+if (isset($data['about']) && is_array($data['about'])) {
+    $aboutInput = $data['about'];
+    $cleanedAbout = [
+        'hero_title'         => $cleanString($aboutInput['hero_title'] ?? null, 'About ' . $serverName, 120),
+        'hero_subtitle'      => $cleanString($aboutInput['hero_subtitle'] ?? null, '', 1000),
+        'command_deck_title' => $cleanString($aboutInput['command_deck_title'] ?? null, $serverName . ' Command Deck', 120),
+        'show_features'      => !empty($aboutInput['show_features']),
+        'show_tech_specs'    => !empty($aboutInput['show_tech_specs']),
+        'crew'               => []
+    ];
+
+    if (!empty($aboutInput['crew']) && is_array($aboutInput['crew'])) {
+        foreach ($aboutInput['crew'] as $member) {
+            if (!is_array($member)) continue;
+            $name = $cleanString($member['name'] ?? null, '', 80);
+            if ($name === '') continue; // skip blank rows
+            $cleanedAbout['crew'][] = [
+                'id'        => $cleanString($member['id'] ?? null, 'crew_' . substr(md5(uniqid()), 0, 8), 32),
+                'name'      => $name,
+                'role'      => $cleanString($member['role'] ?? null, '', 100),
+                'specialty' => $cleanString($member['specialty'] ?? null, '', 100),
+                'icon'      => $cleanString($member['icon'] ?? null, 'fas fa-user-astronaut', 60),
+                'theme'     => $cleanString($member['theme'] ?? null, 'admin-card', 40),
+                'bio'       => $cleanString($member['bio'] ?? null, '', 1500),
+            ];
+        }
+    }
+
+    $aboutPath = __DIR__ . '/../config/about.json';
+    @file_put_contents($aboutPath, json_encode($cleanedAbout, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+}
 
 if ($saved) {
     // Also sync discord_server into theme.json if present

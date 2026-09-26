@@ -14,7 +14,7 @@ include 'includes/header.php';
     <main class="container">
         <section class="hero">
             <div class="logo-wrapper animate-fade-in delay-1">
-                <img src="img/header_logo.png" alt="PSOBB.io - Phantasy Star Online Blue Burst" class="hero-logo">
+                <img src="<?= htmlspecialchars(get_hero_logo_url()) ?>" alt="<?= htmlspecialchars(get_server_name()) ?> - Phantasy Star Online Blue Burst" class="hero-logo">
             </div>
             <p class="hero-subtitle animate-fade-in delay-2"><?= htmlspecialchars(get_server_tagline()) ?></p>
             <div class="cta-group animate-fade-in delay-3">
