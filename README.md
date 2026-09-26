@@ -84,20 +84,32 @@ See [`api/API.md`](api/API.md) for the full endpoint reference.
 
 ---
 
-## Configuration
+## Configuration Architecture
 
-All secrets come from a root `.env` file (one directory above the site root —
-`__DIR__/../.env`), parsed by `loadEnv()` in `config.php`.
+The platform separates **private environment secrets** from **public presentation settings**:
 
-| Variable | Purpose |
-|----------|---------|
-| `NEWSERV_API_URL` | Base URL of the NewServ REST API (default `http://127.0.0.1:8443`) |
-| `NEWSERV_COMMAND_PREFIX` | In-game command prefix, e.g. `$` |
-| `BOT_API_SECRET` | Shared secret for the Discord bot API (legacy tier) |
-| `BOT_TOKEN` | Discord bot token (used by `cron_streak_alert.php` to DM users) |
-| `GEMINI_API_KEY` | Google Gemini key for AI mission/event generation |
-| `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` / `DISCORD_REDIRECT_URI` | Discord OAuth2 |
-| `BREVO_API_KEY` / `SMTP_FROM` | Transactional email (Brevo) |
+### 1. Private Secrets & Infrastructure (`.env`)
+Private credentials and host-specific networking live in a root `.env` file (copied from `.env.example`). This file is **strictly excluded from Git** (`.gitignore`) and loaded by `loadEnv()` in `api/config.php`.
+
+| Variable | Type | Purpose |
+|----------|------|---------|
+| `NEWSERV_API_URL` | Infrastructure | Base URL of the NewServ REST API (default `http://127.0.0.1:8443`) |
+| `NEWSERV_COMMAND_PREFIX` | Game Config | In-game command prefix, e.g. `$` |
+| `DISCORD_CLIENT_ID` | OAuth2 | Discord Developer Portal Application Client ID |
+| `DISCORD_CLIENT_SECRET` | OAuth2 Secret | Discord Application Client Secret |
+| `DISCORD_REDIRECT_URI` | OAuth2 Callback | Full callback URL (e.g. `https://yourdomain.com/api/discord_callback.php`) |
+| `BOT_API_SECRET` | Secret | Legacy shared secret for internal Discord bot API |
+| `BOT_TOKEN` | Secret Token | Discord bot token (used by `cron_streak_alert.php` to DM users) |
+| `GEMINI_API_KEY` | API Key | Google Gemini key for procedural AI mission generation |
+| `GEMINI_MODEL` | Model ID | Gemini model identifier (e.g. `gemini-3.5-flash`) |
+| `BREVO_API_KEY` | API Key | Transactional email key for password resets and verification |
+| `SMTP_FROM` | Email | Outgoing sender address displayed on emails |
+| `DISCORD_SERVER` | Optional Override | Host-level override for the community Discord invite URL |
+
+### 2. Public Presentation & Site Config (`config/`)
+Site-wide visual styling, themes, and public community links live in `config/theme.json`. These settings **are tracked in Git** as default server baselines and can be modified live without touching code via the **Admin Theme Manager** (`/admin/theme_manager.php`).
+
+See [`config/README.md`](config/README.md) for full configuration schema and field reference.
 
 ---
 

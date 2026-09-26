@@ -2,13 +2,25 @@
 /**
  * PSOBB Website Core Configuration
  * 
- * This file handles environment variable parsing, global configuration constants,
- * and secure session management. It must be included at the top of all API endpoints
- * and frontend pages.
+ * CONFIGURATION ARCHITECTURE:
+ * ----------------------------------------------------------------------------
+ * 1. TIER 1 - ENVIRONMENT VARIABLES (.env):
+ *    - Purpose: Machine-specific secrets, API keys, host ports, and private infrastructure.
+ *    - Storage: Root `.env` file (NEVER committed to version control).
+ *    - Examples: DISCORD_CLIENT_SECRET, BOT_API_SECRET, GEMINI_API_KEY, NEWSERV_API_URL.
+ * 
+ * 2. TIER 2 - PERSISTENT SITE CONFIGURATION (config/*.json):
+ *    - Purpose: Public presentation settings, theme presets, colors, and community links.
+ *    - Storage: Committed default in `config/theme.json`; live updates saved by Admins via Web UI.
+ *    - Examples: default_preset, custom_overrides, allow_user_customization, discord_server.
+ * 
+ * 3. TIER 3 - FALLBACK DEFAULTS:
+ *    - Purpose: Sensible, functional defaults coded directly in PHP if neither .env nor JSON is present.
+ * ----------------------------------------------------------------------------
  */
 
 /**
- * Parses a .env file and loads its contents into $_ENV and $_SERVER.
+ * Parses a .env file and loads its contents into $_ENV, $_SERVER, and getenv().
  *
  * @param string $path The absolute path to the .env file.
  * @return void
@@ -32,9 +44,13 @@ function loadEnv($path) {
     }
 }
 
-// Load from project root
-$envPath = __DIR__ . '/../.env';
-loadEnv($envPath);
+// 1. Load environment variables (.env)
+// Checks project root, or parent directory if running inside a nested public checkout
+if (file_exists(__DIR__ . '/../.env')) {
+    loadEnv(__DIR__ . '/../.env');
+} elseif (file_exists(__DIR__ . '/../../.env')) {
+    loadEnv(__DIR__ . '/../../.env');
+}
 
 // Core Configuration
 $NEWSERV_API_URL = $_ENV['NEWSERV_API_URL'] ?? 'http://127.0.0.1:8443';
