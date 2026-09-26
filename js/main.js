@@ -148,6 +148,21 @@ async function handleLogin(e) {
         if (response.ok) {
             // Login Success
             sessionStorage.setItem('psobb_user', JSON.stringify(data));
+
+            // Only prompt to link email after successful credentials login if user has a legacy placeholder email (<username>_legacy@psobb.io) or no valid email
+            const isLegacy = Boolean(
+                data.is_legacy_email ||
+                !data.has_email ||
+                !data.email ||
+                (typeof data.email === 'string' && data.email.toLowerCase().endsWith('_legacy@psobb.io'))
+            );
+
+            if (isLegacy) {
+                sessionStorage.setItem('psobb_prompt_email_on_login', '1');
+            } else {
+                sessionStorage.removeItem('psobb_prompt_email_on_login');
+            }
+
             window.location.reload();
         } else {
             // Login Failed
@@ -247,6 +262,15 @@ function showDashboard(user) {
 
         // Initialize recovery email
         loadAccountEmail();
+
+        // Prompt only after the user logs in with credentials and does not have a valid email on file
+        if (sessionStorage.getItem('psobb_prompt_email_on_login') === '1') {
+            sessionStorage.removeItem('psobb_prompt_email_on_login');
+            const legacyAddr = user.legacy_email || (user.username ? user.username + '_legacy@psobb.io' : (user.LastPlayerName ? user.LastPlayerName.toLowerCase() + '_legacy@psobb.io' : ''));
+            setTimeout(() => {
+                openPromptEmailModal(legacyAddr);
+            }, 350);
+        }
 
         // Initialize display name alias
         loadDisplayName();
@@ -521,16 +545,6 @@ window.loadAccountEmail = async function () {
         if (btn) {
             btn.innerHTML = (isLegacyAcc || !email) ? '<i class="fas fa-link"></i> Link Email' : '<i class="fas fa-save"></i> Save';
         }
-
-        if (isLegacyAcc || !email) {
-            // Automatically prompt on login if no valid recovery email is specified
-            const promptDismissed = sessionStorage.getItem('psobb_email_prompt_dismissed');
-            if (!promptDismissed) {
-                setTimeout(() => {
-                    openPromptEmailModal();
-                }, 400);
-            }
-        }
     }
 };
 
@@ -630,14 +644,36 @@ window.saveAccountEmail = async function () {
     }
 };
 
-window.openPromptEmailModal = function () {
+window.openPromptEmailModal = function (legacyEmail = '') {
     const modal = document.getElementById('prompt-email-modal');
     if (!modal) return;
     const input = document.getElementById('pem-email-input');
     const err = document.getElementById('pem-error');
     const succ = document.getElementById('pem-success');
+    const legacyEl = document.getElementById('pem-legacy-email');
+    const descEl = document.getElementById('pem-legacy-desc');
     if (err) err.style.display = 'none';
     if (succ) succ.style.display = 'none';
+
+    if (!legacyEmail) {
+        const userStr = sessionStorage.getItem('psobb_user');
+        if (userStr) {
+            try {
+                const u = JSON.parse(userStr);
+                legacyEmail = u.legacy_email || (u.username ? u.username + '_legacy@psobb.io' : (u.LastPlayerName ? u.LastPlayerName.toLowerCase() + '_legacy@psobb.io' : ''));
+            } catch (e) { }
+        }
+    }
+
+    if (legacyEl) {
+        if (legacyEmail) {
+            legacyEl.textContent = legacyEmail;
+            if (descEl) descEl.style.display = 'block';
+        } else if (descEl) {
+            descEl.style.display = 'none';
+        }
+    }
+
     modal.style.display = 'flex';
     if (input) input.focus();
 };

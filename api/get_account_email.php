@@ -34,10 +34,12 @@ try {
     $rawEmail = $row ? trim($row['email'] ?? '') : '';
     $isLegacy = empty($rawEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $rawEmail);
     $displayEmail = $isLegacy ? '' : $rawEmail;
+    $legacyEmail = $isLegacy ? ($rawEmail ?: ($username . '_legacy@psobb.io')) : '';
 
     echo json_encode([
         "success" => true,
         "email" => $displayEmail,
+        "legacy_email" => $legacyEmail,
         "has_email" => !$isLegacy,
         "is_legacy" => $isLegacy
     ]);

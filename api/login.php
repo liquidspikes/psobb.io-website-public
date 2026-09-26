@@ -126,8 +126,10 @@ try {
 
         $isLegacyEmail = empty($dbEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $dbEmail);
         $cleanEmail = $isLegacyEmail ? '' : $dbEmail;
+        $legacyEmail = $isLegacyEmail ? $dbEmail : '';
 
         $user_account['email'] = $cleanEmail;
+        $user_account['legacy_email'] = $legacyEmail;
         $user_account['is_legacy_email'] = $isLegacyEmail;
         $user_account['has_email'] = !$isLegacyEmail;
         $user_account['discord_id'] = $discord_id;
@@ -135,6 +137,7 @@ try {
         $user_account['receive_discord_streak_msg'] = $receive_discord_streak_msg;
 
         $_SESSION['user']['email'] = $cleanEmail;
+        $_SESSION['user']['legacy_email'] = $legacyEmail;
         $_SESSION['user']['is_legacy_email'] = $isLegacyEmail;
         $_SESSION['user']['has_email'] = !$isLegacyEmail;
         $_SESSION['user']['receive_system_mail'] = $receive_system_mail;

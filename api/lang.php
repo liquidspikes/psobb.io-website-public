@@ -397,7 +397,9 @@ $I18N = [
         'This email will be used exclusively for password recovery via /forgot_password if you ever lose or forget your account password.' => 'このメールアドレスは、パスワードを紛失または忘れた際に /forgot_password から再設定を行うために使用されます。',
         'Your Email Address' => 'あなたのメールアドレス',
         'Remind Me Later' => '後で通知',
-        'Link Recovery Email' => 'リカバリー用メールを登録'
+        'Link Recovery Email' => 'リカバリー用メールを登録',
+        'Your account currently has a placeholder email on file:' => 'お使いのアカウントには仮のメールアドレスが設定されています:',
+        'Please link a real email address so you can recover your password via /forgot_password if you ever lose or forget your account password.' => 'パスワードを紛失した際に /forgot_password から復旧できるよう、実在するメールアドレスを登録してください。'
     ]
 ];
 

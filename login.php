@@ -1382,12 +1382,12 @@ if (isset($_SESSION['user']['username'])) {
                         </h3>
                     </div>
 
-                    <p style="font-size:0.9rem; color:#eee; line-height:1.5; margin-bottom:10px;">
-                        <?= __('Your account does not have a recovery email on file.') ?>
+                    <p id="pem-legacy-desc" style="font-size:0.9rem; color:#eee; line-height:1.5; margin-bottom:10px;">
+                        <?= __('Your account currently has a placeholder email on file:') ?> <strong id="pem-legacy-email" style="color:#ffaa00; font-family:'Share Tech Mono',monospace;"></strong>
                     </p>
                     <p style="font-size:0.85rem; color:#aaa; line-height:1.5; margin-bottom:1.25rem; background:rgba(255,170,0,0.08); border-left:3px solid #ffaa00; padding:8px 12px; border-radius:0 4px 4px 0;">
                         <i class="fas fa-info-circle" style="color:#ffaa00; margin-right:4px;"></i>
-                        <?= __('This email will be used exclusively for password recovery via /forgot_password if you ever lose or forget your account password.') ?>
+                        <?= __('Please link a real email address so you can recover your password via /forgot_password if you ever lose or forget your account password.') ?>
                     </p>
 
                     <label for="pem-email-input" style="font-size:0.8rem; color:#ccc; display:block; margin-bottom:5px; font-family:'Share Tech Mono',monospace;">
