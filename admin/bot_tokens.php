@@ -139,28 +139,28 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 
     <!-- Create Token -->
     <div class="create-card">
-        <h2><i class="fas fa-plus-circle"></i> Issue New Token</h2>
+        <h2><i class="fas fa-plus-circle"></i> <?= __("Issue New Token") ?></h2>
         <div class="form-row">
             <div class="form-group">
-                <label>Token Name / Label</label>
+                <label><?= __("Token Name / Label") ?></label>
                 <input type="text" id="token-name" placeholder="e.g. Discord Bot – Production" maxlength="80">
             </div>
             <div class="form-group" style="max-width: 160px;">
-                <label>Expires in (days)</label>
-                <input type="number" id="token-expires" placeholder="Never" min="1" max="3650">
+                <label><?= __("Expires in (days)") ?></label>
+                <input type="number" id="token-expires" placeholder="<?= __("Never") ?>" min="1" max="3650">
             </div>
-            <button class="btn-create" id="btn-create"><i class="fas fa-bolt"></i> Generate Token</button>
+            <button class="btn-create" id="btn-create"><i class="fas fa-bolt"></i> <?= __("Generate Token") ?></button>
         </div>
     </div>
 
     <!-- Token Reveal Banner (shown after creation) -->
     <div class="token-reveal" id="token-reveal">
-        <div class="reveal-header"><i class="fas fa-shield-check"></i> Token Created Successfully</div>
+        <div class="reveal-header"><i class="fas fa-shield-check"></i> <?= __("Token Created Successfully") ?></div>
         <div class="token-value">
             <span id="token-raw" class="token-text"></span>
-            <button class="copy-btn" id="copy-btn" onclick="copyToken()"><i class="fas fa-copy"></i> Copy</button>
+            <button class="copy-btn" id="copy-btn" onclick="copyToken()"><i class="fas fa-copy"></i> <?= __("Copy") ?></button>
         </div>
-        <div class="reveal-warning"><i class="fas fa-exclamation-triangle"></i> This token will never be shown again. Copy it now.</div>
+        <div class="reveal-warning"><i class="fas fa-exclamation-triangle"></i> <?= __("This token will never be shown again. Copy it now.") ?></div>
     </div>
 
     <!-- Token Table -->
@@ -168,13 +168,13 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
         <table>
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Created By</th>
-                    <th>Created</th>
-                    <th>Last Used</th>
-                    <th>Expires</th>
-                    <th>Actions</th>
+                    <th><?= __("Name") ?></th>
+                    <th><?= __("Status") ?></th>
+                    <th><?= __("Created By") ?></th>
+                    <th><?= __("Created") ?></th>
+                    <th><?= __("Last Used") ?></th>
+                    <th><?= __("Expires") ?></th>
+                    <th><?= __("Actions") ?></th>
                 </tr>
             </thead>
             <tbody id="token-tbody">

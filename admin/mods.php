@@ -49,7 +49,7 @@ include '../includes/header.php';
 <main class="container">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h1>Manage Mods</h1>
+            <h1><?= __("Manage Mods") ?></h1>
         </div>
     </div>
 
@@ -69,16 +69,16 @@ include '../includes/header.php';
         <table style="width:100%; border-collapse: collapse; background: rgba(0,0,0,0.6); border: 1px solid #333;">
             <thead>
                 <tr style="text-align:left; border-bottom:1px solid #333; background: #111;">
-                    <th style="padding: 10px;">Thumbnail</th>
-                    <th style="padding: 10px;">Details</th>
-                    <th style="padding: 10px;">Submitter & Purpose</th>
-                    <th style="padding: 10px;">Status</th>
-                    <th style="padding: 10px;">Actions</th>
+                    <th style="padding: 10px;"><?= __("Thumbnail") ?></th>
+                    <th style="padding: 10px;"><?= __("Details") ?></th>
+                    <th style="padding: 10px;"><?= __("Submitter & Purpose") ?></th>
+                    <th style="padding: 10px;"><?= __("Status") ?></th>
+                    <th style="padding: 10px;"><?= __("Actions") ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($mods)): ?>
-                    <tr><td colspan="5" style="padding: 20px; text-align: center;">No mods found.</td></tr>
+                    <tr><td colspan="5" style="padding: 20px; text-align: center;"><?= __("No mods found.") ?></td></tr>
                 <?php endif; ?>
                 <?php foreach ($mods as $m): ?>
                     <tr style="border-bottom: 1px solid #222;">
@@ -91,13 +91,13 @@ include '../includes/header.php';
                         </td>
                         <td style="padding: 10px;">
                             <strong><?php echo htmlspecialchars($m['name']); ?></strong> v<?php echo htmlspecialchars($m['version']); ?><br>
-                            <small style="color: #aaa;">Author: <?php echo htmlspecialchars($m['author']); ?> | <?php echo htmlspecialchars($m['category']); ?></small><br>
-                            <a href="/<?php echo htmlspecialchars($m['file_path']); ?>" style="color: var(--pso-blue); font-size: 0.9em;" target="_blank"><i class="fas fa-download"></i> Download Zip</a>
+                            <small style="color: #aaa;"><?= __("Author: ") ?><?php echo htmlspecialchars($m['author']); ?> | <?php echo htmlspecialchars($m['category']); ?></small><br>
+                            <a href="/<?php echo htmlspecialchars($m['file_path']); ?>" style="color: var(--pso-blue); font-size: 0.9em;" target="_blank"><i class="fas fa-download"></i> <?= __("Download Zip") ?></a>
                         </td>
                         <td style="padding: 10px;">
                             <div style="font-size: 0.9em;">
-                                <strong style="color: var(--pso-purple);">By:</strong> <?php echo htmlspecialchars($m['submitted_by']); ?><br>
-                                <strong style="color: var(--pso-purple);">Purpose:</strong><br>
+                                <strong style="color: var(--pso-purple);"><?= __("By: ") ?></strong> <?php echo htmlspecialchars($m['submitted_by']); ?><br>
+                                <strong style="color: var(--pso-purple);"><?= __("Purpose: ") ?></strong><br>
                                 <div style="background: rgba(255,255,255,0.05); padding: 5px; margin-top: 5px; font-size: 0.85em; max-height: 80px; overflow-y: auto;">
                                     <?php echo nl2br(htmlspecialchars($m['purpose'])); ?>
                                 </div>
@@ -105,16 +105,16 @@ include '../includes/header.php';
                         </td>
                         <td style="padding: 10px;">
                             <?php if ($m['status'] === 'approved'): ?>
-                                <span style="background: rgba(0, 200, 81, 0.2); color: #00C851; padding: 3px 8px; border-radius: 3px;">Approved</span>
+                                <span style="background: rgba(0, 200, 81, 0.2); color: #00C851; padding: 3px 8px; border-radius: 3px;"><?= __("Approved") ?></span>
                             <?php else: ?>
-                                <span style="background: rgba(255, 170, 0, 0.2); color: #ffca28; padding: 3px 8px; border-radius: 3px;">Pending</span>
+                                <span style="background: rgba(255, 170, 0, 0.2); color: #ffca28; padding: 3px 8px; border-radius: 3px;"><?= __("Pending") ?></span>
                             <?php endif; ?>
                         </td>
                         <td style="padding: 10px;">
                             <form method="POST" style="display:inline;">
                                 <input type="hidden" name="mod_id" value="<?php echo htmlspecialchars($m['mod_id']); ?>">
                                 <?php if ($m['status'] !== 'approved'): ?>
-                                    <button type="submit" name="action" value="approve" class="dl-btn" style="background: rgba(0,200,81,0.2); border-color: #00C851; color: #00C851; padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;"><i class="fas fa-check"></i> Approve</button>
+                                    <button type="submit" name="action" value="approve" class="dl-btn" style="background: rgba(0,200,81,0.2); border-color: #00C851; color: #00C851; padding: 5px 10px; font-size: 0.8rem; margin-right: 5px;"><i class="fas fa-check"></i> <?= __("Approve") ?></button>
                                 <?php endif; ?>
                                 <button type="submit" name="action" value="reject" class="dl-btn" style="background: rgba(255,68,68,0.2); border-color: #ff4444; color: #ff4444; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('<?= addslashes(__('Are you sure you want to delete this mod?')) ?>');"><i class="fas fa-times"></i> <?= __('Reject/Delete') ?></button>
                             </form>

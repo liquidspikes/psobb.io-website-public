@@ -85,11 +85,11 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
 <main class="container">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h1>Live Telemetry Debug</h1>
-            <div style="font-size:0.9rem; opacity:0.7;">Monitor real-time player locations and server hook detections.</div>
+            <h1><?= __("Live Telemetry Debug") ?></h1>
+            <div style="font-size:0.9rem; opacity:0.7;"><?= __("Monitor real-time player locations and server hook detections.") ?></div>
         </div>
         <div>
-            <button onclick="window.location.reload();" class="dl-btn" style="border-color:#00C851; color:#00C851;">Refresh Data</button>
+            <button onclick="window.location.reload();" class="dl-btn" style="border-color:#00C851; color:#00C851;"><?= __("Refresh Data") ?></button>
         </div>
     </div>
 
@@ -102,26 +102,26 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
     <div class="admin-grid">
         <!-- Live Players Map -->
         <div class="admin-card" style="grid-column: span 2;">
-            <h3>Live Connected Players</h3>
+            <h3><?= __("Live Connected Players") ?></h3>
             <div class="table-responsive">
                 <table class="telemetry-table">
                     <thead style="position: sticky; top: 0; z-index: 1;">
                         <tr>
-                            <th>Char</th>
-                            <th>Acc ID</th>
-                            <th>Lv</th>
-                            <th>Prev</th>
-                            <th>Curr</th>
-                            <th>Time</th>
-                            <th>Old EXP</th>
-                            <th>New EXP</th>
-                            <th>Delta</th>
-                            <th>Status</th>
+                            <th><?= __("Char") ?></th>
+                            <th><?= __("Acc ID") ?></th>
+                            <th><?= __("Lv") ?></th>
+                            <th><?= __("Prev") ?></th>
+                            <th><?= __("Curr") ?></th>
+                            <th><?= __("Time") ?></th>
+                            <th><?= __("Old EXP") ?></th>
+                            <th><?= __("New EXP") ?></th>
+                            <th><?= __("Delta") ?></th>
+                            <th><?= __("Status") ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($clients)): ?>
-                            <tr><td colspan="6">No players currently online.</td></tr>
+                            <tr><td colspan="6"><?= __("No players currently online.") ?></td></tr>
                         <?php else: ?>
                             <?php foreach ($clients as $client): ?>
                                 <?php 
@@ -180,10 +180,10 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
 
         <!-- Telemetry Log -->
         <div class="admin-card" style="grid-column: span 1;">
-            <h3 style="color: #00ffcc;">Recent Hook Detections</h3>
+            <h3 style="color: #00ffcc;"><?= __('Recent Hook Detections') ?></h3>
             <div style="background: rgba(0,0,0,0.8); border: 1px solid #333; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.85rem;">
                 <?php if (empty($telemetry_logs)): ?>
-                    <div style="color: #666; text-align: center; margin-top: 50px;">No telemetry events recorded yet.</div>
+                    <div style="color: #666; text-align: center; margin-top: 50px;"><?= __('No telemetry events recorded yet.') ?></div>
                 <?php else: ?>
                     <?php foreach ($telemetry_logs as $log): ?>
                         <div style="margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px;">

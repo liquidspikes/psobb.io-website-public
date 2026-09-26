@@ -77,14 +77,14 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 <body>
 
     <div class="console-container">
-        <h2 style="margin:0; font-family: 'Orbitron', sans-serif; color: var(--primary-color);">SERVER CONSOLE</h2>
+        <h2 style="margin:0; font-family: 'Orbitron', sans-serif; color: var(--primary-color);"><?= __("SERVER CONSOLE") ?></h2>
         
-        <div id="console-out" class="console-output">Newserv Console Ready...</div>
+        <div id="console-out" class="console-output"><?= __("Newserv Console Ready...") ?></div>
 
         <form onsubmit="runConsole(event)">
             <div class="input-group">
-                <input type="text" id="console-cmd" placeholder="Enter command..." autofocus autocomplete="off">
-                <button type="submit">Send</button>
+                <input type="text" id="console-cmd" placeholder="<?= __("Enter command...") ?>" autofocus autocomplete="off">
+                <button type="submit"><?= __("Send") ?></button>
             </div>
         </form>
     </div>

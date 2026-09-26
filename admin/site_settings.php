@@ -952,19 +952,19 @@ function renderCrewCards(crewList) {
             </div>
             <div class="crew-edit-grid">
                 <div>
-                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;">Name</label>
+                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Name') ?></label>
                     <input type="text" class="field-input crew-name" value="${escapeHtml(member.name || '')}" placeholder="e.g. LiquidSpikes" required>
                 </div>
                 <div>
-                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;">Role</label>
+                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Role') ?></label>
                     <input type="text" class="field-input crew-role" value="${escapeHtml(member.role || '')}" placeholder="e.g. Root Administrator">
                 </div>
                 <div>
-                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;">Specialty / Focus</label>
+                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Specialty / Focus') ?></label>
                     <input type="text" class="field-input crew-specialty" value="${escapeHtml(member.specialty || '')}" placeholder="e.g. Core Backend">
                 </div>
                 <div>
-                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;">Card Style / Color</label>
+                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Card Style / Color') ?></label>
                     <select class="field-select crew-theme">
                         <option value="admin-card" ${themeClass === 'admin-card' ? 'selected' : ''}>Cyan (Admin / Root)</option>
                         <option value="founder-card" ${themeClass === 'founder-card' ? 'selected' : ''}>Neon Pink (Founder / Muse)</option>
@@ -975,7 +975,7 @@ function renderCrewCards(crewList) {
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;">FontAwesome Icon Class</label>
+                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('FontAwesome Icon Class') ?></label>
                     <input type="text" class="field-input crew-icon" value="${escapeHtml(member.icon || 'fas fa-crown')}" placeholder="fas fa-crown">
                     <div style="margin-top:4px;">
                         <span class="icon-preset-chip" data-icon="fas fa-crown">👑 Crown</span>
@@ -990,7 +990,7 @@ function renderCrewCards(crewList) {
                 </div>
             </div>
             <div>
-                <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;">Biography / Description</label>
+                <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Biography / Description') ?></label>
                 <textarea class="field-textarea crew-bio" style="min-height:60px;" placeholder="Short bio or welcome message...">${escapeHtml(member.bio || '')}</textarea>
             </div>
         `;

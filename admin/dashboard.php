@@ -5,7 +5,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     header("Location: ../login.php");
     exit;
 }
-$page_title = "Admin Dashboard";
+$page_title = __("Admin Dashboard");
 include '../includes/header.php'; 
 
 // Fetch Stats
@@ -72,8 +72,8 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
 <main class="container">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h1>Admin Dashboard</h1>
-            <div style="font-size:0.9rem; opacity:0.7;">Logged in as <?php echo htmlspecialchars($_SESSION['user']['username']); ?> (ID: <?php echo $_SESSION['user']['account_id']; ?>)</div>
+            <h1><?= __("Admin Dashboard") ?></h1>
+            <div style="font-size:0.9rem; opacity:0.7;"><?= sprintf(__("Logged in as %s (ID: %s)"), htmlspecialchars($_SESSION['user']['username']), $_SESSION['user']['account_id']) ?></div>
         </div>
         <div style="display:flex; flex-wrap: wrap; gap: 10px;">
             <button onclick="window.open('manual_window.php', 'AdminManual', 'width=600,height=800');" class="dl-btn"><?= __('Admin Manual') ?></button>
@@ -89,65 +89,65 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
     <div class="admin-grid">
         <!-- Statistics -->
         <div class="admin-card">
-            <h3>Account Stats</h3>
+            <h3><?= __("Account Stats") ?></h3>
             <div style="font-size: 2rem; font-weight: bold; color: var(--secondary-color); text-align: center;">
                 <?php echo $user_count; ?>
             </div>
-            <p style="text-align: center; margin-top: 0.5rem; opacity: 0.8;">Registered Accounts</p>
+            <p style="text-align: center; margin-top: 0.5rem; opacity: 0.8;"><?= __("Registered Accounts") ?></p>
         </div>
 
         <div class="admin-card">
-            <h3>Online Stat</h3>
+            <h3><?= __("Online Stat") ?></h3>
             <div style="font-size: 2rem; font-weight: bold; color: #00C851; text-align: center;" id="client-count-admin">
                 --
             </div>
-            <p style="text-align: center; margin-top: 0.5rem; opacity: 0.8;">Players Online</p>
+            <p style="text-align: center; margin-top: 0.5rem; opacity: 0.8;"><?= __("Players Online") ?></p>
         </div>
 
         <!-- Server Control -->
         <div class="admin-card">
-            <h3>Server Broadcast</h3>
-            <p>Send a message to all connected players.</p>
+            <h3><?= __("Server Broadcast") ?></h3>
+            <p><?= __("Send a message to all connected players.") ?></p>
             <form id="announce-form" onsubmit="sendAnnouncement(event)">
                 <div class="form-group">
-                    <input type="text" id="announce-msg" placeholder="Message to server..." required style="width: 100%; padding: 8px;">
+                    <input type="text" id="announce-msg" placeholder="<?= __("Message to server...") ?>" required style="width: 100%; padding: 8px;">
                 </div>
-                <button type="submit" class="dl-btn success-btn" style="width:100%">Broadcast</button>
+                <button type="submit" class="dl-btn success-btn" style="width:100%"><?= __("Broadcast") ?></button>
             </form>
         </div>
 
         <!-- Test In-Game Mail -->
         <div class="admin-card">
-            <h3>Test In-Game Mail</h3>
-            <p>Send a personal mail to a connected player to verify the messaging system.</p>
+            <h3><?= __("Test In-Game Mail") ?></h3>
+            <p><?= __("Send a personal mail to a connected player to verify the messaging system.") ?></p>
             <form id="test-mail-form" onsubmit="sendTestMail(event)">
                 <div style="display:flex; gap:10px; margin-bottom:8px;">
-                    <input type="number" id="tm-aid" placeholder="Account ID" required
+                    <input type="number" id="tm-aid" placeholder="<?= __("Account ID") ?>" required
                            style="width:140px; padding:8px; flex-shrink:0;">
-                    <input type="text" id="tm-from" placeholder="From Name" value="Hunter's Guild"
+                    <input type="text" id="tm-from" placeholder="<?= __("From Name") ?>" value="<?= __("Hunter's Guild") ?>"
                            style="flex-grow:1; padding:8px;">
                 </div>
-                <textarea id="tm-msg" placeholder="Mail body..." required
+                <textarea id="tm-msg" placeholder="<?= __("Mail body...") ?>" required
                           style="width:100%; padding:8px; min-height:70px; resize:vertical; box-sizing:border-box; background:rgba(255,255,255,0.05); color:inherit; border:1px solid #444;"></textarea>
-                <button type="submit" id="tm-btn" class="dl-btn success-btn" style="width:100%; margin-top:8px;">Send Test Mail</button>
+                <button type="submit" id="tm-btn" class="dl-btn success-btn" style="width:100%; margin-top:8px;"><?= __("Send Test Mail") ?></button>
             </form>
             <div id="tm-out" style="margin-top:8px; font-size:0.9em;"></div>
         </div>
 
         <!-- Reward Reset -->
         <div class="admin-card">
-            <h3>Reset Reward Claim</h3>
-            <p>Refund a claimed milestone for a player.</p>
+            <h3><?= __("Reset Reward Claim") ?></h3>
+            <p><?= __("Refund a claimed milestone for a player.") ?></p>
             <form id="reset-claim-form" onsubmit="resetClaim(event)">
                 <div style="display:flex; flex-wrap: wrap; gap:10px; margin-bottom: 5px;">
-                    <input type="text" id="rc-cname" list="claimed-chars-list" placeholder="Search Character Name..." required style="flex-grow:1; padding: 8px;">
-                    <input type="number" id="rc-count" placeholder="# to Revert" value="1" min="1" required style="width: 100px; padding: 8px;">
+                    <input type="text" id="rc-cname" list="claimed-chars-list" placeholder="<?= __("Search Character Name...") ?>" required style="flex-grow:1; padding: 8px;">
+                    <input type="number" id="rc-count" placeholder="<?= __("# to Revert") ?>" value="1" min="1" required style="width: 100px; padding: 8px;">
                 </div>
                 <div style="display:flex; gap:10px; margin-bottom: 10px;">
-                    <input type="number" id="rc-aid" placeholder="Account ID (Auto-filled)" required readonly style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); color: #888;">
+                    <input type="number" id="rc-aid" placeholder="<?= __("Account ID (Auto-filled)") ?>" required readonly style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); color: #888;">
                 </div>
                 <datalist id="claimed-chars-list"></datalist>
-                <button type="submit" class="dl-btn" style="border-color: #ff8800; background: rgba(255, 136, 0, 0.2); color: #ffaa44; width: 100%;">Reset Claim</button>
+                <button type="submit" class="dl-btn" style="border-color: #ff8800; background: rgba(255, 136, 0, 0.2); color: #ffaa44; width: 100%;"><?= __("Reset Claim") ?></button>
             </form>
             <div id="rc-out" style="margin-top: 10px; font-size: 0.9em;"></div>
         </div>
@@ -155,74 +155,74 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
         <!-- Terminal -->
         <div class="admin-card" style="grid-column: span 2;">
             <h3>
-                Console Command
+                <?= __("Console Command") ?>
                 <button onclick="window.open('console_window.php', 'Console', 'width=800,height=600');" 
                         class="dl-btn" 
                         style="float:right; font-size: 0.7rem; padding: 2px 8px; margin-top: -2px;">
-                    Popout
+                    <?= __("Popout") ?>
                 </button>
             </h3>
-            <p>Execute raw shell commands (Use with caution).</p>
+            <p><?= __("Execute raw shell commands (Use with caution).") ?></p>
             <form id="console-form" onsubmit="runConsole(event)">
                 <div style="display:flex; flex-wrap: wrap; gap:10px;">
-                    <input type="text" id="console-cmd" placeholder="Command (e.g. reload, kick <id>)" style="flex-grow:1; padding: 8px;">
-                    <button type="submit" class="dl-btn">Run</button>
+                    <input type="text" id="console-cmd" placeholder="<?= __("Command (e.g. reload, kick <id>)") ?>" style="flex-grow:1; padding: 8px;">
+                    <button type="submit" class="dl-btn"><?= __("Run") ?></button>
                 </div>
             </form>
-            <div id="console-out" class="console-output">Ready...</div>
+            <div id="console-out" class="console-output"><?= __("Ready...") ?></div>
         </div>
 
         <!-- Player Management -->
         <div class="admin-card" style="grid-column: span 3;">
-            <h3>Online Players</h3>
+            <h3><?= __("Online Players") ?></h3>
             <div style="overflow-x: auto;">
                 <table style="width:100%; min-width: 600px; border-collapse: collapse;">
                     <thead>
                         <tr style="text-align:left; border-bottom:1px solid #333;">
-                            <th>Name</th>
-                            <th>Level</th>
-                            <th>Class</th>
-                            <th>Section ID</th>
-                            <th>Actions</th>
+                            <th><?= __("Name") ?></th>
+                            <th><?= __("Level") ?></th>
+                            <th><?= __("Class") ?></th>
+                            <th><?= __("Section ID") ?></th>
+                            <th><?= __("Actions") ?></th>
                         </tr>
                     </thead>
                     <tbody id="admin-player-list">
-                        <tr><td colspan="5">Loading...</td></tr>
+                        <tr><td colspan="5"><?= __("Loading...") ?></td></tr>
                     </tbody>
                 </table>
             </div>
-            <button onclick="refreshPlayerList()" class="dl-btn" style="margin-top:1rem; font-size:0.8rem;">Refresh List</button>
+            <button onclick="refreshPlayerList()" class="dl-btn" style="margin-top:1rem; font-size:0.8rem;"><?= __("Refresh List") ?></button>
         </div>
 
         <!-- All Accounts -->
         <div class="admin-card" style="grid-column: span 3;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
-                <h3 style="margin:0; border:none; padding:0;">All Registered Accounts</h3>
+                <h3 style="margin:0; border:none; padding:0;"><?= __("All Registered Accounts") ?></h3>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <input type="text" id="admin-account-search" placeholder="Filter by user, ID, email..." oninput="filterAccountsList()" style="padding:6px 12px; font-size:0.85rem; border:1px solid #444; background:#111; color:#fff; border-radius:4px; min-width:220px;">
-                    <button onclick="refreshAccountsList()" class="dl-btn" style="font-size:0.8rem; padding:6px 14px;">Refresh List</button>
+                    <input type="text" id="admin-account-search" placeholder="<?= __("Filter by user, ID, email...") ?>" oninput="filterAccountsList()" style="padding:6px 12px; font-size:0.85rem; border:1px solid #444; background:#111; color:#fff; border-radius:4px; min-width:220px;">
+                    <button onclick="refreshAccountsList()" class="dl-btn" style="font-size:0.8rem; padding:6px 14px;"><?= __("Refresh List") ?></button>
                 </div>
             </div>
             <div style="overflow-x: auto; max-height: 400px;">
                 <table style="width:100%; min-width: 600px; border-collapse: collapse;">
                     <thead>
                         <tr style="text-align:left; border-bottom:1px solid #333; position: sticky; top: 0; background: rgba(0,0,0,0.9);">
-                            <th>Account ID</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Discord ID</th>
-                            <th>Created At</th>
-                            <th>Flags</th>
-                            <th>Last Char</th>
-                            <th>Actions</th>
+                            <th><?= __("Account ID") ?></th>
+                            <th><?= __("Username") ?></th>
+                            <th><?= __("Email") ?></th>
+                            <th><?= __("Discord ID") ?></th>
+                            <th><?= __("Created At") ?></th>
+                            <th><?= __("Flags") ?></th>
+                            <th><?= __("Last Char") ?></th>
+                            <th><?= __("Actions") ?></th>
                         </tr>
                     </thead>
                     <tbody id="admin-accounts-list">
-                        <tr><td colspan="8">Loading accounts...</td></tr>
+                        <tr><td colspan="8"><?= __("Loading accounts...") ?></td></tr>
                     </tbody>
                 </table>
             </div>
-            <button onclick="refreshAccountsList()" class="dl-btn" style="margin-top:1rem; font-size:0.8rem;">Refresh List</button>
+            <button onclick="refreshAccountsList()" class="dl-btn" style="margin-top:1rem; font-size:0.8rem;"><?= __("Refresh List") ?></button>
         </div>
     </div>
 </main>
@@ -231,13 +231,13 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
 <div id="admin-edit-email-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
     <div style="background: #181818; padding: 2rem; border-radius: 8px; border: 1px solid #00ffff; max-width: 440px; width: 90%; box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);">
         <h3 style="color: #00ffff; margin-top:0; font-family:'Share Tech Mono',monospace; border-bottom:1px solid rgba(0,255,255,0.2); padding-bottom:8px;">
-            <i class="fas fa-user-edit" style="margin-right:8px;"></i>Edit Account Email
+            <i class="fas fa-user-edit" style="margin-right:8px;"></i><?= __("Edit Account Email") ?>
         </h3>
         <p style="font-size:0.85rem; color:#ccc; margin: 12px 0;">
-            Update recovery email for <strong id="aee-username" style="color:#00ffff;"></strong> (Account ID: <span id="aee-account-id" style="font-family:monospace; color:#fff;"></span>).
+            <?= sprintf(__("Update recovery email for %s (Account ID: %s)."), '<strong id="aee-username" style="color:#00ffff;"></strong>', '<span id="aee-account-id" style="font-family:monospace; color:#fff;"></span>') ?>
         </p>
 
-        <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:5px;">Recovery Email Address</label>
+        <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:5px;"><?= __("Recovery Email Address") ?></label>
         <input type="email" id="aee-email-input" placeholder="player@example.com" maxlength="100"
             style="width: 100%; padding: 10px; background: #000; border: 1px solid #444; color: #fff; border-radius:4px; box-sizing:border-box; font-family:'Share Tech Mono',monospace;">
 
@@ -246,9 +246,9 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
 
         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem;">
             <button type="button" onclick="closeAdminEditEmailModal()" class="dl-btn"
-                style="background: rgba(255,255,255,0.1); border-color: #555;">Cancel</button>
+                style="background: rgba(255,255,255,0.1); border-color: #555;"><?= __("Cancel") ?></button>
             <button type="button" onclick="confirmAdminEditEmail()" id="btn-confirm-aee" class="dl-btn"
-                style="background: rgba(0, 255, 255, 0.15); border-color: #00ffff; color: white;">Save Email</button>
+                style="background: rgba(0, 255, 255, 0.15); border-color: #00ffff; color: white;"><?= __("Save Email") ?></button>
         </div>
     </div>
 </div>
@@ -302,7 +302,7 @@ async function resetClaim(e) {
     const out = document.getElementById('rc-out');
     
     out.style.color = 'var(--text-color)';
-    out.textContent = 'Resetting...';
+    out.textContent = '<?= addslashes(__("Resetting...")) ?>';
     
     try {
         const res = await fetch('/api/admin_reset_claim.php', {
@@ -322,11 +322,11 @@ async function resetClaim(e) {
             initClaimReset();
         } else {
             out.style.color = '#ff4444';
-            out.textContent = data.error || 'Failed to reset claim.';
+            out.textContent = data.error || '<?= addslashes(__("Failed to reset claim.")) ?>';
         }
     } catch (err) {
         out.style.color = '#ff4444';
-        out.textContent = 'Connection error.';
+        out.textContent = '<?= addslashes(__("Connection error.")) ?>';
     }
 }
 
@@ -358,7 +358,7 @@ async function execCommand(cmd) {
             out.textContent += `\nError: ${data.error}`;
         }
     } catch (e) {
-        out.textContent += `\nConnection Failed`;
+        out.textContent += '\n' + '<?= addslashes(__("Connection Failed")) ?>';
     }
     out.scrollTop = out.scrollHeight;
 }
@@ -377,7 +377,7 @@ async function refreshPlayerList() {
         tbody.innerHTML = '';
 
         if (!data.Clients || data.Clients.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5">No players online.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5">' + '<?= addslashes(__("No players online.")) ?>' + '</td></tr>';
             return;
         }
 
@@ -394,7 +394,7 @@ async function refreshPlayerList() {
                 <td style="padding:0.5rem;">${c.Class}</td>
                 <td style="padding:0.5rem;">${c.SectionID}</td>
                 <td style="padding:0.5rem;">
-                    <button class="action-btn" onclick="kickUser('${c.ID}', '${c.Name}')">Kick</button>
+                    <button class="action-btn" onclick="kickUser('${c.ID}', '${c.Name}')"><?= __('Kick') ?></button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -448,7 +448,7 @@ async function refreshAccountsList() {
 
         if (!data.success || !data.accounts) {
             const tbody = document.getElementById('admin-accounts-list');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="8">No accounts found.</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8">' + '<?= addslashes(__("No accounts found.")) ?>' + '</td></tr>';
             return;
         }
 
@@ -457,7 +457,7 @@ async function refreshAccountsList() {
     } catch (e) {
         console.error(e);
         const tbody = document.getElementById('admin-accounts-list');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="8">Error loading accounts.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8">' + '<?= addslashes(__("Error loading accounts.")) ?>' + '</td></tr>';
     }
 }
 
@@ -467,7 +467,7 @@ function renderFilteredAccounts(accounts) {
     tbody.innerHTML = '';
 
     if (!accounts || accounts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8">No matching accounts found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">' + '<?= addslashes(__("No matching accounts found.")) ?>' + '</td></tr>';
         return;
     }
 
@@ -475,11 +475,11 @@ function renderFilteredAccounts(accounts) {
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
         
-        let flagsStr = a.Flags ? '0x' + a.Flags.toString(16).toUpperCase() : 'None';
-        let name = a.WebUsername || (a.BBLicenses && a.BBLicenses[0] ? a.BBLicenses[0].UserName : 'Unknown');
+        let flagsStr = a.Flags ? '0x' + a.Flags.toString(16).toUpperCase() : '<?= addslashes(__("None")) ?>';
+        let name = a.WebUsername || (a.BBLicenses && a.BBLicenses[0] ? a.BBLicenses[0].UserName : '<?= addslashes(__("Unknown")) ?>');
         let email = a.WebEmail || '-';
         let isLegacyEmail = typeof email === 'string' && email.toLowerCase().endsWith('_legacy@psobb.io');
-        let emailDisplay = isLegacyEmail ? `<span style="color:#ffaa00;" title="${email}">${email}</span> <span style="font-size:0.75rem; background:rgba(255,170,0,0.2); border:1px solid #ffaa00; padding:1px 4px; border-radius:3px; color:#ffaa00;">Legacy</span>` : email;
+        let emailDisplay = isLegacyEmail ? `<span style="color:#ffaa00;" title="${email}">${email}</span> <span style="font-size:0.75rem; background:rgba(255,170,0,0.2); border:1px solid #ffaa00; padding:1px 4px; border-radius:3px; color:#ffaa00;"><?= __('Legacy') ?></span>` : email;
         let discordId = a.WebDiscordID || '-';
         let created = a.WebCreatedAt ? new Date(a.WebCreatedAt).toLocaleString() : '-';
         let lastChar = a.LastPlayerName || '-';
@@ -493,8 +493,8 @@ function renderFilteredAccounts(accounts) {
             <td style="padding:0.5rem; font-family:monospace;">${flagsStr}</td>
             <td style="padding:0.5rem;">${lastChar}</td>
             <td style="padding:0.5rem; white-space:nowrap;">
-                <button class="dl-btn" style="padding:0.25rem 0.5rem; font-size:0.75rem; border-color:#00ffff; color:#00ffff; background:rgba(0,255,255,0.1); margin-right:4px;" onclick="openAdminEditEmailModal('${a.AccountID}', '${name.replace(/'/g, "\\'")}', '${(a.WebEmail || '').replace(/'/g, "\\'")}')"><i class="fas fa-envelope"></i> Edit Email</button>
-                <button class="action-btn" onclick="deleteAccount('${a.AccountID}', '${name.replace(/'/g, "\\'")}')">Delete</button>
+                <button class="dl-btn" style="padding:0.25rem 0.5rem; font-size:0.75rem; border-color:#00ffff; color:#00ffff; background:rgba(0,255,255,0.1); margin-right:4px;" onclick="openAdminEditEmailModal('${a.AccountID}', '${name.replace(/'/g, "\\'")}', '${(a.WebEmail || '').replace(/'/g, "\\'")}')"><i class="fas fa-envelope"></i> <?= __('Edit Email') ?></button>
+                <button class="action-btn" onclick="deleteAccount('${a.AccountID}', '${name.replace(/'/g, "\\'")}')"><?= __('Delete') ?></button>
             </td>
         `;
         tbody.appendChild(row);
@@ -559,7 +559,7 @@ async function confirmAdminEditEmail() {
     succ.style.display = 'none';
 
     if (!email) {
-        err.textContent = 'Please enter an email address.';
+        err.textContent = '<?= addslashes(__("Please enter an email address.")) ?>';
         err.style.display = 'block';
         return;
     }
@@ -567,13 +567,13 @@ async function confirmAdminEditEmail() {
     const cleanEmail = email.replace(/[\r\n]/g, '').trim();
 
     if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-        err.textContent = 'Please enter a valid email address.';
+        err.textContent = '<?= addslashes(__("Please enter a valid email address.")) ?>';
         err.style.display = 'block';
         return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.textContent = '<?= addslashes(__("Saving...")) ?>';
 
     try {
         const csrfToken = window.getCSRFToken ? window.getCSRFToken() : '';
@@ -597,25 +597,25 @@ async function confirmAdminEditEmail() {
         if (res.ok && data.success) {
             succ.textContent = '✓ ' + data.message;
             succ.style.display = 'block';
-            btn.textContent = 'Saved!';
+            btn.textContent = '<?= addslashes(__("Saved!")) ?>';
 
             setTimeout(() => {
                 btn.disabled = false;
-                btn.textContent = 'Save Email';
+                btn.textContent = '<?= addslashes(__("Save Email")) ?>';
                 closeAdminEditEmailModal();
                 refreshAccountsList();
             }, 1200);
         } else {
-            err.textContent = data.error || 'Failed to update email.';
+            err.textContent = data.error || '<?= addslashes(__("Failed to update email.")) ?>';
             err.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = 'Save Email';
+            btn.textContent = '<?= addslashes(__("Save Email")) ?>';
         }
     } catch (e) {
-        err.textContent = 'Connection error.';
+        err.textContent = '<?= addslashes(__("Connection error.")) ?>';
         err.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Save Email';
+        btn.textContent = '<?= addslashes(__("Save Email")) ?>';
     }
 }
 
@@ -628,7 +628,7 @@ async function sendTestMail(e) {
     const btn  = document.getElementById('tm-btn');
 
     btn.disabled = true;
-    btn.textContent = 'Sending...';
+    btn.textContent = '<?= addslashes(__("Sending...")) ?>';
     out.style.color = 'var(--text-color)';
     out.textContent = '';
 
@@ -647,15 +647,15 @@ async function sendTestMail(e) {
             document.getElementById('tm-from').value = "Hunter's Guild";
         } else {
             out.style.color = '#ff4444';
-            out.textContent = '✗ ' + (data.error || 'Unknown error.');
+            out.textContent = '✗ ' + (data.error || '<?= addslashes(__("Unknown error.")) ?>');
         }
     } catch (err) {
         out.style.color = '#ff4444';
-        out.textContent = '✗ Connection error.';
+        out.textContent = '✗ ' + '<?= addslashes(__("Connection error.")) ?>';
     }
 
     btn.disabled = false;
-    btn.textContent = 'Send Test Mail';
+    btn.textContent = '<?= addslashes(__("Send Test Mail")) ?>';
 }
 
 // Init
