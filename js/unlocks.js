@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.error) throw new Error(data.error);
 
                 if (!data.is_online) {
-                    showStatus(data.message || "You must be online in a game to view and claim rewards on your character.", false);
+                    showStatus(data.message || (typeof window.__ === 'function' ? window.__("You must be online in a game to view and claim rewards on your character.") : "You must be online in a game to view and claim rewards on your character."), false);
                     milestonesContainer.innerHTML = '';
                     return;
                 }
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('char-level').textContent = data.character.level;
 
                 if (!data.in_game) {
-                    showStatus("⚠️ Character found in Lobby. <b>You must join or create a Game to claim rewards!</b>", false);
+                    showStatus((typeof window.__ === 'function' ? window.__("⚠️ Character found in Lobby. <b>You must join or create a Game to claim rewards!</b>") : "⚠️ Character found in Lobby. <b>You must join or create a Game to claim rewards!</b>"), false);
                 }
 
                 renderMilestones(data.milestones, data.in_game);
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderMilestones(milestones, inGame) {
         if (!milestones || milestones.length === 0) {
-            milestonesContainer.innerHTML = '<p style="color: var(--text-muted);">You have not reached Level 5 yet. Keep hunting!</p>';
+            milestonesContainer.innerHTML = '<p style="color: var(--text-muted);">' + (typeof window.__ === 'function' ? window.__("You have not reached Level 5 yet. Keep hunting!") : "You have not reached Level 5 yet. Keep hunting!") + '</p>';
             return;
         }
 
@@ -64,14 +64,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let btnHtml = '';
             if (m.claimed) {
-                btnHtml = `<p style="color: var(--pso-purple); margin-top: 1.5rem; font-family: 'Share Tech Mono', 'Segoe UI', monospace; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);">CLAIMED:<br>${m.claimed_category}</p>`;
+                const claimedLabel = typeof window.__ === 'function' ? window.__('CLAIMED:') : 'CLAIMED:';
+                btnHtml = `<p style="color: var(--pso-purple); margin-top: 1.5rem; font-family: 'Share Tech Mono', 'Segoe UI', monospace; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);">${claimedLabel}<br>${m.claimed_category}</p>`;
             } else {
                 const disabledStr = !inGame ? 'disabled' : '';
-                btnHtml = `<button class="open-claim-btn" data-level="${m.level}" ${disabledStr}>Claim Reward</button>`;
+                const claimLabel = typeof window.__ === 'function' ? window.__('Claim Reward') : 'Claim Reward';
+                btnHtml = `<button class="open-claim-btn" data-level="${m.level}" ${disabledStr}>${claimLabel}</button>`;
             }
 
+            const levelLabel = typeof window.__ === 'function' ? window.__('Level') : 'Level';
             card.innerHTML = `
-                <div class="milestone-level">Level ${m.level}</div>
+                <div class="milestone-level">${levelLabel} ${m.level}</div>
                 ${btnHtml}
             `;
             milestonesContainer.appendChild(card);
@@ -378,9 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         day.classList.add('day-reached');
                     }
 
+                    const dayLabel = typeof window.__ === 'function' ? window.__('Day') : 'Day';
                     day.innerHTML = `
                         ${stateHtml}
-                        <div class="day-num">Day ${m}</div>
+                        <div class="day-num">${dayLabel} ${m}</div>
                         <div class="day-reward">${rewardName}</div>
                     `;
                     claimsDiv.appendChild(day);
@@ -393,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.daily_claimed) {
                     startDailyCountdown(dailyBtn, data.next_daily_reset, data.server_time);
                 } else if (!data.is_online) {
-                    dailyBtn.textContent = 'Log into the game first';
+                    dailyBtn.textContent = typeof window.__ === 'function' ? window.__('Log into the game first') : 'Log into the game first';
                     dailyBtn.disabled = true;
                 } else {
                     dailyBtn.disabled = false;
@@ -434,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 clearInterval(countInterval);
                 countdown.style.transform = 'scale(1.5)';
-                countdown.textContent = 'DROPPING!';
+                countdown.textContent = typeof window.__ === 'function' ? window.__('DROPPING!') : 'DROPPING!';
                 setTimeout(() => { countdown.style.display = 'none'; }, 600);
 
                 // Send streak claim
@@ -461,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                     .catch(() => {
                         overlay.style.display = 'none';
-                        alert('Connection error. Please try again.');
+                        alert(typeof window.__ === 'function' ? window.__('Connection error. Please try again.') : 'Connection error. Please try again.');
                     });
             }
         }, 1000);
@@ -471,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dailyBtn = document.getElementById('daily-claim-btn');
         const dailyResult = document.getElementById('daily-result');
         dailyBtn.disabled = true;
-        dailyBtn.textContent = 'Preparing...';
+        dailyBtn.textContent = typeof window.__ === 'function' ? window.__('Preparing...') : 'Preparing...';
 
         const overlay = document.getElementById('drop-animation-overlay');
         const box = document.getElementById('drop-item-box');
@@ -502,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 clearInterval(countInterval);
                 countdown.style.transform = 'scale(1.5)';
-                countdown.textContent = 'DROPPING!';
+                countdown.textContent = typeof window.__ === 'function' ? window.__('DROPPING!') : 'DROPPING!';
                 setTimeout(() => { countdown.style.display = 'none'; }, 600);
 
                 fetch('api/claim_daily.php', {
@@ -516,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.error) {
                             overlay.style.display = 'none';
                             dailyBtn.disabled = false;
-                            dailyBtn.textContent = '🎲 Claim Daily Reward';
+                            dailyBtn.textContent = typeof window.__ === 'function' ? window.__('🎲 Claim Daily Reward') : '🎲 Claim Daily Reward';
                             dailyResult.style.display = 'block';
                             dailyResult.style.color = '#ff4444';
                             dailyResult.textContent = data.error;
@@ -528,7 +532,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 overlay.style.display = 'none';
                                 dailyResult.style.display = 'block';
                                 dailyResult.style.color = '#00ff88';
-                                dailyResult.textContent = '🎉 ' + data.item + ' dropped in-game!';
+                                const droppedText = typeof window.__ === 'function' ? window.__('dropped in-game!') : 'dropped in-game!';
+                                dailyResult.textContent = '🎉 ' + data.item + ' ' + droppedText;
 
                                 const nowUnix = Math.floor(Date.now() / 1000);
                                 const midnightEstimate = nowUnix + (86400 - (nowUnix % 86400));
@@ -539,10 +544,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     .catch(() => {
                         overlay.style.display = 'none';
                         dailyBtn.disabled = false;
-                        dailyBtn.textContent = '🎲 Claim Daily Reward';
+                        dailyBtn.textContent = typeof window.__ === 'function' ? window.__('🎲 Claim Daily Reward') : '🎲 Claim Daily Reward';
                         dailyResult.style.display = 'block';
                         dailyResult.style.color = '#ff4444';
-                        dailyResult.textContent = 'Connection error.';
+                        dailyResult.textContent = typeof window.__ === 'function' ? window.__('Connection error.') : 'Connection error.';
                     });
             }
         }, 1000);
@@ -561,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const remaining = resetTimestamp - nowServer;
 
             if (remaining <= 0) {
-                btn.textContent = '🎲 Claim Daily Reward';
+                btn.textContent = typeof window.__ === 'function' ? window.__('🎲 Claim Daily Reward') : '🎲 Claim Daily Reward';
                 btn.disabled = false;
                 btn.style.borderColor = '#00ff88';
                 if (dailyCountdownInterval) clearInterval(dailyCountdownInterval);
@@ -572,7 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const hours = Math.floor(remaining / 3600);
             const mins = Math.floor((remaining % 3600) / 60);
             const secs = remaining % 60;
-            btn.textContent = `✓ Claimed — Next in ${hours}h ${mins}m ${secs}s`;
+            const claimedPrefix = typeof window.__ === 'function' ? window.__('Claimed — Next in') : 'Claimed — Next in';
+            btn.textContent = `✓ ${claimedPrefix} ${hours}h ${mins}m ${secs}s`;
         }
 
         updateCountdown();

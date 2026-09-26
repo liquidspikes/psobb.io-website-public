@@ -19,7 +19,7 @@ $data = @file_get_contents($url);
 
 if ($data === FALSE) {
     http_response_code(500);
-    echo json_encode(["error" => "Game server is offline, cannot fetch character data."]);
+    echo json_encode(["error" => __("Game server is offline, cannot fetch character data.")]);
     exit;
 }
 
@@ -39,7 +39,7 @@ if (!$onlineCharacter) {
     // Return early with a message requiring them to log in
     echo json_encode([
         "is_online" => false,
-        "message" => "Please log into the game with a character to view and claim its rewards!"
+        "message" => __("Please log into the game with a character to view and claim its rewards!")
     ]);
     exit;
 }

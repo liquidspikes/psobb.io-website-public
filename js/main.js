@@ -53,7 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (teamLink) teamLink.style.display = ''; // Reset display to show it
 
         const loginBtn = document.querySelector('.login-nav-btn');
-        if (loginBtn) loginBtn.textContent = 'Dashboard';
+        if (loginBtn) {
+            loginBtn.textContent = (typeof window.__ === 'function')
+                ? window.__('Dashboard')
+                : (loginBtn.getAttribute('data-dashboard-text') || 'Dashboard');
+        }
 
         const signupBtn = document.querySelector('.signup-nav-btn');
         if (signupBtn) signupBtn.style.display = 'none';
@@ -101,22 +105,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Dropdown toggling for mobile
+    // Dropdown toggling for mobile and desktop click support
     const dropBtns = document.querySelectorAll('.dropbtn');
     dropBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768) {
-                e.preventDefault();
-                const parentDropdown = btn.closest('.dropdown');
-
+            e.preventDefault();
+            e.stopPropagation();
+            const parentDropdown = btn.closest('.dropdown');
+            if (parentDropdown) {
                 // Close other open dropdowns
-                document.querySelectorAll('.dropdown.mobile-open').forEach(d => {
-                    if (d !== parentDropdown) d.classList.remove('mobile-open');
+                document.querySelectorAll('.dropdown.is-open, .dropdown.mobile-open').forEach(d => {
+                    if (d !== parentDropdown) {
+                        d.classList.remove('is-open');
+                        d.classList.remove('mobile-open');
+                    }
                 });
-
+                parentDropdown.classList.toggle('is-open');
                 parentDropdown.classList.toggle('mobile-open');
             }
         });
+    });
+
+    // Close dropdowns when clicking anywhere outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown.is-open, .dropdown.mobile-open').forEach(d => {
+                d.classList.remove('is-open');
+                d.classList.remove('mobile-open');
+            });
+        }
     });
 });
 
@@ -1940,33 +1957,35 @@ function renderActiveCharacterSectionId(character) {
     const secIdContainer = document.getElementById('section-id-change-container');
     if (!secIdContainer) return;
 
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
+
     let html = '';
     if (character) {
-        html += `<p style="font-size:0.85rem; margin-bottom:8px; font-family:'Share Tech Mono',monospace;">Current Section ID: <strong class="section-id id-${character.section_id.toLowerCase()}">${character.section_id}</strong></p>`;
+        html += `<p style="font-size:0.85rem; margin-bottom:8px; font-family:'Share Tech Mono',monospace;">${_t('Current Section ID:')} <strong class="section-id id-${character.section_id.toLowerCase()}">${character.section_id}</strong></p>`;
         if (character.level > 50) {
-            html += `<p style="color: #ff4444; font-size:0.8rem; margin: 4px 0 0 0; font-weight:bold;">Only characters level 50 and below can change their Section ID.</p>`;
+            html += `<p style="color: #ff4444; font-size:0.8rem; margin: 4px 0 0 0; font-weight:bold;">${_t('Only characters level 50 and below can change their Section ID.')}</p>`;
             secIdContainer.innerHTML = html;
             return;
         }
     }
 
     const secIdInfo = {
-        'Viridia': 'Partisans, Shots',
-        'Greenill': 'Daggers, Rifles',
-        'Skyly': 'Swords, Sealed J-Sword',
-        'Bluefull': 'Partisans, Spread',
-        'Purplenum': 'Mechguns, Units',
-        'Pinkal': 'Wands, Force Weapons',
-        'Redria': 'Slicers, Armors, Balanced',
-        'Oran': 'Daggers, Handguns',
-        'Yellowboze': 'All Weapons, Meseta',
-        'Whitill': 'Slicers, High-end Rares'
+        'Viridia': _t('Partisans, Shots'),
+        'Greenill': _t('Daggers, Rifles'),
+        'Skyly': _t('Swords, Sealed J-Sword'),
+        'Bluefull': _t('Partisans, Spread'),
+        'Purplenum': _t('Mechguns, Units'),
+        'Pinkal': _t('Wands, Force Weapons'),
+        'Redria': _t('Slicers, Armors, Balanced'),
+        'Oran': _t('Daggers, Handguns'),
+        'Yellowboze': _t('All Weapons, Meseta'),
+        'Whitill': _t('Slicers, High-end Rares')
     };
     const secIds = Object.keys(secIdInfo);
 
     html += `
         <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,0,0,0.5); padding: 12px; border-radius: 6px;">
-            <h4 style="margin-top: 0; margin-bottom:10px; color: #00ffff; font-family:'Share Tech Mono',monospace; font-size:0.95rem;"><i class="fas fa-arrows-spin"></i> Select New Section ID</h4>
+            <h4 style="margin-top: 0; margin-bottom:10px; color: #00ffff; font-family:'Share Tech Mono',monospace; font-size:0.95rem;"><i class="fas fa-arrows-spin"></i> ${_t('Select New Section ID')}</h4>
             <div class="section-id-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 12px;">
                 ${secIds.map((id) => `
                     <label class="secid-option-lbl" style="cursor: pointer; display: flex; align-items: center; gap: 8px; border: 1px solid ${id === character.section_id ? '#00ffff' : 'rgba(0,255,255,0.1)'}; padding: 8px 10px; border-radius: 6px; background: ${id === character.section_id ? 'rgba(0,255,255,0.1)' : 'transparent'}; transition: all 0.2s;" onclick="document.querySelectorAll('.secid-option-lbl').forEach(el=>{el.style.background='transparent';el.style.borderColor='rgba(0,255,255,0.1)'});this.style.background='rgba(0,255,255,0.1)';this.style.borderColor='#00ffff';">
@@ -1979,7 +1998,7 @@ function renderActiveCharacterSectionId(character) {
                     </label>
                 `).join('')}
             </div>
-            <button id="btn-change-secid" onclick="triggerSectionIdChange()" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 8px; font-weight: bold; font-family: 'Share Tech Mono', monospace; font-size:0.85rem;">Change Section ID</button>
+            <button id="btn-change-secid" onclick="triggerSectionIdChange()" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 8px; font-weight: bold; font-family: 'Share Tech Mono', monospace; font-size:0.85rem;">${_t('Change Section ID')}</button>
             <div id="secid-message" style="margin-top: 8px; display: none; font-weight: bold; font-size:0.8rem;"></div>
         </div>
     `;
@@ -1993,9 +2012,10 @@ window.triggerSectionIdChange = async function () {
     const btn = document.getElementById('btn-change-secid');
     if (!checked || !c || !msgEl || !btn) return;
 
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
     const newSecId = checked.value;
     btn.disabled = true;
-    btn.textContent = "Processing...";
+    btn.textContent = _t("Processing...");
     msgEl.style.display = 'none';
 
     try {
@@ -2014,17 +2034,17 @@ window.triggerSectionIdChange = async function () {
             msgEl.textContent = `✓ ${data.message}`;
             msgEl.style.color = '#00C851';
             msgEl.style.display = 'block';
-            btn.textContent = "Success";
+            btn.textContent = _t("Success");
             setTimeout(() => window.loadCharSlot(window.activeSlot), 2000);
         } else {
-            throw new Error(data.error || "Failed to change Section ID.");
+            throw new Error(data.error || _t("Failed to change Section ID."));
         }
     } catch (e) {
         msgEl.textContent = `⚠️ ${e.message}`;
         msgEl.style.color = '#ff4444';
         msgEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = "Change Section ID";
+        btn.textContent = _t("Change Section ID");
     }
 };
 
@@ -2034,16 +2054,23 @@ window.triggerMaterialReset = async function () {
     const msgEl = document.getElementById('reset-mat-message');
     if (!c || !msgEl) return;
 
-    const confirmed = confirm(`CAUTION: Are you absolutely sure you want to reset all consumed materials back to 0 for Character Slot ${window.activeSlot + 1} (${c.name})?\n\nThis will permanently reset your character's stats and CANNOT be undone!`);
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
+
+    const cautionTemplate = _t("CAUTION: Are you absolutely sure you want to reset all consumed materials back to 0 for Character Slot %s (%s)?\n\nThis will permanently reset your character's stats and CANNOT be undone!");
+    const cautionMsg = cautionTemplate
+        .replace('%s', (window.activeSlot + 1))
+        .replace('%s', c.name);
+
+    const confirmed = confirm(cautionMsg);
     if (!confirmed) return;
 
-    const typedConfirm = prompt(`To confirm this permanent reset, please type the word "WIPE" in all caps below:`);
+    const typedConfirm = prompt(_t('To confirm this permanent reset, please type the word "WIPE" in all caps below:'));
     if (typedConfirm !== "WIPE") {
-        alert("Action cancelled. The confirmation word did not match.");
+        alert(_t("Action cancelled. The confirmation word did not match."));
         return;
     }
 
-    msgEl.textContent = "Recalibrating stats...";
+    msgEl.textContent = _t("Recalibrating stats...");
     msgEl.style.color = "#ffaa00";
     msgEl.style.display = "block";
 
@@ -2063,7 +2090,7 @@ window.triggerMaterialReset = async function () {
             msgEl.textContent = `✓ ${data.message}`;
             setTimeout(() => window.loadCharSlot(window.activeSlot), 2000);
         } else {
-            throw new Error(data.error || 'Failed to reset materials.');
+            throw new Error(data.error || _t('Failed to reset materials.'));
         }
     } catch (e) {
         msgEl.style.color = "#ff4444";
@@ -2854,6 +2881,7 @@ window.loadMyBounties = async function () {
         if (!data.success) return;
 
         // --- Community Events ---
+        const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
         const ceSection = document.getElementById('community-event-section');
         const ceCards = document.getElementById('community-event-cards');
         if (ceSection && ceCards && data.community_events && data.community_events.length > 0) {
@@ -2871,8 +2899,8 @@ window.loadMyBounties = async function () {
                         <div style="height:100%; background: linear-gradient(90deg, #ffaa00, #ff6600); border-radius:4px; transition: width 0.8s ease; width:${pct}%;"></div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:rgba(255,255,255,0.5); font-family:'Share Tech Mono',monospace;">
-                        <span>Progress: ${Number(ce.current_progress).toLocaleString()} / ${Number(ce.target_amount).toLocaleString()}</span>
-                        <span>Your Contribution: <strong style="color:#ffaa00;">${ce.user_contribution || 0}</strong></span>
+                        <span>${_t('Progress:')} ${Number(ce.current_progress).toLocaleString()} / ${Number(ce.target_amount).toLocaleString()}</span>
+                        <span>${_t('Your Contribution:')} <strong style="color:#ffaa00;">${ce.user_contribution || 0}</strong></span>
                     </div>
                 </div>`;
             }).join('');
@@ -2890,7 +2918,7 @@ window.loadMyBounties = async function () {
             if (claimSection && claimList) {
                 claimSection.style.display = 'block';
                 claimList.innerHTML = data.claimable_events.map(ce => {
-                    const rewardStr = ce.reward_decoded || ce.reward_item_string || 'Community Event Reward';
+                    const rewardStr = ce.reward_decoded || ce.reward_item_string || _t('Community Event Reward');
                     return `
                     <div style="border: 1px solid rgba(0,255,136,0.4); background: rgba(0,255,136,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -2898,7 +2926,7 @@ window.loadMyBounties = async function () {
                                 <span style="color:#00ff88; font-weight:bold; font-family:'Share Tech Mono',monospace;">🏆 ${ce.title}</span>
                                 <div style="color:#fbbf24; font-size:0.75rem; margin-top:4px; font-family:'Share Tech Mono',monospace;">🎁 ${rewardStr}</div>
                             </div>
-                            <a href="missions.php" class="dl-btn" style="text-decoration:none; border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15); font-size:0.8rem; padding:6px 14px; white-space:nowrap;">Claim →</a>
+                            <a href="missions.php" class="dl-btn" style="text-decoration:none; border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15); font-size:0.8rem; padding:6px 14px; white-space:nowrap;">${_t('Claim →')}</a>
                         </div>
                     </div>`;
                 }).join('');
@@ -2914,7 +2942,7 @@ window.loadMyBounties = async function () {
             if (claimSection && claimList) {
                 claimSection.style.display = 'block';
                 claimList.innerHTML += completed.map(b => {
-                    const rewardStr = b.reward_decoded || b.reward_item_string || 'Mystery Reward';
+                    const rewardStr = b.reward_decoded || b.reward_item_string || _t('Mystery Reward');
                     return `
                     <div style="border: 1px solid rgba(0,255,136,0.4); background: rgba(0,255,136,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -2923,7 +2951,7 @@ window.loadMyBounties = async function () {
                                 <div style="color:rgba(255,255,255,0.5); font-size:0.75rem; margin-top:4px;">${b.character_name || 'Unknown'} · ${b.goal_type}</div>
                                 <div style="color:#fbbf24; font-size:0.75rem; margin-top:4px; font-family:'Share Tech Mono',monospace;">🎁 ${rewardStr}</div>
                             </div>
-                            <a href="missions.php" class="dl-btn" style="text-decoration:none; border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15); font-size:0.8rem; padding:6px 14px; white-space:nowrap;">Claim →</a>
+                            <a href="missions.php" class="dl-btn" style="text-decoration:none; border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15); font-size:0.8rem; padding:6px 14px; white-space:nowrap;">${_t('Claim →')}</a>
                         </div>
                     </div>`;
                 }).join('');
@@ -2944,13 +2972,13 @@ window.loadMyBounties = async function () {
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                             <div style="flex:1; min-width:0;">
                                 <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${b.title}</span>
-                                <div style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:6px;">📋 <strong>Objective:</strong> ${objective}</div>
-                                <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">Character: ${b.character_name || 'Unknown'}</div>
+                                <div style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:6px;">📋 <strong>${_t('Objective:')}</strong> ${objective}</div>
+                                <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${b.character_name || 'Unknown'}</div>
                                 ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">IN PROGRESS</span>
-                                <button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">✕ Abandon</button>
+                                <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('IN PROGRESS')}</span>
+                                <button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('✕ Abandon')}</button>
                             </div>
                         </div>
                     </div>`;
@@ -2965,7 +2993,8 @@ window.loadMyBounties = async function () {
 
 // Abandon a bounty mission
 window.abandonBounty = async function (playerMissionId) {
-    if (!confirm('Are you sure you want to abandon this bounty? Progress will be lost.')) return;
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
+    if (!confirm(_t('Are you sure you want to abandon this bounty? Progress will be lost.'))) return;
     try {
         const res = await fetch('/api/abandon_bounty.php', {
             method: 'POST',
@@ -2980,10 +3009,10 @@ window.abandonBounty = async function (playerMissionId) {
         if (res.ok && data.success) {
             window.loadMyBounties();
         } else {
-            alert(data.error || 'Failed to abandon bounty.');
+            alert(data.error || _t('Failed to abandon bounty.'));
         }
     } catch (e) {
-        alert('Connection error: ' + e.message);
+        alert(_t('Connection error: ') + e.message);
     }
 };
 
@@ -3442,22 +3471,24 @@ window.loadStreak = function () {
                         day.classList.add('day-reached');
                     }
 
+                    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
                     day.innerHTML = `
                         ${stateHtml}
-                        <div class="day-num">Day ${m}</div>
+                        <div class="day-num">${_t('Day')} ${m}</div>
                         <div class="day-reward">${rewardName}</div>
                     `;
                     claimsDiv.appendChild(day);
                 });
             }
 
+            const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
             const dailyBtn = document.getElementById('daily-claim-btn');
             const dailyResult = document.getElementById('daily-result');
             if (dailyBtn) {
                 if (data.daily_claimed) {
                     startDailyCountdown(dailyBtn, data.next_daily_reset, data.server_time);
                 } else if (!data.is_online) {
-                    dailyBtn.textContent = 'Log into the game first';
+                    dailyBtn.textContent = _t('Log into the game first');
                     dailyBtn.disabled = true;
                 } else {
                     dailyBtn.disabled = false;
@@ -3469,6 +3500,7 @@ window.loadStreak = function () {
 };
 
 function claimStreak(milestone) {
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
     const overlay = document.getElementById('drop-animation-overlay');
     const box = document.getElementById('drop-item-box');
     const thankYouText = document.getElementById('thank-you-text');
@@ -3496,7 +3528,7 @@ function claimStreak(milestone) {
         } else {
             clearInterval(countInterval);
             countdown.style.transform = 'scale(1.5)';
-            countdown.textContent = 'DROPPING!';
+            countdown.textContent = _t('DROPPING!');
             setTimeout(() => { countdown.style.display = 'none'; }, 600);
 
             fetch('/api/claim_streak.php', {
@@ -3521,19 +3553,20 @@ function claimStreak(milestone) {
                 })
                 .catch(() => {
                     overlay.style.display = 'none';
-                    alert('Connection error. Please try again.');
+                    alert(_t('Connection error. Please try again.'));
                 });
         }
     }, 1000);
 }
 
 function claimDaily() {
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
     const dailyBtn = document.getElementById('daily-claim-btn');
     const dailyResult = document.getElementById('daily-result');
     if (!dailyBtn || !dailyResult) return;
 
     dailyBtn.disabled = true;
-    dailyBtn.textContent = 'Preparing...';
+    dailyBtn.textContent = _t('Preparing...');
 
     const overlay = document.getElementById('drop-animation-overlay');
     const box = document.getElementById('drop-item-box');
@@ -3561,7 +3594,7 @@ function claimDaily() {
         } else {
             clearInterval(countInterval);
             countdown.style.transform = 'scale(1.5)';
-            countdown.textContent = 'DROPPING!';
+            countdown.textContent = _t('DROPPING!');
             setTimeout(() => { countdown.style.display = 'none'; }, 600);
 
             fetch('/api/claim_daily.php', {
@@ -3575,7 +3608,7 @@ function claimDaily() {
                     if (data.error) {
                         overlay.style.display = 'none';
                         dailyBtn.disabled = false;
-                        dailyBtn.textContent = '🎲 Claim Daily Reward';
+                        dailyBtn.textContent = _t('🎲 Claim Daily Reward');
                         dailyResult.style.display = 'block';
                         dailyResult.style.color = '#ff4444';
                         dailyResult.textContent = data.error;
@@ -3587,7 +3620,7 @@ function claimDaily() {
                             overlay.style.display = 'none';
                             dailyResult.style.display = 'block';
                             dailyResult.style.color = '#00ff88';
-                            dailyResult.textContent = '🎉 ' + data.item + ' dropped in-game!';
+                            dailyResult.textContent = '🎉 ' + data.item + ' ' + _t('dropped in-game!');
 
                             const nowUnix = Math.floor(Date.now() / 1000);
                             const midnightEstimate = nowUnix + (86400 - (nowUnix % 86400));
@@ -3598,10 +3631,10 @@ function claimDaily() {
                 .catch(() => {
                     overlay.style.display = 'none';
                     dailyBtn.disabled = false;
-                    dailyBtn.textContent = '🎲 Claim Daily Reward';
+                    dailyBtn.textContent = _t('🎲 Claim Daily Reward');
                     dailyResult.style.display = 'block';
                     dailyResult.style.color = '#ff4444';
-                    dailyResult.textContent = 'Connection error.';
+                    dailyResult.textContent = _t('Connection error.');
                 });
         }
     }, 1000);
@@ -3609,6 +3642,7 @@ function claimDaily() {
 
 let dailyCountdownInterval = null;
 function startDailyCountdown(btn, resetTimestamp, serverTime) {
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
     btn.disabled = true;
     btn.style.borderColor = 'rgba(255,255,255,0.15)';
     const offset = serverTime - Math.floor(Date.now() / 1000);
@@ -3618,7 +3652,7 @@ function startDailyCountdown(btn, resetTimestamp, serverTime) {
         const remaining = resetTimestamp - nowServer;
 
         if (remaining <= 0) {
-            btn.textContent = '🎲 Claim Daily Reward';
+            btn.textContent = _t('🎲 Claim Daily Reward');
             btn.disabled = false;
             btn.style.borderColor = '#00ff88';
             if (dailyCountdownInterval) clearInterval(dailyCountdownInterval);
@@ -3629,7 +3663,8 @@ function startDailyCountdown(btn, resetTimestamp, serverTime) {
         const hours = Math.floor(remaining / 3600);
         const mins = Math.floor((remaining % 3600) / 60);
         const secs = remaining % 60;
-        btn.textContent = `✓ Claimed — Next in ${hours}h ${mins}m ${secs}s`;
+        const claimedPrefix = _t('Claimed — Next in');
+        btn.textContent = `✓ ${claimedPrefix} ${hours}h ${mins}m ${secs}s`;
     }
 
     updateCountdown();

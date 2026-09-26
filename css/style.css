@@ -168,6 +168,24 @@ nav a.active {
     transform: translateX(-50%);
 }
 
+/* Invisible bridge so mouse hover doesn't drop off */
+.dropdown-content::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background: transparent;
+}
+
+.dropdown-content.align-right,
+.theme-dropdown-menu {
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+}
+
 .dropdown-content a {
     color: white;
     padding: 12px 16px;
@@ -190,7 +208,8 @@ nav a.active {
     border-bottom: 1px solid rgba(0, 255, 255, 0.1);
 }
 
-.dropdown:hover .dropdown-content {
+.dropdown:hover .dropdown-content,
+.dropdown.is-open .dropdown-content {
     display: block;
 }
 

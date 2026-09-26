@@ -26,6 +26,17 @@ start_secure_session();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css?v=<?php echo time(); ?>">
     <?= render_theme_css() ?>
+    <script>
+        window.PSO_LANG = <?= json_encode($PSO_LANG ?? 'en') ?>;
+        window.PSO_I18N = <?= json_encode($I18N[$PSO_LANG ?? 'en'] ?? []) ?>;
+        window.__ = function(str, fallback) {
+            if (!str) return '';
+            if (window.PSO_I18N && window.PSO_I18N[str] !== undefined) {
+                return window.PSO_I18N[str];
+            }
+            return (fallback !== undefined) ? fallback : str;
+        };
+    </script>
     <script src="/js/main.js?v=<?php echo time(); ?>" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
@@ -95,7 +106,7 @@ start_secure_session();
 
                 <li class="dropdown">
                     <a href="javascript:void(0)"
-                        class="dropbtn <?php echo in_array($current_page, ['mods', 'quest-editor']) ? 'active' : ''; ?>"><?= __('Development') ?>
+                        class="dropbtn <?php echo in_array($current_page, ['mods', 'quest-editor', 'decryption']) ? 'active' : ''; ?>"><?= __('Development') ?>
                         <i class="fas fa-caret-down"></i></a>
                     <div class="dropdown-content">
                         <?php if (is_feature_enabled('mods')): ?>
@@ -106,6 +117,8 @@ start_secure_session();
                         <a href="/quest-editor"
                             class="<?php echo ($current_page == 'quest-editor') ? 'active' : ''; ?>"><?= __('Quest Editor') ?></a>
                         <?php endif; ?>
+                        <a href="/decryption.php"
+                            class="<?php echo ($current_page == 'decryption') ? 'active' : ''; ?>"><?= __('Data Decryption') ?></a>
                         <a href="/development.php"
                             class="<?php echo ($current_page == 'development') ? 'active' : ''; ?>"><?= __('Dev Resources') ?></a>
                     </div>
@@ -139,7 +152,9 @@ start_secure_session();
                 </li>
                 <?php endif; ?>
                 <li><a href="/login.php"
-                        class="<?php echo ($current_page == 'login') ? 'login-nav-btn active' : 'login-nav-btn'; ?>"><?= __('Login') ?></a>
+                        class="<?php echo ($current_page == 'login') ? 'login-nav-btn active' : 'login-nav-btn'; ?>"
+                        data-dashboard-text="<?= __('Dashboard') ?>"
+                        data-login-text="<?= __('Login') ?>"><?= !empty($_SESSION['user']) ? __('Dashboard') : __('Login') ?></a>
                 </li>
                 <li class="lang-toggle-nav">
                     <i class="fas fa-globe" style="margin-right: 4px; opacity: 0.7;"></i>
@@ -150,10 +165,10 @@ start_secure_session();
                     <a href="/api/set_lang.php?lang=ru&redirect=<?= urlencode($_SERVER['REQUEST_URI'] ?? '/') ?>" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'ru' ? 'active-lang' : '' ?>" title="Русский">RU</a>
                 </li>
                 <li class="dropdown theme-toggle-nav">
-                    <a href="javascript:void(0)" class="dropbtn" title="<?= __('Theme') ?>" style="padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
+                    <a href="javascript:void(0)" class="dropbtn" id="theme-menu-btn" title="<?= __('Theme') ?>" style="padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-palette" style="color: var(--pso-blue);"></i> <i class="fas fa-caret-down" style="font-size: 0.7rem;"></i>
                     </a>
-                    <div class="dropdown-content theme-dropdown-menu" style="min-width: 190px; right: 0; left: auto;">
+                    <div class="dropdown-content align-right theme-dropdown-menu" style="min-width: 190px; right: 0; left: auto; transform: none;">
                         <?php 
                         $themePresets = get_theme_presets();
                         $activeThemeInfo = get_active_theme_vars();

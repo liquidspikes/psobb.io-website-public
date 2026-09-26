@@ -418,31 +418,31 @@ if (isset($_SESSION['user']['username'])) {
                                 <?= __('Materials Used') ?></h3>
                             <div class="mat-compact-grid">
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon hp-icon"></div><span class="mat-name">HP</span><span
+                                    <div class="mat-icon hp-icon"></div><span class="mat-name"><?= __('HP') ?></span><span
                                         class="mat-val" id="mat-val-hp">0</span><span class="mat-max">/125</span>
                                 </div>
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon tp-icon"></div><span class="mat-name">TP</span><span
+                                    <div class="mat-icon tp-icon"></div><span class="mat-name"><?= __('TP') ?></span><span
                                         class="mat-val" id="mat-val-tp">0</span><span class="mat-max">/125</span>
                                 </div>
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon pow-icon"></div><span class="mat-name">Power</span><span
+                                    <div class="mat-icon pow-icon"></div><span class="mat-name"><?= __('Power') ?></span><span
                                         class="mat-val" id="mat-val-power">0</span>
                                 </div>
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon mind-icon"></div><span class="mat-name">Mind</span><span
+                                    <div class="mat-icon mind-icon"></div><span class="mat-name"><?= __('Mind') ?></span><span
                                         class="mat-val" id="mat-val-mind">0</span>
                                 </div>
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon evd-icon"></div><span class="mat-name">Evade</span><span
+                                    <div class="mat-icon evd-icon"></div><span class="mat-name"><?= __('Evade') ?></span><span
                                         class="mat-val" id="mat-val-evade">0</span>
                                 </div>
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon def-icon"></div><span class="mat-name">Def</span><span
+                                    <div class="mat-icon def-icon"></div><span class="mat-name"><?= __('Def') ?></span><span
                                         class="mat-val" id="mat-val-def">0</span>
                                 </div>
                                 <div class="mat-compact-item">
-                                    <div class="mat-icon lck-icon"></div><span class="mat-name">Luck</span><span
+                                    <div class="mat-icon lck-icon"></div><span class="mat-name"><?= __('Luck') ?></span><span
                                         class="mat-val" id="mat-val-luck">0</span><span class="mat-max">/45</span>
                                 </div>
                             </div>
