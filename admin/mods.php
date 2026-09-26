@@ -47,12 +47,17 @@ include '../includes/header.php';
 ?>
 
 <main class="container">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <h1>Manage Mods</h1>
-            <a href="dashboard.php" style="color: var(--pso-blue);"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
     </div>
+
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'mods';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
     
     <?php if (isset($message)): ?>
         <div style="background: rgba(0,200,81,0.1); border: 1px solid #00C851; color: #00C851; padding: 10px; margin-bottom: 1rem;">

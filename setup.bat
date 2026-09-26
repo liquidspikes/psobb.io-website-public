@@ -141,6 +141,7 @@ if (!file_exists($siteFile)) {
         'server_name' => 'PSOBB.IO',
         'server_address' => 'psobb.io',
         'server_tagline' => 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.',
+        'default_language' => 'auto',
         'hero_logo_url' => '/img/header_logo.png',
         'exp_rate' => '1x',
         'drop_rate' => '1x',

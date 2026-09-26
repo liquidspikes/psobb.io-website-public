@@ -112,6 +112,7 @@ if (!function_exists('get_site_config')) {
             'drop_rate'            => '1x',
             'meseta_rate'          => '1x',
             'discord_server'       => 'https://discord.gg/28s84HJXha',
+            'default_language'     => 'auto',
             'enable_registration'  => true,
             'enable_bounties'      => true,
             'enable_lfg'           => true,

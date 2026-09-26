@@ -203,15 +203,11 @@ $discordServer = $config['discord_server'] ?? $config['discord_invite_url'] ?? g
         </div>
     </div>
 
-    <!-- Admin Subnav -->
-    <div class="admin-subnav">
-        <a href="site_settings.php"><i class="fas fa-sliders-h"></i> <?= __('Site Settings') ?></a>
-        <a href="theme_manager.php" class="active"><i class="fas fa-palette"></i> <?= __('Theme Manager') ?></a>
-        <a href="telemetry.php"><i class="fas fa-chart-line"></i> <?= __('Telemetry') ?></a>
-        <a href="mission_manager.php"><i class="fas fa-crosshairs"></i> <?= __('Mission Manager') ?></a>
-        <a href="special_deliveries.php"><i class="fas fa-gift"></i> <?= __('Special Deliveries') ?></a>
-        <a href="bot_tokens.php"><i class="fas fa-robot"></i> <?= __('Bot Tokens') ?></a>
-    </div>
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'theme_manager';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <!-- Banner Alerts -->
     <div id="theme-alert" style="display:none; margin-bottom:1.5rem; padding:12px 18px; border-radius:6px; font-weight:bold;"></div>

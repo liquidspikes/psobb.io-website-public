@@ -411,15 +411,11 @@ input:checked + .slider:before {
         </div>
     </div>
 
-    <!-- Admin Subnav -->
-    <div class="admin-subnav">
-        <a href="site_settings.php" class="active"><i class="fas fa-sliders-h"></i> <?= __('Site Settings') ?></a>
-        <a href="theme_manager.php"><i class="fas fa-palette"></i> <?= __('Theme Manager') ?></a>
-        <a href="telemetry.php"><i class="fas fa-chart-line"></i> <?= __('Telemetry') ?></a>
-        <a href="mission_manager.php"><i class="fas fa-crosshairs"></i> <?= __('Mission Manager') ?></a>
-        <a href="special_deliveries.php"><i class="fas fa-gift"></i> <?= __('Special Deliveries') ?></a>
-        <a href="bot_tokens.php"><i class="fas fa-robot"></i> <?= __('Bot Tokens') ?></a>
-    </div>
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'site_settings';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <!-- Readiness Bar -->
     <div class="readiness-bar">
@@ -500,6 +496,30 @@ input:checked + .slider:before {
                             <small><?= __('Welcoming statement displayed under the hero banner on the homepage') ?></small>
                         </label>
                         <input type="text" class="field-input" name="server_tagline" value="<?= htmlspecialchars($cfg['server_tagline']) ?>">
+                    </div>
+
+                    <div class="field-group">
+                        <label>
+                            <i class="fas fa-globe" style="color:var(--pso-blue); margin-right:4px;"></i> <?= __('Default Visitor Language') ?>
+                            <small><?= __('The initial language presented to new visitors when they arrive at the site for the first time.') ?></small>
+                        </label>
+                        <select class="field-select" name="default_language" id="field_default_language">
+                            <option value="auto" <?= ($cfg['default_language'] ?? 'auto') === 'auto' ? 'selected' : '' ?>>
+                                🌐 <?= __('Auto-Detect Browser Language (Recommended)') ?>
+                            </option>
+                            <option value="en" <?= ($cfg['default_language'] ?? 'auto') === 'en' ? 'selected' : '' ?>>
+                                🇺🇸 <?= __('English (EN)') ?>
+                            </option>
+                            <option value="jp" <?= ($cfg['default_language'] ?? 'auto') === 'jp' ? 'selected' : '' ?>>
+                                🇯🇵 <?= __('Japanese (JP / 日本語)') ?>
+                            </option>
+                            <option value="ru" <?= ($cfg['default_language'] ?? 'auto') === 'ru' ? 'selected' : '' ?>>
+                                🇷🇺 <?= __('Russian (RU / Русский)') ?>
+                            </option>
+                        </select>
+                        <small style="display:block; margin-top:6px; color:#888; font-size:0.75rem;">
+                            <?= __('Auto-detect inspects incoming browser language headers (Japanese and Russian locales will automatically see their native language; all others see English). Users can override this at any time using the header toggle.') ?>
+                        </small>
                     </div>
                 </div>
 

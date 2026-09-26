@@ -89,10 +89,15 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
             <div style="font-size:0.9rem; opacity:0.7;">Monitor real-time player locations and server hook detections.</div>
         </div>
         <div>
-            <a href="dashboard.php" class="dl-btn">Back to Dashboard</a>
             <button onclick="window.location.reload();" class="dl-btn" style="border-color:#00C851; color:#00C851;">Refresh Data</button>
         </div>
     </div>
+
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'telemetry';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <div class="admin-grid">
         <!-- Live Players Map -->

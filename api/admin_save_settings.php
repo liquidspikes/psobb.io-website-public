@@ -55,10 +55,16 @@ $enableMods         = !empty($data['enable_mods']);
 $enableQuestEditor  = !empty($data['enable_quest_editor']);
 $enableDiscordOAuth = !empty($data['enable_discord_oauth']);
 
+$defaultLanguage = $data['default_language'] ?? ($currentConfig['default_language'] ?? 'auto');
+if (!in_array($defaultLanguage, ['auto', 'en', 'jp', 'ru'])) {
+    $defaultLanguage = 'auto';
+}
+
 $newConfig = [
     'server_name'          => $serverName ?: 'PSOBB.IO',
     'server_address'       => $serverAddress ?: 'psobb.io',
     'server_tagline'       => $serverTagline,
+    'default_language'     => $defaultLanguage,
     'hero_logo_url'        => $heroLogoUrl ?: '/img/header_logo.png',
     'exp_rate'             => $expRate ?: '1x',
     'drop_rate'            => $dropRate ?: '1x',

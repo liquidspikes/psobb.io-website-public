@@ -3,13 +3,66 @@
  * PSOBB Global Localization & Translation Engine
  * Supports English ('en'), Japanese ('jp'), and Russian ('ru').
  */
-$PSO_LANG = $_COOKIE['psobb_lang'] ?? 'en';
+if (!function_exists('detect_visitor_language')) {
+    /**
+     * Auto-detect visitor language based on HTTP Accept-Language headers.
+     * Supports Japanese ('jp'), Russian ('ru'), with English ('en') fallback.
+     */
+    function detect_visitor_language(): string {
+        $accept = strtolower($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '');
+        if (preg_match('/(^|,|\s)(ja|jp)/', $accept)) {
+            return 'jp';
+        }
+        if (preg_match('/(^|,|\s)(ru)/', $accept)) {
+            return 'ru';
+        }
+        return 'en';
+    }
+}
+
+// 1. Explicit user cookie preference (highest precedence)
+$PSO_LANG = $_COOKIE['psobb_lang'] ?? '';
 if (!in_array($PSO_LANG, ['en', 'jp', 'ru'])) {
-    $PSO_LANG = 'en';
+    $PSO_LANG = '';
+}
+
+// 2. User account profile setting (if logged in and no cookie set)
+if (!$PSO_LANG && !empty($_SESSION['user']['account_id'])) {
+    if (!empty($_SESSION['user']['language']) && in_array($_SESSION['user']['language'], ['en', 'jp', 'ru'])) {
+        $PSO_LANG = $_SESSION['user']['language'];
+    }
+}
+
+// 3. Fallback for new visitors: site default or browser auto-detection
+if (!$PSO_LANG) {
+    if (function_exists('get_site_config')) {
+        $siteConfig = get_site_config();
+    } else {
+        $cfgPath = __DIR__ . '/../config/site.json';
+        $siteConfig = file_exists($cfgPath) ? json_decode(@file_get_contents($cfgPath), true) : [];
+    }
+    $defaultMode = $siteConfig['default_language'] ?? 'auto';
+
+    if ($defaultMode === 'auto') {
+        $PSO_LANG = detect_visitor_language();
+    } elseif (in_array($defaultMode, ['en', 'jp', 'ru'])) {
+        $PSO_LANG = $defaultMode;
+    } else {
+        $PSO_LANG = 'en';
+    }
 }
 
 $I18N = [
     'jp' => [
+        'Admin Interface Language' => '管理画面の表示言語',
+        'Auto-Detect Browser Language (Recommended)' => 'ブラウザの言語を自動検出 (推奨)',
+        'Auto-detect inspects incoming browser language headers (Japanese and Russian locales will automatically see their native language; all others see English). Users can override this at any time using the header toggle.' => '自動検出はブラウザの言語設定を確認します（日本語・ロシア語環境ではネイティブ言語で表示され、その他は英語になります）。ヘッダーのトグルからいつでも変更可能です。',
+        'Default Visitor Language' => '新規訪問者のデフォルト言語',
+        'English (EN)' => '英語 (EN)',
+        'Japanese (JP / 日本語)' => '日本語 (JP / 日本語)',
+        'Lang' => '言語',
+        'Russian (RU / Русский)' => 'ロシア語 (RU / Русский)',
+        'The initial language presented to new visitors when they arrive at the site for the first time.' => '初めてサイトを訪れた新規プレイヤーに最初に表示される言語。',
         'About & Command Deck' => 'アバウト＆司令デッキ',
         'About Hero Subtitle / Lore' => 'アバウトのサブタイトル / ロア設定',
         'About Hero Title' => 'アバウトのメインタイトル',
@@ -950,6 +1003,15 @@ $I18N = [
         'private server' => 'プライベートサーバー',
     ],
     'ru' => [
+        'Admin Interface Language' => 'Язык интерфейса администратора',
+        'Auto-Detect Browser Language (Recommended)' => 'Автоопределение языка браузера (рекомендуется)',
+        'Auto-detect inspects incoming browser language headers (Japanese and Russian locales will automatically see their native language; all others see English). Users can override this at any time using the header toggle.' => 'Автоопределение проверяет заголовок языка браузера (японские и русские пользователи увидят родной язык, все остальные — английский). Пользователи могут в любой момент переключить язык в шапке сайта.',
+        'Default Visitor Language' => 'Язык по умолчанию для новых посетителей',
+        'English (EN)' => 'Английский (EN)',
+        'Japanese (JP / 日本語)' => 'Японский (JP / 日本語)',
+        'Lang' => 'Язык',
+        'Russian (RU / Русский)' => 'Русский (RU / Русский)',
+        'The initial language presented to new visitors when they arrive at the site for the first time.' => 'Язык, отображаемый новым посетителям при первом посещении сайта.',
         'About & Command Deck' => 'О сервере и Командный мостик',
         'About Hero Subtitle / Lore' => 'Подзаголовок / Лор страницы О нас',
         'About Hero Title' => 'Заголовок страницы О нас',
@@ -2007,17 +2069,19 @@ $I18N = [
  * @param mixed ...$args Optional sprintf arguments
  * @return string The localized string or English fallback
  */
-function __($key, ...$args) {
-    global $PSO_LANG, $I18N;
-    
-    $translated = $key;
-    if (!empty($PSO_LANG) && isset($I18N[$PSO_LANG][$key])) {
-        $translated = $I18N[$PSO_LANG][$key];
+if (!function_exists('__')) {
+    function __($key, ...$args) {
+        global $PSO_LANG, $I18N;
+        
+        $translated = $key;
+        if (!empty($PSO_LANG) && isset($I18N[$PSO_LANG][$key])) {
+            $translated = $I18N[$PSO_LANG][$key];
+        }
+        
+        if (!empty($args)) {
+            return sprintf($translated, ...$args);
+        }
+        return $translated;
     }
-    
-    if (!empty($args)) {
-        return sprintf($translated, ...$args);
-    }
-    return $translated;
 }
 ?>

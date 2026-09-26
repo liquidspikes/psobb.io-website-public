@@ -76,14 +76,15 @@ $user_count = $db->querySingle("SELECT COUNT(*) FROM users");
             <div style="font-size:0.9rem; opacity:0.7;">Logged in as <?php echo htmlspecialchars($_SESSION['user']['username']); ?> (ID: <?php echo $_SESSION['user']['account_id']; ?>)</div>
         </div>
         <div style="display:flex; flex-wrap: wrap; gap: 10px;">
-            <a href="site_settings.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; border-color:#00ffff; color:#00ffff;"><i class="fas fa-cog" style="margin-right:5px;"></i> <?= __('Site Settings') ?></a>
-            <a href="theme_manager.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; border-color:var(--pso-blue); color:var(--pso-blue);"><i class="fas fa-palette" style="margin-right:5px;"></i> <?= __('Theme Manager') ?></a>
-            <a href="mods.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; background: var(--pso-blue); color: #000;"><?= __('Manage Mods') ?></a>
-            <a href="mission_manager.php" class="dl-btn success-btn" style="text-decoration:none; display:flex; align-items:center;"><?= __('Manage Missions') ?></a>
-            <a href="telemetry.php" class="dl-btn" style="text-decoration:none; display:flex; align-items:center; border-color:#00ffcc; color:#00ffcc;"><?= __('Telemetry') ?></a>
             <button onclick="window.open('manual_window.php', 'AdminManual', 'width=600,height=800');" class="dl-btn"><?= __('Admin Manual') ?></button>
         </div>
     </div>
+
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'dashboard';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <div class="admin-grid">
         <!-- Statistics -->

@@ -111,7 +111,7 @@ start_secure_session();
                     </div>
                 </li>
 
-                <li class="dropdown" id="nav-admin-dropdown" style="display: none;">
+                <li class="dropdown" id="nav-admin-dropdown" style="<?php echo !empty($_SESSION['user']['is_admin']) ? '' : 'display: none;'; ?>">
                     <a href="javascript:void(0)"
                         class="dropbtn <?php echo in_array($current_page, ['dashboard', 'telemetry', 'mission_manager', 'bot_tokens', 'special_deliveries', 'site_settings', 'theme_manager']) ? 'active' : ''; ?>"
                         style="color: #ff5555;"><?= __('Admin') ?> <i class="fas fa-caret-down"></i></a>
@@ -143,11 +143,11 @@ start_secure_session();
                 </li>
                 <li class="lang-toggle-nav">
                     <i class="fas fa-globe" style="margin-right: 4px; opacity: 0.7;"></i>
-                    <a href="/api/set_lang.php?lang=en" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'en' ? 'active-lang' : '' ?>" title="English">EN</a>
+                    <a href="/api/set_lang.php?lang=en&redirect=<?= urlencode($_SERVER['REQUEST_URI'] ?? '/') ?>" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'en' ? 'active-lang' : '' ?>" title="English">EN</a>
                     <span style="opacity: 0.4; margin: 0 2px;">|</span>
-                    <a href="/api/set_lang.php?lang=jp" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'jp' ? 'active-lang' : '' ?>" title="日本語">JP</a>
+                    <a href="/api/set_lang.php?lang=jp&redirect=<?= urlencode($_SERVER['REQUEST_URI'] ?? '/') ?>" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'jp' ? 'active-lang' : '' ?>" title="日本語">JP</a>
                     <span style="opacity: 0.4; margin: 0 2px;">|</span>
-                    <a href="/api/set_lang.php?lang=ru" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'ru' ? 'active-lang' : '' ?>" title="Русский">RU</a>
+                    <a href="/api/set_lang.php?lang=ru&redirect=<?= urlencode($_SERVER['REQUEST_URI'] ?? '/') ?>" class="lang-toggle <?= ($PSO_LANG ?? 'en') === 'ru' ? 'active-lang' : '' ?>" title="Русский">RU</a>
                 </li>
                 <li class="dropdown theme-toggle-nav">
                     <a href="javascript:void(0)" class="dropbtn" title="<?= __('Theme') ?>" style="padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">

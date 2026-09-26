@@ -204,8 +204,13 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 <main class="sd-page">
     <div class="page-header">
         <h1><i class="fas fa-gift"></i> Special Deliveries</h1>
-        <a href="dashboard.php" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
     </div>
+
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'special_deliveries';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <!-- Create Form -->
     <div class="create-card">

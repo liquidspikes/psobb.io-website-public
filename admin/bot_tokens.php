@@ -129,8 +129,13 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 <main class="token-page">
     <div class="page-header">
         <h1><i class="fas fa-key"></i> Bot Token Manager</h1>
-        <a href="dashboard.php" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
     </div>
+
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'bot_tokens';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <!-- Create Token -->
     <div class="create-card">

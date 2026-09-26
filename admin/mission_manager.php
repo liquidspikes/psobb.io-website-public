@@ -216,10 +216,13 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
             <h1>Manage Missions</h1>
             <div style="font-size:0.9rem; opacity:0.7;">Create and assign dynamic server-events tracking quests!</div>
         </div>
-        <div>
-            <a href="dashboard.php" class="dl-btn">Back to Dashboard</a>
-        </div>
     </div>
+
+    <!-- Admin Subnav & Language Switcher -->
+    <?php 
+    $admin_active_tab = 'mission_manager';
+    include __DIR__ . '/../includes/admin_subnav.php'; 
+    ?>
 
     <?php if ($message) echo "<div style='margin-top:10px; padding:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5);'>$message</div>"; ?>
 
