@@ -1,5 +1,9 @@
 <?php
-$dbPath = __DIR__ . '/website.db';
+$dbPath = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/website.db'));
+$dir = dirname($dbPath);
+if (!is_dir($dir)) {
+    @mkdir($dir, 0775, true);
+}
 $db = new SQLite3($dbPath);
 $db->enableExceptions(true);
 $db->busyTimeout(5000);
@@ -183,5 +187,122 @@ $db->exec("CREATE TABLE IF NOT EXISTS tekker_settings (
     value TEXT NOT NULL
 )");
 
-echo "Database initialized at $dbPath\n";
+// Community Events & Participants
+$db->exec("CREATE TABLE IF NOT EXISTS community_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    goal_type TEXT NOT NULL,
+    goal_target TEXT NOT NULL,
+    target_amount INTEGER NOT NULL,
+    current_progress INTEGER DEFAULT 0,
+    reward_item_string TEXT NOT NULL,
+    top_3_reward_item_string TEXT,
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    announced_start BOOLEAN DEFAULT 0,
+    announced_20 BOOLEAN DEFAULT 0,
+    announced_50 BOOLEAN DEFAULT 0,
+    announced_80 BOOLEAN DEFAULT 0
+)");
+
+$db->exec("CREATE TABLE IF NOT EXISTS community_event_participants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL,
+    account_id INTEGER NOT NULL,
+    contribution_count INTEGER DEFAULT 0,
+    reward_claimed BOOLEAN DEFAULT 0,
+    UNIQUE(event_id, account_id),
+    FOREIGN KEY(event_id) REFERENCES community_events(id)
+)");
+
+// Sessions table
+$db->exec("CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    data TEXT,
+    last_accessed INTEGER NOT NULL
+)");
+
+// LFG Requests table
+$db->exec("CREATE TABLE IF NOT EXISTS lfg_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    character_name TEXT NOT NULL,
+    class TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    section_id TEXT NOT NULL,
+    game_id INTEGER,
+    game_name TEXT,
+    bounty_id INTEGER,
+    looking_for TEXT,
+    description TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)");
+
+// Bot Tokens table
+$db->exec("CREATE TABLE IF NOT EXISTS bot_tokens (
+    token_id TEXT PRIMARY KEY,
+    server_id TEXT NOT NULL,
+    server_name TEXT,
+    channel_id TEXT,
+    channel_name TEXT,
+    created_at INTEGER NOT NULL,
+    created_by_account_id INTEGER NOT NULL
+)");
+
+// Special Deliveries table
+$db->exec("CREATE TABLE IF NOT EXISTS special_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    item_string TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER NOT NULL,
+    claimed_count INTEGER DEFAULT 0
+)");
+
+// Daily Rewards configuration table
+$db->exec("CREATE TABLE IF NOT EXISTS daily_rewards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    day_number INTEGER UNIQUE NOT NULL,
+    reward_name TEXT NOT NULL,
+    item_string TEXT NOT NULL,
+    description TEXT
+)");
+
+// Column migrations for users table
+$userCols = [];
+$uRes = $db->query("PRAGMA table_info(users)");
+while ($col = $uRes->fetchArray(SQLITE3_ASSOC)) {
+    $userCols[] = $col['name'];
+}
+if (!in_array('discord_id', $userCols)) {
+    $db->exec("ALTER TABLE users ADD COLUMN discord_id TEXT");
+    $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id IS NOT NULL");
+}
+if (!in_array('language', $userCols)) {
+    $db->exec("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'");
+}
+if (!in_array('display_name', $userCols)) {
+    $db->exec("ALTER TABLE users ADD COLUMN display_name TEXT");
+}
+if (!in_array('receive_system_mail', $userCols)) {
+    $db->exec("ALTER TABLE users ADD COLUMN receive_system_mail INTEGER DEFAULT 1");
+}
+if (!in_array('receive_discord_streak_msg', $userCols)) {
+    $db->exec("ALTER TABLE users ADD COLUMN receive_discord_streak_msg INTEGER DEFAULT 1");
+}
+if (!in_array('is_admin', $userCols)) {
+    $db->exec("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0");
+}
+
+// Count total tables
+$tableCount = 0;
+$tRes = $db->query("SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+if ($row = $tRes->fetchArray(SQLITE3_ASSOC)) {
+    $tableCount = $row['count'];
+}
+
+echo "Database initialized at $dbPath ($tableCount tables verified)\n";
 ?>

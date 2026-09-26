@@ -133,6 +133,7 @@ psobb.io-website-public/
 │   └── website.db         SQLite database (not in VCS)
 ├── admin/                Admin dashboard pages
 ├── css/  js/  img/       Static assets
+├── decryption/           PSO data-format / wiki decryption tooling
 ├── quest-editor/         Browser-based quest editor
 ├── DEVELOPER_GUIDE.md    High-level architecture narrative
 └── README.md             This file
@@ -140,21 +141,45 @@ psobb.io-website-public/
 
 ---
 
-## Local development
+## Automated Setup (Linux & Windows)
+
+The portal includes automated setup scripts that initialize all directories (`db/`, `config/`, `uploads/`, `logs/`), baseline configurations (`.env`, `site.json`, `theme.json`, `about.json`), bootstrap the SQLite database (24 verified schemas), test NewServ game server connectivity, and configure permissions.
+
+### Linux / macOS
+```bash
+chmod +x setup.sh
+./setup.sh                  # For local development
+
+# Or for production VPS deployments (configures web user ownership):
+sudo ./setup.sh
+```
+
+### Windows
+Double-click `setup.bat` in File Explorer, or run in Command Prompt:
+```cmd
+setup.bat
+```
+
+Or run via PowerShell:
+```powershell
+.\setup.ps1
+# Or automatically launch the local development server upon completion:
+.\setup.ps1 -StartServer -Port 8000
+```
+
+---
+
+## Local Development & Manual Run
 
 The site targets **PHP 8** with the `sqlite3`, `mbstring`, `iconv`, `openssl`,
 and `json` extensions.
 
-1. Create the database schema:
+1. Run automated setup as shown above (or run `php db/init_db.php` manually).
+2. Start the built-in development server:
    ```bash
-   php db/init_db.php          # creates db/website.db
+   php -S 0.0.0.0:8000
    ```
-2. Create a `.env` one level above the site root with at least
-   `NEWSERV_API_URL` and `BOT_API_SECRET` (see table above).
-3. Serve the site:
-   ```bash
-   php -S localhost:8000       # or point Apache/nginx at the site root
-   ```
+3. Open `http://localhost:8000/` in your browser.
 
 > Without a reachable NewServ instance, endpoints that read live game state
 > (`/y/clients`, `/y/accounts`, …) degrade gracefully — calls are wrapped in

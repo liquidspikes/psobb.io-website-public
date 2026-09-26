@@ -1,4 +1,4 @@
-# Block all web access to database directory and files
+# Block all web access to configuration directory
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>
@@ -7,5 +7,4 @@
     Deny from all
 </IfModule>
 
-# Prevent directory indexing
 Options -Indexes

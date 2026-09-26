@@ -10,13 +10,15 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 RewriteRule ^\.env - [F,L]
 RewriteRule ^\.git - [F,L]
 
-# Block access to SQLite database files and the db directory
+# Block access to SQLite database files and sensitive directories
 RewriteRule \.db$ - [F,L]
 RewriteRule ^db/ - [F,L]
+RewriteRule ^config/ - [F,L]
+RewriteRule ^logs/ - [F,L]
 
 # Block access to server scripts, logs, and test files (Allow install-deck.sh for Steam Deck users)
 RewriteCond %{REQUEST_URI} !install-deck\.sh$
-RewriteRule \.(sh|py|log)$ - [F,L]
+RewriteRule \.(sh|bat|cmd|ps1|py|log)$ - [F,L]
 RewriteRule ^test_.*\.php$ - [F,L]
 
 
@@ -28,6 +30,10 @@ RewriteRule ^ %1 [R=301,L]
 # Explicitly rewrite /downloads (directory collision fix)
 RewriteRule ^downloads/(.+)$ - [L]
 RewriteRule ^downloads/?$ downloads.php [L]
+
+# Explicitly rewrite /decryption (directory collision fix)
+RewriteRule ^decryption/(.+)$ - [L]
+RewriteRule ^decryption/?$ decryption.php [L]
 
 # 2. Internally rewrite /file to /file.php
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -19,7 +19,12 @@ ini_set('display_errors', 0);
  */
 function get_db()
 {
-    $path = __DIR__ . '/../db/website.db';
+    $path = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/../db/website.db'));
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+
     try {
         $db = new SQLite3($path);
         $db->enableExceptions(true);
@@ -32,8 +37,120 @@ function get_db()
         $db->exec("PRAGMA synchronous = NORMAL;");
         $db->exec("PRAGMA temp_store = MEMORY;");
         $db->exec("PRAGMA cache_size = -8000;");  // 8MB page cache
-        // Note: PRAGMA foreign_keys is enabled AFTER all schema migrations run,
-        // so self-healing drops (e.g. bot_tokens FK repair) execute without errors.
+
+        // Ensure foundational tables exist before running column migrations
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                account_id INTEGER NOT NULL,
+                discord_id TEXT,
+                language TEXT DEFAULT 'en',
+                display_name TEXT,
+                receive_system_mail INTEGER DEFAULT 1,
+                receive_discord_streak_msg INTEGER DEFAULT 1,
+                is_admin INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS password_resets (
+                token TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS email_confirmations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                new_email TEXT NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                confirmed_at INTEGER DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS rewards_claimed (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                character_name TEXT NOT NULL,
+                character_index INTEGER NOT NULL DEFAULT 0,
+                level_milestone INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                item_string TEXT NOT NULL,
+                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, character_name, character_index, level_milestone)
+            );
+
+            CREATE TABLE IF NOT EXISTS daily_rewards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                day_number INTEGER UNIQUE NOT NULL,
+                reward_name TEXT NOT NULL,
+                item_string TEXT NOT NULL,
+                description TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS streak_claims (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                streak_cycle INTEGER NOT NULL DEFAULT 1,
+                milestone INTEGER NOT NULL,
+                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, streak_cycle, milestone)
+            );
+
+            CREATE TABLE IF NOT EXISTS tekker_active_drops (
+                drop_id TEXT PRIMARY KEY,
+                stat_native INTEGER NOT NULL,
+                stat_abeast INTEGER NOT NULL,
+                stat_machine INTEGER NOT NULL,
+                stat_dark INTEGER NOT NULL,
+                stat_hit INTEGER NOT NULL,
+                hint_attribute TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1
+            );
+
+            CREATE TABLE IF NOT EXISTS tekker_player_state (
+                user_id TEXT NOT NULL,
+                drop_id TEXT NOT NULL,
+                attempts_used INTEGER NOT NULL,
+                max_attempts INTEGER NOT NULL,
+                PRIMARY KEY (user_id, drop_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS tekker_telemetry (
+                log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                drop_id TEXT NOT NULL,
+                guess_array TEXT NOT NULL,
+                result_state TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS tekker_tokens (
+                token_id TEXT PRIMARY KEY,
+                owner_id TEXT NOT NULL,
+                stat_native INTEGER NOT NULL,
+                stat_abeast INTEGER NOT NULL,
+                stat_machine INTEGER NOT NULL,
+                stat_dark INTEGER NOT NULL,
+                stat_hit INTEGER NOT NULL,
+                is_claimed INTEGER DEFAULT 0,
+                claimed_by TEXT,
+                claimed_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS tekker_active_users (
+                user_id TEXT PRIMARY KEY
+            );
+
+            CREATE TABLE IF NOT EXISTS tekker_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+        ");
 
         // --- Auto-migration for 'users' table ---
         // Ensure discord_id column exists
