@@ -5,7 +5,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     header("Location: ../login.php");
     exit;
 }
-$page_title = "Manage Missions";
+$page_title = __('Manage Missions');
 include '../includes/header.php'; 
 
 require_once '../api/db.php';
@@ -57,12 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindValue(':gta', $target, SQLITE3_TEXT);
             $stmt->bindValue(':ri', $reward, SQLITE3_TEXT);
             if ($stmt->execute()) {
-                $message = "<div style='color:#00C851'>Mission added successfully!</div>";
+                $message = "<div style='color:#00C851'>" . __('Mission added successfully!') . "</div>";
             } else {
-                $message = "<div style='color:#ff4444'>Failed to add mission.</div>";
+                $message = "<div style='color:#ff4444'>" . __('Failed to add mission.') . "</div>";
             }
         } else {
-            $message = "<div style='color:#ff4444'>All fields are required.</div>";
+            $message = "<div style='color:#ff4444'>" . __('All fields are required.') . "</div>";
         }
     } elseif ($action === 'assign_mission') {
         $mission_id = (int)$_POST['mission_id'];
@@ -78,28 +78,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $m_stmt = $db->prepare("SELECT title FROM missions WHERE id = :mid");
                     $m_stmt->bindValue(':mid', $mission_id, SQLITE3_INTEGER);
                     $m_row = $m_stmt->execute()->fetchArray(SQLITE3_ASSOC);
-                    $m_title = $m_row ? $m_row['title'] : 'a new mission';
-                    send_personal_mail($account_id, "Hunters Guild", "You've been assigned: " . $m_title . ". Good luck!");
-                    $message = "<div style='color:#00C851'>Mission assigned and player notified in-game!</div>";
+                    $m_title = $m_row ? $m_row['title'] : __('a new mission');
+                    send_personal_mail($account_id, __('Hunters Guild'), sprintf(__("You've been assigned: %s. Good luck!"), $m_title));
+                    $message = "<div style='color:#00C851'>" . __('Mission assigned and player notified in-game!') . "</div>";
                 } else {
-                    $message = "<div style='color:#ff8800'>Player already has this mission.</div>";
+                    $message = "<div style='color:#ff8800'>" . __('Player already has this mission.') . "</div>";
                 }
             } else {
-                $message = "<div style='color:#ff4444'>Failed to assign mission.</div>";
+                $message = "<div style='color:#ff4444'>" . __('Failed to assign mission.') . "</div>";
             }
         } else {
-            $message = "<div style='color:#ff4444'>Missing information to assign mission.</div>";
+            $message = "<div style='color:#ff4444'>" . __('Missing information to assign mission.') . "</div>";
         }
     } elseif ($action === 'send_message') {
         $msg_account_id = (int)$_POST['msg_account_id'];
-        $msg_from = trim($_POST['msg_from'] ?? 'Admin');
+        $msg_from = trim($_POST['msg_from'] ?? __('Hunters Guild'));
         $msg_text = trim($_POST['msg_text'] ?? '');
 
         if ($msg_account_id && $msg_text) {
             send_personal_mail($msg_account_id, $msg_from, $msg_text);
-            $message = "<div style='color:#00C851'>Message sent to account $msg_account_id!</div>";
+            $message = "<div style='color:#00C851'>" . sprintf(__('Message sent to account %s!'), $msg_account_id) . "</div>";
         } else {
-            $message = "<div style='color:#ff4444'>Account ID and message text are required.</div>";
+            $message = "<div style='color:#ff4444'>" . __('Account ID and message text are required.') . "</div>";
         }
     } elseif ($action === 'add_community_event') {
         $title = trim($_POST['title']);
@@ -128,20 +128,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindValue(':ri', $reward, SQLITE3_TEXT);
             $stmt->bindValue(':top3', $top3_reward ?: null, SQLITE3_TEXT);
             if ($stmt->execute()) {
-                $message = "<div style='color:#00C851'>Community Event created successfully!</div>";
+                $message = "<div style='color:#00C851'>" . __('Community Event created successfully!') . "</div>";
             } else {
-                $message = "<div style='color:#ff4444'>Failed to create community event.</div>";
+                $message = "<div style='color:#ff4444'>" . __('Failed to create community event.') . "</div>";
             }
         } else {
-            $message = "<div style='color:#ff4444'>All fields are required. Target Amount must be > 0.</div>";
+            $message = "<div style='color:#ff4444'>" . __('All fields are required. Target Amount must be > 0.') . "</div>";
         }
     } elseif ($action === 'launch_curated_event') {
         require_once __DIR__ . '/../api/event_roster.php';
         $idx = (int)$_POST['event_index'];
         if (launch_event($db, $roster, $idx)) {
-            $message = "<div style='color:#00C851'>Curated Event #{$idx} (\"" . htmlspecialchars($roster[$idx]['title']) . "\") launched successfully!</div>";
+            $message = "<div style='color:#00C851'>" . sprintf(__('Curated Event #%d ("%s") launched successfully!'), $idx, htmlspecialchars($roster[$idx]['title'])) . "</div>";
         } else {
-            $message = "<div style='color:#ff4444'>Failed to launch curated event.</div>";
+            $message = "<div style='color:#ff4444'>" . __('Failed to launch curated event.') . "</div>";
         }
     }
 }
@@ -213,8 +213,8 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
 <main class="container">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h1>Manage Missions</h1>
-            <div style="font-size:0.9rem; opacity:0.7;">Create and assign dynamic server-events tracking quests!</div>
+            <h1><?= __('Manage Missions') ?></h1>
+            <div style="font-size:0.9rem; opacity:0.7;"><?= __('Create and assign dynamic server-events tracking quests!') ?></div>
         </div>
     </div>
 
@@ -229,51 +229,51 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
     <div class="admin-grid">
         <!-- Add Mission Form -->
         <div class="admin-card">
-            <h3 style="color: #00bfff;">Create Daily Bounty Template</h3>
+            <h3 style="color: #00bfff;"><?= __('Create Daily Bounty Template') ?></h3>
             <form method="POST">
                 <input type="hidden" name="action" value="add_mission">
                 
                 <div class="form-group">
-                    <label>Mission Title</label>
-                    <input type="text" name="title" required placeholder="e.g. Become a Millionaire">
+                    <label><?= __('Mission Title') ?></label>
+                    <input type="text" name="title" required placeholder="<?= htmlspecialchars(__('e.g. Become a Millionaire')) ?>">
                 </div>
                 
                 <div class="form-group">
-                    <label>Description</label>
-                    <input type="text" name="description" required placeholder="User friendly text of what to do">
+                    <label><?= __('Description') ?></label>
+                    <input type="text" name="description" required placeholder="<?= htmlspecialchars(__('User friendly text of what to do')) ?>">
                 </div>
 
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1;">
-                        <label>Goal Type</label>
+                        <label><?= __('Goal Type') ?></label>
                         <select name="goal_type" id="goal_type_select" onchange="updateGoalTargetUI()">
-                            <option value="MESETA">Meseta Check</option>
-                            <option value="LEVEL">Reach Level</option>
-                            <option value="PLAYTIME">Play Time (Seconds)</option>
-                            <option value="ITEM">Obtain Item</option>
-                            <option value="BOSS_ARENA">Defeat Boss (Floor ID)</option>
-                            <option value="SPEEDRUN_BOSS">Speedrun Boss (Time Limit)</option>
-                            <option value="EXPLORATION">Explore Area (Floor ID)</option>
-                            <option value="PATROL">Patrol Area 10m (Floor ID)</option>
-                            <option value="SPEEDRUN_FLOOR">Speedrun Area (Time Limit)</option>
-                            <option value="BATTLE_WINS">Battle Mode Wins</option>
-                            <option value="CHALLENGE_STAGES">Challenge Stages Cleared</option>
+                            <option value="MESETA"><?= __('Meseta Check') ?></option>
+                            <option value="LEVEL"><?= __('Reach Level') ?></option>
+                            <option value="PLAYTIME"><?= __('Play Time (Seconds)') ?></option>
+                            <option value="ITEM"><?= __('Obtain Item') ?></option>
+                            <option value="BOSS_ARENA"><?= __('Defeat Boss (Floor ID)') ?></option>
+                            <option value="SPEEDRUN_BOSS"><?= __('Speedrun Boss (Time Limit)') ?></option>
+                            <option value="EXPLORATION"><?= __('Explore Area (Floor ID)') ?></option>
+                            <option value="PATROL"><?= __('Patrol Area 10m (Floor ID)') ?></option>
+                            <option value="SPEEDRUN_FLOOR"><?= __('Speedrun Area (Time Limit)') ?></option>
+                            <option value="BATTLE_WINS"><?= __('Battle Mode Wins') ?></option>
+                            <option value="CHALLENGE_STAGES"><?= __('Challenge Stages Cleared') ?></option>
                         </select>
                     </div>
                     <div class="form-group" style="flex:1;">
-                        <label id="goal_target_label">Goal Target</label>
+                        <label id="goal_target_label"><?= __('Goal Target') ?></label>
                         <div id="goal_target_container">
-                            <input type="text" name="goal_target" id="goal_target_input" required placeholder="e.g. 100000 or Saber">
+                            <input type="text" name="goal_target" id="goal_target_input" required placeholder="<?= htmlspecialchars(__('e.g. 100000 or Saber')) ?>">
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Reward Item / Hex Code</label>
-                    <input type="text" name="reward_item_string" required placeholder="e.g. 1000 Meseta">
+                    <label><?= __('Reward Item / Hex Code') ?></label>
+                    <input type="text" name="reward_item_string" required placeholder="<?= htmlspecialchars(__('e.g. 1000 Meseta')) ?>">
                 </div>
 
-                <button type="submit" class="dl-btn success-btn" style="width:100%">Create Mission</button>
+                <button type="submit" class="dl-btn success-btn" style="width:100%"><?= __('Create Mission') ?></button>
             </form>
         </div>
 
@@ -281,20 +281,20 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         // Real newserv floor IDs from StaticGameData.cc floor_defs.
         // Ep2 bosses share floor numbers with Ep1 bosses; episode is disambiguated by context.
         const bossOptions = [
-            {val: 'ANY_DRAGON', text: 'Any Dragon Boss (Dragon, Gol Dragon)'},
-            {val: '11', text: 'Dragon (Ep1 Forest — Floor 11)'},
-            {val: '12', text: 'De Rol Le (Ep1 Caves — Floor 12) / Gal Gryphon (Ep2 CCA — Floor 12)'},
-            {val: '13', text: 'Vol Opt (Ep1 Mines — Floor 13) / Olga Flow (Ep2 Seabed — Floor 13)'},
-            {val: '14', text: 'Dark Falz (Ep1 Ruins — Floor 14) / Barba Ray (Ep2 Temple — Floor 14)'},
-            {val: '15', text: 'Gol Dragon (Ep2 Spaceship — Floor 15)'},
-            {val: '9', text: 'Saint-Milion (Ep4 Desert — Floor 9)'}
+            {val: 'ANY_DRAGON', text: <?= json_encode(__('Any Dragon Boss (Dragon, Gol Dragon)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '11', text: <?= json_encode(__('Dragon (Ep1 Forest — Floor 11)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '12', text: <?= json_encode(__('De Rol Le (Ep1 Caves — Floor 12) / Gal Gryphon (Ep2 CCA — Floor 12)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '13', text: <?= json_encode(__('Vol Opt (Ep1 Mines — Floor 13) / Olga Flow (Ep2 Seabed — Floor 13)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '14', text: <?= json_encode(__('Dark Falz (Ep1 Ruins — Floor 14) / Barba Ray (Ep2 Temple — Floor 14)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '15', text: <?= json_encode(__('Gol Dragon (Ep2 Spaceship — Floor 15)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '9', text: <?= json_encode(__('Saint-Milion (Ep4 Desert — Floor 9)'), JSON_UNESCAPED_UNICODE) ?>}
         ];
         
         const floorOptions = [
-            {val: '1', text: 'Forest 1'}, {val: '2', text: 'Forest 2'},
-            {val: '3', text: 'Cave 1'}, {val: '4', text: 'Cave 2'}, {val: '5', text: 'Cave 3'},
-            {val: '6', text: 'Mine 1'}, {val: '7', text: 'Mine 2'},
-            {val: '8', text: 'Ruins 1'}, {val: '9', text: 'Ruins 2'}, {val: '10', text: 'Ruins 3'}
+            {val: '1', text: <?= json_encode(__('Forest 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '2', text: <?= json_encode(__('Forest 2'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '3', text: <?= json_encode(__('Cave 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '4', text: <?= json_encode(__('Cave 2'), JSON_UNESCAPED_UNICODE) ?>}, {val: '5', text: <?= json_encode(__('Cave 3'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '6', text: <?= json_encode(__('Mine 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '7', text: <?= json_encode(__('Mine 2'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '8', text: <?= json_encode(__('Ruins 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '9', text: <?= json_encode(__('Ruins 2'), JSON_UNESCAPED_UNICODE) ?>}, {val: '10', text: <?= json_encode(__('Ruins 3'), JSON_UNESCAPED_UNICODE) ?>}
         ];
 
         function updateGoalTargetUI() {
@@ -303,30 +303,30 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
             const label = document.getElementById('goal_target_label');
 
             if (type === 'BOSS_ARENA' || type === 'SPEEDRUN_BOSS') {
-                label.textContent = "Select Target Boss";
+                label.textContent = <?= json_encode(__('Select Target Boss'), JSON_UNESCAPED_UNICODE) ?>;
                 let html = '<div style="display:flex; gap:10px;"><select name="goal_target" required style="flex:1; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 bossOptions.forEach(b => html += `<option value="${b.val}">${b.text}</option>`);
                 html += '</select>';
                 if (type === 'SPEEDRUN_BOSS') {
-                    html += '<input type="number" name="time_limit" required placeholder="Seconds (e.g. 90)" style="flex:1; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
+                    html += '<input type="number" name="time_limit" required placeholder="' + <?= json_encode(__('Seconds (e.g. 90)'), JSON_UNESCAPED_UNICODE) ?> + '" style="flex:1; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 }
                 html += '</div>';
                 container.innerHTML = html;
             } else if (type === 'EXPLORATION' || type === 'PATROL' || type === 'SPEEDRUN_FLOOR') {
-                label.textContent = "Select Target Area";
+                label.textContent = <?= json_encode(__('Select Target Area'), JSON_UNESCAPED_UNICODE) ?>;
                 let html = '<div style="display:flex; gap:10px;"><select name="goal_target" required style="flex:1; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 floorOptions.forEach(f => html += `<option value="${f.val}">${f.text}</option>`);
                 html += '</select>';
                 if (type === 'SPEEDRUN_FLOOR') {
-                    html += '<input type="number" name="time_limit" required placeholder="Seconds (e.g. 300)" style="flex:1; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
+                    html += '<input type="number" name="time_limit" required placeholder="' + <?= json_encode(__('Seconds (e.g. 300)'), JSON_UNESCAPED_UNICODE) ?> + '" style="flex:1; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 }
                 html += '</div>';
                 container.innerHTML = html;
             } else {
-                label.textContent = "Goal Target (Number or Item Name)";
-                let ph = "e.g. 100000 or Saber";
-                if(type === 'BATTLE_WINS' || type === 'CHALLENGE_STAGES' || type === 'LEVEL') ph = "e.g. 10";
-                if(type === 'PLAYTIME') ph = "Play time in seconds (e.g. 3600)";
+                label.textContent = <?= json_encode(__('Goal Target (Number or Item Name)'), JSON_UNESCAPED_UNICODE) ?>;
+                let ph = <?= json_encode(__('e.g. 100000 or Saber'), JSON_UNESCAPED_UNICODE) ?>;
+                if(type === 'BATTLE_WINS' || type === 'CHALLENGE_STAGES' || type === 'LEVEL') ph = <?= json_encode(__('e.g. 10'), JSON_UNESCAPED_UNICODE) ?>;
+                if(type === 'PLAYTIME') ph = <?= json_encode(__('Play time in seconds (e.g. 3600)'), JSON_UNESCAPED_UNICODE) ?>;
                 
                 container.innerHTML = `<input type="text" name="goal_target" required placeholder="${ph}" style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">`;
             }
@@ -341,25 +341,25 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
             const label = document.getElementById('ce_goal_target_label');
 
             if (type === 'BOSS_ARENA') {
-                label.textContent = "Select Target Boss";
+                label.textContent = <?= json_encode(__('Select Target Boss'), JSON_UNESCAPED_UNICODE) ?>;
                 let html = '<select name="goal_target" required style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 bossOptions.forEach(b => html += `<option value="${b.val}">${b.text}</option>`);
                 html += '</select>';
                 container.innerHTML = html;
             } else if (type === 'EXPLORATION' || type === 'PATROL') {
-                label.textContent = "Select Target Area";
+                label.textContent = <?= json_encode(__('Select Target Area'), JSON_UNESCAPED_UNICODE) ?>;
                 let html = '<select name="goal_target" required style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 floorOptions.forEach(f => html += `<option value="${f.val}">${f.text}</option>`);
                 html += '</select>';
                 container.innerHTML = html;
             } else if (['MESETA', 'LEVEL_UP', 'MAT_CONSUME', 'PLAYTIME', 'CHALLENGE_STAGES'].includes(type)) {
-                label.textContent = "Target Specification";
+                label.textContent = <?= json_encode(__('Target Specification'), JSON_UNESCAPED_UNICODE) ?>;
                 container.innerHTML = `<input type="text" name="goal_target" value="ANY" readonly style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid #222; color:#888; cursor:not-allowed;">`;
             } else {
-                label.textContent = "Goal Target (Number or Item Name)";
-                let ph = "e.g. 100000 or Saber";
-                if(type === 'BATTLE_WINS' || type === 'CHALLENGE_STAGES' || type === 'LEVEL') ph = "e.g. 10";
-                if(type === 'PLAYTIME') ph = "Play time in seconds (e.g. 3600)";
+                label.textContent = <?= json_encode(__('Goal Target (Number or Item Name)'), JSON_UNESCAPED_UNICODE) ?>;
+                let ph = <?= json_encode(__('e.g. 100000 or Saber'), JSON_UNESCAPED_UNICODE) ?>;
+                if(type === 'BATTLE_WINS' || type === 'CHALLENGE_STAGES' || type === 'LEVEL') ph = <?= json_encode(__('e.g. 10'), JSON_UNESCAPED_UNICODE) ?>;
+                if(type === 'PLAYTIME') ph = <?= json_encode(__('Play time in seconds (e.g. 3600)'), JSON_UNESCAPED_UNICODE) ?>;
                 container.innerHTML = `<input type="text" name="goal_target" required placeholder="${ph}" style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">`;
             }
         }
@@ -367,122 +367,122 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
 
         <!-- Assign Mission Form -->
         <div class="admin-card">
-            <h3>Assign Mission Privately</h3>
-            <p>Give an existing user a mission manually (Later, users can accept missions from a 'Bounty Board').</p>
+            <h3><?= __('Assign Mission Privately') ?></h3>
+            <p><?= __("Give an existing user a mission manually (Later, users can accept missions from a 'Bounty Board').") ?></p>
             <form method="POST">
                 <input type="hidden" name="action" value="assign_mission">
                 
                 <div class="form-group">
-                    <label>Select Mission</label>
+                    <label><?= __('Select Mission') ?></label>
                     <select name="mission_id" required>
                         <?php foreach($missions as $m): ?>
-                            <option value="<?php echo $m['id']; ?>"><?php echo htmlspecialchars($m['title'] . " (Goal: " . $m['goal_target'] . " " . $m['goal_type'] . ")"); ?></option>
+                            <option value="<?php echo $m['id']; ?>"><?php echo htmlspecialchars($m['title'] . " (" . __('Goal:') . " " . $m['goal_target'] . " " . $m['goal_type'] . ")"); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label>Select Player</label>
+                    <label><?= __('Select Player') ?></label>
                     <?php if (!empty($live_players)): ?>
                         <select name="account_id" required>
-                            <option value="">-- Select a player --</option>
+                            <option value=""><?= __('-- Select a player --') ?></option>
                             <?php foreach ($live_players as $lp): ?>
                                 <option value="<?php echo $lp['account_id']; ?>"><?php echo htmlspecialchars($lp['name']); ?> (Lv<?php echo $lp['level']; ?>, ID: <?php echo $lp['account_id']; ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     <?php else: ?>
-                        <input type="number" name="account_id" required placeholder="No players online — enter Account ID manually">
+                        <input type="number" name="account_id" required placeholder="<?= htmlspecialchars(__('No players online — enter Account ID manually')) ?>">
                     <?php endif; ?>
                 </div>
 
-                <button type="submit" class="dl-btn" style="width:100%">Assign to Player</button>
+                <button type="submit" class="dl-btn" style="width:100%"><?= __('Assign to Player') ?></button>
             </form>
         </div>
 
         <!-- Send Direct Message -->
         <div class="admin-card">
-            <h3 style="color: #00bfff;">Send In-Game Mail</h3>
-            <p style="opacity:0.7; font-size:0.85rem;">Send a Simple Mail directly to a connected player's mailbox.</p>
+            <h3 style="color: #00bfff;"><?= __('Send In-Game Mail') ?></h3>
+            <p style="opacity:0.7; font-size:0.85rem;"><?= __("Send a Simple Mail directly to a connected player's mailbox.") ?></p>
             <form method="POST">
                 <input type="hidden" name="action" value="send_message">
                 
                 <div class="form-group">
-                    <label>Select Player</label>
+                    <label><?= __('Select Player') ?></label>
                     <?php if (!empty($live_players)): ?>
                         <select name="msg_account_id" required>
-                            <option value="">-- Select a player --</option>
+                            <option value=""><?= __('-- Select a player --') ?></option>
                             <?php foreach ($live_players as $lp): ?>
                                 <option value="<?php echo $lp['account_id']; ?>"><?php echo htmlspecialchars($lp['name']); ?> (Lv<?php echo $lp['level']; ?>, ID: <?php echo $lp['account_id']; ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     <?php else: ?>
-                        <input type="number" name="msg_account_id" required placeholder="No players online — enter Account ID manually">
+                        <input type="number" name="msg_account_id" required placeholder="<?= htmlspecialchars(__('No players online — enter Account ID manually')) ?>">
                     <?php endif; ?>
                 </div>
                 
                 <div class="form-group">
-                    <label>From Name</label>
-                    <input type="text" name="msg_from" value="Hunters Guild" placeholder="Sender display name">
+                    <label><?= __('From Name') ?></label>
+                    <input type="text" name="msg_from" value="<?= htmlspecialchars(__('Hunters Guild')) ?>" placeholder="<?= htmlspecialchars(__('Sender display name')) ?>">
                 </div>
                 
                 <div class="form-group">
-                    <label>Message</label>
-                    <input type="text" name="msg_text" required placeholder="Your message here..." maxlength="500">
+                    <label><?= __('Message') ?></label>
+                    <input type="text" name="msg_text" required placeholder="<?= htmlspecialchars(__('Your message here...')) ?>" maxlength="500">
                 </div>
 
-                <button type="submit" class="dl-btn" style="width:100%; border-color:#00bfff; color:#00bfff; background:rgba(0,191,255,0.15);">Send Mail</button>
+                <button type="submit" class="dl-btn" style="width:100%; border-color:#00bfff; color:#00bfff; background:rgba(0,191,255,0.15);"><?= __('Send Mail') ?></button>
             </form>
         </div>
 
         <!-- Create Community Event Form -->
         <div class="admin-card">
-            <h3 style="color: #ffaa00;">Create Community Event</h3>
-            <p>Generates a server-wide shared goal. Anyone who contributes will get the reward when the total runs out!</p>
+            <h3 style="color: #ffaa00;"><?= __('Create Community Event') ?></h3>
+            <p><?= __('Generates a server-wide shared goal. Anyone who contributes will get the reward when the total runs out!') ?></p>
             <form method="POST">
                 <input type="hidden" name="action" value="add_community_event">
                 
                 <div class="form-group">
-                    <label>Event Title</label>
-                    <input type="text" name="title" required placeholder="e.g. The Great Dragon Purge">
+                    <label><?= __('Event Title') ?></label>
+                    <input type="text" name="title" required placeholder="<?= htmlspecialchars(__('e.g. The Great Dragon Purge')) ?>">
                 </div>
                 
                 <div class="form-group">
-                    <label>Description</label>
-                    <input type="text" name="description" required placeholder="Slay 50 Dragons together to unlock a reward!">
+                    <label><?= __('Description') ?></label>
+                    <input type="text" name="description" required placeholder="<?= htmlspecialchars(__('Slay 50 Dragons together to unlock a reward!')) ?>">
                 </div>
 
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1;">
-                        <label>Participant Goal</label>
+                        <label><?= __('Participant Goal') ?></label>
                         <select name="goal_type" id="ce_goal_type_select" onchange="updateCEGoalTargetUI()">
-                            <option value="BOSS_ARENA" selected>Defeat Boss (Floor ID)</option>
-                            <option value="MESETA">Meseta Extracted (Total)</option>
-                            <option value="ITEM">Obtain Item</option>
-                            <option value="PATROL">Patrol Area 10m (Floor ID)</option>
-                            <option value="LEVEL_UP">Server Level Ups (Total)</option>
-                            <option value="MAT_CONSUME">Materials Consumed (Total)</option>
-                            <option value="PLAYTIME">Playtime Logged (Hours)</option>
-                            <option value="CHALLENGE_STAGES">Challenge Stages Cleared (Total)</option>
+                            <option value="BOSS_ARENA" selected><?= __('Defeat Boss (Floor ID)') ?></option>
+                            <option value="MESETA"><?= __('Meseta Extracted (Total)') ?></option>
+                            <option value="ITEM"><?= __('Obtain Item') ?></option>
+                            <option value="PATROL"><?= __('Patrol Area 10m (Floor ID)') ?></option>
+                            <option value="LEVEL_UP"><?= __('Server Level Ups (Total)') ?></option>
+                            <option value="MAT_CONSUME"><?= __('Materials Consumed (Total)') ?></option>
+                            <option value="PLAYTIME"><?= __('Playtime Logged (Hours)') ?></option>
+                            <option value="CHALLENGE_STAGES"><?= __('Challenge Stages Cleared (Total)') ?></option>
                         </select>
                     </div>
                 </div>
                 
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1;">
-                        <label id="ce_goal_target_label">Goal Target</label>
+                        <label id="ce_goal_target_label"><?= __('Goal Target') ?></label>
                         <div id="ce_goal_target_container">
-                            <input type="text" name="goal_target" id="ce_goal_target_input" required placeholder="e.g. 11">
+                            <input type="text" name="goal_target" id="ce_goal_target_input" required placeholder="<?= htmlspecialchars(__('e.g. 11')) ?>">
                         </div>
                     </div>
                     <div class="form-group" style="flex:1;">
-                        <label style="color:#ffaa00; font-weight:bold;">Total Amount Required</label>
-                        <input type="number" name="target_amount" required min="1" placeholder="e.g. 50">
+                        <label style="color:#ffaa00; font-weight:bold;"><?= __('Total Amount Required') ?></label>
+                        <input type="number" name="target_amount" required min="1" placeholder="<?= htmlspecialchars(__('e.g. 50')) ?>">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Community Reward Item</label>
-                    <input type="text" name="reward_item_string" required list="rare_rewards_list" placeholder="e.g. 10 Photon Drop">
+                    <label><?= __('Community Reward Item') ?></label>
+                    <input type="text" name="reward_item_string" required list="rare_rewards_list" placeholder="<?= htmlspecialchars(__('e.g. 10 Photon Drop')) ?>">
                     <datalist id="rare_rewards_list">
                         <!-- Standard Currencies -->
                         <option value="10 Photon Drop">
@@ -519,51 +519,51 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                 </div>
 
                 <div class="form-group">
-                    <label>Top 3 Contributors Bonus Reward Choices (Hold CTRL to select multiple)</label>
+                    <label><?= __('Top 3 Contributors Bonus Reward Choices (Hold CTRL to select multiple)') ?></label>
                     <select name="top_3_reward_item_string[]" multiple style="height: 180px; width: 100%; padding: 8px; background: rgba(0,0,0,0.4); border: 1px solid #444; color: #fff;">
-                        <option value="">-- No Bonus Reward --</option>
-                        <optgroup label="Sega Console Kits">
-                            <option value="Kit of DREAMCAST">Kit of DREAMCAST</option>
-                            <option value="Kit of SEGA SATURN">Kit of SEGA SATURN</option>
-                            <option value="Kit of GENESIS">Kit of GENESIS</option>
-                            <option value="Kit of MASTER SYSTEM">Kit of MASTER SYSTEM</option>
-                            <option value="Kit of MARK3">Kit of MARK3</option>
+                        <option value=""><?= __('-- No Bonus Reward --') ?></option>
+                        <optgroup label="<?= htmlspecialchars(__('Sega Console Kits')) ?>">
+                            <option value="Kit of DREAMCAST"><?= __('Kit of DREAMCAST') ?></option>
+                            <option value="Kit of SEGA SATURN"><?= __('Kit of SEGA SATURN') ?></option>
+                            <option value="Kit of GENESIS"><?= __('Kit of GENESIS') ?></option>
+                            <option value="Kit of MASTER SYSTEM"><?= __('Kit of MASTER SYSTEM') ?></option>
+                            <option value="Kit of MARK3"><?= __('Kit of MARK3') ?></option>
                         </optgroup>
-                        <optgroup label="Creature Hearts">
-                            <option value="Heart of Chao">Heart of Chao</option>
-                            <option value="Parts of RoboChao">Parts of RoboChao</option>
-                            <option value="Heart of Opa Opa">Heart of Opa Opa</option>
-                            <option value="Heart of Pian">Heart of Pian</option>
-                            <option value="Heart of Chu Chu">Heart of Chu Chu</option>
-                            <option value="Heart of Morolian">Heart of Morolian</option>
+                        <optgroup label="<?= htmlspecialchars(__('Creature Hearts')) ?>">
+                            <option value="Heart of Chao"><?= __('Heart of Chao') ?></option>
+                            <option value="Parts of RoboChao"><?= __('Parts of RoboChao') ?></option>
+                            <option value="Heart of Opa Opa"><?= __('Heart of Opa Opa') ?></option>
+                            <option value="Heart of Pian"><?= __('Heart of Pian') ?></option>
+                            <option value="Heart of Chu Chu"><?= __('Heart of Chu Chu') ?></option>
+                            <option value="Heart of Morolian"><?= __('Heart of Morolian') ?></option>
                         </optgroup>
-                        <optgroup label="Angel / Demon Mags">
-                            <option value="Heart of Angel">Heart of Angel</option>
-                            <option value="Heart of Devil">Heart of Devil</option>
+                        <optgroup label="<?= htmlspecialchars(__('Angel / Demon Mags')) ?>">
+                            <option value="Heart of Angel"><?= __('Heart of Angel') ?></option>
+                            <option value="Heart of Devil"><?= __('Heart of Devil') ?></option>
                         </optgroup>
-                        <optgroup label="Special & Joke Mags">
-                            <option value="Kit of Hamburger">Kit of Hamburger</option>
-                            <option value="Panther's Spirit">Panther's Spirit</option>
-                            <option value="Halo Soul">Halo Soul</option>
-                            <option value="Cell of MAG 502">Cell of MAG 502 (Soniti)</option>
-                            <option value="Cell of Mag 213">Cell of Mag 213 (Pitri)</option>
-                            <option value="Amitie's Memo">Amitie's Memo (Kapu Kapu)</option>
-                            <option value="Pioneer Parts">Pioneer Parts (Pioneer 2)</option>
-                            <option value="Dragon Scale">Dragon Scale (Tellusis)</option>
-                            <option value="Heaven Striker Coat">Heaven Striker Coat (Striker Unit)</option>
+                        <optgroup label="<?= htmlspecialchars(__('Special & Joke Mags')) ?>">
+                            <option value="Kit of Hamburger"><?= __('Kit of Hamburger') ?></option>
+                            <option value="Panther's Spirit"><?= __('Panther\'s Spirit') ?></option>
+                            <option value="Halo Soul"><?= __('Halo Soul') ?></option>
+                            <option value="Cell of MAG 502"><?= __('Cell of MAG 502 (Soniti)') ?></option>
+                            <option value="Cell of Mag 213"><?= __('Cell of Mag 213 (Pitri)') ?></option>
+                            <option value="Amitie's Memo"><?= __('Amitie\'s Memo (Kapu Kapu)') ?></option>
+                            <option value="Pioneer Parts"><?= __('Pioneer Parts (Pioneer 2)') ?></option>
+                            <option value="Dragon Scale"><?= __('Dragon Scale (Tellusis)') ?></option>
+                            <option value="Heaven Striker Coat"><?= __('Heaven Striker Coat (Striker Unit)') ?></option>
                         </optgroup>
                     </select>
                 </div>
 
-                <button type="submit" class="dl-btn" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.15);">Start Global Event!</button>
+                <button type="submit" class="dl-btn" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.15);"><?= __('Start Global Event!') ?></button>
             </form>
         </div>
 
         <!-- Launch Curated Event Form -->
         <div class="admin-card" style="grid-column: span 3; border-color: #ffaa00;">
-            <h3 style="color: #ffaa00;">Launch Curated Monthly Event</h3>
+            <h3 style="color: #ffaa00;"><?= __('Launch Curated Monthly Event') ?></h3>
             <p style="opacity:0.8; font-size:0.9rem; margin-bottom:1.5rem;">
-                Select and immediately activate one of the curated, high-volume month-long **Boss Rush** server-wide events:
+                <?= __('Select and immediately activate one of the curated, high-volume month-long **Boss Rush** server-wide events:') ?>
             </p>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
                 <?php 
@@ -572,16 +572,16 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                 ?>
                     <div style="background:rgba(255,255,255,0.05); padding:1rem; border-radius:6px; border:1px solid rgba(255,170,0,0.15); display:flex; flex-direction:column; justify-content:space-between;">
                         <div>
-                            <h4 style="margin:0 0 5px 0; color:#ffaa00; font-size:1.05rem;">[Month <?php echo $idx; ?>] <?php echo htmlspecialchars($event['title']); ?></h4>
-                            <p style="font-size:0.8rem; margin:0 0 10px 0; opacity:0.8; line-height:1.3; flex-grow:1;"><?php echo htmlspecialchars($event['description']); ?></p>
+                            <h4 style="margin:0 0 5px 0; color:#ffaa00; font-size:1.05rem;">[<?= __('Month') ?> <?php echo $idx; ?>] <?php echo htmlspecialchars(__($event['title'])); ?></h4>
+                            <p style="font-size:0.8rem; margin:0 0 10px 0; opacity:0.8; line-height:1.3; flex-grow:1;"><?php echo htmlspecialchars(__($event['description'])); ?></p>
                             <div style="font-size:0.75rem; opacity:0.6; margin-bottom:10px;">
-                                <strong>Target:</strong> <?php echo number_format($event['target_amount']); ?> points (<?php echo htmlspecialchars($event['goal_target']); ?>)
+                                <strong><?= __('Target:') ?></strong> <?php echo number_format($event['target_amount']); ?> <?= __('points') ?> (<?php echo htmlspecialchars($event['goal_target']); ?>)
                             </div>
                         </div>
                         <form method="POST" style="margin:0;">
                             <input type="hidden" name="action" value="launch_curated_event">
                             <input type="hidden" name="event_index" value="<?php echo $idx; ?>">
-                            <button type="submit" class="dl-btn" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.1); padding:6px; font-size:0.85rem;" onclick="return confirm('<?php echo htmlspecialchars(addslashes(sprintf(__('Are you sure you want to deactivate the active event and launch %s?'), $event['title']))); ?>');"><?= __('Launch Event') ?></button>
+                            <button type="submit" class="dl-btn" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.1); padding:6px; font-size:0.85rem;" onclick="return confirm('<?php echo htmlspecialchars(addslashes(sprintf(__('Are you sure you want to deactivate the active event and launch %s?'), __($event['title'])))); ?>');"><?= __('Launch Event') ?></button>
                         </form>
                     </div>
                 <?php endforeach; ?>
@@ -589,21 +589,21 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         </div>
 
         <div class="admin-card" style="grid-column: span 3;">
-            <h3>Currently Tracked Player Missions (Last 50)</h3>
+            <h3><?= __('Currently Tracked Player Missions (Last 50)') ?></h3>
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table>
                     <thead style="position: sticky; top: 0; z-index: 1;">
                         <tr>
-                            <th>ID</th>
-                            <th>Username (Acc ID)</th>
-                            <th>Mission</th>
-                            <th>Status</th>
-                            <th>Completed At</th>
+                            <th><?= __('ID') ?></th>
+                            <th><?= __('Username (Acc ID)') ?></th>
+                            <th><?= __('Mission') ?></th>
+                            <th><?= __('Status') ?></th>
+                            <th><?= __('Completed At') ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($player_missions)): ?>
-                            <tr><td colspan="5">No missions tracked currently.</td></tr>
+                            <tr><td colspan="5"><?= __('No missions tracked currently.') ?></td></tr>
                         <?php else: ?>
                             <?php foreach ($player_missions as $pm): ?>
                                 <tr>
@@ -611,7 +611,7 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                                     <td><?php echo htmlspecialchars($pm['username']) . ' (' . $pm['account_id'] . ')'; ?></td>
                                     <td><?php echo htmlspecialchars($pm['title']); ?></td>
                                     <td>
-                                        <?php if ($pm['status'] === 'completed') echo "<span style='color:#00C851'>Completed!</span>"; else echo "<span style='color:#ff8800'>In Progress</span>"; ?>
+                                        <?php if ($pm['status'] === 'completed') echo "<span style='color:#00C851'>" . __('Completed!') . "</span>"; else echo "<span style='color:#ff8800'>" . __('In Progress') . "</span>"; ?>
                                     </td>
                                     <td><?php echo $pm['completed_at'] ? date('M j, g:i A', strtotime($pm['completed_at'])) : '-'; ?></td>
                                 </tr>
@@ -623,26 +623,26 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         </div>
 
         <div class="admin-card" style="grid-column: span 3;">
-            <h3>Live Community Event Telemetry</h3>
-            <p style="opacity: 0.8; font-size: 0.9rem;">Monitor real-time progress for active global events. Watch as players contribute to the goal!</p>
+            <h3><?= __('Live Community Event Telemetry') ?></h3>
+            <p style="opacity: 0.8; font-size: 0.9rem;"><?= __('Monitor real-time progress for active global events. Watch as players contribute to the goal!') ?></p>
             
             <?php if (empty($active_telemetry)): ?>
                 <div style="padding: 20px; text-align: center; background: rgba(255,255,255,0.05); border-radius: 5px;">
-                    No active community events are running right now.
+                    <?= __('No active community events are running right now.') ?>
                 </div>
             <?php else: ?>
                 <div class="admin-grid" style="margin-top: 10px;">
                     <?php foreach ($active_telemetry as $tele): ?>
                         <div style="background: rgba(0,0,0,0.4); border: 1px solid #ffaa00; padding: 15px; border-radius: 5px;">
-                            <h4 style="color: #ffaa00; margin-top: 0; margin-bottom: 5px;"><?php echo htmlspecialchars($tele['title']); ?></h4>
+                            <h4 style="color: #ffaa00; margin-top: 0; margin-bottom: 5px;"><?php echo htmlspecialchars(__($tele['title'])); ?></h4>
                             <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">
-                                Total Progress: <strong style="color:#fff;"><?php echo number_format($tele['current_progress']); ?> / <?php echo number_format($tele['target_amount']); ?></strong>
+                                <?= __('Total Progress:') ?> <strong style="color:#fff;"><?php echo number_format($tele['current_progress']); ?> / <?php echo number_format($tele['target_amount']); ?></strong>
                             </div>
                             
-                            <h5 style="margin: 0 0 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">Participant Contributions</h5>
+                            <h5 style="margin: 0 0 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;"><?= __('Participant Contributions') ?></h5>
                             <div style="max-height: 250px; overflow-y: auto;">
                                 <?php if (empty($tele['participants'])): ?>
-                                    <div style="font-size: 0.85rem; color: #888;">No contributions recorded yet.</div>
+                                    <div style="font-size: 0.85rem; color: #888;"><?= __('No contributions recorded yet.') ?></div>
                                 <?php else: ?>
                                     <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem;">
                                         <?php foreach ($tele['participants'] as $idx => $p): ?>
