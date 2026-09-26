@@ -29,10 +29,6 @@ RewriteRule ^ %1 [R=301,L]
 RewriteRule ^downloads/(.+)$ - [L]
 RewriteRule ^downloads/?$ downloads.php [L]
 
-# Explicitly rewrite /decryption (directory collision fix)
-RewriteRule ^decryption/(.+)$ - [L]
-RewriteRule ^decryption/?$ decryption.php [L]
-
 # 2. Internally rewrite /file to /file.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

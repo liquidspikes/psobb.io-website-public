@@ -89,15 +89,13 @@ start_secure_session();
 
                 <li class="dropdown">
                     <a href="javascript:void(0)"
-                        class="dropbtn <?php echo in_array($current_page, ['mods', 'quest-editor', 'decryption']) ? 'active' : ''; ?>"><?= __('Development') ?>
+                        class="dropbtn <?php echo in_array($current_page, ['mods', 'quest-editor']) ? 'active' : ''; ?>"><?= __('Development') ?>
                         <i class="fas fa-caret-down"></i></a>
                     <div class="dropdown-content">
                         <a href="/mods.php"
                             class="<?php echo ($current_page == 'mods') ? 'active' : ''; ?>"><?= __('Client Mods') ?></a>
                         <a href="/quest-editor"
                             class="<?php echo ($current_page == 'quest-editor') ? 'active' : ''; ?>"><?= __('Quest Editor') ?></a>
-                        <a href="/decryption.php"
-                            class="<?php echo ($current_page == 'decryption') ? 'active' : ''; ?>"><?= __('Data Decryption') ?></a>
                         <a href="/development.php"
                             class="<?php echo ($current_page == 'development') ? 'active' : ''; ?>"><?= __('Dev Resources') ?></a>
                     </div>

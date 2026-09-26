@@ -156,11 +156,6 @@ include 'includes/header.php';
                     <h3><i class="fas fa-map-marked-alt"></i> Quest Editor</h3>
                     <p>Web-based interface for visualizing, modifying, and creating custom quests, NPC spawns, and map layouts.</p>
                 </a>
-
-                <a href="/decryption.php" class="resource-card">
-                    <h3><i class="fas fa-microchip"></i> Decompilation Matrix</h3>
-                    <p>Live telemetry from our autonomous decompilation pipeline as it byte-matches C++ source against original MSVC 2003 machine code.</p>
-                </a>
             </div>
         </div>
     </div>
