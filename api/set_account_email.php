@@ -2,8 +2,9 @@
 /**
  * PSOBB API: Set / Update Account Recovery Email
  * 
- * Allows an authenticated user (especially legacy game accounts with placeholder emails)
- * to link a real email address for password recovery via /forgot_password.
+ * Allows an authenticated user to request linking a real recovery email address.
+ * Generates a secure confirmation token and sends a confirmation link to the email.
+ * The email is only confirmed and linked once the confirmation link is clicked.
  */
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -72,45 +73,67 @@ try {
         exit;
     }
 
-    // 4. Update or Insert User Record
-    $stmt = $db->prepare("SELECT id, language FROM users WHERE account_id = :aid OR username = :u");
-    $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-    $stmt->bindValue(':u', $username, SQLITE3_TEXT);
-    $userRow = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    // Check if the account already has this exact email confirmed on file
+    $currStmt = $db->prepare("SELECT email, language FROM users WHERE account_id = :aid OR username = :u");
+    $currStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $currStmt->bindValue(':u', $username, SQLITE3_TEXT);
+    $userRow = $currStmt->execute()->fetchArray(SQLITE3_ASSOC);
 
-    if ($userRow) {
-        $upd = $db->prepare("UPDATE users SET email = :e WHERE id = :id");
-        $upd->bindValue(':e', $email, SQLITE3_TEXT);
-        $upd->bindValue(':id', (int)$userRow['id'], SQLITE3_INTEGER);
-        $upd->execute();
-    } else {
-        $ins = $db->prepare("INSERT INTO users (username, email, account_id, receive_system_mail, receive_discord_streak_msg) VALUES (:u, :e, :aid, 1, 1)");
-        $ins->bindValue(':u', $username, SQLITE3_TEXT);
-        $ins->bindValue(':e', $email, SQLITE3_TEXT);
-        $ins->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-        $ins->execute();
+    if ($userRow && strcasecmp(trim($userRow['email'] ?? ''), $email) === 0) {
+        echo json_encode(["success" => false, "error" => "This email address is already linked to your account."]);
+        exit;
     }
 
-    // 5. Update Active Session State
-    $_SESSION['user']['email'] = $email;
-    $_SESSION['user']['has_email'] = true;
-    $_SESSION['user']['is_legacy_email'] = false;
+    // 4. Ensure email_confirmations table exists
+    $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        new_email TEXT NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        confirmed_at INTEGER DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at INTEGER NOT NULL
+    )");
 
-    // 6. Send Confirmation Email to the newly linked address
+    // 5. Generate Secure Confirmation Token
+    $token = bin2hex(random_bytes(32));
+    $expiresAt = time() + 86400; // 24 hours
+
+    // Invalidate any older unconfirmed tokens for this account
+    $del = $db->prepare("DELETE FROM email_confirmations WHERE account_id = :aid AND confirmed_at IS NULL");
+    $del->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $del->execute();
+
+    // Store new pending confirmation
+    $ins = $db->prepare("INSERT INTO email_confirmations (account_id, username, new_email, token, expires_at) VALUES (:aid, :u, :e, :t, :exp)");
+    $ins->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $ins->bindValue(':u', $username, SQLITE3_TEXT);
+    $ins->bindValue(':e', $email, SQLITE3_TEXT);
+    $ins->bindValue(':t', $token, SQLITE3_TEXT);
+    $ins->bindValue(':exp', $expiresAt, SQLITE3_INTEGER);
+    $ins->execute();
+
+    // 6. Build Confirmation Link & Send Email
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? 0) == 443) ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'] ?? 'psobb.io';
+    $confirmLink = "$protocol://$host/confirm_email.php?token=$token";
+
     $lang_pref = $userRow['language'] ?? ($_COOKIE['psobb_lang'] ?? 'en');
     if ($lang_pref === 'jp') {
-        $subject = "リカバリー用メールアドレス設定完了 - PSOBB.IO";
-        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) にリカバリー用メールアドレスが正常に設定されました。\n今後はパスワードを忘れた場合でも、以下のURLからパスワード再設定が可能です：\nhttps://psobb.io/forgot_password.php\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\nPSOBB.IO チーム";
+        $subject = "リカバリー用メールアドレスの確認 - PSOBB.IO";
+        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスとして、このアドレス ($email) を登録するリクエストを受け付けました。\n\n以下のリンクをクリックして、メールアドレスの登録を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。メールアドレスは変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
     } else {
-        $subject = "Recovery Email Linked - PSOBB.IO";
-        $msg = "Hello $username,\n\nYour recovery email address has been successfully set for your PSOBB.IO account ($username).\nYou can now use this email address to recover your password at:\nhttps://psobb.io/forgot_password.php\n\nIf you did not make this change, please contact an administrator immediately.\n\nHappy Hunting,\nPSOBB.IO Team";
+        $subject = "Confirm Your Recovery Email - PSOBB.IO";
+        $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your PSOBB.IO account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\nPSOBB.IO Team";
     }
     @send_email($email, $subject, $msg);
 
     echo json_encode([
         "success" => true,
+        "pending" => true,
         "email" => $email,
-        "message" => "Recovery email successfully linked! You can now use it to reset your password."
+        "message" => "Confirmation email sent! Please check your inbox and click the confirmation link to finish linking your email."
     ]);
 } catch (Exception $e) {
     http_response_code(500);

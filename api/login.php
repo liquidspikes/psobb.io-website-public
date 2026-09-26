@@ -128,10 +128,32 @@ try {
         $cleanEmail = $isLegacyEmail ? '' : $dbEmail;
         $legacyEmail = $isLegacyEmail ? $dbEmail : '';
 
+        // Check for pending unconfirmed email request
+        $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            new_email TEXT NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            confirmed_at INTEGER DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at INTEGER NOT NULL
+        )");
+
+        $pendStmt = $db->prepare("SELECT new_email FROM email_confirmations WHERE account_id = :aid AND confirmed_at IS NULL AND expires_at > :now ORDER BY id DESC LIMIT 1");
+        $pendStmt->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
+        $pendStmt->bindValue(':now', time(), SQLITE3_INTEGER);
+        $pendRes = $pendStmt->execute();
+        $pendRow = $pendRes ? $pendRes->fetchArray(SQLITE3_ASSOC) : null;
+        $pendingEmail = $pendRow ? trim($pendRow['new_email'] ?? '') : '';
+        $isPendingEmail = !empty($pendingEmail);
+
         $user_account['email'] = $cleanEmail;
         $user_account['legacy_email'] = $legacyEmail;
         $user_account['is_legacy_email'] = $isLegacyEmail;
         $user_account['has_email'] = !$isLegacyEmail;
+        $user_account['pending_email'] = $pendingEmail;
+        $user_account['is_pending_email'] = $isPendingEmail;
         $user_account['discord_id'] = $discord_id;
         $user_account['receive_system_mail'] = $receive_system_mail;
         $user_account['receive_discord_streak_msg'] = $receive_discord_streak_msg;
@@ -140,6 +162,8 @@ try {
         $_SESSION['user']['legacy_email'] = $legacyEmail;
         $_SESSION['user']['is_legacy_email'] = $isLegacyEmail;
         $_SESSION['user']['has_email'] = !$isLegacyEmail;
+        $_SESSION['user']['pending_email'] = $pendingEmail;
+        $_SESSION['user']['is_pending_email'] = $isPendingEmail;
         $_SESSION['user']['receive_system_mail'] = $receive_system_mail;
         $_SESSION['user']['receive_discord_streak_msg'] = $receive_discord_streak_msg;
         

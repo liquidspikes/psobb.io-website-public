@@ -770,14 +770,14 @@ if (isset($_SESSION['user']['username'])) {
                                 <span id="email-status-badge" style="font-size:0.75rem; padding: 2px 8px; border-radius: 4px; font-family:'Share Tech Mono',monospace;">--</span>
                             </div>
                             <p style="font-size:0.8rem; color:#aaa; margin:0 0 10px 0;">
-                                <?= __('Required for password recovery via /forgot_password. If you created your account in-game, link your email here so you can recover your password.') ?>
+                                <?= __('Required for password recovery via the Forgot Password page. If you created your account in-game, link your email here so you can recover your password. A confirmation link will be sent to verify your address.') ?>
                             </p>
                             <div style="display: flex; gap: 8px;">
                                 <input type="email" id="account-email-input"
                                     placeholder="<?= __('Enter email address (e.g. hunter@example.com)') ?>" maxlength="100"
                                     style="flex: 1; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.3); color: #fff; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
                                 <button onclick="saveAccountEmail()" id="btn-save-email" class="dl-btn"
-                                    style="padding: 8px 16px; border-color: #00ffff; background: rgba(0,255,255,0.15); color: #00ffff; white-space: nowrap;"><i class="fas fa-save"></i> <?= __('Save') ?></button>
+                                    style="padding: 8px 16px; border-color: #00ffff; background: rgba(0,255,255,0.15); color: #00ffff; white-space: nowrap;"><i class="fas fa-paper-plane"></i> <?= __('Send Link') ?></button>
                             </div>
                             <div id="email-message" style="margin-top: 6px; font-size: 0.85em; display: none;"></div>
                         </div>
@@ -1382,12 +1382,12 @@ if (isset($_SESSION['user']['username'])) {
                         </h3>
                     </div>
 
-                    <p id="pem-legacy-desc" style="font-size:0.9rem; color:#eee; line-height:1.5; margin-bottom:10px;">
-                        <?= __('Your account currently has a placeholder email on file:') ?> <strong id="pem-legacy-email" style="color:#ffaa00; font-family:'Share Tech Mono',monospace;"></strong>
+                    <p style="font-size:0.9rem; color:#eee; line-height:1.5; margin-bottom:10px;">
+                        <?= __('Your account does not have a recovery email linked yet.') ?>
                     </p>
                     <p style="font-size:0.85rem; color:#aaa; line-height:1.5; margin-bottom:1.25rem; background:rgba(255,170,0,0.08); border-left:3px solid #ffaa00; padding:8px 12px; border-radius:0 4px 4px 0;">
                         <i class="fas fa-info-circle" style="color:#ffaa00; margin-right:4px;"></i>
-                        <?= __('Please link a real email address so you can recover your password via /forgot_password if you ever lose or forget your account password.') ?>
+                        <?= __('Link a real email address so you can recover your password on the Forgot Password page if you ever lose or forget it. A confirmation link will be sent to verify your email.') ?>
                     </p>
 
                     <label for="pem-email-input" style="font-size:0.8rem; color:#ccc; display:block; margin-bottom:5px; font-family:'Share Tech Mono',monospace;">
@@ -1403,7 +1403,7 @@ if (isset($_SESSION['user']['username'])) {
                         <button type="button" onclick="closePromptEmailModal(true)" class="dl-btn"
                             style="background: rgba(255,255,255,0.08); border-color: #555; color:#aaa; font-size:0.85rem;"><?= __('Remind Me Later') ?></button>
                         <button type="button" onclick="confirmPromptEmail()" id="btn-confirm-pem" class="dl-btn"
-                            style="background: rgba(255, 170, 0, 0.2); border-color: #ffaa00; color: #ffaa00; font-size:0.85rem; font-weight:bold;"><i class="fas fa-link"></i> <?= __('Link Recovery Email') ?></button>
+                            style="background: rgba(255, 170, 0, 0.2); border-color: #ffaa00; color: #ffaa00; font-size:0.85rem; font-weight:bold;"><i class="fas fa-paper-plane"></i> <?= __('Send Confirmation Link') ?></button>
                     </div>
                 </div>
             </div>

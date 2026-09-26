@@ -247,8 +247,8 @@ objective/reward text.
 | `change_password.php` | POST | 🛡️ | `csrf_token`, password fields | Change password (synced to NewServ) |
 | `forgot_password.php` | POST | 🔓 | email | Email a reset token |
 | `reset_password.php` | POST | 🔓 | token, new password | Complete a password reset |
-| `get_account_email.php` | GET | 🔑 | — | Get user's current recovery email & legacy status |
-| `set_account_email.php` | POST | 🛡️ | `csrf_token`, JSON `email` | Link or update account recovery email |
+| `get_account_email.php` | GET | 🔑 | — | Get user's current recovery email & legacy/pending status |
+| `set_account_email.php` | POST | 🛡️ | `csrf_token`, JSON `email` | Send confirmation link to verify and link recovery email |
 | `captcha.php` | GET | 🔓 | — | Render a CAPTCHA image into the session |
 
 ---
@@ -429,6 +429,7 @@ endpoints self-migrate (add missing tables/columns) at runtime via `get_db()`.
 | `mod_ratings` | Per-account mod ratings (1–5) |
 | `lfg_requests` | Looking-for-group requests |
 | `password_resets` | Password-reset tokens |
+| `email_confirmations` | Pending and verified email confirmation tokens |
 | `rewards_claimed` | Per-character level-milestone reward claims |
 
 ---

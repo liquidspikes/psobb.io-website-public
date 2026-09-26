@@ -149,12 +149,13 @@ async function handleLogin(e) {
             // Login Success
             sessionStorage.setItem('psobb_user', JSON.stringify(data));
 
-            // Only prompt to link email after successful credentials login if user has a legacy placeholder email (<username>_legacy@psobb.io) or no valid email
+            // Only prompt to link email after successful credentials login if user has a legacy placeholder email (<username>_legacy@psobb.io) or no valid email and no pending confirmation
             const isLegacy = Boolean(
-                data.is_legacy_email ||
+                (data.is_legacy_email ||
                 !data.has_email ||
                 !data.email ||
-                (typeof data.email === 'string' && data.email.toLowerCase().endsWith('_legacy@psobb.io'))
+                (typeof data.email === 'string' && data.email.toLowerCase().endsWith('_legacy@psobb.io'))) &&
+                !data.is_pending_email
             );
 
             if (isLegacy) {
@@ -266,10 +267,11 @@ function showDashboard(user) {
         // Prompt only after the user logs in with credentials and does not have a valid email on file
         if (sessionStorage.getItem('psobb_prompt_email_on_login') === '1') {
             sessionStorage.removeItem('psobb_prompt_email_on_login');
-            const legacyAddr = user.legacy_email || (user.username ? user.username + '_legacy@psobb.io' : (user.LastPlayerName ? user.LastPlayerName.toLowerCase() + '_legacy@psobb.io' : ''));
-            setTimeout(() => {
-                openPromptEmailModal(legacyAddr);
-            }, 350);
+            if (!user.is_pending_email) {
+                setTimeout(() => {
+                    openPromptEmailModal();
+                }, 350);
+            }
         }
 
         // Initialize display name alias
@@ -492,6 +494,8 @@ window.loadAccountEmail = async function () {
     const userStr = sessionStorage.getItem('psobb_user');
     let cachedEmail = '';
     let isLegacy = false;
+    let pendingEmail = '';
+    let isPending = false;
     if (userStr) {
         try {
             const user = JSON.parse(userStr);
@@ -500,37 +504,49 @@ window.loadAccountEmail = async function () {
             } else if (user.email) {
                 cachedEmail = user.email;
             }
+            if (user.pending_email) {
+                pendingEmail = user.pending_email;
+                isPending = Boolean(user.is_pending_email);
+            }
         } catch (e) { }
     }
 
-    renderEmailStatus(cachedEmail, isLegacy);
+    renderEmailStatus(cachedEmail, isLegacy, pendingEmail, isPending);
 
     try {
         const res = await fetch('/api/get_account_email.php', { credentials: 'same-origin' });
         const data = await res.json();
         if (data.success) {
-            renderEmailStatus(data.email || '', data.is_legacy);
+            renderEmailStatus(data.email || '', data.is_legacy, data.pending_email || '', data.is_pending);
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
                     user.email = data.email || '';
                     user.is_legacy_email = data.is_legacy;
                     user.has_email = data.has_email;
+                    user.pending_email = data.pending_email || '';
+                    user.is_pending_email = Boolean(data.is_pending);
                     sessionStorage.setItem('psobb_user', JSON.stringify(user));
                 } catch (e) { }
             }
         }
     } catch (e) { /* silent */ }
 
-    function renderEmailStatus(email, isLegacyAcc) {
+    function renderEmailStatus(email, isLegacyAcc, pending = '', isPendingConf = false) {
+        const msgEl = document.getElementById('email-message');
         if (banner) {
-            banner.style.display = isLegacyAcc ? 'block' : 'none';
+            banner.style.display = (isLegacyAcc && !isPendingConf) ? 'block' : 'none';
         }
         if (input) {
-            input.value = email || '';
+            input.value = email || pending || '';
         }
         if (badge) {
-            if (isLegacyAcc || !email) {
+            if (isPendingConf) {
+                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                badge.style.background = 'rgba(255, 170, 0, 0.2)';
+                badge.style.border = '1px solid #ffaa00';
+                badge.style.color = '#ffaa00';
+            } else if (isLegacyAcc || !email) {
                 badge.innerHTML = '<i class="fas fa-exclamation-circle"></i> No Email Linked';
                 badge.style.background = 'rgba(255, 170, 0, 0.2)';
                 badge.style.border = '1px solid #ffaa00';
@@ -542,8 +558,19 @@ window.loadAccountEmail = async function () {
                 badge.style.color = '#00C851';
             }
         }
+        if (isPendingConf && pending && msgEl) {
+            msgEl.textContent = 'Confirmation link sent to ' + pending + '. Check your inbox to activate.';
+            msgEl.style.color = '#ffaa00';
+            msgEl.style.display = 'block';
+        }
         if (btn) {
-            btn.innerHTML = (isLegacyAcc || !email) ? '<i class="fas fa-link"></i> Link Email' : '<i class="fas fa-save"></i> Save';
+            if (isPendingConf) {
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Link';
+            } else if (isLegacyAcc || !email) {
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link';
+            } else {
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Update Email';
+            }
         }
     }
 };
@@ -579,7 +606,7 @@ window.saveAccountEmail = async function () {
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Link...';
     if (msgEl) msgEl.style.display = 'none';
 
     try {
@@ -597,44 +624,43 @@ window.saveAccountEmail = async function () {
 
         if (response.ok && data.success) {
             if (msgEl) {
-                msgEl.textContent = '✓ ' + data.message;
+                msgEl.textContent = '✓ ' + (data.message || 'Confirmation email sent! Please check your inbox.');
                 msgEl.style.color = '#00C851';
                 msgEl.style.display = 'block';
             }
             if (badge) {
-                badge.innerHTML = '<i class="fas fa-check-circle"></i> Linked';
-                badge.style.background = 'rgba(0, 200, 81, 0.2)';
-                badge.style.border = '1px solid #00C851';
-                badge.style.color = '#00C851';
+                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                badge.style.background = 'rgba(255, 170, 0, 0.2)';
+                badge.style.border = '1px solid #ffaa00';
+                badge.style.color = '#ffaa00';
             }
             if (banner) {
                 banner.style.display = 'none';
             }
-            btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+            btn.innerHTML = '<i class="fas fa-check"></i> Link Sent!';
 
             const userStr = sessionStorage.getItem('psobb_user');
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    user.email = data.email;
-                    user.has_email = true;
-                    user.is_legacy_email = false;
+                    user.pending_email = data.email;
+                    user.is_pending_email = true;
                     sessionStorage.setItem('psobb_user', JSON.stringify(user));
                 } catch (e) { }
             }
 
             setTimeout(() => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save"></i> Save';
-            }, 2000);
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Resend Link';
+            }, 2500);
         } else {
             if (msgEl) {
-                msgEl.textContent = data.error || 'Failed to update email.';
+                msgEl.textContent = data.error || 'Failed to send confirmation email.';
                 msgEl.style.color = '#ff4444';
                 msgEl.style.display = 'block';
             }
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Save';
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link';
         }
     } catch (e) {
         if (msgEl) {
@@ -643,39 +669,18 @@ window.saveAccountEmail = async function () {
             msgEl.style.display = 'block';
         }
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save"></i> Save';
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Link';
     }
 };
 
-window.openPromptEmailModal = function (legacyEmail = '') {
+window.openPromptEmailModal = function () {
     const modal = document.getElementById('prompt-email-modal');
     if (!modal) return;
     const input = document.getElementById('pem-email-input');
     const err = document.getElementById('pem-error');
     const succ = document.getElementById('pem-success');
-    const legacyEl = document.getElementById('pem-legacy-email');
-    const descEl = document.getElementById('pem-legacy-desc');
     if (err) err.style.display = 'none';
     if (succ) succ.style.display = 'none';
-
-    if (!legacyEmail) {
-        const userStr = sessionStorage.getItem('psobb_user');
-        if (userStr) {
-            try {
-                const u = JSON.parse(userStr);
-                legacyEmail = u.legacy_email || (u.username ? u.username + '_legacy@psobb.io' : (u.LastPlayerName ? u.LastPlayerName.toLowerCase() + '_legacy@psobb.io' : ''));
-            } catch (e) { }
-        }
-    }
-
-    if (legacyEl) {
-        if (legacyEmail) {
-            legacyEl.textContent = legacyEmail;
-            if (descEl) descEl.style.display = 'block';
-        } else if (descEl) {
-            descEl.style.display = 'none';
-        }
-    }
 
     modal.style.display = 'flex';
     if (input) input.focus();
@@ -719,7 +724,7 @@ window.confirmPromptEmail = async function () {
     if (err) err.style.display = 'none';
     if (succ) succ.style.display = 'none';
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Linking...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Link...';
 
     try {
         const csrfToken = window.getCSRFToken ? window.getCSRFToken() : '';
@@ -736,19 +741,18 @@ window.confirmPromptEmail = async function () {
 
         if (response.ok && data.success) {
             if (succ) {
-                succ.textContent = '✓ ' + data.message;
+                succ.textContent = '✓ ' + (data.message || 'Confirmation link sent! Please check your inbox.');
                 succ.style.display = 'block';
             }
-            btn.innerHTML = '<i class="fas fa-check"></i> Linked!';
+            btn.innerHTML = '<i class="fas fa-check"></i> Link Sent!';
 
             sessionStorage.setItem('psobb_email_prompt_dismissed', '1');
             const userStr = sessionStorage.getItem('psobb_user');
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    user.email = data.email;
-                    user.has_email = true;
-                    user.is_legacy_email = false;
+                    user.pending_email = data.email;
+                    user.is_pending_email = true;
                     sessionStorage.setItem('psobb_user', JSON.stringify(user));
                 } catch (e) { }
             }
@@ -757,10 +761,10 @@ window.confirmPromptEmail = async function () {
             if (settingsInput) settingsInput.value = data.email;
             const badge = document.getElementById('email-status-badge');
             if (badge) {
-                badge.innerHTML = '<i class="fas fa-check-circle"></i> Linked';
-                badge.style.background = 'rgba(0, 200, 81, 0.2)';
-                badge.style.border = '1px solid #00C851';
-                badge.style.color = '#00C851';
+                badge.innerHTML = '<i class="fas fa-envelope-open-text"></i> Confirmation Pending';
+                badge.style.background = 'rgba(255, 170, 0, 0.2)';
+                badge.style.border = '1px solid #ffaa00';
+                badge.style.color = '#ffaa00';
             }
             const banner = document.getElementById('legacy-email-banner');
             if (banner) banner.style.display = 'none';
@@ -768,23 +772,23 @@ window.confirmPromptEmail = async function () {
             setTimeout(() => {
                 closePromptEmailModal(false);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-link"></i> Link Recovery Email';
-            }, 1200);
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation Link';
+            }, 3000);
         } else {
             if (err) {
-                err.textContent = data.error || 'Failed to update email.';
+                err.textContent = data.error || 'Failed to send confirmation link.';
                 err.style.display = 'block';
             }
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-link"></i> Link Recovery Email';
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation Link';
         }
     } catch (e) {
         if (err) {
-            err.textContent = 'Connection error.';
+            err.textContent = 'Connection error. Please try again.';
             err.style.display = 'block';
         }
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-link"></i> Link Recovery Email';
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Confirmation Link';
     }
 };
 

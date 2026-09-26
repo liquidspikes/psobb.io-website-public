@@ -26,6 +26,18 @@ $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
     expires_at INTEGER NOT NULL
 )");
 
+// Email Confirmations table
+$db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    username TEXT NOT NULL,
+    new_email TEXT NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    confirmed_at INTEGER DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at INTEGER NOT NULL
+)");
+
 // Rewards Claimed table
 $db->exec("CREATE TABLE IF NOT EXISTS rewards_claimed (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
