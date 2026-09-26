@@ -9,7 +9,7 @@ $cache_dir = __DIR__ . '/../scratch';
 if (!is_dir($cache_dir)) {
     @mkdir($cache_dir, 0777, true);
 }
-$cache_file = $cache_dir . '/rare_table_cache_v3.json';
+$cache_file = $cache_dir . '/rare_table_cache_v4.json';
 $cache_ttl = 86400; // 24 hours
 
 $data_json = false;
@@ -135,8 +135,13 @@ if ($data_json === false) {
                                     elseif ($type_byte === '02') $item_type = 'Mag';
                                     elseif ($type_byte === '03') $item_type = 'Tool';
                                     
-                                    $item_subtype = $item_subtypes[strtolower($item_name)] ?? 'Other';
-                                    $item_equip_classes = $item_equips[strtolower(trim($item_name))] ?? null;
+                                    // Canonical English name fallback for metadata lookups (preserves localized/Russian display names)
+                                    $canonical_en = $hex_to_name[$clean_hex] ?? $item_name;
+                                    $canonical_key = strtolower(trim($canonical_en));
+                                    $display_key = strtolower(trim($item_name));
+
+                                    $item_subtype = $item_subtypes[$canonical_key] ?? $item_subtypes[$display_key] ?? 'Other';
+                                    $item_equip_classes = $item_equips[$canonical_key] ?? $item_equips[$display_key] ?? null;
                                     
                                     // Clean up Monster Name (e.g. Box-Cave1 -> Cave 1 Box, HILDEBEAR -> Hildebear)
                                     $monster_clean = str_replace('_', ' ', $monster);
