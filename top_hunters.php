@@ -8,7 +8,7 @@ require_once __DIR__ . '/api/config.php';
 require_once __DIR__ . '/api/functions.php';
 start_secure_session();
 
-$page_title = 'Top Hunters';
+$page_title = __('Top Hunters');
 $current_page = 'top_hunters';
 include 'includes/header.php';
 require_once 'api/db.php';

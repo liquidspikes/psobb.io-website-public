@@ -14,7 +14,7 @@ if (empty($_SESSION['user'])) {
     exit;
 }
 
-$page_title = 'Hunter\'s LFG Terminal - PSOBB';
+$page_title = __('Hunter\'s LFG Terminal - PSOBB');
 $current_page = 'lfg';
 include 'includes/header.php';
 ?>
@@ -202,14 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (inGame) {
                     syncHtml += `
                         <div style="font-size:0.75em; color:#aaa; margin-top:5px; border-top:1px dashed rgba(255,255,255,0.05); padding-top:4px; display:flex; justify-content:space-between; align-items:center;">
-                            <span>In Game: <strong style="color:var(--lfg-blue);">#${myActiveChar.LobbyID}</strong></span>
-                            <button class="dl-btn danger-btn" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; margin: 0; line-height: 1.1; text-shadow: none; border-color: #ff4444;" onclick="leaveCurrentGroup()"><i class="fas fa-sign-out-alt"></i> LEAVE GROUP</button>
+                            <span><?= __("In Game:") ?> <strong style="color:var(--lfg-blue);">#${myActiveChar.LobbyID}</strong></span>
+                            <button class="dl-btn danger-btn" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; margin: 0; line-height: 1.1; text-shadow: none; border-color: #ff4444;" onclick="leaveCurrentGroup()"><i class="fas fa-sign-out-alt"></i> <?= __("Leave Group") ?></button>
                         </div>
                     `;
                 } else {
                     syncHtml += `
                         <div style="font-size:0.75em; color:#aaa; margin-top:5px; border-top:1px dashed rgba(255,255,255,0.05); padding-top:4px;">
-                            Online in Lobby: <strong style="color:var(--lfg-blue);">${myActiveChar.LobbyID !== null ? '#' + myActiveChar.LobbyID : 'Connecting'}</strong>
+                            <?= __('Online in Lobby:') ?> <strong style="color:var(--lfg-blue);">${myActiveChar.LobbyID !== null ? '#' + myActiveChar.LobbyID : <?= json_encode(__('Connecting'), JSON_UNESCAPED_UNICODE) ?>}</strong>
                         </div>
                     `;
                 }
@@ -222,19 +222,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         submitBtn.disabled = false;
                         submitBtn.classList.remove('disabled');
                         submitBtn.innerHTML = hasActiveListing 
-                            ? '<i class="fas fa-edit"></i> UPDATE LFG POST' 
-                            : '<i class="fas fa-plus-circle"></i> CREATE LFG POST';
+                            ? '<i class="fas fa-edit"></i> ' + <?= json_encode(__('UPDATE LFG POST'), JSON_UNESCAPED_UNICODE) ?> 
+                            : '<i class="fas fa-plus-circle"></i> ' + <?= json_encode(__("CREATE LFG POST"), JSON_UNESCAPED_UNICODE) ?>;
                     } else {
                         submitBtn.disabled = true;
                         submitBtn.classList.add('disabled');
-                        submitBtn.innerHTML = '<i class="fas fa-lock"></i> REQUIRES JOINABLE PARTY';
+                        submitBtn.innerHTML = '<i class="fas fa-lock"></i> ' + <?= json_encode(__('REQUIRES JOINABLE PARTY'), JSON_UNESCAPED_UNICODE) ?>;
                     }
                 }
             } else {
                 panel.innerHTML = `
                     <div style="color:#ffaa00; text-align:center; font-size:0.85em;">
-                        <i class="fas fa-exclamation-triangle"></i> CHARACTER OFFLINE<br>
-                        <span style="font-size:0.8em; color:#888;">Log in in-game to post / join.</span>
+                        <i class="fas fa-exclamation-triangle"></i> ${<?= json_encode(__('CHARACTER OFFLINE'), JSON_UNESCAPED_UNICODE) ?>}<br>
+                        <span style="font-size:0.8em; color:#888;">${<?= json_encode(__('Log in in-game to post / join.'), JSON_UNESCAPED_UNICODE) ?>}</span>
                     </div>
                 `;
 
@@ -243,11 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.classList.add('disabled');
-                    submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> CHARACTER OFFLINE';
+                    submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + <?= json_encode(__('CHARACTER OFFLINE'), JSON_UNESCAPED_UNICODE) ?>;
                 }
             }
         } catch (e) {
-            panel.innerHTML = '<span style="color:#ff4444;">SYNC FAILURE // CONFIG ERROR</span>';
+            panel.innerHTML = '<span style="color:#ff4444;">' + <?= json_encode(__("SYNC FAILURE // CONFIG ERROR"), JSON_UNESCAPED_UNICODE) ?> + '</span>';
         }
     }
 
@@ -293,18 +293,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         if (!myActiveChar) {
-            showAlert('You must be online on a character in-game to create an LFG post.', 'error');
+            showAlert(<?= json_encode(__('You must be online on a character in-game to create an LFG post.'), JSON_UNESCAPED_UNICODE) ?>, 'error');
             return;
         }
 
         if (!myActiveChar.inGame) {
-            showAlert('You must be inside an active joinable party to create an LFG post.', 'error');
+            showAlert(<?= json_encode(__('You must be inside an active joinable party to create an LFG post.'), JSON_UNESCAPED_UNICODE) ?>, 'error');
             return;
         }
 
         const btn = document.getElementById('submit-post-btn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> POSTING...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + <?= json_encode(__('Posting...'), JSON_UNESCAPED_UNICODE) ?>;
 
         const desc = document.getElementById('lfg-description').value;
         const bountyId = document.getElementById('lfg-bounty').value || null;
@@ -339,15 +339,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Refresh terminal feed instantly
                 pollLfgTerminal();
             } else {
-                showAlert(data.error || 'Failed to post LFG request.', 'error');
+                showAlert(data.error || <?= json_encode(__('Failed to post LFG request.'), JSON_UNESCAPED_UNICODE) ?>, 'error');
             }
         } catch (e) {
             showAlert('Connection error: ' + e.message, 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = hasActiveListing 
-                ? '<i class="fas fa-edit"></i> UPDATE LFG POST' 
-                : '<i class="fas fa-plus-circle"></i> CREATE LFG POST';
+                ? '<i class="fas fa-edit"></i> ' + <?= json_encode(__('UPDATE LFG POST'), JSON_UNESCAPED_UNICODE) ?> 
+                : '<i class="fas fa-plus-circle"></i> ' + <?= json_encode(__("CREATE LFG POST"), JSON_UNESCAPED_UNICODE) ?>;
         }
     }
 
@@ -394,8 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const submitBtn = document.getElementById('submit-post-btn');
         if (submitBtn && myActiveChar && myActiveChar.inGame) {
             submitBtn.innerHTML = hasActiveListing 
-                ? '<i class="fas fa-edit"></i> UPDATE LFG POST' 
-                : '<i class="fas fa-plus-circle"></i> CREATE LFG POST';
+                ? '<i class="fas fa-edit"></i> ' + <?= json_encode(__('UPDATE LFG POST'), JSON_UNESCAPED_UNICODE) ?> 
+                : '<i class="fas fa-plus-circle"></i> ' + <?= json_encode(__("CREATE LFG POST"), JSON_UNESCAPED_UNICODE) ?>;
         }
 
         // Pre-fill the form ONCE if they have an active post
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 3rem; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
                     <i class="fas fa-clipboard-list" style="font-size: 3rem; margin-bottom: 12px; color: var(--lfg-orange);"></i><br>
-                    NO ACTIVE COORDINATION POSTS FOUND
+                    <?= __("NO ACTIVE COORDINATION POSTS FOUND") ?>
                 </div>
             `;
             return;
@@ -466,9 +466,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (l.bounty_id && l.bounty_title) {
                 bountyHtml = `
                     <div class="bounty-glass-badge">
-                        <div class="bounty-badge-title"><i class="fas fa-crosshairs"></i> BOUNTY TARGET</div>
+                        <div class="bounty-badge-title"><i class="fas fa-crosshairs"></i> <?= __("BOUNTY TARGET") ?></div>
                         <strong style="color:#fff; font-size:0.85rem;">${escapeHtml(l.bounty_title)}</strong>
-                        <div style="font-size:0.7em; color:#aaa; margin-top:2px;">Reward: <span style="color:#ffaa00;">${escapeHtml(l.bounty_reward || 'Standard Payout')}</span></div>
+                        <div style="font-size:0.7em; color:#aaa; margin-top:2px;"><?= __("Reward:") ?> <span style="color:#ffaa00;">${escapeHtml(l.bounty_reward || <?= json_encode(__("Standard Payout"), JSON_UNESCAPED_UNICODE) ?>)}</span></div>
                     </div>
                 `;
             }
@@ -495,8 +495,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const passBadge = g.HasPassword 
-                    ? '<span class="c-badge private-badge" style="font-size:0.6rem; padding:1px 4px;"><i class="fas fa-lock"></i> PRIVATE</span>'
-                    : '<span class="c-badge lobby-badge" style="background:rgba(0, 255, 255, 0.1); border-color:var(--lfg-blue); color:var(--lfg-blue); font-size:0.6rem; padding:1px 4px;"><i class="fas fa-unlock"></i> OPEN</span>';
+                    ? '<span class="c-badge private-badge" style="font-size:0.6rem; padding:1px 4px;"><i class="fas fa-lock"></i> ' + <?= json_encode(__("PRIVATE"), JSON_UNESCAPED_UNICODE) ?> + '</span>'
+                    : '<span class="c-badge lobby-badge" style="background:rgba(0, 255, 255, 0.1); border-color:var(--lfg-blue); color:var(--lfg-blue); font-size:0.6rem; padding:1px 4px;"><i class="fas fa-unlock"></i> ' + <?= json_encode(__("OPEN"), JSON_UNESCAPED_UNICODE) ?> + '</span>';
 
                 let slotHtml = '';
                 for (let i = 0; i < g.MaxClients; i++) {
@@ -505,24 +505,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         const sArch = getArchetype(cClass);
                         slotHtml += `<span class="c-slot filled-${sArch.toLowerCase()}" title="${cClass}">${sArch}</span>`;
                     } else {
-                        slotHtml += `<span class="c-slot" title="Empty Slot">--</span>`;
+                        slotHtml += `<span class="c-slot" title="<?= htmlspecialchars(__("Empty Slot")) ?>">--</span>`;
                     }
                 }
 
                 gameHtml = `
                     <div style="background: rgba(0, 255, 255, 0.03); border: 1px solid rgba(0, 255, 255, 0.12); border-radius: 8px; padding: 12px; margin-top: 12px; margin-bottom: 12px; box-shadow: inset 0 0 10px rgba(0,255,255,0.02);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <strong style="color:#00ffc8; font-size:0.85rem; font-family:'Share Tech Mono', monospace; letter-spacing:0.5px;"><i class="fas fa-gamepad"></i> LIVE ROOM: "${escapeHtml(g.Name)}"</strong>
+                            <strong style="color:#00ffc8; font-size:0.85rem; font-family:'Share Tech Mono', monospace; letter-spacing:0.5px;"><i class="fas fa-gamepad"></i> <?= __("LIVE ROOM:") ?> "${escapeHtml(g.Name)}"</strong>
                             <span class="count-badge" style="background:rgba(0, 255, 200, 0.1); border-color:#00ffc8; color:#00ffc8; font-size:0.65rem; padding:1px 6px;">${g.Players}/${g.MaxClients}</span>
                         </div>
                         <div class="card-meta-row" style="margin-bottom: 8px; gap: 4px;">
-                            <span class="mode-badge mode-${g.Mode.toLowerCase()}" style="font-size:0.6rem; padding:1px 6px; border-radius:4px; font-weight:600;">${g.Mode === 'Normal' ? 'Extermination' : g.Mode}</span>
+                            <span class="mode-badge mode-${g.Mode.toLowerCase()}" style="font-size:0.6rem; padding:1px 6px; border-radius:4px; font-weight:600;">${g.Mode === 'Normal' ? <?= json_encode(__('Extermination'), JSON_UNESCAPED_UNICODE) ?> : g.Mode}</span>
                             <span class="c-badge lobby-badge" style="font-size:0.6rem; padding:1px 4px;">${g.Episode}</span>
                             <span class="c-badge lobby-badge" style="background:rgba(157,78,221,0.1); border-color:var(--lfg-purple); color:#d288ff; font-size:0.6rem; padding:1px 4px;">${g.Difficulty}</span>
                             ${levelBadge}
                             ${passBadge}
                         </div>
-                        <div style="font-size:0.65rem; color:#888; font-family:'Share Tech Mono', monospace; margin-bottom: 4px;">PARTY COMPOSITION:</div>
+                        <div style="font-size:0.65rem; color:#888; font-family:'Share Tech Mono', monospace; margin-bottom: 4px;"><?= __("PARTY COMPOSITION:") ?></div>
                         <div class="slot-badge-container" style="margin: 0; padding: 4px 8px;">
                             ${slotHtml}
                         </div>
@@ -533,17 +533,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // 4. Action Buttons logic at the bottom right
             let actionBtn = '';
             if (parseInt(l.account_id) === parseInt(myAccountId)) {
-                actionBtn = `<button class="dl-btn danger-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteLfgPost(${l.id})"><i class="fas fa-trash-alt"></i> CLOSE POST</button>`;
+                actionBtn = `<button class="dl-btn danger-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="deleteLfgPost(${l.id})"><i class="fas fa-trash-alt"></i> <?= __("CLOSE POST") ?></button>`;
             } else if (l.game_id !== null && myActiveChar) {
                 if (lobbyFull) {
-                    actionBtn = `<button class="dl-btn disabled" style="padding: 4px 10px; font-size: 0.75rem; color:#888; border-color:#555;"><i class="fas fa-users"></i> FULL</button>`;
+                    actionBtn = `<button class="dl-btn disabled" style="padding: 4px 10px; font-size: 0.75rem; color:#888; border-color:#555;"><i class="fas fa-users"></i> <?= __("FULL") ?></button>`;
                 } else if (levelLocked) {
-                    actionBtn = `<button class="dl-btn disabled" style="padding: 4px 10px; font-size: 0.75rem; color:#ff4444; border-color:#ff4444;"><i class="fas fa-lock"></i> LV LOCKED</button>`;
+                    actionBtn = `<button class="dl-btn disabled" style="padding: 4px 10px; font-size: 0.75rem; color:#ff4444; border-color:#ff4444;"><i class="fas fa-lock"></i> <?= __("LV LOCKED") ?></button>`;
                 } else {
-                    actionBtn = `<button class="dl-btn success-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="joinActiveGame(${l.game_id})"><i class="fas fa-rocket"></i> WARP DIRECT</button>`;
+                    actionBtn = `<button class="dl-btn success-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="joinActiveGame(${l.game_id})"><i class="fas fa-rocket"></i> <?= __("WARP DIRECT") ?></button>`;
                 }
             } else if (!myActiveChar) {
-                actionBtn = `<button class="dl-btn disabled" style="padding: 4px 10px; font-size: 0.75rem;"><i class="fas fa-sign-in-alt"></i> OFFLINE</button>`;
+                actionBtn = `<button class="dl-btn disabled" style="padding: 4px 10px; font-size: 0.75rem;"><i class="fas fa-sign-in-alt"></i> <?= __("OFFLINE") ?></button>`;
             }
 
             const arch = getArchetype(l.class);
@@ -573,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     ${seekHtml ? `
                         <div class="seek-container">
-                            <span class="seek-label">SEEKING:</span>
+                            <span class="seek-label"><?= __("SEEKING:") ?></span>
                             ${seekHtml}
                         </div>
                     ` : ''}
@@ -645,7 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                showAlert('🚀 TELEPORT MATRIX ACTIVE! ' + data.message, 'success');
+                showAlert(<?= json_encode(__('🚀 TELEPORT MATRIX ACTIVE! '), JSON_UNESCAPED_UNICODE) ?> + data.message, 'success');
             } else {
                 showAlert('<?= addslashes(__('Warp rejected by game gateway: ')) ?>' + (data.error || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
             }

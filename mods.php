@@ -1,5 +1,5 @@
 <?php
-$page_title = 'Mods - PSOBB Private Server';
+$page_title = __('Mods - PSOBB Private Server');
 $current_page = 'mods';
 include 'includes/header.php';
 ?>
@@ -159,7 +159,7 @@ async function fetchMods() {
         list.innerHTML = '';
         
         if (data.length === 0) {
-            list.innerHTML = '<p>No mods approved yet.</p>';
+            list.innerHTML = '<p>' + <?= json_encode(__('No mods approved yet.'), JSON_UNESCAPED_UNICODE) ?> + '</p>';
             return;
         }
 

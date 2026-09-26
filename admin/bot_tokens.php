@@ -5,7 +5,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     header("Location: ../login.php");
     exit;
 }
-$page_title = "Bot Token Manager — Admin";
+$page_title = __("Bot Token Manager — Admin");
 $current_page = 'bot_tokens';
 include '../includes/header.php';
 ?>
@@ -128,7 +128,7 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 
 <main class="token-page">
     <div class="page-header">
-        <h1><i class="fas fa-key"></i> Bot Token Manager</h1>
+        <h1><i class="fas fa-key"></i> <?= __("Bot Token Manager") ?></h1>
     </div>
 
     <!-- Admin Subnav & Language Switcher -->
@@ -143,7 +143,7 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
         <div class="form-row">
             <div class="form-group">
                 <label><?= __("Token Name / Label") ?></label>
-                <input type="text" id="token-name" placeholder="e.g. Discord Bot – Production" maxlength="80">
+                <input type="text" id="token-name" placeholder="<?= htmlspecialchars(__("e.g. Discord Bot – Production")) ?>" maxlength="80">
             </div>
             <div class="form-group" style="max-width: 160px;">
                 <label><?= __("Expires in (days)") ?></label>
@@ -178,7 +178,7 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
                 </tr>
             </thead>
             <tbody id="token-tbody">
-                <tr><td colspan="7" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+                <tr><td colspan="7" class="empty-state"><i class="fas fa-spinner fa-spin"></i> <?= __("Loading…") ?></td></tr>
             </tbody>
         </table>
     </div>
@@ -197,9 +197,9 @@ function api(action, body = null) {
 }
 
 function badge(tok) {
-    if (tok.revoked)    return `<span class="badge badge-revoked"><i class="fas fa-ban"></i> Revoked</span>`;
-    if (tok.is_expired) return `<span class="badge badge-expired"><i class="fas fa-clock"></i> Expired</span>`;
-    return `<span class="badge badge-active"><i class="fas fa-circle"></i> Active</span>`;
+    if (tok.revoked)    return `<span class="badge badge-revoked"><i class="fas fa-ban"></i> <?= __("Revoked") ?></span>`;
+    if (tok.is_expired) return `<span class="badge badge-expired"><i class="fas fa-clock"></i> <?= __("Expired") ?></span>`;
+    return `<span class="badge badge-active"><i class="fas fa-circle"></i> <?= __("Active") ?></span>`;
 }
 
 function fmt(dt) {
@@ -210,7 +210,7 @@ function fmt(dt) {
 function render(tokens) {
     const tbody = document.getElementById('token-tbody');
     if (!tokens.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><i class="fas fa-key"></i>No tokens yet. Create one above.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><i class="fas fa-key"></i><?= __("No tokens yet. Create one above.") ?></td></tr>`;
         return;
     }
     tbody.innerHTML = tokens.map(tok => {
@@ -224,12 +224,12 @@ function render(tokens) {
             <td><span class="mono">${esc(tok.created_by)}</span></td>
             <td>${fmt(tok.created_at)}</td>
             <td>${fmt(tok.last_used_at)}</td>
-            <td>${tok.expires_at ? fmt(tok.expires_at) : '<span style="color:#4b5563">Never</span>'}</td>
+            <td>${tok.expires_at ? fmt(tok.expires_at) : '<span style="color:#4b5563"><?= __("Never") ?></span>'}</td>
             <td>
                 <div class="action-btns">
-                    <button class="btn-revoke" ${disabled ? 'disabled title="Already inactive"' : ''}
+                    <button class="btn-revoke" ${disabled ? 'disabled title="<?= htmlspecialchars(__("Already inactive")) ?>"' : ''}
                         onclick="revokeToken(${tok.id})">
-                        <i class="fas fa-ban"></i> Revoke
+                        <i class="fas fa-ban"></i> <?= __("Revoke") ?>
                     </button>
                     <button class="btn-delete" onclick="deleteToken(${tok.id})">
                         <i class="fas fa-trash"></i>
@@ -247,21 +247,21 @@ function esc(s) {
 async function loadTokens() {
     const data = await api('list');
     if (data.tokens) render(data.tokens);
-    else toast(data.error ?? 'Failed to load tokens', 'error');
+    else toast(data.error ?? <?= json_encode(__('Failed to load tokens'), JSON_UNESCAPED_UNICODE) ?>, 'error');
 }
 
 async function createToken() {
     const name = document.getElementById('token-name').value.trim();
     const days = document.getElementById('token-expires').value.trim();
-    if (!name) { toast('Token name is required', 'error'); return; }
+    if (!name) { toast(<?= json_encode(__('Token name is required'), JSON_UNESCAPED_UNICODE) ?>, 'error'); return; }
 
     const btn = document.getElementById('btn-create');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + <?= json_encode(__('Generating…'), JSON_UNESCAPED_UNICODE) ?>;
 
     const data = await api('create', { name, expires_days: days ? parseInt(days) : null });
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Token';
+    btn.innerHTML = '<i class="fas fa-bolt"></i> ' + <?= json_encode(__('Generate Token'), JSON_UNESCAPED_UNICODE) ?>;
 
     if (data.token) {
         // Show reveal banner
@@ -273,32 +273,32 @@ async function createToken() {
         document.getElementById('token-name').value = '';
         document.getElementById('token-expires').value = '';
         loadTokens();
-        toast('Token created — copy it now!', 'success');
+        toast(<?= json_encode(__('Token created — copy it now!'), JSON_UNESCAPED_UNICODE) ?>, 'success');
     } else {
-        toast(data.error ?? 'Failed to create token', 'error');
+        toast(data.error ?? <?= json_encode(__('Failed to create token'), JSON_UNESCAPED_UNICODE) ?>, 'error');
     }
 }
 
 async function revokeToken(id) {
     if (!confirm('<?= addslashes(__('Revoke this token? It will stop working immediately.')) ?>')) return;
     const data = await api('revoke', { id });
-    if (data.success) { toast('Token revoked', 'success'); loadTokens(); }
-    else toast(data.error ?? 'Failed to revoke', 'error');
+    if (data.success) { toast(<?= json_encode(__('Token revoked'), JSON_UNESCAPED_UNICODE) ?>, 'success'); loadTokens(); }
+    else toast(data.error ?? <?= json_encode(__('Failed to revoke'), JSON_UNESCAPED_UNICODE) ?>, 'error');
 }
 
 async function deleteToken(id) {
     if (!confirm('<?= addslashes(__('Permanently delete this token record? This cannot be undone.')) ?>')) return;
     const data = await api('delete', { id });
-    if (data.success) { toast('Token deleted', 'success'); loadTokens(); }
-    else toast(data.error ?? 'Failed to delete', 'error');
+    if (data.success) { toast(<?= json_encode(__('Token deleted'), JSON_UNESCAPED_UNICODE) ?>, 'success'); loadTokens(); }
+    else toast(data.error ?? <?= json_encode(__('Failed to delete'), JSON_UNESCAPED_UNICODE) ?>, 'error');
 }
 
 function copyToken() {
     const text = document.getElementById('token-raw').textContent;
     navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copy-btn');
-        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> Copy', 2000);
+        btn.innerHTML = '<i class="fas fa-check"></i> ' + <?= json_encode(__('Copied!'), JSON_UNESCAPED_UNICODE) ?>;
+        setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> ' + <?= json_encode(__('Copy'), JSON_UNESCAPED_UNICODE) ?>, 2000);
     });
 }
 

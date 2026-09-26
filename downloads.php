@@ -1,5 +1,6 @@
 <?php
-$page_title = 'Downloads - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Downloads - PSOBB Private Server');
 $current_page = 'downloads';
 include 'includes/header.php';
 ?>

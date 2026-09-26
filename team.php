@@ -1,5 +1,5 @@
 <?php
-$page_title = 'Team Management - PSOBB Private Server';
+$page_title = __('Team Management - PSOBB Private Server');
 $current_page = 'team';
 include 'includes/header.php';
 ?>
@@ -178,7 +178,7 @@ async function fetchTeamInfo() {
 
     } catch (e) {
         document.getElementById('team-loading').style.display = 'block';
-        document.getElementById('team-loading').innerHTML = '<p style="color:#ff4444;">Connection error: ' + e.message + '</p>';
+        document.getElementById('team-loading').innerHTML = '<p style="color:#ff4444;">' + <?= json_encode(__('Connection error: '), JSON_UNESCAPED_UNICODE) ?> + e.message + '</p>';
     }
 }
 
@@ -203,7 +203,7 @@ function renderNextUnlocks(unspentPoints, unlockedKeys) {
     });
 
     if (goals.length === 0) {
-        list.innerHTML = '<p style="color:#00C851;">All possible team rewards have been unlocked!</p>';
+        list.innerHTML = '<p style="color:#00C851;">' + <?= json_encode(__('All possible team rewards have been unlocked!'), JSON_UNESCAPED_UNICODE) ?> + '</p>';
         return;
     }
 

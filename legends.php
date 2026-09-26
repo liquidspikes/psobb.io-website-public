@@ -1,5 +1,6 @@
 <?php
-$page_title = 'Wall of Legends - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Wall of Legends - PSOBB Private Server');
 $current_page = 'stats';
 include 'includes/header.php';
 require_once 'api/db.php';

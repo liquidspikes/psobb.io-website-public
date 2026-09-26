@@ -1,5 +1,6 @@
 <?php
-$page_title = 'Reset Password - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Reset Password - PSOBB Private Server');
 include 'includes/header.php';
 
 $token = preg_replace('/[^a-f0-9]/i', '', trim($_GET['token'] ?? ''));

@@ -1,5 +1,6 @@
 <?php
-$page_title = 'Forgot Password - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Forgot Password - PSOBB Private Server');
 include 'includes/header.php';
 ?>
 

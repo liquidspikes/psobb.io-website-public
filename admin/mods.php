@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
         $stmt = $db->prepare("UPDATE mods SET status = 'approved' WHERE mod_id = :id");
         $stmt->bindValue(':id', $mod_id);
         $stmt->execute();
-        $message = "Mod approved successfully.";
+        $message = __('Mod approved successfully.');
     } elseif ($action === 'reject' || $action === 'delete') {
         // Fetch to delete files
         $stmt = $db->prepare("SELECT file_path, image_path FROM mods WHERE mod_id = :id");
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
         $stmt = $db->prepare("DELETE FROM mods WHERE mod_id = :id");
         $stmt->bindValue(':id', $mod_id);
         $stmt->execute();
-        $message = "Mod rejected and deleted.";
+        $message = __('Mod rejected and deleted.');
     }
 }
 
@@ -42,7 +42,7 @@ while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
     $mods[] = $row;
 }
 
-$page_title = "Manage Mods - Admin";
+$page_title = __('Manage Mods - Admin');
 include '../includes/header.php'; 
 ?>
 

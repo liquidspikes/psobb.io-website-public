@@ -1,5 +1,6 @@
 <?php
-$page_title = 'Stats - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Stats - PSOBB Private Server');
 $current_page = 'stats';
 include 'includes/header.php';
 ?>

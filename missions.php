@@ -11,7 +11,7 @@ require_once __DIR__ . '/api/functions.php';
 start_secure_session();
 
 // Global page variables mapped before headers
-$page_title = 'Hunters Guild - Bounty Board';
+$page_title = __('Hunters Guild - Bounty Board');
 $current_page = 'missions';
 include 'includes/header.php';
 require_once 'api/db.php';

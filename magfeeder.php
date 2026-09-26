@@ -1,5 +1,6 @@
 <?php
-$page_title = 'MAG Feeder - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('MAG Feeder - PSOBB Private Server');
 $current_page = 'magfeeder';
 include 'includes/header.php';
 ?>

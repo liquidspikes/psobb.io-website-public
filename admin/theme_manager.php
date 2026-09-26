@@ -367,9 +367,9 @@ $discordServer = $config['discord_server'] ?? $config['discord_invite_url'] ?? g
                     </div>
 
                     <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.75rem;">
-                        <span style="background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; border-left:2px solid var(--pso-blue);">Section ID: Skyly</span>
-                        <span style="background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; border-left:2px solid var(--pso-purple);">Class: HUmar</span>
-                        <span style="background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; border-left:2px solid var(--pso-orange);">Status: Online</span>
+                        <span style="background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; border-left:2px solid var(--pso-blue);"><?= __('Section ID: Skyly') ?></span>
+                        <span style="background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; border-left:2px solid var(--pso-purple);"><?= __('Class: HUmar') ?></span>
+                        <span style="background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; border-left:2px solid var(--pso-orange);"><?= __('Status: Online') ?></span>
                     </div>
                 </div>
 

@@ -1165,10 +1165,10 @@ function renderCrewCards(crewList) {
             <div class="crew-edit-header">
                 <div class="member-badge">
                     <i class="${escapeHtml(member.icon || 'fas fa-user-astronaut')}"></i>
-                    <strong>Member #${idx + 1}: ${escapeHtml(member.name || 'New Member')}</strong>
+                    <strong>${(window.__ ? window.__('Member #%s: %s', 'Member #' + (idx + 1) + ': ' + (member.name || 'New Member')) : 'Member #' + (idx + 1) + ': ' + (member.name || 'New Member')).replace('%s', idx + 1).replace('%s', escapeHtml(member.name || (window.__ ? window.__('New Member') : 'New Member')))}</strong>
                 </div>
                 <button type="button" class="btn-danger-sm btn-remove-crew" data-index="${idx}">
-                    <i class="fas fa-trash-alt"></i> Remove
+                    <i class="fas fa-trash-alt"></i> <?= __('Remove') ?>
                 </button>
             </div>
             <div class="crew-edit-grid">
@@ -1178,21 +1178,21 @@ function renderCrewCards(crewList) {
                 </div>
                 <div>
                     <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Role') ?></label>
-                    <input type="text" class="field-input crew-role" value="${escapeHtml(member.role || '')}" placeholder="e.g. Root Administrator">
+                    <input type="text" class="field-input crew-role" value="${escapeHtml(member.role || '')}" placeholder="<?= htmlspecialchars(__("e.g. Root Administrator")) ?>">
                 </div>
                 <div>
                     <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Specialty / Focus') ?></label>
-                    <input type="text" class="field-input crew-specialty" value="${escapeHtml(member.specialty || '')}" placeholder="e.g. Core Backend">
+                    <input type="text" class="field-input crew-specialty" value="${escapeHtml(member.specialty || '')}" placeholder="<?= htmlspecialchars(__("e.g. Core Backend")) ?>">
                 </div>
                 <div>
                     <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Card Style / Color') ?></label>
                     <select class="field-select crew-theme">
-                        <option value="admin-card" ${themeClass === 'admin-card' ? 'selected' : ''}>Cyan (Admin / Root)</option>
-                        <option value="founder-card" ${themeClass === 'founder-card' ? 'selected' : ''}>Neon Pink (Founder / Muse)</option>
-                        <option value="dev-card" ${themeClass === 'dev-card' ? 'selected' : ''}>Emerald (Developer / Pioneer)</option>
-                        <option value="vibe-card" ${themeClass === 'vibe-card' ? 'selected' : ''}>Amber Gold (Community / Vibe)</option>
-                        <option value="mod-card" ${themeClass === 'mod-card' ? 'selected' : ''}>Sky Blue (Moderation / Staff)</option>
-                        <option value="ai-card" ${themeClass === 'ai-card' ? 'selected' : ''}>Purple (AI / Bot)</option>
+                        <option value="admin-card" ${themeClass === 'admin-card' ? 'selected' : ''}><?= __("Cyan (Admin / Root)") ?></option>
+                        <option value="founder-card" ${themeClass === 'founder-card' ? 'selected' : ''}><?= __("Neon Pink (Founder / Muse)") ?></option>
+                        <option value="dev-card" ${themeClass === 'dev-card' ? 'selected' : ''}><?= __("Emerald (Developer / Pioneer)") ?></option>
+                        <option value="vibe-card" ${themeClass === 'vibe-card' ? 'selected' : ''}><?= __("Amber Gold (Community / Vibe)") ?></option>
+                        <option value="mod-card" ${themeClass === 'mod-card' ? 'selected' : ''}><?= __("Sky Blue (Moderation / Staff)") ?></option>
+                        <option value="ai-card" ${themeClass === 'ai-card' ? 'selected' : ''}><?= __("Purple (AI / Bot)") ?></option>
                     </select>
                 </div>
                 <div>
@@ -1212,7 +1212,7 @@ function renderCrewCards(crewList) {
             </div>
             <div>
                 <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:3px;"><?= __('Biography / Description') ?></label>
-                <textarea class="field-textarea crew-bio" style="min-height:60px;" placeholder="Short bio or welcome message...">${escapeHtml(member.bio || '')}</textarea>
+                <textarea class="field-textarea crew-bio" style="min-height:60px;" placeholder="<?= htmlspecialchars(__("Short bio or welcome message...")) ?>">${escapeHtml(member.bio || '')}</textarea>
             </div>
         `;
         crewContainer.appendChild(card);

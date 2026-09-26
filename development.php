@@ -1,5 +1,6 @@
 <?php
-$page_title = 'Development Resources - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Development Resources - PSOBB Private Server');
 $current_page = 'development';
 include 'includes/header.php';
 ?>
@@ -155,6 +156,11 @@ include 'includes/header.php';
                 <a href="/quest-editor" class="resource-card">
                     <h3><i class="fas fa-map-marked-alt"></i> <?= __('Quest Editor') ?></h3>
                     <p><?= __('Web-based interface for visualizing, modifying, and creating custom quests, NPC spawns, and map layouts.') ?></p>
+                </a>
+
+                <a href="/decryption.php" class="resource-card">
+                    <h3><i class="fas fa-microchip"></i> <?= __('Decompilation Matrix') ?></h3>
+                    <p><?= __('Live telemetry from our autonomous decompilation pipeline as it byte-matches C++ source against original MSVC 2003 machine code.') ?></p>
                 </a>
             </div>
         </div>

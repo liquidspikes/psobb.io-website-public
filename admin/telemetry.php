@@ -5,7 +5,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     header("Location: ../login.php");
     exit;
 }
-$page_title = "Live Telemetry Debug";
+$page_title = __('Live Telemetry Debug') . ' - ' . get_server_name();
 include '../includes/header.php'; 
 
 // Fetch Live Game State

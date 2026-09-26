@@ -6,7 +6,8 @@
  * If logged in, renders the Player Dashboard which provides access to Account Settings, 
  * Character Management (Bank Swap, Section ID), and Discord Integration links.
  */
-$page_title = 'Login - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Login - PSOBB Private Server');
 $current_page = 'login';
 include 'includes/header.php';
 require_once __DIR__ . '/includes/portal/modules.php';
@@ -73,7 +74,7 @@ if (isset($_SESSION['user']['username'])) {
                     <label for="captcha"><?= __('Security Check') ?></label>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <img id="captcha-img" src="api/captcha.php" alt="CAPTCHA"
-                            style="cursor:pointer; border:1px solid #444; height:40px;" title="Click to reload"
+                            style="cursor:pointer; border:1px solid #444; height:40px;" title="<?= htmlspecialchars(__('Click to reload')) ?>"
                             onclick="this.src='api/captcha.php?'+Math.random()">
                         <input type="text" id="captcha" name="captcha" placeholder="<?= __('Enter code') ?>"
                             style="width: 120px;">

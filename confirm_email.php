@@ -6,10 +6,10 @@
  * Activates and links the email to the user's game account (for legacy accounts
  * linking for the first time or users changing their email address).
  */
-$page_title = 'Confirm Recovery Email - PSOBB Private Server';
+require_once __DIR__ . '/api/config.php';
+$page_title = __('Confirm Recovery Email - PSOBB Private Server');
 include 'includes/header.php';
 
-require_once 'api/config.php';
 require_once 'api/db.php';
 
 $token = preg_replace('/[^a-f0-9]/i', '', trim($_GET['token'] ?? ''));

@@ -5,7 +5,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     header("Location: ../login.php");
     exit;
 }
-$page_title = "Special Deliveries — Admin";
+$page_title = __("Special Deliveries — Admin");
 $current_page = 'special_deliveries';
 include '../includes/header.php';
 ?>
@@ -203,7 +203,7 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 
 <main class="sd-page">
     <div class="page-header">
-        <h1><i class="fas fa-gift"></i> Special Deliveries</h1>
+        <h1><i class="fas fa-gift"></i> <?= __("Special Deliveries") ?></h1>
     </div>
 
     <!-- Admin Subnav & Language Switcher -->
@@ -214,150 +214,150 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 
     <!-- Create Form -->
     <div class="create-card">
-        <h2><i class="fas fa-plus-circle"></i> Create Delivery</h2>
+        <h2><i class="fas fa-plus-circle"></i> <?= __("Create Delivery") ?></h2>
         <div class="form-grid">
             <div class="form-group">
-                <label>Player Username</label>
+                <label><?= __("Player Username") ?></label>
                 <div class="item-search-wrap">
-                    <input type="text" id="sd-username" placeholder="Search username…" autocomplete="off">
+                    <input type="text" id="sd-username" placeholder="<?= htmlspecialchars(__("Search username…")) ?>" autocomplete="off">
                     <div class="item-search-results" id="sd-user-results"></div>
                 </div>
             </div>
             <div class="form-group">
-                <label>Item Display Name</label>
-                <input type="text" id="sd-item-name" placeholder="e.g. Dual Bird +21 0/0/0/70" maxlength="80">
+                <label><?= __("Item Display Name") ?></label>
+                <input type="text" id="sd-item-name" placeholder="<?= htmlspecialchars(__("e.g. Dual Bird +21 0/0/0/70")) ?>" maxlength="80">
             </div>
 
             <!-- Item Search -->
             <div class="form-group full">
-                <label>Search Item</label>
+                <label><?= __("Search Item") ?></label>
                 <div class="item-search-wrap">
-                    <input type="text" id="sd-item-search" placeholder="Type item name to search… (e.g. Dual Bird, Cannon Rouge)" autocomplete="off">
+                    <input type="text" id="sd-item-search" placeholder="<?= htmlspecialchars(__("Type item name to search… (e.g. Dual Bird, Cannon Rouge)")) ?>" autocomplete="off">
                     <div class="item-search-results" id="sd-search-results"></div>
                 </div>
-                <span class="form-hint">Search selects the item code. Then use the attribute builder below to set grind and stats.</span>
+                <span class="form-hint"><?= __("Search selects the item code. Then use the attribute builder below to set grind and stats.") ?></span>
             </div>
 
             <!-- Item String -->
             <div class="form-group full">
-                <label>Item String <span style="color:#4b5563;font-weight:400;text-transform:none;font-size:.72rem">— auto-filled by search + builder, or type manually</span></label>
-                <input type="text" id="sd-item-string" placeholder='e.g. "Photon Drop x3" or "004B0115 0/0/0/70/0"'>
-                <span class="form-hint">Weapons: <code style="color:#fb923c">XXXXXX[GG] N/AB/M/D/H</code> &nbsp;|&nbsp; Armor: <code style="color:#fb923c">XXXXXX +Ndef +Nevp</code> &nbsp;|&nbsp; Tools: item name or <code style="color:#fb923c">Disk:Megid Lv.15</code> &nbsp;|&nbsp; Meseta: <code style="color:#fb923c">50000 Meseta</code></span>
+                <label><?= __("Item String") ?> <span style="color:#4b5563;font-weight:400;text-transform:none;font-size:.72rem">— <?= __("auto-filled by search + builder, or type manually") ?></span></label>
+                <input type="text" id="sd-item-string" placeholder='<?= htmlspecialchars(__("e.g. \"Photon Drop x3\" or \"004B0115 0/0/0/70/0\"")) ?>'>
+                <span class="form-hint"><?= __("Weapons:") ?> <code style="color:#fb923c">XXXXXX[GG] N/AB/M/D/H</code> &nbsp;|&nbsp; <?= __("Armor:") ?> <code style="color:#fb923c">XXXXXX +Ndef +Nevp</code> &nbsp;|&nbsp; <?= __("Tools:") ?> <?= __("item name or") ?> <code style="color:#fb923c">Disk:Megid Lv.15</code> &nbsp;|&nbsp; <?= __("Meseta:") ?> <code style="color:#fb923c">50000 Meseta</code></span>
             </div>
 
             <!-- Attribute Builder (shown after item selected) -->
             <div class="form-group full" id="attr-builder-wrap" style="display:none;">
-                <label id="attr-builder-label">Builder</label>
+                <label id="attr-builder-label"><?= __("Builder") ?></label>
 
                 <!-- WEAPON: grind + 5 elements -->
                 <div class="attr-builder visible" id="builder-weapon" style="display:none;">
-                    <div class="attr-row"><label>Grind</label>    <input type="range" id="ab-grind" min="0" max="30" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-grind-v">0</span></div>
-                    <div class="attr-row"><label>Native</label>   <input type="range" id="ab-n"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-n-v">0</span></div>
-                    <div class="attr-row"><label>ABeast</label>   <input type="range" id="ab-ab" min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-ab-v">0</span></div>
-                    <div class="attr-row"><label>Machine</label>  <input type="range" id="ab-m"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-m-v">0</span></div>
-                    <div class="attr-row"><label>Dark</label>     <input type="range" id="ab-d"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-d-v">0</span></div>
-                    <div class="attr-row"><label>Hit</label>      <input type="range" id="ab-h"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-h-v">0</span></div>
-                    <div class="attr-preview"><span id="ab-preview-weapon">—</span><button class="btn-apply-attrs" onclick="applyAttrs()"><i class="fas fa-check"></i> Apply</button></div>
+                    <div class="attr-row"><label><?= __("Grind") ?></label>    <input type="range" id="ab-grind" min="0" max="30" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-grind-v">0</span></div>
+                    <div class="attr-row"><label><?= __("Native") ?></label>   <input type="range" id="ab-n"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-n-v">0</span></div>
+                    <div class="attr-row"><label><?= __("ABeast") ?></label>   <input type="range" id="ab-ab" min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-ab-v">0</span></div>
+                    <div class="attr-row"><label><?= __("Machine") ?></label>  <input type="range" id="ab-m"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-m-v">0</span></div>
+                    <div class="attr-row"><label><?= __("Dark") ?></label>     <input type="range" id="ab-d"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-d-v">0</span></div>
+                    <div class="attr-row"><label><?= __("Hit") ?></label>      <input type="range" id="ab-h"  min="0" max="100" value="0" oninput="updatePreview()"><span class="attr-val" id="ab-h-v">0</span></div>
+                    <div class="attr-preview"><span id="ab-preview-weapon">—</span><button class="btn-apply-attrs" onclick="applyAttrs()"><i class="fas fa-check"></i> <?= __("Apply") ?></button></div>
                 </div>
 
                 <!-- ARMOR / SHIELD: slots + def bonus + evp bonus -->
                 <div class="attr-builder visible" id="builder-armor" style="display:none;">
                     <div class="attr-row">
-                        <label>Slots</label>
+                        <label><?= __("Slots") ?></label>
                         <input type="range" id="ab-slots" min="0" max="4" value="0" oninput="updatePreview()">
                         <span class="attr-val" id="ab-slots-v">0</span>
                     </div>
                     <div class="attr-row">
-                        <label>DEF +</label>
+                        <label><?= __("DEF +") ?></label>
                         <input type="range" id="ab-def" min="0" max="200" value="0" oninput="updatePreview()">
                         <span class="attr-val" id="ab-def-v">0</span>
                     </div>
                     <div class="attr-row">
-                        <label>EVP +</label>
+                        <label><?= __("EVP +") ?></label>
                         <input type="range" id="ab-evp" min="0" max="200" value="0" oninput="updatePreview()">
                         <span class="attr-val" id="ab-evp-v">0</span>
                     </div>
-                    <div class="attr-preview"><span id="ab-preview-armor">—</span><button class="btn-apply-attrs" onclick="applyAttrs()"><i class="fas fa-check"></i> Apply</button></div>
+                    <div class="attr-preview"><span id="ab-preview-armor">—</span><button class="btn-apply-attrs" onclick="applyAttrs()"><i class="fas fa-check"></i> <?= __("Apply") ?></button></div>
                 </div>
 
                 <!-- UNIT: +/- modifier -->
                 <div class="attr-builder visible" id="builder-unit" style="display:none;">
                     <div class="attr-row">
-                        <label>Modifier</label>
+                        <label><?= __("Modifier") ?></label>
                         <select id="ab-unit-sign" onchange="updatePreview()" style="background:#0f172a;border:1px solid #374151;border-radius:5px;color:#f9fafb;padding:.25rem .5rem;font-size:.85rem;">
-                            <option value="+">+ (enhance)</option>
-                            <option value="-">− (reduce)</option>
+                            <option value="+"><?= __("+ (enhance)") ?></option>
+                            <option value="-"><?= __("− (reduce)") ?></option>
                         </select>
                         <input type="range" id="ab-unit-val" min="0" max="3" value="0" oninput="updatePreview()" style="flex:1;">
                         <span class="attr-val" id="ab-unit-val-v">0</span>
                     </div>
-                    <div class="attr-preview"><span id="ab-preview-unit">—</span><button class="btn-apply-attrs" onclick="applyAttrs()"><i class="fas fa-check"></i> Apply</button></div>
+                    <div class="attr-preview"><span id="ab-preview-unit">—</span><button class="btn-apply-attrs" onclick="applyAttrs()"><i class="fas fa-check"></i> <?= __("Apply") ?></button></div>
                 </div>
             </div>
 
             <!-- Material Bulk Builder -->
             <div class="form-group full">
                 <button class="mat-toggle" type="button" id="mat-toggle-btn" onclick="toggleMatPanel()">
-                    <i class="fas fa-cubes"></i> Material Bulk Builder
+                    <i class="fas fa-cubes"></i> <?= __("Material Bulk Builder") ?>
                 </button>
                 <div class="mat-panel" id="mat-panel">
                     <div class="mat-grid">
                         <div class="mat-row">
-                            <label>&#x1F4AA; Power</label>
+                            <label>&#x1F4AA; <?= __("Power") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-power',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-power" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-power',1)">+</button>
                         </div>
                         <div class="mat-row">
-                            <label>&#x1F9E0; Mind</label>
+                            <label>&#x1F9E0; <?= __("Mind") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-mind',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-mind" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-mind',1)">+</button>
                         </div>
                         <div class="mat-row">
-                            <label>&#x1F4A8; Evade</label>
+                            <label>&#x1F4A8; <?= __("Evade") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-evade',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-evade" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-evade',1)">+</button>
                         </div>
                         <div class="mat-row">
-                            <label>&#x2764;&#xFE0F; HP</label>
+                            <label>&#x2764;&#xFE0F; <?= __("HP") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-hp',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-hp" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-hp',1)">+</button>
                         </div>
                         <div class="mat-row">
-                            <label>&#x26A1; TP</label>
+                            <label>&#x26A1; <?= __("TP") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-tp',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-tp" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-tp',1)">+</button>
                         </div>
                         <div class="mat-row">
-                            <label>&#x1F6E1;&#xFE0F; Def</label>
+                            <label>&#x1F6E1;&#xFE0F; <?= __("Def") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-def',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-def" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-def',1)">+</button>
                         </div>
                         <div class="mat-row">
-                            <label>&#x2B50; Luck</label>
+                            <label>&#x2B50; <?= __("Luck") ?></label>
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-luck',-1)">&#8722;</button>
                             <input class="mat-qty" id="mat-luck" type="number" min="0" max="99" value="0" oninput="updateMatPreview()">
                             <button class="mat-stepper" type="button" onclick="stepMat('mat-luck',1)">+</button>
                         </div>
                     </div>
-                    <div class="mat-preview-str" id="mat-preview-str">Set quantities above then click Apply.</div>
+                    <div class="mat-preview-str" id="mat-preview-str"><?= __("Set quantities above then click Apply.") ?></div>
                     <button class="btn-build-mat" type="button" onclick="buildMaterials()">
-                        <i class="fas fa-arrow-down"></i> Apply to Item String
+                        <i class="fas fa-arrow-down"></i> <?= __("Apply to Item String") ?>
                     </button>
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Note to Player <span style="color:#4b5563">(optional)</span></label>
-                <input type="text" id="sd-note" placeholder="e.g. Thanks for bug testing!" maxlength="200">
+                <label><?= __("Note to Player") ?> <span style="color:#4b5563">(<?= __("optional") ?>)</span></label>
+                <input type="text" id="sd-note" placeholder="<?= htmlspecialchars(__("e.g. Thanks for bug testing!")) ?>" maxlength="200">
             </div>
         </div>
-        <button class="btn-create" id="btn-create-delivery"><i class="fas fa-paper-plane"></i> Queue Delivery</button>
+        <button class="btn-create" id="btn-create-delivery"><i class="fas fa-paper-plane"></i> <?= __("Queue Delivery") ?></button>
     </div>
 
     <!-- Table -->
@@ -365,18 +365,18 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
         <table>
             <thead>
                 <tr>
-                    <th>Player</th>
-                    <th>Item</th>
-                    <th>Note</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Redeemed</th>
-                    <th>By</th>
+                    <th><?= __("Player") ?></th>
+                    <th><?= __("Item") ?></th>
+                    <th><?= __("Note") ?></th>
+                    <th><?= __("Status") ?></th>
+                    <th><?= __("Created") ?></th>
+                    <th><?= __("Redeemed") ?></th>
+                    <th><?= __("By") ?></th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="sd-tbody">
-                <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+                <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> <?= __("Loading…") ?></td></tr>
             </tbody>
         </table>
     </div>
@@ -400,9 +400,9 @@ function fmt(dt) {
 }
 function badge(status) {
     const map = {
-        pending:  `<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span>`,
-        redeemed: `<span class="badge badge-redeemed"><i class="fas fa-check"></i> Redeemed</span>`,
-        revoked:  `<span class="badge badge-revoked"><i class="fas fa-ban"></i> Revoked</span>`,
+        pending:  `<span class="badge badge-pending"><i class="fas fa-clock"></i> <?= __("Pending") ?></span>`,
+        redeemed: `<span class="badge badge-redeemed"><i class="fas fa-check"></i> <?= __("Redeemed") ?></span>`,
+        revoked:  `<span class="badge badge-revoked"><i class="fas fa-ban"></i> <?= __("Revoked") ?></span>`,
     };
     return map[status] ?? `<span class="badge">${esc(status)}</span>`;
 }
@@ -410,7 +410,7 @@ function badge(status) {
 function render(rows) {
     const tbody = document.getElementById('sd-tbody');
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fas fa-gift"></i>No deliveries yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fas fa-gift"></i><?= __("No deliveries yet.") ?></td></tr>`;
         return;
     }
     tbody.innerHTML = rows.map(r => `<tr>
@@ -426,7 +426,7 @@ function render(rows) {
         <td><span class="mono" style="font-size:.78rem">${esc(r.created_by)}</span></td>
         <td>
             <button class="btn-revoke" ${r.status !== 'pending' ? 'disabled' : ''}
-                onclick="revoke(${r.id})"><i class="fas fa-times"></i> Revoke</button>
+                onclick="revoke(${r.id})"><i class="fas fa-times"></i> <?= __("Revoke") ?></button>
         </td>
     </tr>`).join('');
 }
@@ -434,7 +434,7 @@ function render(rows) {
 async function load() {
     const data = await api('list');
     if (data.deliveries) render(data.deliveries);
-    else toast(data.error ?? 'Failed to load', 'error');
+    else toast(data.error ?? <?= json_encode(__('Failed to load'), JSON_UNESCAPED_UNICODE) ?>, 'error');
 }
 
 async function create() {
@@ -444,31 +444,31 @@ async function create() {
     const admin_note  = document.getElementById('sd-note').value.trim();
 
     if (!username || !item_name || !item_string) {
-        toast('Username, item name, and item string are required', 'error'); return;
+        toast(<?= json_encode(__('Username, item name, and item string are required'), JSON_UNESCAPED_UNICODE) ?>, 'error'); return;
     }
 
     const btn = document.getElementById('btn-create-delivery');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Queuing…';
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + <?= json_encode(__('Queuing…'), JSON_UNESCAPED_UNICODE) ?>;
 
     const data = await api('create', { username, item_name, item_string, admin_note });
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Queue Delivery';
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + <?= json_encode(__('Queue Delivery'), JSON_UNESCAPED_UNICODE) ?>;
 
     if (data.success) {
-        toast(`Delivery queued for ${data.recipient_name}`, 'success');
+        toast(`<?= __('Delivery queued for %s') ?>`.replace('%s', data.recipient_name), 'success');
         ['sd-username','sd-item-name','sd-item-string','sd-note','sd-item-search'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('attr-builder-wrap').style.display = 'none';
         resetAllBuilders();
         load();
     } else {
-        toast(data.error ?? 'Failed to create delivery', 'error');
+        toast(data.error ?? <?= json_encode(__('Failed to create delivery'), JSON_UNESCAPED_UNICODE) ?>, 'error');
     }
 }
 
 async function revoke(id) {
     if (!confirm('<?= addslashes(__('Revoke this delivery? The player will no longer be able to claim it.')) ?>')) return;
     const data = await api('revoke', { id });
-    if (data.success) { toast('Delivery revoked', 'success'); load(); }
-    else toast(data.error ?? 'Failed', 'error');
+    if (data.success) { toast(<?= json_encode(__('Delivery revoked'), JSON_UNESCAPED_UNICODE) ?>, 'success'); load(); }
+    else toast(data.error ?? <?= json_encode(__('Failed'), JSON_UNESCAPED_UNICODE) ?>, 'error');
 }
 
 function toast(msg, type = 'info') {
@@ -500,7 +500,7 @@ async function doUserSearch(q) {
     const res  = await fetch(`/api/admin_user_search.php?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-        userResults.innerHTML = '<div class="user-result" style="color:#6b7280;cursor:default;">No users found</div>';
+        userResults.innerHTML = '<div class="user-result" style="color:#6b7280;cursor:default;">' + <?= json_encode(__("No users found"), JSON_UNESCAPED_UNICODE) ?> + '</div>';
     } else {
         userResults.innerHTML = data.map(u => `
             <div class="user-result" onmousedown="selectUser('${u.username.replace(/'/g,"\\'")}')">
@@ -542,7 +542,7 @@ async function doSearch(q) {
     const res  = await fetch(`/api/admin_item_search.php?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-        searchResults.innerHTML = '<div class="item-result" style="color:#6b7280;cursor:default;">No results</div>';
+        searchResults.innerHTML = '<div class="item-result" style="color:#6b7280;cursor:default;">' + <?= json_encode(__("No results"), JSON_UNESCAPED_UNICODE) ?> + '</div>';
     } else {
         searchResults.innerHTML = data.map(item => `
             <div class="item-result" onmousedown="selectItem('${item.code}','${item.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${item.cat}')">
@@ -578,19 +578,19 @@ function selectItem(code, name, cat) {
     selectedCode = code; selectedCat = cat;
 
     if (cat === 'Weapon') {
-        label.textContent = 'Grind & Attribute Builder';
+        label.textContent = <?= json_encode(__('Grind & Attribute Builder'), JSON_UNESCAPED_UNICODE) ?>;
         document.getElementById('builder-weapon').style.display = 'block';
         wrap.style.display = 'block';
         updatePreview();
     } else if (cat === 'Armor' || cat === 'Shield') {
-        label.textContent = cat === 'Shield' ? 'Shield Builder (DEF / EVP bonus)' : 'Armor Builder (Slots / DEF / EVP bonus)';
+        label.textContent = cat === 'Shield' ? <?= json_encode(__('Shield Builder (DEF / EVP bonus)'), JSON_UNESCAPED_UNICODE) ?> : <?= json_encode(__('Armor Builder (Slots / DEF / EVP bonus)'), JSON_UNESCAPED_UNICODE) ?>;
         // Shields don't have slots in PSO
         document.getElementById('ab-slots').closest('.attr-row').style.display = cat === 'Shield' ? 'none' : 'flex';
         document.getElementById('builder-armor').style.display = 'block';
         wrap.style.display = 'block';
         updatePreview();
     } else if (cat === 'Unit') {
-        label.textContent = 'Unit Modifier Builder';
+        label.textContent = <?= json_encode(__('Unit Modifier Builder'), JSON_UNESCAPED_UNICODE) ?>;
         document.getElementById('builder-unit').style.display = 'block';
         wrap.style.display = 'block';
         updatePreview();
@@ -664,7 +664,7 @@ function applyAttrs() {
             const nf = document.getElementById('sd-item-name');
             if (nf.value && !nf.value.includes('+')) nf.value = nf.value.trimEnd() + nameAppend;
         }
-        toast('Applied to item string ✓', 'success');
+        toast(<?= json_encode(__('Applied to item string ✓'), JSON_UNESCAPED_UNICODE) ?>, 'success');
     }
 }
 
@@ -704,8 +704,8 @@ function toggleMatPanel() {
     const btn   = document.getElementById('mat-toggle-btn');
     panel.classList.toggle('open');
     btn.innerHTML = panel.classList.contains('open')
-        ? '<i class="fas fa-cubes"></i> Material Bulk Builder <i class="fas fa-chevron-up" style="font-size:.7rem;margin-left:.3rem;"></i>'
-        : '<i class="fas fa-cubes"></i> Material Bulk Builder';
+        ? '<i class="fas fa-cubes"></i> <?= __("Material Bulk Builder") ?> <i class="fas fa-chevron-up" style="font-size:.7rem;margin-left:.3rem;"></i>'
+        : '<i class="fas fa-cubes"></i> <?= __("Material Bulk Builder") ?>';
 }
 
 function stepMat(id, delta) {
@@ -723,7 +723,7 @@ function updateMatPreview() {
     });
     const preview = document.getElementById('mat-preview-str');
     if (parts.length === 0) {
-        preview.textContent = 'Set quantities above then click Apply.';
+        preview.textContent = <?= json_encode(__('Set quantities above then click Apply.'), JSON_UNESCAPED_UNICODE) ?>;
         preview.style.color = '#6b7280';
     } else {
         preview.textContent = parts.join(', ');
@@ -742,14 +742,14 @@ function buildMaterials() {
         }
     });
     if (hexParts.length === 0) {
-        toast('Set at least one material quantity first', 'error');
+        toast(<?= json_encode(__('Set at least one material quantity first'), JSON_UNESCAPED_UNICODE) ?>, 'error');
         return;
     }
     document.getElementById('sd-item-string').value = hexParts.join(', ');
     // Auto-fill display name if blank
     const nf = document.getElementById('sd-item-name');
-    if (!nf.value) nf.value = 'Materials: ' + nameParts.join(', ');
-    toast('Material string applied ' + String.fromCodePoint(0x2713), 'success');
+    if (!nf.value) nf.value = '<?= __('Materials: %s') ?>'.replace('%s', nameParts.join(', '));
+    toast(<?= json_encode(__('Material string applied ✓'), JSON_UNESCAPED_UNICODE) ?>, 'success');
 }
 
 document.getElementById('btn-create-delivery').addEventListener('click', create);

@@ -11,7 +11,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Manual - psobb.io</title>
+    <title><?= __("Admin Manual - psobb.io") ?></title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap">
     <style>
@@ -93,14 +93,14 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 <body>
 
 <div id="search-container">
-    <input type="text" id="search-input" placeholder="Search thousands of commands, IDs, items..." autofocus>
+    <input type="text" id="search-input" placeholder="<?= htmlspecialchars(__("Search thousands of commands, IDs, items...")) ?>" autofocus>
 </div>
 
-<h1>Newserv Admin Manual</h1>
+<h1><?= __("Newserv Admin Manual") ?></h1>
 
-<h2>Console Commands</h2>
+<h2><?= __("Console Commands") ?></h2>
 
-<h3>User & Account Management</h3>
+<h3><?= __("User & Account Management") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>lookup &lt;USER&gt;</code></strong><br>Find account by name or client ID.<br><em>Example:</em> <code>lookup Sonic</code></li>
@@ -114,7 +114,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Server Control</h3>
+<h3><?= __("Server Control") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>announce &lt;MSG&gt;</code></strong><br>Scroll message to all players.</li>
@@ -126,7 +126,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Tournaments (Ep3)</h3>
+<h3><?= __("Tournaments (Ep3)") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>create-tournament &lt;NAME&gt; &lt;MAP&gt; &lt;RULES&gt;</code></strong><br>Create new tournament.</li>
@@ -137,9 +137,9 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h2>Chat Commands (In-Game)</h2>
+<h2><?= __("Chat Commands (In-Game)") ?></h2>
 
-<h3>General & Info</h3>
+<h3><?= __("General & Info") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>$help</code></strong>: List available commands.</li>
@@ -152,7 +152,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Moderation</h3>
+<h3><?= __("Moderation") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>$kick &lt;USER&gt;</code></strong>: Kick user.</li>
@@ -166,7 +166,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Character & Game State</h3>
+<h3><?= __("Character & Game State") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>$warp &lt;AREA&gt;</code> / <code>$warpme</code></strong>: Warp self to area.</li>
@@ -183,7 +183,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Quests & Events</h3>
+<h3><?= __("Quests & Events") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>$quest &lt;ID&gt;</code></strong>: Start quest.</li>
@@ -194,7 +194,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Episode 3 (Card Battle)</h3>
+<h3><?= __("Episode 3 (Card Battle)") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>$spectate</code> / <code>$spec&gt;</code></strong>: Spectator mode.</li>
@@ -206,7 +206,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h3>Technical / Debug</h3>
+<h3><?= __("Technical / Debug") ?></h3>
 <div class="command-block">
     <ul class="searchable">
         <li><strong><code>$arrow</code></strong>: Debug arrows.</li>
@@ -218,12 +218,12 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </ul>
 </div>
 
-<h2>Reference Lists</h2>
+<h2><?= __("Reference Lists") ?></h2>
 
-<h3>Section IDs</h3>
+<h3><?= __("Section IDs") ?></h3>
 <div class="command-block">
     <table class="searchable-table">
-        <tr><th>ID</th><th>Name</th><th>Abbrev</th></tr>
+        <tr><th><?= __("ID") ?></th><th><?= __("Name") ?></th><th><?= __("Abbrev") ?></th></tr>
         <tr><td>0</td><td>Viridia</td><td>Vir</td></tr>
         <tr><td>1</td><td>Greennill</td><td>Grn</td></tr>
         <tr><td>2</td><td>Skyly</td><td>Sky</td></tr>
@@ -237,16 +237,16 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     </table>
 </div>
 
-<h3>Lobby Events</h3>
+<h3><?= __("Lobby Events") ?></h3>
 <div class="command-block">
     <p class="searchable-text"><code>xmas</code>, <code>val</code>, <code>easter</code>, <code>hallo</code>, <code>sonic</code>, <code>newyear</code>, <code>summer</code>, <code>white</code>, <code>wedding</code>, <code>fall</code>, <code>s-spring</code>, <code>s-summer</code>, <code>spring</code></p>
 </div>
 
-<h3>Common Warp IDs (EP:AREA)</h3>
+<h3><?= __("Common Warp IDs (EP:AREA)") ?></h3>
 <div class="command-block">
     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
         <ul class="searchable">
-            <li><strong>Episode 1</strong></li>
+            <li><strong><?= __("Episode 1") ?></strong></li>
             <li>00: Pioneer 2</li>
             <li>01: Forest 1</li>
             <li>02: Forest 2</li>
@@ -260,7 +260,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
             <li>0F: Lobby</li>
         </ul>
         <ul class="searchable">
-            <li><strong>Episode 2</strong></li>
+            <li><strong><?= __("Episode 2") ?></strong></li>
             <li>00: Lab</li>
             <li>01: Temple Alpha</li>
             <li>03: Spaceship Alpha</li>
@@ -272,7 +272,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
             <li>11: Tower</li>
         </ul>
         <ul class="searchable">
-            <li><strong>Episode 4</strong></li>
+            <li><strong><?= __("Episode 4") ?></strong></li>
             <li>00: Pioneer 2</li>
             <li>01: Crater East</li>
             <li>06: Desert 1</li>

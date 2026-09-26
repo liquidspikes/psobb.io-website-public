@@ -7,11 +7,11 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= htmlspecialchars($PSO_LANG ?? 'en') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Console - psobb.io</title>
+    <title><?= __('Server Console') ?> - <?= htmlspecialchars(get_server_name()) ?></title>
     <meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?? '' ?>">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap">
@@ -134,10 +134,10 @@ async function execCommand(cmd) {
         if (data.result) {
             out.textContent += `\n${data.result}\n`;
         } else if (data.error) {
-            out.textContent += `\nError: ${data.error}\n`;
+            out.textContent += "\n" + <?= json_encode(__('Error: '), JSON_UNESCAPED_UNICODE) ?> + data.error + "\n";
         }
     } catch (e) {
-        out.textContent += `\nConnection Failed: ${e}\n`;
+        out.textContent += "\n" + <?= json_encode(__('Connection Failed: '), JSON_UNESCAPED_UNICODE) ?> + e + "\n";
     }
     out.scrollTop = out.scrollHeight;
 }

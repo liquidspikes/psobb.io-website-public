@@ -1,5 +1,5 @@
 <?php
-$page_title = 'Drop Chart - PSOBB Private Server';
+$page_title = __('Drop Chart - PSOBB Private Server');
 $current_page = 'drops';
 include 'includes/header.php';
 
