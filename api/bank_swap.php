@@ -21,6 +21,12 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['user']['account_id'])) {
     exit;
 }
 
+if (!can_access_portal_module('bank')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Bank portal module is currently unavailable.', 'success' => false]);
+    exit;
+}
+
 $accountId = (int)$_SESSION['user']['account_id'];
 
 // 2. Validate input

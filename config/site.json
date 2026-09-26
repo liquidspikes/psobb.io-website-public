@@ -17,5 +17,15 @@
     "client_windows_url": "/downloads/PSOBBIO-Setup_1.25.13b.exe",
     "client_mac_url": "/downloads/PSOBBIO_125.13.dmg",
     "client_raw_url": "/downloads/PSOBBIO-Linux_1.25.13.zip",
+    "portal_modules": {
+        "hub": "everyone",
+        "characters": "everyone",
+        "bank": "everyone",
+        "guild": "everyone",
+        "tekker": "everyone",
+        "lfg": "everyone",
+        "chat": "everyone",
+        "settings": "everyone"
+    },
     "updated_at": "2026-09-26T12:00:00+00:00"
 }

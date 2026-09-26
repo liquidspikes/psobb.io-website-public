@@ -265,11 +265,15 @@ function showDashboard(user) {
         // Populate dashboard header
         const lastPlayer = (user.BBLicenses && user.BBLicenses.length > 0) ? user.BBLicenses[0].UserName : (user.LastPlayerName || 'Hunter');
 
-        document.getElementById('dash-username-header').textContent = lastPlayer;
-        document.getElementById('dash-username').textContent = lastPlayer;
-        document.getElementById('dash-account-id').textContent = user.AccountID;
+        const userHeader = document.getElementById('dash-username-header');
+        if (userHeader) userHeader.textContent = lastPlayer;
+        const dashUser = document.getElementById('dash-username');
+        if (dashUser) dashUser.textContent = lastPlayer;
+        const dashAcc = document.getElementById('dash-account-id');
+        if (dashAcc) dashAcc.textContent = user.AccountID;
 
-        document.getElementById('dash-team').textContent = user.BBTeamID ? _t('Team') + ' #' + user.BBTeamID : _t('None');
+        const dashTeam = document.getElementById('dash-team');
+        if (dashTeam) dashTeam.textContent = user.BBTeamID ? _t('Team') + ' #' + user.BBTeamID : _t('None');
 
         const playtimeEl = document.getElementById('dash-playtime');
         if (playtimeEl) {
@@ -1539,18 +1543,30 @@ window.installPortalApp = async function () {
 
 // Switch Dashboard Tab Panes
 window.switchDashboardTab = function (tabId) {
+    let target = document.getElementById(tabId);
+    let targetBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+
+    // Graceful fallback if target tab or button is disabled / not in DOM
+    if (!target || !targetBtn) {
+        target = document.querySelector('.dashboard-tab-pane');
+        if (target) {
+            tabId = target.id;
+            targetBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+        }
+    }
+    if (!target) return;
+
     document.querySelectorAll('.dashboard-tab-pane').forEach(pane => {
         pane.classList.remove('active');
     });
-    const target = document.getElementById(tabId);
-    if (target) target.classList.add('active');
+    target.classList.add('active');
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
-        if (btn.getAttribute('data-tab') === tabId) {
-            btn.classList.add('active');
-        }
     });
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
 
     // Lazy load tab data
     if (tabId === 'tab-banks' || tabId === 'tab-bank') {

@@ -21,6 +21,12 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
     exit;
 }
 
+if (!can_access_portal_module('chat')) {
+    http_response_code(403);
+    echo json_encode(["success" => false, "error" => "Ragol chat portal module is currently unavailable."]);
+    exit;
+}
+
 $accountId = (int)$_SESSION['user']['account_id'];
 
 // 2. Validate Inputs

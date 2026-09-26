@@ -122,17 +122,73 @@ if (!function_exists('get_site_config')) {
             'client_windows_url'   => '/downloads/PSOBBIO-Setup_1.25.13b.exe',
             'client_mac_url'       => '/downloads/PSOBBIO_125.13.dmg',
             'client_raw_url'       => '/downloads/PSOBBIO-Linux_1.25.13.zip',
+            'portal_modules'       => [
+                'hub'        => 'everyone',
+                'characters' => 'everyone',
+                'bank'       => 'everyone',
+                'guild'      => 'everyone',
+                'tekker'     => 'everyone',
+                'lfg'        => 'everyone',
+                'chat'       => 'everyone',
+                'settings'   => 'everyone',
+            ],
         ];
+        $merged = $defaults;
         if (!empty($SITE_CONFIG)) {
-            return array_merge($defaults, $SITE_CONFIG);
+            $merged = array_merge($defaults, $SITE_CONFIG);
+            if (isset($SITE_CONFIG['portal_modules']) && is_array($SITE_CONFIG['portal_modules'])) {
+                $merged['portal_modules'] = array_merge($defaults['portal_modules'], $SITE_CONFIG['portal_modules']);
+            }
+            return $merged;
         }
         if (file_exists($cfgPath)) {
             $json = json_decode(@file_get_contents($cfgPath), true);
             if (is_array($json)) {
-                return array_merge($defaults, $json);
+                $merged = array_merge($defaults, $json);
+                if (isset($json['portal_modules']) && is_array($json['portal_modules'])) {
+                    $merged['portal_modules'] = array_merge($defaults['portal_modules'], $json['portal_modules']);
+                }
+                return $merged;
             }
         }
         return $defaults;
+    }
+}
+
+if (!function_exists('get_portal_module_visibility')) {
+    /**
+     * Get the visibility state of a portal feature module.
+     * Returns: 'everyone', 'admin_only', or 'disabled'
+     */
+    function get_portal_module_visibility(string $moduleKey): string {
+        $cfg = get_site_config();
+        $modules = $cfg['portal_modules'] ?? [];
+        if (isset($modules[$moduleKey])) {
+            $val = strtolower(trim((string)$modules[$moduleKey]));
+            if (in_array($val, ['everyone', 'admin_only', 'disabled'], true)) {
+                return $val;
+            }
+        }
+        return 'everyone';
+    }
+}
+
+if (!function_exists('can_access_portal_module')) {
+    /**
+     * Check if a given user (or the current session user) can access a portal module.
+     */
+    function can_access_portal_module(string $moduleKey, ?array $user = null): bool {
+        if ($user === null && isset($_SESSION['user'])) {
+            $user = $_SESSION['user'];
+        }
+        $vis = get_portal_module_visibility($moduleKey);
+        if ($vis === 'disabled') {
+            return false;
+        }
+        if ($vis === 'admin_only') {
+            return !empty($user) && !empty($user['is_admin']);
+        }
+        return true;
     }
 }
 

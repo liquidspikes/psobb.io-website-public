@@ -60,6 +60,30 @@ if (!in_array($defaultLanguage, ['auto', 'en', 'jp', 'ru'])) {
     $defaultLanguage = 'auto';
 }
 
+$existingPortalModules = $currentConfig['portal_modules'] ?? [
+    'hub'        => 'everyone',
+    'characters' => 'everyone',
+    'bank'       => 'everyone',
+    'guild'      => 'everyone',
+    'tekker'     => 'everyone',
+    'lfg'        => 'everyone',
+    'chat'       => 'everyone',
+    'settings'   => 'everyone',
+];
+$portalModules = $existingPortalModules;
+if (isset($data['portal_modules']) && is_array($data['portal_modules'])) {
+    foreach ($data['portal_modules'] as $modKey => $vis) {
+        $cleanKey = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$modKey);
+        $cleanVis = strtolower(trim((string)$vis));
+        if (!in_array($cleanVis, ['everyone', 'admin_only', 'disabled'], true)) {
+            $cleanVis = 'everyone';
+        }
+        if ($cleanKey !== '') {
+            $portalModules[$cleanKey] = $cleanVis;
+        }
+    }
+}
+
 $newConfig = [
     'server_name'          => $serverName ?: 'PSOBB.IO',
     'server_address'       => $serverAddress ?: 'psobb.io',
@@ -79,6 +103,7 @@ $newConfig = [
     'client_windows_url'   => $clientWin,
     'client_mac_url'       => $clientMac,
     'client_raw_url'       => $clientRaw,
+    'portal_modules'       => $portalModules,
     'updated_at'           => date('c')
 ];
 

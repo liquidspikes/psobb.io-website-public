@@ -1,0 +1,33 @@
+<?php
+/**
+ * PSOBB.io Player Portal: Custom Module Example
+ * 
+ * Instructions:
+ * 1. Remove the `.sample` extension from this file (rename to `my_module.php`).
+ * 2. Customize the module key, title, icon, and view callback.
+ * 3. The tab will automatically appear in the Player Portal and in the Admin Settings panel.
+ */
+
+/*
+register_portal_module('my_custom_module', [
+    'id'          => 'tab-my-custom',
+    'name'        => __('Custom Module'),
+    'icon'        => 'fas fa-rocket',
+    'description' => __('An example community extension module for the player portal.'),
+    'order'       => 90,
+    'default'     => 'everyone',
+    'render_callback' => function(array $context) {
+        $existing_slots = $context['existing_slots'] ?? [0];
+        ?>
+        <div style="padding: 1.5rem; border: 1px solid rgba(0, 255, 255, 0.2); background: rgba(0, 10, 20, 0.5); border-radius: 8px;">
+            <h3 style="color:#00ffff; font-family:'Share Tech Mono', monospace; margin-top:0;">
+                <i class="fas fa-rocket animate-pulse"></i> <?= __('Custom Extension Module') ?>
+            </h3>
+            <p style="color:#ccc;">
+                <?= __('Welcome to your custom module view! You can query database tables, build custom mini-games, or create specialized guild tools here.') ?>
+            </p>
+        </div>
+        <?php
+    }
+]);
+*/

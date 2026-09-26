@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../api/config.php';
 require_once __DIR__ . '/../api/functions.php';
+require_once __DIR__ . '/../includes/portal/modules.php';
 start_secure_session();
 
 if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
@@ -394,6 +395,142 @@ input:checked + .slider:before {
     background: #ff4444;
     color: #fff;
 }
+
+/* Player Portal Module Cards */
+.portal-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.portal-module-card {
+    background: rgba(0, 15, 30, 0.7);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s ease;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+.portal-module-card.state-everyone {
+    border-color: rgba(0, 200, 81, 0.4);
+    box-shadow: 0 0 15px rgba(0, 200, 81, 0.1);
+}
+.portal-module-card.state-admin_only {
+    border-color: rgba(255, 170, 0, 0.5);
+    background: rgba(30, 20, 5, 0.75);
+    box-shadow: 0 0 18px rgba(255, 170, 0, 0.15);
+}
+.portal-module-card.state-disabled {
+    border-color: rgba(255, 68, 68, 0.3);
+    opacity: 0.75;
+}
+.portal-module-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+    gap: 10px;
+}
+.portal-module-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.portal-module-badge {
+    font-size: 0.72rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.badge-everyone {
+    background: rgba(0, 200, 81, 0.15);
+    color: #00C851;
+    border: 1px solid rgba(0, 200, 81, 0.4);
+}
+.badge-admin_only {
+    background: rgba(255, 170, 0, 0.15);
+    color: #ffaa00;
+    border: 1px solid rgba(255, 170, 0, 0.5);
+}
+.badge-disabled {
+    background: rgba(255, 68, 68, 0.15);
+    color: #ff4444;
+    border: 1px solid rgba(255, 68, 68, 0.4);
+}
+.portal-module-desc {
+    font-size: 0.85rem;
+    color: #bbb;
+    margin-bottom: 1.25rem;
+    line-height: 1.45;
+    flex-grow: 1;
+}
+.portal-vis-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.portal-vis-option {
+    position: relative;
+    text-align: center;
+}
+.portal-vis-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.portal-vis-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 4px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #888;
+}
+.portal-vis-label:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+.portal-vis-option input[type="radio"]:checked + .portal-vis-label.opt-everyone {
+    background: rgba(0, 200, 81, 0.25);
+    color: #00C851;
+    border: 1px solid rgba(0, 200, 81, 0.6);
+    box-shadow: 0 0 8px rgba(0, 200, 81, 0.3);
+}
+.portal-vis-option input[type="radio"]:checked + .portal-vis-label.opt-admin_only {
+    background: rgba(255, 170, 0, 0.25);
+    color: #ffaa00;
+    border: 1px solid rgba(255, 170, 0, 0.6);
+    box-shadow: 0 0 8px rgba(255, 170, 0, 0.3);
+}
+.portal-vis-option input[type="radio"]:checked + .portal-vis-label.opt-disabled {
+    background: rgba(255, 68, 68, 0.25);
+    color: #ff4444;
+    border: 1px solid rgba(255, 68, 68, 0.6);
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+}
 </style>
 
 <main class="container settings-admin-container">
@@ -452,6 +589,9 @@ input:checked + .slider:before {
     <div class="settings-tabs">
         <button type="button" class="settings-tab-btn active" data-tab="tab-identity">
             <i class="fas fa-id-card"></i> <?= __('Identity & Media') ?>
+        </button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-portal">
+            <i class="fas fa-id-card-clip"></i> <?= __('Player Portal Modules') ?>
         </button>
         <button type="button" class="settings-tab-btn" data-tab="tab-modules">
             <i class="fas fa-cubes"></i> <?= __('Modules & Rates') ?>
@@ -556,7 +696,88 @@ input:checked + .slider:before {
             </div>
         </div>
 
-        <!-- TAB 2: MODULES & RATES -->
+        <!-- TAB 2: PLAYER PORTAL MODULES -->
+        <div id="tab-portal" class="tab-pane">
+            <div class="settings-card">
+                <h3><i class="fas fa-id-card-clip"></i> 2. <?= __('Player Portal Feature Modules') ?></h3>
+                <p style="font-size:0.9rem; color:#aaa; margin-top:0; margin-bottom:1.5rem;">
+                    <?= __('Configure accessibility and visibility states for player portal features. You can enable them for all players, restrict them to administrators only for private testing, or disable them entirely.') ?>
+                </p>
+
+                <div class="portal-modules-grid">
+                    <?php
+                    $registeredModules = get_portal_module_definitions();
+                    $configuredModules = $cfg['portal_modules'] ?? [];
+
+                    foreach ($registeredModules as $key => $mod):
+                        $currentVis = $configuredModules[$key] ?? $mod['default'] ?? 'everyone';
+                        if (!in_array($currentVis, ['everyone', 'admin_only', 'disabled'], true)) {
+                            $currentVis = 'everyone';
+                        }
+                    ?>
+                        <div class="portal-module-card state-<?= htmlspecialchars($currentVis) ?>" id="card-mod-<?= htmlspecialchars($key) ?>">
+                            <div>
+                                <div class="portal-module-card-header">
+                                    <div class="portal-module-title">
+                                        <i class="<?= htmlspecialchars($mod['icon']) ?>" style="color:var(--pso-blue);"></i>
+                                        <?= htmlspecialchars($mod['name']) ?>
+                                    </div>
+                                    <span class="portal-module-badge badge-<?= htmlspecialchars($currentVis) ?>" id="badge-mod-<?= htmlspecialchars($key) ?>">
+                                        <?= $currentVis === 'everyone' ? __('Everyone') : ($currentVis === 'admin_only' ? __('Admin Only') : __('Disabled')) ?>
+                                    </span>
+                                </div>
+                                <div class="portal-module-desc">
+                                    <?= htmlspecialchars($mod['description']) ?>
+                                </div>
+                            </div>
+
+                            <div class="portal-vis-selector">
+                                <div class="portal-vis-option">
+                                    <input type="radio" 
+                                           id="vis-<?= htmlspecialchars($key) ?>-everyone" 
+                                           name="portal_modules[<?= htmlspecialchars($key) ?>]" 
+                                           value="everyone" 
+                                           <?= $currentVis === 'everyone' ? 'checked' : '' ?>
+                                           onchange="updatePortalCardState('<?= htmlspecialchars($key) ?>', 'everyone')">
+                                    <label for="vis-<?= htmlspecialchars($key) ?>-everyone" class="portal-vis-label opt-everyone">
+                                        <i class="fas fa-users" style="margin-bottom:3px;"></i>
+                                        <span><?= __('Everyone') ?></span>
+                                    </label>
+                                </div>
+
+                                <div class="portal-vis-option">
+                                    <input type="radio" 
+                                           id="vis-<?= htmlspecialchars($key) ?>-admin" 
+                                           name="portal_modules[<?= htmlspecialchars($key) ?>]" 
+                                           value="admin_only" 
+                                           <?= $currentVis === 'admin_only' ? 'checked' : '' ?>
+                                           onchange="updatePortalCardState('<?= htmlspecialchars($key) ?>', 'admin_only')">
+                                    <label for="vis-<?= htmlspecialchars($key) ?>-admin" class="portal-vis-label opt-admin_only">
+                                        <i class="fas fa-shield-alt" style="margin-bottom:3px;"></i>
+                                        <span><?= __('Admin Only') ?></span>
+                                    </label>
+                                </div>
+
+                                <div class="portal-vis-option">
+                                    <input type="radio" 
+                                           id="vis-<?= htmlspecialchars($key) ?>-disabled" 
+                                           name="portal_modules[<?= htmlspecialchars($key) ?>]" 
+                                           value="disabled" 
+                                           <?= $currentVis === 'disabled' ? 'checked' : '' ?>
+                                           onchange="updatePortalCardState('<?= htmlspecialchars($key) ?>', 'disabled')">
+                                    <label for="vis-<?= htmlspecialchars($key) ?>-disabled" class="portal-vis-label opt-disabled">
+                                        <i class="fas fa-ban" style="margin-bottom:3px;"></i>
+                                        <span><?= __('Disabled') ?></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: MODULES & RATES -->
         <div id="tab-modules" class="tab-pane">
             <div class="settings-grid">
                 <!-- Modular Feature Toggles -->
@@ -1099,6 +1320,27 @@ document.getElementById('btn-reset-crew').addEventListener('click', () => {
 // Initial Render
 renderCrewCards(initialCrew);
 
+// Update Portal Card State visually
+function updatePortalCardState(key, state) {
+    const card = document.getElementById('card-mod-' + key);
+    const badge = document.getElementById('badge-mod-' + key);
+    if (!card || !badge) return;
+
+    card.classList.remove('state-everyone', 'state-admin_only', 'state-disabled');
+    card.classList.add('state-' + state);
+
+    badge.classList.remove('badge-everyone', 'badge-admin_only', 'badge-disabled');
+    badge.classList.add('badge-' + state);
+
+    if (state === 'everyone') {
+        badge.textContent = <?= json_encode(__('Everyone')) ?>;
+    } else if (state === 'admin_only') {
+        badge.textContent = <?= json_encode(__('Admin Only')) ?>;
+    } else {
+        badge.textContent = <?= json_encode(__('Disabled')) ?>;
+    }
+}
+
 // Form Submission
 document.getElementById('site-settings-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1116,6 +1358,15 @@ document.getElementById('site-settings-form').addEventListener('submit', async f
     payload.enable_mods         = !!formData.get('enable_mods');
     payload.enable_quest_editor = !!formData.get('enable_quest_editor');
     payload.enable_discord_oauth = !!formData.get('enable_discord_oauth');
+
+    // Collect Player Portal module visibility settings
+    payload.portal_modules = {};
+    document.querySelectorAll('input[type="radio"][name^="portal_modules["]:checked').forEach(r => {
+        const m = r.name.match(/portal_modules\[([a-zA-Z0-9_-]+)\]/);
+        if (m) {
+            payload.portal_modules[m[1]] = r.value;
+        }
+    });
 
     // Collect About Page & Command Deck config
     payload.about = {

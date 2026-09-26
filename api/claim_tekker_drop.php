@@ -19,6 +19,12 @@ if (empty($_SESSION['user']['account_id'])) {
     exit;
 }
 
+if (!can_access_portal_module('tekker')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Tekker store portal module is currently unavailable.', 'success' => false]);
+    exit;
+}
+
 $accountId = (int)$_SESSION['user']['account_id'];
 $db = get_db();
 
