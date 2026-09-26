@@ -80,20 +80,7 @@ $accountIdHex = dechex($accountId);
 $chatCmd = 'on ' . $accountIdHex . ' c ' . $messageText;
 
 function run_shell_command($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode_newserv_cmd($cmd);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-    ];
-    $ctx = stream_context_create($opts);
-    return @file_get_contents($url, false, $ctx);
+    return newserv_shell_exec($cmd);
 }
 
 $execRes = run_shell_command($chatCmd);

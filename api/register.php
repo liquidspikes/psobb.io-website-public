@@ -65,21 +65,7 @@ if ($res->fetchArray()) {
 
 // Helper to run shell command
 function run_shell($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-    ];
-    $ctx = stream_context_create($opts);
-    // Return result directly, do not access deprecated $http_response_header
-    return file_get_contents($url, false, $ctx);
+    return newserv_shell_exec($cmd);
 }
 
 // 1. Create Account Container
@@ -132,6 +118,8 @@ $srvName = get_server_name();
 $srvAddr = get_server_address();
 if ($lang_pref === 'jp') {
     send_email($email, "{$srvName}へようこそ", "$username さん、\n\n{$srvName}へようこそ！アカウントが正常に作成されました。\n\nアカウント情報は以下の通りです：\nユーザー名: $username\nギルドカード: $accountIdInt\n\nアカウント管理はこちら: https://{$srvAddr}/login.php\n\n良い狩りを！\n{$srvName} チーム");
+} elseif ($lang_pref === 'ru') {
+    send_email($email, "Добро пожаловать в {$srvName}", "Здравствуйте, $username,\n\nДобро пожаловать в {$srvName}! Ваш аккаунт был успешно создан.\n\nДанные вашей учётной записи:\nИмя пользователя: $username\nНомер гильд-карты: $accountIdInt\n\nУправление аккаунтом: https://{$srvAddr}/login.php\n\nУдачной охоты!\nКоманда {$srvName}");
 } else {
     send_email($email, "Welcome to {$srvName}", "Hello $username,\n\nWelcome to {$srvName}! Your account has been created successfully.\n\nHere are your account details:\nUsername: $username\nGuild Card: $accountIdInt\n\nYou can manage your account at: https://{$srvAddr}/login.php\n\nHappy Hunting,\n{$srvName} Team");
 }

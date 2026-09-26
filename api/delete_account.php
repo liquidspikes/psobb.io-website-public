@@ -56,19 +56,7 @@ if (!$target_account_id) {
 
 // 2. Perform Deletion via Shell Command
 function run_shell($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ]
-    ];
-    $ctx = stream_context_create($opts);
-    return file_get_contents($url, false, $ctx);
+    return newserv_shell_exec($cmd);
 }
 
 // Convert ID to Hex String

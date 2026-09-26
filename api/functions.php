@@ -35,9 +35,9 @@ function send_personal_mail($client_acc_id, $from_name, $text)
         // Fallback to English on DB error
     }
 
-    // NewServ uses \tE / \tJ as the language marker — required at the start of both fields
+    // NewServ uses \tE / \tJ as the language marker for the from_name field (UTF16_ALWAYS_MARKED)
     $from_name = $marker . trim($from_name);
-    $text = $marker . trim($text);
+    $text = trim($text);
 
     // UTF-16LE encoding helper — tries the fastest available method
     $to_utf16 = function (string $s) {
@@ -60,18 +60,7 @@ function send_personal_mail($client_acc_id, $from_name, $text)
     $packet = substr_replace($packet, str_pad(substr($date_utf16, 0, 38), 38, "\x00"), 48, 38); // received_date
     $packet = substr_replace($packet, str_pad(substr($text_utf16, 0, 1022), 1022, "\x00"), 88, 1022); // text
 
-    $exec_payload = json_encode(['command' => 'on ' . $client_acc_id . ' sc ' . bin2hex($packet)]);
-    @file_get_contents(
-        $NEWSERV_API_URL . '/y/shell-exec',
-        false,
-        stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\n",
-                'content' => $exec_payload,
-            ]
-        ])
-    );
+    newserv_shell_exec('on ' . $client_acc_id . ' sc ' . bin2hex($packet));
 }
 
 /**
@@ -801,18 +790,7 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             $finalPayload = function_exists('buildHexPayload') ? buildHexPayload($baseItemName) : simpleBuildHexPayload($baseItemName);
             $cmd = "on " . $targetIdent . " cc {$NEWSERV_COMMAND_PREFIX}item " . $finalPayload;
 
-            $url = $NEWSERV_API_URL . "/y/shell-exec";
-            $opts = [
-                'http' => [
-                    'method' => 'POST',
-                    'header' => "Content-Type: application/json\r\n",
-                    'content' => json_encode(['command' => $cmd]),
-                    'ignore_errors' => true
-                ],
-                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-            ];
-
-            $execRes = @file_get_contents($url, false, stream_context_create($opts));
+            $execRes = newserv_shell_exec($cmd);
             if ($execRes === false) {
                 return ["success" => false, "error" => "Failed to connect to game server API."];
             }

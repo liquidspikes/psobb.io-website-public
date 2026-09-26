@@ -36,24 +36,10 @@ echo "Found Account ID: $accId (Hex)\n";
 $cmd = "update-account $accId flags=ROOT";
 echo "Executing: $cmd\n";
 
-global $NEWSERV_API_URL;
-$url = $NEWSERV_API_URL . "/y/shell-exec";
-$body = json_encode(['command' => $cmd]);
-
-$opts = [
-    'http' => [
-        'method' => 'POST',
-        'header' => 'Content-Type: application/json',
-        'content' => $body,
-        'ignore_errors' => true
-    ],
-    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-];
-
-$response = @file_get_contents($url, false, stream_context_create($opts));
+$response = newserv_shell_exec($cmd);
 
 if ($response === false) {
-    echo "Error: Failed to connect to Newserv API at $url\n";
+    echo "Error: Failed to connect to Newserv API\n";
     exit(1);
 }
 

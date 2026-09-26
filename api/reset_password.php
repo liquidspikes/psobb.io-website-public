@@ -53,19 +53,7 @@ $hexId = sprintf('%08X', $account_id);
 
 // 3. Update Password in Newserv
 function run_shell($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-    ];
-    return file_get_contents($url, false, stream_context_create($opts));
+    return newserv_shell_exec($cmd);
 }
 
 // Delete old license (admin force)

@@ -148,8 +148,6 @@ $packetData = pack(
 // Convert to hex string
 $hexString = strtoupper(bin2hex($packetData));
 
-$shellUrl = $NEWSERV_API_URL . "/y/shell-exec";
-
 // Send via "ss" to process the feed server-side. This correctly handles:
 // - MAG stat updates (DEF/POW/DEX/MIND)
 // - MAG evolution and photon blast learning
@@ -157,19 +155,7 @@ $shellUrl = $NEWSERV_API_URL . "/y/shell-exec";
 // Note: The BB client doesn't receive real-time visual updates from server-side
 // feeds. The player must change rooms or reload to see the updated MAG in-game.
 $cmd = "on " . $accountId . " ss " . $hexString;
-
-$body = json_encode(['command' => $cmd]);
-$opts = [
-    'http' => [
-        'method' => 'POST',
-        'header' => 'Content-Type: application/json',
-        'content' => $body,
-        'ignore_errors' => true
-    ],
-    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-];
-$ctx = stream_context_create($opts);
-$result = @file_get_contents($shellUrl, false, $ctx);
+$result = newserv_shell_exec($cmd);
 
 if ($result === FALSE) {
     http_response_code(500);

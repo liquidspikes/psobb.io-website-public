@@ -498,12 +498,19 @@ function send_email($to, $subject, $message)
         $success = ($httpCode >= 200 && $httpCode < 300);
         $logEntry .= " | Via: Brevo API | Success: " . ($success ? 'Yes' : 'No') . " | Resp: $response\n";
     } else {
-        // Fallback to local mail()
+        // Fallback to local mail() with full UTF-8 MIME compliance (fixes Cyrillic/Japanese mojibake)
+        $encoded_subject = function_exists('mb_encode_mimeheader')
+            ? mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n")
+            : $subject;
+
         $headers = 'From: ' . $from . "\r\n" .
             'Reply-To: ' . $from . "\r\n" .
+            'MIME-Version: 1.0' . "\r\n" .
+            'Content-Type: text/plain; charset=UTF-8' . "\r\n" .
+            'Content-Transfer-Encoding: 8bit' . "\r\n" .
             'X-Mailer: PHP/' . phpversion();
 
-        $sent = @mail($to, $subject, $message, $headers);
+        $sent = @mail($to, $encoded_subject, $message, $headers);
         $logEntry .= " | Via: Internal mail() | Sent: " . ($sent ? 'Yes' : 'No') . "\n";
     }
 

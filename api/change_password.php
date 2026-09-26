@@ -66,19 +66,7 @@ if (!$target_id) {
 
 // 2. Shell Execution Helper
 function run_shell($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-    ];
-    return file_get_contents($url, false, stream_context_create($opts));
+    return newserv_shell_exec($cmd);
 }
 
 $hexId = is_numeric($target_id) ? sprintf('%08X', $target_id) : $target_id;
@@ -102,6 +90,8 @@ if ($json && isset($json['result']) && stripos($json['result'], 'updated') !== f
             $lang_pref = $row['language'] ?? 'en';
             if ($lang_pref === 'jp') {
                 send_email($row['email'], "パスワード変更完了 - PSOBB.IO", "$username さん、\n\nパスワードが正常に変更されました。\n心当たりがない場合は、直ちに管理者にご連絡ください。");
+            } elseif ($lang_pref === 'ru') {
+                send_email($row['email'], "Пароль изменён - PSOBB.IO", "Здравствуйте, $username,\n\nВаш пароль был успешно изменён.\nЕсли это были не вы, немедленно свяжитесь с администрацией сервера.");
             } else {
                 send_email($row['email'], "Password Changed - PSOBB.IO", "Hello $username,\n\nYour password was successfully changed.\nIf this wasn't you, please contact an admin immediately.");
             }

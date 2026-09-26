@@ -444,27 +444,44 @@ function verify_csrf_token($token) {
  */
 if (!function_exists('json_encode_newserv_cmd')) {
     function json_encode_newserv_cmd(string $cmd): string {
-        $escaped = '';
-        $len = strlen($cmd);
-        for ($i = 0; $i < $len; $i++) {
-            $ord = ord($cmd[$i]);
-            if ($ord > 127) {
-                $escaped .= sprintf('\\u%04x', $ord);
-            } elseif ($cmd[$i] === '\\') {
-                $escaped .= '\\\\';
-            } elseif ($cmd[$i] === '"') {
-                $escaped .= '\\"';
-            } elseif ($cmd[$i] === "\n") {
-                $escaped .= '\\n';
-            } elseif ($cmd[$i] === "\r") {
-                $escaped .= '\\r';
-            } elseif ($cmd[$i] === "\t") {
-                $escaped .= '\\t';
-            } else {
-                $escaped .= $cmd[$i];
-            }
+        $utf8Json = json_encode(['command' => $cmd], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return preg_replace_callback(
+            '/[\x80-\xFF]/',
+            static function ($match) {
+                return sprintf('\\u00%02X', ord($match[0]));
+            },
+            $utf8Json
+        );
+    }
+}
+
+/**
+ * Dispatches a shell command to NewServ's /y/shell-exec API.
+ * Safely encodes multi-byte UTF-8 international text (Cyrillic, Japanese, emoji)
+ * and enforces NewServ's strict 'application/json' Content-Type requirements.
+ *
+ * @param string $cmd The raw shell command (e.g. 'announce Привет' or 'on <id> c <msg>')
+ * @return string|false The raw response from NewServ or false on failure.
+ */
+if (!function_exists('newserv_shell_exec')) {
+    function newserv_shell_exec(string $cmd) {
+        global $NEWSERV_API_URL;
+        if (empty($NEWSERV_API_URL)) {
+            return false;
         }
-        return '{"command":"' . $escaped . '"}';
+        $url = rtrim($NEWSERV_API_URL, '/') . '/y/shell-exec';
+        $body = json_encode_newserv_cmd($cmd);
+        $opts = [
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/json\r\n",
+                'content' => $body,
+                'ignore_errors' => true,
+                'timeout' => 5
+            ],
+            'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+        ];
+        return @file_get_contents($url, false, stream_context_create($opts));
     }
 }
 

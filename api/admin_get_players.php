@@ -12,20 +12,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 
 // Reuse connection logic from admin_exec.php or similar
 function run_shell_command($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-    ];
-    $ctx = stream_context_create($opts);
-    $result = file_get_contents($url, false, $ctx);
+    $result = newserv_shell_exec($cmd);
     if ($result === false) return null;
     
     $json = json_decode($result, true);

@@ -115,32 +115,8 @@ if ($level > 50) {
 
 // 4. Send the Commands to the Server
 function run_shell_command($cmd) {
-    global $NEWSERV_API_URL;
-    $url = $NEWSERV_API_URL . "/y/shell-exec";
-    $body = json_encode(['command' => $cmd]);
-    $opts = [
-        'http' => [
-            'method' => 'POST',
-            'header' => 'Content-Type: application/json',
-            'content' => $body,
-            'ignore_errors' => true
-        ],
-        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
-    ];
-    $ctx = stream_context_create($opts);
-    $result = @file_get_contents($url, false, $ctx);
-    
-    // Capture HTTP response headers for debugging
-    $response_code = null;
-    if (isset($http_response_header) && is_array($http_response_header)) {
-        foreach ($http_response_header as $header) {
-            if (preg_match('/^HTTP\/\S+\s+(\d+)/', $header, $matches)) {
-                $response_code = intval($matches[1]);
-            }
-        }
-    }
-    
-    return ['body' => $result, 'http_code' => $response_code];
+    $result = newserv_shell_exec($cmd);
+    return ['body' => $result, 'http_code' => ($result !== false ? 200 : 502)];
 }
 
 // Use account ID (hex) to identify the client — the `on` command's parser
