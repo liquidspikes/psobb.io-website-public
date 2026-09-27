@@ -320,7 +320,7 @@ for /f "usebackq tokens=1,* delims==" %%A in (`"%PHP_CMD%" -r "
             '..\newserv\system\players',
             '.\newserv\system\players',
             'C:\newserv\system\players',
-            'C:\OSPanel\home\psobb.ru\newserv\system\players'
+            'D:\newserv\system\players'
         ];
         foreach (\$candidates as \$c) {
             if (is_dir(\$c)) {

@@ -101,16 +101,16 @@ Primary configuration file for public server identity, gameplay multipliers, cli
 
 | Parameter | Type | Default | Description & Concrete Examples |
 | :--- | :--- | :--- | :--- |
-| **`server_name`** | string | `"PSOBB.IO"` | The public brand name of your server displayed in titles, emails, and headers.<br>• *Examples:* `"PSOBB.IO"`, `"PSOBB.RU"`, `"Pioneer 2 Destiny"` |
-| **`server_address`** | string | `"psobb.io"` | Server domain or IP address without protocol or slashes.<br>• *Examples:* `"psobb.io"`, `"psobb.ru"`, `"play.myserver.net"`, `"127.0.0.1:8000"` |
-| **`server_tagline`** | string | *See above* | Descriptive slogan displayed on homepage hero banner and SEO meta tags.<br>• *Examples:* `"Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."`, `"Возрождение легендарной PSOBB в русскоязычном сообществе."` |
+| **`server_name`** | string | `"PSOBB.IO"` | The public brand name of your server displayed in titles, emails, and headers.<br>• *Examples:* `"PSOBB.IO"`, `"Ragol Online"`, `"Pioneer 2 Destiny"` |
+| **`server_address`** | string | `"psobb.io"` | Server domain or IP address without protocol or slashes.<br>• *Examples:* `"psobb.io"`, `"play.myserver.net"`, `"127.0.0.1:8000"` |
+| **`server_tagline`** | string | *See above* | Descriptive slogan displayed on homepage hero banner and SEO meta tags.<br>• *Examples:* `"Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."`, `"The classic Phantasy Star Online experience reborn."` |
 | **`default_language`** | string | `"auto"` | Default interface language for visitors.<br>• *Options:* `"auto"` (browser-detected), `"en"` (English), `"jp"` (Japanese), `"ru"` (Russian) |
 | **`hero_logo_url`** | string | `"/img/header_logo.png"` | Path or external URL for the header/hero logo image.<br>• *Examples:* `"/img/header_logo.png"`, `"/img/custom_logo.svg"` |
 | **`exp_rate`** | string | `"1x"` | Displayed EXP multiplier badge.<br>• *Examples:* `"1x"`, `"2x"`, `"5x"`, `"Dynamic Weekend Boost"` |
 | **`drop_rate`** | string | `"1x"` | Displayed Rare Drop multiplier badge.<br>• *Examples:* `"1x"`, `"2x"`, `"3x"` |
 | **`meseta_rate`** | string | `"1x"` | Displayed Meseta rate multiplier badge.<br>• *Examples:* `"1x"`, `"2x"`, `"10x"` |
 | **`discord_server`** | string | `"https://discord.gg/..."` | Public Discord community invite URL.<br>• *Examples:* `"https://discord.gg/28s84HJXha"`, `"https://discord.gg/your-invite-code"` |
-| **`newserv_players_dir`** | string | `"/opt/newserv/system/players"` | Absolute host filesystem path to NewServ's `system/players/` directory.<br>• *Linux VPS:* `"/opt/newserv/system/players"`<br>• *Windows OpenServer:* `"C:/OSPanel/home/psobb.ru/newserv/system/players"`<br>• *Docker:* `"/var/newserv/system/players"` |
+| **`newserv_players_dir`** | string | `"/opt/newserv/system/players"` | Absolute host filesystem path to NewServ's `system/players/` directory.<br>• *Linux VPS:* `"/opt/newserv/system/players"`<br>• *Windows:* `"C:/newserv/system/players"`<br>• *Docker:* `"/var/newserv/system/players"` |
 | **`enable_registration`** | boolean | `true` | When `false`, disables new player account creation.<br>• *Values:* `true`, `false` |
 | **`enable_bounties`** | boolean | `true` | Enables or disables the Hunter's Guild Bounty Board.<br>• *Values:* `true`, `false` |
 | **`enable_lfg`** | boolean | `true` | Enables or disables the Looking For Group (LFG) Lobby terminal.<br>• *Values:* `true`, `false` |

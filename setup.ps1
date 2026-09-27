@@ -435,7 +435,7 @@ if (-not $currentPlayersDir -or -not (Test-Path $currentPlayersDir)) {
         "..\newserv\system\players",
         ".\newserv\system\players",
         "C:\newserv\system\players",
-        "C:\OSPanel\home\psobb.ru\newserv\system\players"
+        "D:\newserv\system\players"
     )
     foreach ($cp in $commonPlayerPaths) {
         if (Test-Path $cp) {
