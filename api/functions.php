@@ -644,6 +644,82 @@ function renderRewardString($rewardStr)
 }
 
 /**
+ * Converts an item hex string with optional stats/attributes into a complete 32-character NewServ hex payload.
+ * Handles:
+ *  - Weapons: parses '00xxxx Native/ABeast/Machine/Dark/Hit' and writes stats into byte offsets 6..11
+ *  - Armors/Shields: parses '+Xdef', '+Xevp', '+X' slot and writes byte offsets 5..9
+ *  - Units: parses '+X' modifiers and writes byte offsets 6..7
+ *
+ * @param string $itemStr Raw item definition string
+ * @return string 32-character uppercase hex string or original item string if non-hex
+ */
+if (!function_exists('buildHexPayload')) {
+    function buildHexPayload($itemStr) {
+        $itemStr = trim($itemStr);
+        if (empty($itemStr)) return $itemStr;
+
+        $parts = explode(' ', $itemStr);
+        $firstPart = array_shift($parts);
+
+        if (ctype_xdigit($firstPart) && strlen($firstPart) >= 6) {
+            $hex = str_pad(substr($firstPart, 0, 32), 32, "0");
+            $data = hex2bin($hex);
+            
+            $is_weapon = ($data[0] === "\x00");
+            $is_armor_shield = ($data[0] === "\x01" && ($data[1] === "\x01" || $data[1] === "\x02"));
+            $is_unit = ($data[0] === "\x01" && $data[1] === "\x03");
+
+            if ($is_weapon) {
+                if (!empty($parts) && strpos($parts[0], '/') !== false) {
+                    $stats = explode('/', $parts[0]);
+                    $idx = 6;
+                    // Native=1, A.Beast=2, Machine=3, Dark=4, Hit=5
+                    for ($i = 0; $i < 5; $i++) {
+                        if (isset($stats[$i]) && (int)$stats[$i] > 0 && $idx < 12) {
+                            $data[$idx] = chr($i + 1);
+                            $data[$idx + 1] = chr((int)$stats[$i]);
+                            $idx += 2;
+                        }
+                    }
+                }
+            } else if ($is_armor_shield) {
+                foreach ($parts as $token) {
+                    if (substr($token, 0, 1) === '+') {
+                        if (strpos($token, 'def') !== false) {
+                            $val = intval(str_replace('def', '', substr($token, 1)));
+                            $data[6] = chr($val & 0xFF);
+                            $data[7] = chr(($val >> 8) & 0xFF);
+                        } else if (strpos($token, 'evp') !== false) {
+                            $val = intval(str_replace('evp', '', substr($token, 1)));
+                            $data[8] = chr($val & 0xFF);
+                            $data[9] = chr(($val >> 8) & 0xFF);
+                        } else {
+                            $val = intval(substr($token, 1));
+                            $data[5] = chr($val & 0xFF);
+                        }
+                    }
+                }
+            } else if ($is_unit) {
+                foreach ($parts as $token) {
+                    if (substr($token, 0, 1) === '+') {
+                        preg_match('/\+([0-9]+)/', $token, $matches);
+                        if (!empty($matches[1])) {
+                            $val = intval($matches[1]);
+                            $data[6] = chr($val & 0xFF);
+                            $data[7] = chr(($val >> 8) & 0xFF);
+                        }
+                    }
+                }
+            }
+            
+            return strtoupper(bin2hex($data));
+        }
+        
+        return $itemStr;
+    }
+}
+
+/**
  * Robustly parses a reward string (like "Photon Drop x2", "Disk:Shifta Lv.15", or "001006 0/30/0/20")
  * and sends the exact shell-exec payload(s) to NewServ.
  * 
@@ -673,20 +749,6 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
                     break;
                 }
             }
-        }
-    }
-
-    // Ensure buildHexPayload is available (it's defined in redeem_bounty.php, but we might not have it loaded)
-    if (!function_exists('buildHexPayload') && !function_exists('simpleBuildHexPayload')) {
-        // Fallback simple payload builder if the full one isn't loaded
-        function simpleBuildHexPayload($itemStr)
-        {
-            $parts = explode(' ', trim($itemStr));
-            $firstPart = $parts[0];
-            if (ctype_xdigit($firstPart) && strlen($firstPart) >= 6) {
-                return strtoupper(str_pad(substr($firstPart, 0, 32), 32, "0"));
-            }
-            return $itemStr; // Can't parse
         }
     }
 
@@ -789,7 +851,7 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
 
         // Execute the drop multiple times if necessary
         for ($i = 0; $i < $multiplier; $i++) {
-            $finalPayload = function_exists('buildHexPayload') ? buildHexPayload($baseItemName) : simpleBuildHexPayload($baseItemName);
+            $finalPayload = buildHexPayload($baseItemName);
             $cmd = "on " . $targetIdent . " cc {$NEWSERV_COMMAND_PREFIX}item " . $finalPayload;
 
             $execRes = newserv_shell_exec($cmd);

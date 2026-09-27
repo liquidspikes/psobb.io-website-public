@@ -114,11 +114,6 @@ if ($level > 50) {
 }
 
 // 4. Send the Commands to the Server
-function run_shell_command($cmd) {
-    $result = newserv_shell_exec($cmd);
-    return ['body' => $result, 'http_code' => ($result !== false ? 200 : 502)];
-}
-
 // Use account ID (hex) to identify the client — the `on` command's parser
 // uses skip_non_whitespace which doesn't handle quoted strings, so names
 // with spaces or quotes would break. Account ID is always unambiguous.
@@ -128,7 +123,7 @@ $account_id_hex = dechex($targetAccountId);
 $change_cmd = 'on ' . $account_id_hex . ' cc $edit secid ' . strtolower($new_section_id);
 $res1 = run_shell_command($change_cmd);
 
-if ($res1['body'] === false) {
+if ($res1 === false) {
     http_response_code(502);
     echo json_encode(['error' => 'Failed to connect to game server shell API.']);
     exit;

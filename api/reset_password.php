@@ -72,10 +72,6 @@ try {
     $email = $userRow['email'] ?: $email;
 
     // 3. Update Password in Newserv
-    function run_shell($cmd) {
-        return newserv_shell_exec($cmd);
-    }
-
     // Delete old license (admin force)
     run_shell("delete-license $hexId BB $username");
 

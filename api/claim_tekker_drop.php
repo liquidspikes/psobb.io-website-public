@@ -283,44 +283,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Define buildHexPayload so functions.php:parse_and_drop_items can use it
-    if (!function_exists('buildHexPayload')) {
-        function buildHexPayload($itemStr)
-        {
-            $itemStr = trim($itemStr);
-            if (empty($itemStr)) return $itemStr;
-
-            $parts = explode(' ', $itemStr);
-            $firstPart = array_shift($parts);
-
-            if (ctype_xdigit($firstPart) && strlen($firstPart) >= 6) {
-                $hex = str_pad(substr($firstPart, 0, 32), 32, "0");
-                $data = hex2bin($hex);
-                
-                $is_weapon = ($data[0] === "\x00");
-
-                if ($is_weapon) {
-                    if (!empty($parts) && strpos($parts[0], '/') !== false) {
-                        $stats = explode('/', $parts[0]);
-                        $idx = 6;
-                        // Native=1, A.Beast=2, Machine=3, Dark=4, Hit=5
-                        for ($i = 0; $i < 5; $i++) {
-                            if (isset($stats[$i]) && (int)$stats[$i] > 0 && $idx < 12) {
-                                $data[$idx] = chr($i + 1);
-                                $data[$idx+1] = chr((int)$stats[$i]);
-                                $idx += 2;
-                            }
-                        }
-                    }
-                }
-                
-                return strtoupper(bin2hex($data));
-            }
-            
-            return $itemStr;
-        }
-    }
-
     // Randomly pick one of the 3 weapons
     $chosenWeaponHex = $weapons[array_rand($weapons)];
     $chosenWeaponName = $allowed_weapons[$chosenWeaponHex];

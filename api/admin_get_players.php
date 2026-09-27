@@ -10,17 +10,8 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     exit;
 }
 
-// Reuse connection logic from admin_exec.php or similar
-function run_shell_command($cmd) {
-    $result = newserv_shell_exec($cmd);
-    if ($result === false) return null;
-    
-    $json = json_decode($result, true);
-    return $json['result'] ?? null;
-}
-
 // Execute 'show-slots' to get players
-$output = run_shell_command("show-slots");
+$output = run_shell_command_json("show-slots");
 
 if ($output === null) {
     echo json_encode(['error' => 'Failed to retrieve player list']);

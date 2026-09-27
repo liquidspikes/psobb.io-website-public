@@ -140,7 +140,11 @@ if (!function_exists('get_site_config')) {
      * - 'portal_modules' (array): Module visibility permissions ('everyone' | 'admin_only' | 'disabled').
      *     Modules: 'hub', 'characters', 'bank', 'guild', 'tekker', 'lfg', 'chat', 'settings'
      */
-    function get_site_config(): array {
+    function get_site_config(bool $refresh = false): array {
+        static $cached = null;
+        if ($cached !== null && !$refresh) {
+            return $cached;
+        }
         global $SITE_CONFIG;
         $cfgPath = __DIR__ . '/../config/site.json';
         $defaults = [
@@ -180,7 +184,8 @@ if (!function_exists('get_site_config')) {
             if (isset($SITE_CONFIG['portal_modules']) && is_array($SITE_CONFIG['portal_modules'])) {
                 $merged['portal_modules'] = array_merge($defaults['portal_modules'], $SITE_CONFIG['portal_modules']);
             }
-            return $merged;
+            $cached = $merged;
+            return $cached;
         }
         if (file_exists($cfgPath)) {
             $json = json_decode(@file_get_contents($cfgPath), true);
@@ -189,10 +194,12 @@ if (!function_exists('get_site_config')) {
                 if (isset($json['portal_modules']) && is_array($json['portal_modules'])) {
                     $merged['portal_modules'] = array_merge($defaults['portal_modules'], $json['portal_modules']);
                 }
-                return $merged;
+                $cached = $merged;
+                return $cached;
             }
         }
-        return $defaults;
+        $cached = $defaults;
+        return $cached;
     }
 }
 
@@ -264,6 +271,10 @@ if (!function_exists('get_newserv_players_dir')) {
      *  4. Standard default fallback: '/opt/newserv/system/players/'
      */
     function get_newserv_players_dir(): string {
+        global $NEWSERV_PLAYERS_DIR;
+        if (!empty($NEWSERV_PLAYERS_DIR)) {
+            return $NEWSERV_PLAYERS_DIR;
+        }
         $dir = $_ENV['NEWSERV_PLAYERS_DIR'] ?? $_SERVER['NEWSERV_PLAYERS_DIR'] ?? (getenv('NEWSERV_PLAYERS_DIR') ?: null);
         if (empty($dir)) {
             $cfg = get_site_config();
@@ -278,9 +289,13 @@ if (!function_exists('get_newserv_players_dir')) {
         if (empty($dir)) {
             $dir = '/opt/newserv/system/players/';
         }
-        return rtrim(str_replace('\\', '/', $dir), '/') . '/';
+        $NEWSERV_PLAYERS_DIR = rtrim(str_replace('\\', '/', $dir), '/') . '/';
+        return $NEWSERV_PLAYERS_DIR;
     }
 }
+
+// Global player directory path
+$NEWSERV_PLAYERS_DIR = get_newserv_players_dir();
 
 if (!function_exists('is_feature_enabled')) {
     /**
@@ -614,6 +629,84 @@ if (!function_exists('newserv_shell_exec')) {
             'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
         ];
         return @file_get_contents($url, false, stream_context_create($opts));
+    }
+}
+
+/**
+ * Executes a command via NewServ's shell-exec API endpoint.
+ *
+ * @param string $cmd The command to execute.
+ * @return string|false Raw response from NewServ or false on failure.
+ */
+if (!function_exists('run_shell_command')) {
+    function run_shell_command(string $cmd) {
+        return newserv_shell_exec($cmd);
+    }
+}
+
+/**
+ * Standard alias for run_shell_command / newserv_shell_exec.
+ */
+if (!function_exists('run_shell')) {
+    function run_shell(string $cmd) {
+        return newserv_shell_exec($cmd);
+    }
+}
+
+/**
+ * Admin alias for run_shell_command.
+ */
+if (!function_exists('run_shell_admin')) {
+    function run_shell_admin(string $cmd) {
+        return newserv_shell_exec($cmd);
+    }
+}
+
+/**
+ * Executes a command via NewServ's shell-exec and decodes the JSON response result.
+ *
+ * @param string $cmd The command to execute.
+ * @return mixed|null Parsed 'result' field, or null on error.
+ */
+if (!function_exists('run_shell_command_json')) {
+    function run_shell_command_json(string $cmd) {
+        $result = newserv_shell_exec($cmd);
+        if ($result === false) return null;
+        $json = json_decode($result, true);
+        return $json['result'] ?? null;
+    }
+}
+
+/**
+ * Clamps a numeric value between a minimum and maximum threshold.
+ */
+if (!function_exists('clamp')) {
+    function clamp($val, $min, $max) {
+        return max($min, min($max, $val));
+    }
+}
+
+/**
+ * Resolves a player filename (.psochar or .psobank) inside the given directory,
+ * falling back to case-insensitive matching if exact match does not exist.
+ */
+if (!function_exists('resolve_player_file')) {
+    function resolve_player_file(string $dir, string $filename): string {
+        $fullPath = $dir . $filename;
+        if (file_exists($fullPath)) {
+            return $fullPath;
+        }
+        if (is_dir($dir)) {
+            $files = scandir($dir);
+            if ($files !== false) {
+                foreach ($files as $f) {
+                    if (strcasecmp($f, $filename) === 0) {
+                        return $dir . $f;
+                    }
+                }
+            }
+        }
+        return $fullPath;
     }
 }
 

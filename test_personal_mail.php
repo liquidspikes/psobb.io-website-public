@@ -1,4 +1,5 @@
 <?php
+if (!function_exists('send_personal_mail')) {
 function send_personal_mail($client_acc_id, $from_name, $text) {
     global $NEWSERV_API_URL;
     $packet = str_repeat("\x00", 1112);
@@ -31,6 +32,7 @@ function send_personal_mail($client_acc_id, $from_name, $text) {
     $exec_payload = json_encode(["command" => "on " . $client_acc_id . " sc " . $hex]);
     echo "Payload Length: " . strlen($exec_payload) . "\n";
     echo substr($exec_payload, 0, 100) . " ... " . substr($exec_payload, -50) . "\n";
+}
 }
 
 send_personal_mail(10, "Hunter's Guild", "Gwyn,\nYour new bounty is here!");

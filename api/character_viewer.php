@@ -39,28 +39,6 @@ $slot = isset($_GET['slot']) ? clamp((int)$_GET['slot'], 0, 19) : 0;
 // Path definition to players folder
 $playersDir = get_newserv_players_dir();
 
-// Helper to clamp values
-function clamp($val, $min, $max) {
-    return max($min, min($max, $val));
-}
-
-// Helper to resolve player files case-insensitively
-function resolve_player_file($dir, $filename) {
-    $fullPath = $dir . $filename;
-    if (file_exists($fullPath)) {
-        return $fullPath;
-    }
-    if (is_dir($dir)) {
-        $files = scandir($dir);
-        foreach ($files as $f) {
-            if (strcasecmp($f, $filename) === 0) {
-                return $dir . $f;
-            }
-        }
-    }
-    return $fullPath;
-}
-
 $psocharPath = resolve_player_file($playersDir, "player_{$username}_{$slot}.psochar");
 
 // Master Class Names Map

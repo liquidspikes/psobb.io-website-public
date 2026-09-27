@@ -64,11 +64,6 @@ if (!$target_id) {
     exit;
 }
 
-// 2. Shell Execution Helper
-function run_shell($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 $hexId = is_numeric($target_id) ? sprintf('%08X', $target_id) : $target_id;
 
 // 3. Update Password (Delete old license, add new)

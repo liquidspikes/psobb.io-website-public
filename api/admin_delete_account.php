@@ -30,11 +30,6 @@ if (!$target_account_id && !$username) {
     exit;
 }
 
-// 1. Perform Deletion via Shell Command
-function run_shell_admin($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 $success = false;
 $shell_result = null;
 

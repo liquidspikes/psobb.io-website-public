@@ -28,10 +28,6 @@ if (!$cmd) {
     exit;
 }
 
-function run_shell_admin($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 // Execute
 // Logic to prevent running potentially destructive commands indiscriminately?
 // Admin is trusted.

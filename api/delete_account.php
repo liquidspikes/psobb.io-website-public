@@ -55,10 +55,6 @@ if (!$target_account_id) {
 }
 
 // 2. Perform Deletion via Shell Command
-function run_shell($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 // Convert ID to Hex String
 if (is_numeric($target_account_id)) {
     $hexId = sprintf('%08X', $target_account_id);

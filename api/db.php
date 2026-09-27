@@ -17,8 +17,13 @@ ini_set('display_errors', 0);
  * @throws Exception If the database file cannot be opened or created.
  * @return SQLite3 The established SQLite3 database connection.
  */
-function get_db()
+function get_db(bool $reset = false)
 {
+    static $dbInstance = null;
+    if ($dbInstance !== null && !$reset) {
+        return $dbInstance;
+    }
+
     $path = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/../db/website.db'));
     $dir = dirname($path);
     if (!is_dir($dir)) {
@@ -504,7 +509,8 @@ function get_db()
         // Enable FK enforcement only after all schema migrations are done
         $db->exec("PRAGMA foreign_keys = ON;");
 
-        return $db;
+        $dbInstance = $db;
+        return $dbInstance;
 
     } catch (Exception $e) {
         throw $e;

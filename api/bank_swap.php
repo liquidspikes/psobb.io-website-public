@@ -89,12 +89,7 @@ if ($targetBankIndex === -1) {
 // Use account ID hex to identify client (quoted names break newserv's parser)
 $accountIdHex = dechex($accountId);
 
-// 5. Helper to POST shell commands to newserv
-function run_shell_command($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
-// 6. Execute the bank swap
+// 5. Execute the bank swap
 $bankCmd = 'on ' . $accountIdHex . ' cc $bank ' . $cmdIndex;
 $bankResult = run_shell_command($bankCmd);
 

@@ -85,10 +85,6 @@ if (!$foundClient) {
 $accountIdHex = dechex($accountId);
 $chatCmd = 'on ' . $accountIdHex . ' c ' . $messageText;
 
-function run_shell_command($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 $execRes = run_shell_command($chatCmd);
 
 if ($execRes === false) {

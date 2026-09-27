@@ -63,11 +63,6 @@ if ($res->fetchArray()) {
     exit;
 }
 
-// Helper to run shell command
-function run_shell($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 // 1. Create Account Container
 $res = run_shell('add-account flags=NONE');
 $json = json_decode($res, true);

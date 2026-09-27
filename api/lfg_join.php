@@ -41,13 +41,6 @@ function dechex_4byte_le($val) {
     return bin2hex(pack('V', $val));
 }
 
-/**
- * Dispatches a command to the NewServ shell-exec API.
- */
-function run_shell_command($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
 try {
     // 1. Fetch `/y/summary` to verify user is online and extract client details
     $summary_url = $NEWSERV_API_URL . "/y/summary";

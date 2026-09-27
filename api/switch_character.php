@@ -34,10 +34,6 @@ if (!$input || !isset($input['slot'])) {
 $slot = clamp((int)$input['slot'], 0, 3);
 $targetSlotNum = $slot + 1; // 1-based character slot for newserv command
 
-function clamp($val, $min, $max) {
-    return max($min, min($max, $val));
-}
-
 // 3. Check online state via newserv
 $clientsUrl = $NEWSERV_API_URL . '/y/clients';
 $clientsResponse = @file_get_contents($clientsUrl);
@@ -98,12 +94,7 @@ if ($inGame) {
     exit;
 }
 
-// 5. Helper to execute server commands
-function run_shell_command($cmd) {
-    return newserv_shell_exec($cmd);
-}
-
-// 6. Execute the switch character command
+// 5. Execute the switch character command
 $accountIdHex = dechex($accountId);
 $switchCmd = 'on ' . $accountIdHex . ' cc $switchchar ' . $targetSlotNum;
 $result = run_shell_command($switchCmd);

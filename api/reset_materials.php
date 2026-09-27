@@ -68,23 +68,6 @@ if ($clientsResponse !== FALSE) {
 // Path to players folder
 $playersDir = get_newserv_players_dir();
 
-// Helper to resolve player files case-insensitively
-function resolve_player_file($dir, $filename) {
-    $fullPath = $dir . $filename;
-    if (file_exists($fullPath)) {
-        return $fullPath;
-    }
-    if (is_dir($dir)) {
-        $files = scandir($dir);
-        foreach ($files as $f) {
-            if (strcasecmp($f, $filename) === 0) {
-                return $dir . $f;
-            }
-        }
-    }
-    return $fullPath;
-}
-
 $psocharPath = resolve_player_file($playersDir, "player_{$username}_{$slot}.psochar");
 
 if (!file_exists($psocharPath)) {
@@ -104,11 +87,6 @@ if ($charData === false || strlen($charData) < 0x399C) {
 $nameBytes = substr($charData, 852 + 116, 32);
 $slotCharName = mb_convert_encoding($nameBytes, 'UTF-8', 'UTF-16LE');
 $slotCharName = trim(str_replace("\x00", "", $slotCharName));
-
-// Helper to POST shell commands to NewServ
-function run_shell_command($cmd) {
-    return newserv_shell_exec($cmd);
-}
 
 // -------------------------------------------------------------------------
 // Case A: Character is Online
