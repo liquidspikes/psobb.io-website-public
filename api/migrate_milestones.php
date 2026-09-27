@@ -10,4 +10,3 @@ try {
 } catch (Exception $e) {
   echo "Error: " . $e->getMessage() . "\n";
 }
-unlink(__FILE__);

@@ -14,8 +14,16 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 
 // 3. Authenticate the Python script's POST request
-$headers = getallheaders();
-$auth = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+$auth = '';
+if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'];
+} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+    $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+} elseif (function_exists('getallheaders')) {
+    $headers = getallheaders();
+    $auth = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+}
+
 if ($auth !== 'Bearer ' . AGENT_SECRET) {
     http_response_code(403);
     echo json_encode(["status" => "error", "message" => "Unauthorized"]);
