@@ -299,6 +299,20 @@ function get_db()
         if (!$hasCharName) {
             $db->exec("ALTER TABLE player_missions ADD COLUMN character_name TEXT");
         }
+
+        // Ensure created_at exists in missions
+        $hasMissionCreatedAt = false;
+        $result = $db->query("PRAGMA table_info(missions)");
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            if ($row['name'] === 'created_at') {
+                $hasMissionCreatedAt = true;
+                break;
+            }
+        }
+        $result->finalize();
+        if (!$hasMissionCreatedAt) {
+            $db->exec("ALTER TABLE missions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
         
         // --- Auto-migration for Community Event Participants & Game Mods ---
         $db->exec("
@@ -395,11 +409,29 @@ function get_db()
 
         // --- Bot API Tokens ---
         // Self-healing: if the table was created with the broken FK (REFERENCES users(account_id)),
-        // drop it and recreate. The FK is invalid because account_id has no UNIQUE/PK constraint.
-        $bad_schema = $db->querySingle(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='bot_tokens' AND sql LIKE '%REFERENCES users%'"
-        );
-        if ($bad_schema) {
+        // or with an older legacy schema (e.g. token_id column instead of token_hash), drop and recreate it.
+        $botCols = [];
+        $bRes = $db->query("PRAGMA table_info(bot_tokens)");
+        if ($bRes) {
+            while ($c = $bRes->fetchArray(SQLITE3_ASSOC)) {
+                $botCols[] = $c['name'];
+            }
+            $bRes->finalize();
+        }
+        $recreateBotTokens = false;
+        if (!empty($botCols)) {
+            if (!in_array('token_hash', $botCols) || in_array('token_id', $botCols)) {
+                $recreateBotTokens = true;
+            } else {
+                $badFk = $db->querySingle(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='bot_tokens' AND sql LIKE '%REFERENCES users%'"
+                );
+                if ($badFk) {
+                    $recreateBotTokens = true;
+                }
+            }
+        }
+        if ($recreateBotTokens) {
             $db->exec("DROP TABLE IF EXISTS bot_tokens");
             $db->exec("DROP INDEX IF EXISTS idx_bot_tokens_hash");
         }
@@ -418,6 +450,19 @@ function get_db()
         ");
 
         // --- Special Item Deliveries ---
+        // Self-healing: if the table exists with a legacy schema lacking recipient_id, drop and recreate it.
+        $sdCols = [];
+        $sdRes = $db->query("PRAGMA table_info(special_deliveries)");
+        if ($sdRes) {
+            while ($c = $sdRes->fetchArray(SQLITE3_ASSOC)) {
+                $sdCols[] = $c['name'];
+            }
+            $sdRes->finalize();
+        }
+        if (!empty($sdCols) && !in_array('recipient_id', $sdCols)) {
+            $db->exec("DROP TABLE IF EXISTS special_deliveries");
+            $db->exec("DROP INDEX IF EXISTS idx_special_deliveries_recipient");
+        }
         $db->exec("
             CREATE TABLE IF NOT EXISTS special_deliveries (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,

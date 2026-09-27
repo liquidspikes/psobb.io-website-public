@@ -20,6 +20,12 @@ $db->exec("CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     account_id INTEGER NOT NULL,
+    discord_id TEXT,
+    language TEXT DEFAULT 'en',
+    display_name TEXT,
+    receive_system_mail INTEGER DEFAULT 1,
+    receive_discord_streak_msg INTEGER DEFAULT 1,
+    is_admin INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )");
 
@@ -57,6 +63,7 @@ $db->exec("CREATE TABLE IF NOT EXISTS rewards_claimed (
 
 // Daily Logins table (tracks unique play days per account)
 $db->exec("CREATE TABLE IF NOT EXISTS daily_logins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_id INTEGER NOT NULL,
     login_date TEXT NOT NULL,
     UNIQUE(account_id, login_date)
@@ -78,9 +85,22 @@ $db->exec("CREATE TABLE IF NOT EXISTS missions (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     goal_type TEXT NOT NULL,
-    goal_target INTEGER NOT NULL,
-    reward_item_string TEXT NOT NULL
+    goal_target TEXT NOT NULL,
+    reward_item_string TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )");
+
+$mCols = [];
+$mRes = $db->query("PRAGMA table_info(missions)");
+if ($mRes) {
+    while ($mCol = $mRes->fetchArray(SQLITE3_ASSOC)) {
+        $mCols[] = $mCol['name'];
+    }
+    $mRes->finalize();
+}
+if (!in_array('created_at', $mCols)) {
+    $db->exec("ALTER TABLE missions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+}
 
 // Player Missions Tracking
 $db->exec("CREATE TABLE IF NOT EXISTS player_missions (
@@ -241,26 +261,58 @@ $db->exec("CREATE TABLE IF NOT EXISTS lfg_requests (
 )");
 
 // Bot Tokens table
+$botCols = [];
+$bRes = $db->query("PRAGMA table_info(bot_tokens)");
+if ($bRes) {
+    while ($col = $bRes->fetchArray(SQLITE3_ASSOC)) {
+        $botCols[] = $col['name'];
+    }
+    $bRes->finalize();
+}
+if (!empty($botCols) && (!in_array('token_hash', $botCols) || in_array('token_id', $botCols))) {
+    $db->exec("DROP TABLE IF EXISTS bot_tokens");
+    $db->exec("DROP INDEX IF EXISTS idx_bot_tokens_hash");
+}
+
 $db->exec("CREATE TABLE IF NOT EXISTS bot_tokens (
-    token_id TEXT PRIMARY KEY,
-    server_id TEXT NOT NULL,
-    server_name TEXT,
-    channel_id TEXT,
-    channel_name TEXT,
-    created_at INTEGER NOT NULL,
-    created_by_account_id INTEGER NOT NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME,
+    expires_at DATETIME,
+    revoked INTEGER DEFAULT 0
 )");
+$db->exec("CREATE INDEX IF NOT EXISTS idx_bot_tokens_hash ON bot_tokens(token_hash) WHERE revoked = 0");
 
 // Special Deliveries table
+$sdCols = [];
+$sdRes = $db->query("PRAGMA table_info(special_deliveries)");
+if ($sdRes) {
+    while ($col = $sdRes->fetchArray(SQLITE3_ASSOC)) {
+        $sdCols[] = $col['name'];
+    }
+    $sdRes->finalize();
+}
+if (!empty($sdCols) && !in_array('recipient_id', $sdCols)) {
+    $db->exec("DROP TABLE IF EXISTS special_deliveries");
+    $db->exec("DROP INDEX IF EXISTS idx_special_deliveries_recipient");
+}
+
 $db->exec("CREATE TABLE IF NOT EXISTS special_deliveries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT,
-    item_string TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    created_by INTEGER NOT NULL,
-    claimed_count INTEGER DEFAULT 0
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient_id   INTEGER NOT NULL,
+    recipient_name TEXT    NOT NULL,
+    item_name      TEXT    NOT NULL,
+    item_string    TEXT    NOT NULL,
+    admin_note     TEXT,
+    created_by     INTEGER NOT NULL,
+    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    redeemed_at    DATETIME,
+    status         TEXT DEFAULT 'pending'
 )");
+$db->exec("CREATE INDEX IF NOT EXISTS idx_special_deliveries_recipient ON special_deliveries(recipient_id, status)");
 
 // Daily Rewards configuration table
 $db->exec("CREATE TABLE IF NOT EXISTS daily_rewards (

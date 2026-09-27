@@ -431,6 +431,7 @@ endpoints self-migrate (add missing tables/columns) at runtime via `get_db()`.
 | `password_resets` | Password-reset tokens |
 | `email_confirmations` | Pending and verified email confirmation tokens |
 | `rewards_claimed` | Per-character level-milestone reward claims |
+| `special_deliveries` | Admin-issued direct player item deliveries (`recipient_id`, `item_string`, `status`) |
 
 ---
 
