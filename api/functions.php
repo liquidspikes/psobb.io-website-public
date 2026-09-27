@@ -4,7 +4,7 @@
  * Include via require_once from any script that needs these helpers.
  */
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/../db/init_db.php';
+require_once __DIR__ . '/db.php';
 
 /**
  * Send a Simple Mail (command 0x81) to a connected BB client via newserv's shell-exec API.

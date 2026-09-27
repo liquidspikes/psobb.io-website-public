@@ -376,5 +376,7 @@ if ($row = $tRes->fetchArray(SQLITE3_ASSOC)) {
     $tableCount = $row['count'];
 }
 
-echo "Database initialized at $dbPath ($tableCount tables verified)\n";
+if (php_sapi_name() === 'cli' && (!isset($_SERVER['SCRIPT_FILENAME']) || realpath($_SERVER['SCRIPT_FILENAME']) === realpath(__FILE__))) {
+    echo "Database initialized at $dbPath ($tableCount tables verified)\n";
+}
 ?>
