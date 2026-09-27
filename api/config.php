@@ -692,6 +692,7 @@ if (!function_exists('clamp')) {
  */
 if (!function_exists('resolve_player_file')) {
     function resolve_player_file(string $dir, string $filename): string {
+        $dir = rtrim(str_replace('\\', '/', $dir), '/') . '/';
         $fullPath = $dir . $filename;
         if (file_exists($fullPath)) {
             return $fullPath;

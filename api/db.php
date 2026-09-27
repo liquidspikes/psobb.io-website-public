@@ -20,11 +20,13 @@ ini_set('display_errors', 0);
 function get_db(bool $reset = false)
 {
     static $dbInstance = null;
-    if ($dbInstance !== null && !$reset) {
-        return $dbInstance;
-    }
+    static $cachedPath = null;
 
     $path = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/../db/website.db'));
+    if ($dbInstance !== null && !$reset && $cachedPath === $path) {
+        return $dbInstance;
+    }
+    $cachedPath = $path;
     $dir = dirname($path);
     if (!is_dir($dir)) {
         @mkdir($dir, 0775, true);
