@@ -99,6 +99,45 @@ $DISCORD_SERVER_ID  = $_ENV['DISCORD_SERVER_ID'] ?? $_SERVER['DISCORD_SERVER_ID'
 if (!function_exists('get_site_config')) {
     /**
      * Retrieve the persistent site configuration array.
+     * 
+     * Supported Configuration Parameters & Concrete Examples:
+     * -------------------------------------------------------------------------
+     * - 'server_name' (string): Public brand name displayed across the portal & emails.
+     *     Examples: 'PSOBB.IO', 'PSOBB.RU', 'Pioneer 2 Destiny'
+     * - 'server_address' (string): Domain or IP without protocol/slashes used in links.
+     *     Examples: 'psobb.io', 'psobb.ru', '127.0.0.1:8000', 'play.myserver.net'
+     * - 'server_tagline' (string): Descriptive slogan on hero banner & SEO meta tags.
+     *     Examples: 'Join the adventure...', 'Возрождение легендарной PSOBB...'
+     * - 'hero_logo_url' (string): Relative path or URL to header/hero banner logo.
+     *     Examples: '/img/header_logo.png', '/img/custom_logo.svg'
+     * - 'exp_rate' (string): Displayed EXP rate multiplier badge.
+     *     Examples: '1x', '2x', '5x', 'Dynamic Weekend Boost'
+     * - 'drop_rate' (string): Displayed Rare Drop multiplier badge.
+     *     Examples: '1x', '2x', '3x'
+     * - 'meseta_rate' (string): Displayed Meseta multiplier badge.
+     *     Examples: '1x', '2x', '10x'
+     * - 'discord_server' (string): Public Discord invite link for community buttons.
+     *     Examples: 'https://discord.gg/28s84HJXha', 'https://discord.gg/your-code'
+     * - 'default_language' (string): Initial interface language for new visitors.
+     *     Options: 'auto' (browser-detected), 'en', 'jp', 'ru'
+     * - 'enable_registration' (bool): Toggle new player account registration (true | false).
+     * - 'enable_bounties' (bool): Toggle Hunter's Guild Bounty Board (true | false).
+     * - 'enable_lfg' (bool): Toggle Looking For Group terminal (true | false).
+     * - 'enable_mods' (bool): Toggle Community Mod Repository (true | false).
+     * - 'enable_quest_editor' (bool): Toggle web-based Quest Script Editor (true | false).
+     * - 'enable_discord_oauth' (bool): Toggle Discord OAuth2 account linking (true | false).
+     * - 'client_windows_url' (string): Download link for Windows installer / zip.
+     *     Examples: '/downloads/PSOBBIO-Setup_1.25.13b.exe', 'https://mega.nz/file/...'
+     * - 'client_mac_url' (string): Download link for macOS DMG bundle.
+     *     Examples: '/downloads/PSOBBIO_125.13.dmg'
+     * - 'client_raw_url' (string): Download link for raw / Linux Wine archive.
+     *     Examples: '/downloads/PSOBBIO-Linux_1.25.13.zip'
+     * - 'newserv_players_dir' (string): Absolute host path to NewServ's system/players/.
+     *     Linux VPS:   '/opt/newserv/system/players'
+     *     Windows:     'C:/OSPanel/home/psobb.ru/newserv/system/players'
+     *     Docker:      '/var/newserv/system/players'
+     * - 'portal_modules' (array): Module visibility permissions ('everyone' | 'admin_only' | 'disabled').
+     *     Modules: 'hub', 'characters', 'bank', 'guild', 'tekker', 'lfg', 'chat', 'settings'
      */
     function get_site_config(): array {
         global $SITE_CONFIG;

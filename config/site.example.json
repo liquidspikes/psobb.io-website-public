@@ -1,0 +1,32 @@
+{
+    "server_name": "PSOBB.IO",
+    "server_address": "psobb.io",
+    "server_tagline": "Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.",
+    "default_language": "auto",
+    "hero_logo_url": "/img/header_logo.png",
+    "exp_rate": "1x",
+    "drop_rate": "1x",
+    "meseta_rate": "1x",
+    "discord_server": "https://discord.gg/28s84HJXha",
+    "newserv_players_dir": "/opt/newserv/system/players",
+    "enable_registration": true,
+    "enable_bounties": true,
+    "enable_lfg": true,
+    "enable_mods": true,
+    "enable_quest_editor": true,
+    "enable_discord_oauth": true,
+    "client_windows_url": "/downloads/PSOBBIO-Setup_1.25.13b.exe",
+    "client_mac_url": "/downloads/PSOBBIO_125.13.dmg",
+    "client_raw_url": "/downloads/PSOBBIO-Linux_1.25.13.zip",
+    "portal_modules": {
+        "hub": "everyone",
+        "characters": "everyone",
+        "bank": "everyone",
+        "guild": "everyone",
+        "tekker": "everyone",
+        "lfg": "everyone",
+        "chat": "everyone",
+        "settings": "everyone"
+    },
+    "updated_at": "2026-09-26T12:00:00+00:00"
+}

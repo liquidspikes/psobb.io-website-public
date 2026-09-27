@@ -58,10 +58,81 @@ Central configuration file for the site-wide theming engine and community links.
 
 ---
 
+### `site.json`
+Primary configuration file for public server identity, gameplay multipliers, client downloads, feature toggles, and portal module access control.
+
+#### JSON Structure:
+```json
+{
+    "server_name": "PSOBB.IO",
+    "server_address": "psobb.io",
+    "server_tagline": "Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.",
+    "default_language": "auto",
+    "hero_logo_url": "/img/header_logo.png",
+    "exp_rate": "1x",
+    "drop_rate": "1x",
+    "meseta_rate": "1x",
+    "discord_server": "https://discord.gg/28s84HJXha",
+    "newserv_players_dir": "/opt/newserv/system/players",
+    "enable_registration": true,
+    "enable_bounties": true,
+    "enable_lfg": true,
+    "enable_mods": true,
+    "enable_quest_editor": true,
+    "enable_discord_oauth": true,
+    "client_windows_url": "/downloads/PSOBBIO-Setup_1.25.13b.exe",
+    "client_mac_url": "/downloads/PSOBBIO_125.13.dmg",
+    "client_raw_url": "/downloads/PSOBBIO-Linux_1.25.13.zip",
+    "portal_modules": {
+        "hub": "everyone",
+        "characters": "everyone",
+        "bank": "everyone",
+        "guild": "everyone",
+        "tekker": "everyone",
+        "lfg": "everyone",
+        "chat": "everyone",
+        "settings": "everyone"
+    },
+    "updated_at": "2026-09-26T12:00:00+00:00"
+}
+```
+
+#### Field Explanations & Examples:
+
+| Parameter | Type | Default | Description & Concrete Examples |
+| :--- | :--- | :--- | :--- |
+| **`server_name`** | string | `"PSOBB.IO"` | The public brand name of your server displayed in titles, emails, and headers.<br>• *Examples:* `"PSOBB.IO"`, `"PSOBB.RU"`, `"Pioneer 2 Destiny"` |
+| **`server_address`** | string | `"psobb.io"` | Server domain or IP address without protocol or slashes.<br>• *Examples:* `"psobb.io"`, `"psobb.ru"`, `"play.myserver.net"`, `"127.0.0.1:8000"` |
+| **`server_tagline`** | string | *See above* | Descriptive slogan displayed on homepage hero banner and SEO meta tags.<br>• *Examples:* `"Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."`, `"Возрождение легендарной PSOBB в русскоязычном сообществе."` |
+| **`default_language`** | string | `"auto"` | Default interface language for visitors.<br>• *Options:* `"auto"` (browser-detected), `"en"` (English), `"jp"` (Japanese), `"ru"` (Russian) |
+| **`hero_logo_url`** | string | `"/img/header_logo.png"` | Path or external URL for the header/hero logo image.<br>• *Examples:* `"/img/header_logo.png"`, `"/img/custom_logo.svg"` |
+| **`exp_rate`** | string | `"1x"` | Displayed EXP multiplier badge.<br>• *Examples:* `"1x"`, `"2x"`, `"5x"`, `"Dynamic Weekend Boost"` |
+| **`drop_rate`** | string | `"1x"` | Displayed Rare Drop multiplier badge.<br>• *Examples:* `"1x"`, `"2x"`, `"3x"` |
+| **`meseta_rate`** | string | `"1x"` | Displayed Meseta rate multiplier badge.<br>• *Examples:* `"1x"`, `"2x"`, `"10x"` |
+| **`discord_server`** | string | `"https://discord.gg/..."` | Public Discord community invite URL.<br>• *Examples:* `"https://discord.gg/28s84HJXha"`, `"https://discord.gg/your-invite-code"` |
+| **`newserv_players_dir`** | string | `"/opt/newserv/system/players"` | Absolute host filesystem path to NewServ's `system/players/` directory.<br>• *Linux VPS:* `"/opt/newserv/system/players"`<br>• *Windows OpenServer:* `"C:/OSPanel/home/psobb.ru/newserv/system/players"`<br>• *Docker:* `"/var/newserv/system/players"` |
+| **`enable_registration`** | boolean | `true` | When `false`, disables new player account creation.<br>• *Values:* `true`, `false` |
+| **`enable_bounties`** | boolean | `true` | Enables or disables the Hunter's Guild Bounty Board.<br>• *Values:* `true`, `false` |
+| **`enable_lfg`** | boolean | `true` | Enables or disables the Looking For Group (LFG) Lobby terminal.<br>• *Values:* `true`, `false` |
+| **`enable_mods`** | boolean | `true` | Enables or disables the Community Mod Repository.<br>• *Values:* `true`, `false` |
+| **`enable_quest_editor`** | boolean | `true` | Enables or disables the web-based Quest Script Editor.<br>• *Values:* `true`, `false` |
+| **`enable_discord_oauth`** | boolean | `true` | Enables or disables Discord OAuth2 account linking.<br>• *Values:* `true`, `false` |
+| **`client_windows_url`** | string | `"/downloads/..."` | Direct download link for Windows game client.<br>• *Examples:* `"/downloads/PSOBBIO-Setup_1.25.13b.exe"`, `"https://mega.nz/file/..."` |
+| **`client_mac_url`** | string | `"/downloads/..."` | Download link for macOS DMG client.<br>• *Examples:* `"/downloads/PSOBBIO_125.13.dmg"` |
+| **`client_raw_url`** | string | `"/downloads/..."` | Download link for Linux/Wine archive.<br>• *Examples:* `"/downloads/PSOBBIO-Linux_1.25.13.zip"` |
+| **`portal_modules`** | object | *All "everyone"* | Access permission per player portal module (`hub`, `characters`, `bank`, `guild`, `tekker`, `lfg`, `chat`, `settings`).<br>• *Options per module:* `"everyone"`, `"admin_only"`, `"disabled"` |
+
+---
+
 ## 🖥️ Live Administration via Web UI
 
-Administrators do **not** need to edit `config/theme.json` manually:
-1. Log in with an admin account.
-2. Navigate to **Admin** $\rightarrow$ **Theme Manager** (`/admin/theme_manager.php`).
-3. Select presets, adjust individual colors using live color pickers, and edit the Discord invite link.
-4. Click **"Preview on This Browser Only"** to test risk-free, or **"Save as Global Server Default"** to write changes directly to `config/theme.json`.
+Administrators do **not** need to manually edit `site.json` or `theme.json`:
+1. **Site Settings & Server Configuration:**
+   * Navigate to **Admin** $\rightarrow$ **Site Settings** (`/admin/site_settings.php`).
+   * Configure server branding, rates, NewServ player files directory, client download links, and module visibility.
+   * Changes write directly to `config/site.json` in real time.
+2. **Visual Theme & Presets:**
+   * Navigate to **Admin** $\rightarrow$ **Theme Manager** (`/admin/theme_manager.php`).
+   * Select theme presets, adjust CSS colors, and edit the Discord invite link.
+   * Changes write directly to `config/theme.json`.
+
