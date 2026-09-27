@@ -291,34 +291,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $statStr = "{$combined_stats['stat_native']}/{$combined_stats['stat_abeast']}/{$combined_stats['stat_machine']}/{$combined_stats['stat_dark']}/{$combined_stats['stat_hit']}";
     $itemString = $chosenWeaponHex . "008000000000000000000000 " . $statStr;
 
-    // Trigger drop
-    $dropResult = parse_and_drop_items($accountId, $itemString);
-
-    if (!$dropResult['success']) {
-        http_response_code(500);
-        echo json_encode(['error' => $dropResult['error'] ?? 'Server drop execution failed']);
-        exit;
-    }
-
-    // Mark all selected tokens as claimed inside a transaction
-    $db->exec("BEGIN TRANSACTION;");
+    // Mark all selected tokens as claimed inside an atomic transaction FIRST to block concurrent race conditions
+    $db->exec("BEGIN IMMEDIATE;");
+    $claimedCount = 0;
     try {
         foreach ($tokenIds as $tid) {
             $cleanTid = preg_replace('/[\r\n\t ]/', '', trim($tid));
             $upd = $db->prepare("
                 UPDATE tekker_tokens 
                 SET is_claimed = 1, claimed_by = :claimed_by, claimed_at = datetime('now') 
-                WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :tokenId
+                WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :tokenId AND is_claimed = 0
             ");
             $upd->bindValue(':claimed_by', $accountId, SQLITE3_INTEGER);
             $upd->bindValue(':tokenId', $cleanTid, SQLITE3_TEXT);
             $upd->execute();
+            if ($db->changes() > 0) {
+                $claimedCount++;
+            }
+        }
+        if ($claimedCount < count($tokenIds)) {
+            $db->exec("ROLLBACK;");
+            http_response_code(409);
+            echo json_encode(['error' => 'One or more tokens have already been claimed or are currently being processed.']);
+            exit;
         }
         $db->exec("COMMIT;");
     } catch (Exception $e) {
         $db->exec("ROLLBACK;");
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to commit token claim: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Failed to process token claim: ' . $e->getMessage()]);
+        exit;
+    }
+
+    // Trigger drop now that tokens are locked
+    $dropResult = parse_and_drop_items($accountId, $itemString);
+
+    if (!$dropResult['success']) {
+        // Revert tokens so the user does not lose them on drop failure
+        foreach ($tokenIds as $tid) {
+            $cleanTid = preg_replace('/[\r\n\t ]/', '', trim($tid));
+            $revert = $db->prepare("UPDATE tekker_tokens SET is_claimed = 0, claimed_by = NULL, claimed_at = NULL WHERE trim(token_id, char(13)||char(10)||' '||char(9)) = :tokenId");
+            $revert->bindValue(':tokenId', $cleanTid, SQLITE3_TEXT);
+            $revert->execute();
+        }
+        http_response_code(500);
+        echo json_encode(['error' => $dropResult['error'] ?? 'Server drop execution failed']);
         exit;
     }
 

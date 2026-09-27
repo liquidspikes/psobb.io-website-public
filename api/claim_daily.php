@@ -130,7 +130,20 @@ foreach ($dailyPool as $hex => $info) {
     }
 }
 
-// 5. Drop the item
+// 5. Atomic Reservation: Insert before drop to block race conditions with concurrent requests
+try {
+    $stmt = $db->prepare("INSERT INTO daily_rewards (account_id, claim_date, item_string) VALUES (:aid, :date, :item)");
+    $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $stmt->bindValue(':date', $today, SQLITE3_TEXT);
+    $stmt->bindValue(':item', $chosenItemHex, SQLITE3_TEXT);
+    $stmt->execute();
+} catch (Exception $e) {
+    http_response_code(409);
+    echo json_encode(["error" => "You have already claimed your daily reward today. Come back tomorrow!"]);
+    exit;
+}
+
+// 6. Drop the item
 if (!function_exists('parse_and_drop_items')) {
     require_once 'functions.php';
 }
@@ -138,17 +151,16 @@ if (!function_exists('parse_and_drop_items')) {
 $dropResult = parse_and_drop_items($accountId, $chosenItemHex);
 
 if (!$dropResult['success']) {
+    // Revert reservation so player can retry
+    $del = $db->prepare("DELETE FROM daily_rewards WHERE account_id = :aid AND claim_date = :date");
+    $del->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $del->bindValue(':date', $today, SQLITE3_TEXT);
+    $del->execute();
+
     http_response_code(400);
     echo json_encode(["error" => $dropResult['error']]);
     exit;
 }
-
-// 6. Record the claim
-$stmt = $db->prepare("INSERT INTO daily_rewards (account_id, claim_date, item_string) VALUES (:aid, :date, :item)");
-$stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-$stmt->bindValue(':date', $today, SQLITE3_TEXT);
-$stmt->bindValue(':item', $chosenItemHex, SQLITE3_TEXT);
-$stmt->execute();
 
 $translatedName = __($chosenItemName);
 

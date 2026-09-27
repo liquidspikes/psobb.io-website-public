@@ -94,10 +94,11 @@ function get_db(bool $reset = false)
 
             CREATE TABLE IF NOT EXISTS daily_rewards (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                day_number INTEGER UNIQUE NOT NULL,
-                reward_name TEXT NOT NULL,
+                account_id INTEGER NOT NULL,
+                claim_date TEXT NOT NULL,
                 item_string TEXT NOT NULL,
-                description TEXT
+                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, claim_date)
             );
 
             CREATE TABLE IF NOT EXISTS streak_claims (
@@ -506,6 +507,30 @@ function get_db(bool $reset = false)
             );
             CREATE INDEX IF NOT EXISTS idx_special_deliveries_recipient
                 ON special_deliveries(recipient_id, status);
+        ");
+
+        // --- Daily Rewards Self-Healing Migration ---
+        $drCols = [];
+        $drRes = $db->query("PRAGMA table_info(daily_rewards)");
+        if ($drRes) {
+            while ($c = $drRes->fetchArray(SQLITE3_ASSOC)) {
+                $drCols[] = $c['name'];
+            }
+            $drRes->finalize();
+        }
+        if (!empty($drCols) && !in_array('account_id', $drCols)) {
+            $db->exec("DROP TABLE IF EXISTS daily_rewards");
+        }
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS daily_rewards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                claim_date TEXT NOT NULL,
+                item_string TEXT NOT NULL,
+                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, claim_date)
+            );
+            CREATE INDEX IF NOT EXISTS idx_daily_rewards_account_date ON daily_rewards(account_id, claim_date);
         ");
 
         // Enable FK enforcement only after all schema migrations are done

@@ -334,14 +334,16 @@ $db->exec("CREATE TABLE IF NOT EXISTS special_deliveries (
 )");
 $db->exec("CREATE INDEX IF NOT EXISTS idx_special_deliveries_recipient ON special_deliveries(recipient_id, status)");
 
-// Daily Rewards configuration table
+// Daily Rewards claim records table
 $db->exec("CREATE TABLE IF NOT EXISTS daily_rewards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    day_number INTEGER UNIQUE NOT NULL,
-    reward_name TEXT NOT NULL,
+    account_id INTEGER NOT NULL,
+    claim_date TEXT NOT NULL,
     item_string TEXT NOT NULL,
-    description TEXT
+    claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(account_id, claim_date)
 )");
+$db->exec("CREATE INDEX IF NOT EXISTS idx_daily_rewards_account_date ON daily_rewards(account_id, claim_date)");
 
 // Column migrations for users table
 $userCols = [];

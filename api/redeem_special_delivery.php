@@ -82,10 +82,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Atomic reservation: set status = 'redeeming' to lock out concurrent requests
+    $lock = $db->prepare("UPDATE special_deliveries SET status = 'redeeming' WHERE id = :id AND recipient_id = :uid AND status = 'pending'");
+    $lock->bindValue(':id',  $id,        SQLITE3_INTEGER);
+    $lock->bindValue(':uid', $accountId, SQLITE3_INTEGER);
+    $lock->execute();
+    if ($db->changes() === 0) {
+        http_response_code(409);
+        echo json_encode(['error' => 'Delivery is already being redeemed or has already been claimed.']);
+        exit;
+    }
+
     // Attempt to deliver via newserv (player must be in-game)
     $result = parse_and_drop_items($accountId, $delivery['item_string']);
 
     if (!$result['success']) {
+        // Revert status to pending on failure so player can retry
+        $revert = $db->prepare("UPDATE special_deliveries SET status = 'pending' WHERE id = :id");
+        $revert->bindValue(':id', $id, SQLITE3_INTEGER);
+        $revert->execute();
+
         $errMsg = $result['error'] ?? 'Unknown error';
 
         // Detect offline / not found specifically so the UI can give a helpful message

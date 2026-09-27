@@ -14,8 +14,8 @@ if (empty($_SESSION['user']['account_id'])) {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$event_id = intval($input['event_id'] ?? 0);
-$bonus_choice = $input['bonus_choice'] ?? null;
+$event_id = intval($input['event_id'] ?? $_POST['event_id'] ?? 0);
+$bonus_choice = $input['bonus_choice'] ?? $_POST['bonus_choice'] ?? null;
 
 if (!$event_id) {
     http_response_code(400);
@@ -189,6 +189,17 @@ try {
     // Always append the calculated Meseta reward
     $raw_string .= ',' . $meseta_reward . ' Meseta';
     
+    // Atomic reservation: set reward_claimed = 2 (in-progress) to lock out concurrent requests
+    $lock = $db->prepare("UPDATE community_event_participants SET reward_claimed = 2 WHERE event_id = :eid AND account_id = :accId AND reward_claimed = 0");
+    $lock->bindValue(':eid', $event_id, SQLITE3_INTEGER);
+    $lock->bindValue(':accId', $accId, SQLITE3_INTEGER);
+    $lock->execute();
+    if ($db->changes() === 0) {
+        http_response_code(409);
+        echo json_encode(["error" => "Community reward is already being redeemed or has already been claimed."]);
+        exit;
+    }
+
     if (!function_exists('parse_and_drop_items')) {
         require_once 'functions.php';
     }
@@ -196,13 +207,18 @@ try {
     $dropResult = parse_and_drop_items($accId, $raw_string);
     
     if (!$dropResult['success']) {
+        // Revert reservation so player can retry
+        $revert = $db->prepare("UPDATE community_event_participants SET reward_claimed = 0 WHERE event_id = :eid AND account_id = :accId");
+        $revert->bindValue(':eid', $event_id, SQLITE3_INTEGER);
+        $revert->bindValue(':accId', $accId, SQLITE3_INTEGER);
+        $revert->execute();
+
         http_response_code(400);
         echo json_encode(["error" => $dropResult['error']]);
         exit;
     }
     
-    // Mark claimed
-    // Mark the participant's reward as claimed in the database to prevent double-redemptions
+    // Mark claimed (1 = fully redeemed)
     $upd = $db->prepare("UPDATE community_event_participants SET reward_claimed = 1 WHERE event_id = :eid AND account_id = :accId");
     $upd->bindValue(':eid', $event_id, SQLITE3_INTEGER);
     $upd->bindValue(':accId', $accId, SQLITE3_INTEGER);

@@ -242,7 +242,20 @@ if ($milestone === 365) {
     $itemName = $materials[$itemString];
 }
 
-// Execute the robust item parser to handle the drop securely
+// 5. Atomic Reservation: Insert before drop to block race conditions with concurrent requests
+try {
+    $stmt = $db->prepare("INSERT INTO streak_claims (account_id, streak_cycle, milestone) VALUES (:aid, :cycle, :ms)");
+    $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $stmt->bindValue(':cycle', $currentCycle, SQLITE3_INTEGER);
+    $stmt->bindValue(':ms', $milestone, SQLITE3_INTEGER);
+    $stmt->execute();
+} catch (Exception $e) {
+    http_response_code(409);
+    echo json_encode(["error" => "You have already claimed the {$milestone}-day streak reward this cycle."]);
+    exit;
+}
+
+// 6. Execute Game Payload (Drop Generation)
 if (!function_exists('parse_and_drop_items')) {
     require_once 'functions.php';
 }
@@ -250,23 +263,17 @@ if (!function_exists('parse_and_drop_items')) {
 $dropResult = parse_and_drop_items($accountId, $itemString);
 
 if (!$dropResult['success']) {
+    // Revert reservation so player can retry when in-game
+    $del = $db->prepare("DELETE FROM streak_claims WHERE account_id = :aid AND streak_cycle = :cycle AND milestone = :ms");
+    $del->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+    $del->bindValue(':cycle', $currentCycle, SQLITE3_INTEGER);
+    $del->bindValue(':ms', $milestone, SQLITE3_INTEGER);
+    $del->execute();
+
     http_response_code(400);
     echo json_encode(["error" => $dropResult['error']]);
     exit;
 }
-
-// 5. Hardened Security DB Update
-// Only fires after verification the item has actually manifested on the game server.
-
-// --------------------------------------------------------------------------
-// 7. Success Finalization
-// --------------------------------------------------------------------------
-// Ensure the DB marks exactly what was claimed so it cannot be claimed twice
-$stmt = $db->prepare("INSERT INTO streak_claims (account_id, streak_cycle, milestone) VALUES (:aid, :cycle, :ms)");
-$stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-$stmt->bindValue(':cycle', $currentCycle, SQLITE3_INTEGER);
-$stmt->bindValue(':ms', $milestone, SQLITE3_INTEGER);
-$stmt->execute();
 
 echo json_encode([
     "success" => true,

@@ -21,7 +21,7 @@ if (empty($_SESSION['user']['account_id'])) {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$pm_id = intval($input['player_mission_id'] ?? 0);
+$pm_id = intval($input['player_mission_id'] ?? $_POST['player_mission_id'] ?? 0);
 
 if (!$pm_id) {
     http_response_code(400);
@@ -132,6 +132,16 @@ try {
     // We split compound AI strings like "Saber, Monomate and 300 Meseta" into isolated payloads
     $raw_string = trim(str_ireplace(' and ', ',', $bounty['reward_item_string']), ',');
     
+    // Atomic reservation: transition status to 'redeeming' to lock out concurrent requests
+    $lock = $db->prepare("UPDATE player_missions SET status = 'redeeming' WHERE id = :pm_id AND status = 'ready_to_redeem'");
+    $lock->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
+    $lock->execute();
+    if ($db->changes() === 0) {
+        http_response_code(409);
+        echo json_encode(["error" => "Bounty is already being redeemed or has already been completed."]);
+        exit;
+    }
+
     if (!function_exists('parse_and_drop_items')) {
         require_once 'functions.php';
     }
@@ -139,6 +149,11 @@ try {
     $dropResult = parse_and_drop_items($accId, $raw_string, $bounty['character_name']);
     
     if (!$dropResult['success']) {
+        // Revert status on failure so player can retry
+        $revert = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :pm_id");
+        $revert->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
+        $revert->execute();
+
         http_response_code(400);
         echo json_encode(["error" => $dropResult['error']]);
         exit;
