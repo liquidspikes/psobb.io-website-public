@@ -60,13 +60,11 @@ if ($foundAccount) {
     $isAdmin = ($flags & 0x07) !== 0;     
     $foundAccount['isAdmin'] = $isAdmin;
 
-    // Calculate total account playtime across all 4 character files
-    $playersDir = '/opt/newserv/system/players/';
-    if (!is_dir($playersDir)) {
-        $playersDir = __DIR__ . '/../../newserv/system/players/';
-    }
+    // Calculate total account playtime and existing character slots across player files
+    $playersDir = get_newserv_players_dir();
     
     $total_play_time = 0;
+    $existing_slots = [];
     $username = strtolower(trim($foundAccount['username'] ?? $_SESSION['user']['username'] ?? ''));
     $usernames = [$username];
     if (empty($username) && isset($foundAccount['BBLicenses']) && is_array($foundAccount['BBLicenses']) && count($foundAccount['BBLicenses']) > 0) {
@@ -92,6 +90,9 @@ if ($foundAccount) {
                 }
             }
             if (file_exists($charPath)) {
+                if (!in_array($slot, $existing_slots)) {
+                    $existing_slots[] = $slot;
+                }
                 $charData = @file_get_contents($charPath);
                 if ($charData !== false && strlen($charData) >= (8 + 0x04E8 + 4)) {
                     $playTime = unpack('V', substr($charData, 8 + 0x04E8, 4))[1];
@@ -101,6 +102,7 @@ if ($foundAccount) {
         }
     }
     
+    $foundAccount['existing_slots'] = !empty($existing_slots) ? $existing_slots : [0];
     $foundAccount['total_play_time_hours'] = round($total_play_time / 3600, 1);
 
     echo json_encode($foundAccount);

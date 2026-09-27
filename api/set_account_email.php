@@ -132,33 +132,35 @@ try {
 
     // 6. Build Confirmation Link & Send Email
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? 0) == 443) ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST'] ?? 'psobb.io';
+    $srvName = get_server_name();
+    $srvAddr = get_server_address();
+    $host = $_SERVER['HTTP_HOST'] ?? $srvAddr;
     $confirmLink = "$protocol://$host/confirm_email.php?token=$token";
 
     $lang_pref = $userRow['language'] ?? ($_COOKIE['psobb_lang'] ?? 'en');
 
     if ($isChange) {
         if ($lang_pref === 'jp') {
-            $subject = "登録メールアドレス変更の確認 - PSOBB.IO";
-            $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスを以下のアドレスに変更するリクエストを受け付けました：\n$email\n\n以下のリンクをクリックして、メールアドレスの変更を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。現在の登録メールアドレス ($currentEmail) は変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+            $subject = "登録メールアドレス変更の確認 - $srvName";
+            $msg = "$username さん、\n\n$srvName アカウント ($username) のリカバリー用メールアドレスを以下のアドレスに変更するリクエストを受け付けました：\n$email\n\n以下のリンクをクリックして、メールアドレスの変更を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。現在の登録メールアドレス ($currentEmail) は変更されません。\n\n良い狩りを！\n$srvName チーム";
         } elseif ($lang_pref === 'ru') {
-            $subject = "Подтверждение смены email - PSOBB.IO";
-            $msg = "Здравствуйте, $username,\n\nВы запросили смену email для восстановления вашей учетной записи PSOBB.IO ($username) с $currentEmail на: $email.\n\nПожалуйста, перейдите по ссылке ниже для подтверждения смены email:\n$confirmLink\n\nСсылка действительна в течение 24 часов.\n\nЕсли вы не запрашивали это действие, проигнорируйте это письмо. Ваш текущий адрес ($currentEmail) останется активным.\n\nУдачной охоты!\nКоманда PSOBB.IO";
+            $subject = "Подтверждение смены email - $srvName";
+            $msg = "Здравствуйте, $username,\n\nВы запросили смену email для восстановления вашей учетной записи $srvName ($username) с $currentEmail на: $email.\n\nПожалуйста, перейдите по ссылке ниже для подтверждения смены email:\n$confirmLink\n\nСсылка действительна в течение 24 часов.\n\nЕсли вы не запрашивали это действие, проигнорируйте это письмо. Ваш текущий адрес ($currentEmail) останется активным.\n\nУдачной охоты!\nКоманда $srvName";
         } else {
-            $subject = "Confirm Your PSOBB.IO Email Change";
-            $msg = "Hello $username,\n\nYou requested to change the recovery email for your PSOBB.IO account ($username) from $currentEmail to: $email.\n\nPlease click the link below to confirm this change:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this change, please ignore this email. Your current recovery email ($currentEmail) will remain active.\n\nHappy Hunting,\nPSOBB.IO Team";
+            $subject = "Confirm Your $srvName Email Change";
+            $msg = "Hello $username,\n\nYou requested to change the recovery email for your $srvName account ($username) from $currentEmail to: $email.\n\nPlease click the link below to confirm this change:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this change, please ignore this email. Your current recovery email ($currentEmail) will remain active.\n\nHappy Hunting,\n$srvName Team";
         }
         $responseMsg = "Confirmation link sent to $email! Please check your inbox and click the link to confirm your email change.";
     } else {
         if ($lang_pref === 'jp') {
-            $subject = "リカバリー用メールアドレスの確認 - PSOBB.IO";
-            $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスとして、このアドレス ($email) を登録するリクエストを受け付けました。\n\n以下のリンクをクリックして、メールアドレスの登録を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。メールアドレスは変更されません。\n\n良い狩りを！\nPSOBB.IO チーム";
+            $subject = "リカバリー用メールアドレスの確認 - $srvName";
+            $msg = "$username さん、\n\n$srvName アカウント ($username) のリカバリー用メールアドレスとして、このアドレス ($email) を登録するリクエストを受け付けました。\n\n以下のリンクをクリックして、メールアドレスの登録を完了してください：\n$confirmLink\n\nこのリンクは24時間有効です。\n\n心当たりがない場合は、このメールを無視してください。メールアドレスは変更されません。\n\n良い狩りを！\n$srvName チーム";
         } elseif ($lang_pref === 'ru') {
-            $subject = "Подтверждение email для восстановления - PSOBB.IO";
-            $msg = "Здравствуйте, $username,\n\nВы запросили привязку адреса ($email) в качестве email для восстановления учетной записи PSOBB.IO ($username).\n\nПожалуйста, перейдите по ссылке ниже для активации адреса:\n$confirmLink\n\nСсылка действительна в течение 24 часов.\n\nЕсли вы не запрашивали это действие, проигнорируйте это письмо.\n\nУдачной охоты!\nКоманда PSOBB.IO";
+            $subject = "Подтверждение email для восстановления - $srvName";
+            $msg = "Здравствуйте, $username,\n\nВы запросили привязку адреса ($email) в качестве email для восстановления учетной записи $srvName ($username).\n\nПожалуйста, перейдите по ссылке ниже для активации адреса:\n$confirmLink\n\nСсылка действительна в течение 24 часов.\n\nЕсли вы не запрашивали это действие, проигнорируйте это письмо.\n\nУдачной охоты!\nКоманда $srvName";
         } else {
-            $subject = "Confirm Your Recovery Email - PSOBB.IO";
-            $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your PSOBB.IO account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\nPSOBB.IO Team";
+            $subject = "Confirm Your Recovery Email - $srvName";
+            $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your $srvName account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\n$srvName Team";
         }
         $responseMsg = "Confirmation email sent! Please check your inbox and click the confirmation link to finish linking your email.";
     }

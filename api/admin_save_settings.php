@@ -47,6 +47,7 @@ $discordServer = $cleanString($data['discord_server'] ?? null, 'https://discord.
 $clientWin = $cleanString($data['client_windows_url'] ?? null, '/downloads/PSOBBIO-Setup_1.25.13b.exe', 250);
 $clientMac = $cleanString($data['client_mac_url'] ?? null, '/downloads/PSOBBIO_125.13.dmg', 250);
 $clientRaw = $cleanString($data['client_raw_url'] ?? null, '/downloads/PSOBBIO-Linux_1.25.13.zip', 250);
+$newservPlayersDir = $cleanString($data['newserv_players_dir'] ?? null, $currentConfig['newserv_players_dir'] ?? '', 250);
 
 $enableRegistration = !empty($data['enable_registration']);
 $enableBounties     = !empty($data['enable_bounties']);
@@ -103,6 +104,7 @@ $newConfig = [
     'client_windows_url'   => $clientWin,
     'client_mac_url'       => $clientMac,
     'client_raw_url'       => $clientRaw,
+    'newserv_players_dir'  => $newservPlayersDir,
     'portal_modules'       => $portalModules,
     'updated_at'           => date('c')
 ];

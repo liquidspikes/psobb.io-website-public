@@ -88,12 +88,13 @@ if ($json && isset($json['result']) && stripos($json['result'], 'updated') !== f
         
         if ($row && !empty($row['email'])) {
             $lang_pref = $row['language'] ?? 'en';
+            $srvName = get_server_name();
             if ($lang_pref === 'jp') {
-                send_email($row['email'], "パスワード変更完了 - PSOBB.IO", "$username さん、\n\nパスワードが正常に変更されました。\n心当たりがない場合は、直ちに管理者にご連絡ください。");
+                send_email($row['email'], "パスワード変更完了 - $srvName", "$username さん、\n\nパスワードが正常に変更されました。\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n$srvName チーム");
             } elseif ($lang_pref === 'ru') {
-                send_email($row['email'], "Пароль изменён - PSOBB.IO", "Здравствуйте, $username,\n\nВаш пароль был успешно изменён.\nЕсли это были не вы, немедленно свяжитесь с администрацией сервера.");
+                send_email($row['email'], "Пароль изменён - $srvName", "Здравствуйте, $username,\n\nВаш пароль был успешно изменён.\nЕсли это были не вы, немедленно свяжитесь с администрацией сервера.\n\nКоманда $srvName");
             } else {
-                send_email($row['email'], "Password Changed - PSOBB.IO", "Hello $username,\n\nYour password was successfully changed.\nIf this wasn't you, please contact an admin immediately.");
+                send_email($row['email'], "Password Changed - $srvName", "Hello $username,\n\nYour password was successfully changed.\nIf this wasn't you, please contact an admin immediately.\n\nHappy Hunting,\n$srvName Team");
             }
         }
     } catch (Exception $e) {

@@ -32,9 +32,29 @@ $db->exec("CREATE TABLE IF NOT EXISTS users (
 // Password Resets table
 $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
     token TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    expires_at INTEGER NOT NULL
+    username TEXT,
+    email TEXT,
+    expires_at INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )");
+
+$pwCols = [];
+$pRes = $db->query("PRAGMA table_info(password_resets)");
+if ($pRes) {
+    while ($col = $pRes->fetchArray(SQLITE3_ASSOC)) {
+        $pwCols[] = $col['name'];
+    }
+    $pRes->finalize();
+}
+if (!in_array('email', $pwCols)) {
+    $db->exec("ALTER TABLE password_resets ADD COLUMN email TEXT");
+}
+if (!in_array('created_at', $pwCols)) {
+    $db->exec("ALTER TABLE password_resets ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+}
+if (!in_array('expires_at', $pwCols)) {
+    $db->exec("ALTER TABLE password_resets ADD COLUMN expires_at INTEGER");
+}
 
 // Email Confirmations table
 $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (

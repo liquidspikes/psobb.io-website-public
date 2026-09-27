@@ -403,9 +403,7 @@ if ($action === 'get_player') {
     }
     $is_online = count($live_clients) > 0;
 
-    // --- Parse all 20 character slots ---
-    $playersDir = '/opt/newserv/system/players/';
-    if (!is_dir($playersDir)) $playersDir = __DIR__ . '/../../newserv/system/players/';
+    $playersDir = get_newserv_players_dir();
 
     $resolve_file = function($dir, $filename) {
         $full = $dir . $filename;

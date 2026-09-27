@@ -122,6 +122,7 @@ if (!function_exists('get_site_config')) {
             'client_windows_url'   => '/downloads/PSOBBIO-Setup_1.25.13b.exe',
             'client_mac_url'       => '/downloads/PSOBBIO_125.13.dmg',
             'client_raw_url'       => '/downloads/PSOBBIO-Linux_1.25.13.zip',
+            'newserv_players_dir'  => '',
             'portal_modules'       => [
                 'hub'        => 'everyone',
                 'characters' => 'everyone',
@@ -210,6 +211,34 @@ if (!function_exists('get_server_tagline')) {
     function get_server_tagline(): string {
         global $SERVER_TAGLINE;
         return $SERVER_TAGLINE ?: 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.';
+    }
+}
+
+if (!function_exists('get_newserv_players_dir')) {
+    /**
+     * Retrieves the configured filesystem directory where NewServ stores player files (.psochar).
+     * Sourced strictly from configuration:
+     *  1. Environment variable: NEWSERV_PLAYERS_DIR (via .env or environment)
+     *  2. Site config JSON: config/site.json ('newserv_players_dir')
+     *  3. Environment variable NEWSERV_PATH or NEWSERV_DIR (+ '/system/players/')
+     *  4. Standard default fallback: '/opt/newserv/system/players/'
+     */
+    function get_newserv_players_dir(): string {
+        $dir = $_ENV['NEWSERV_PLAYERS_DIR'] ?? $_SERVER['NEWSERV_PLAYERS_DIR'] ?? (getenv('NEWSERV_PLAYERS_DIR') ?: null);
+        if (empty($dir)) {
+            $cfg = get_site_config();
+            $dir = $cfg['newserv_players_dir'] ?? null;
+        }
+        if (empty($dir)) {
+            $baseDir = $_ENV['NEWSERV_DIR'] ?? $_SERVER['NEWSERV_DIR'] ?? $_ENV['NEWSERV_PATH'] ?? $_SERVER['NEWSERV_PATH'] ?? (getenv('NEWSERV_DIR') ?: (getenv('NEWSERV_PATH') ?: null));
+            if (!empty($baseDir)) {
+                $dir = rtrim($baseDir, '/\\') . DIRECTORY_SEPARATOR . 'system' . DIRECTORY_SEPARATOR . 'players';
+            }
+        }
+        if (empty($dir)) {
+            $dir = '/opt/newserv/system/players/';
+        }
+        return rtrim(str_replace('\\', '/', $dir), '/') . '/';
     }
 }
 

@@ -640,6 +640,17 @@ input:checked + .slider:before {
 
                     <div class="field-group">
                         <label>
+                            <i class="fas fa-folder-open" style="color:var(--pso-blue); margin-right:4px;"></i> <?= __('NewServ Players Directory') ?>
+                            <small><?= __('Path where NewServ stores player files (.psochar). Leave empty to use automatic discovery.') ?></small>
+                        </label>
+                        <input type="text" class="field-input" name="newserv_players_dir" id="field_newserv_players_dir" value="<?= htmlspecialchars($cfg['newserv_players_dir'] ?? '') ?>" placeholder="<?= htmlspecialchars(get_newserv_players_dir()) ?>">
+                        <small style="display:block; margin-top:6px; color:#888; font-size:0.75rem;">
+                            <?= __('Currently resolved to:') ?> <code style="color:var(--pso-green);"><?= htmlspecialchars(get_newserv_players_dir()) ?></code>
+                        </small>
+                    </div>
+
+                    <div class="field-group">
+                        <label>
                             <i class="fas fa-globe" style="color:var(--pso-blue); margin-right:4px;"></i> <?= __('Default Visitor Language') ?>
                             <small><?= __('The initial language presented to new visitors when they arrive at the site for the first time.') ?></small>
                         </label>

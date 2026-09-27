@@ -66,10 +66,7 @@ if ($clientsResponse !== FALSE) {
 }
 
 // Path to players folder
-$playersDir = '/opt/newserv/system/players/';
-if (!is_dir($playersDir)) {
-    $playersDir = __DIR__ . '/../../newserv/system/players/';
-}
+$playersDir = get_newserv_players_dir();
 
 // Helper to resolve player files case-insensitively
 function resolve_player_file($dir, $filename) {

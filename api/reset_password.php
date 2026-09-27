@@ -21,62 +21,84 @@ if (strlen($password) > 16 || preg_match('/\s/', $password)) {
     exit;
 }
 
-$db = get_db();
+try {
+    $db = get_db();
 
-// 1. Verify Token
-$stmt = $db->prepare("SELECT email FROM password_resets WHERE token = :t");
-$stmt->bindValue(':t', $token);
-$res = $stmt->execute();
-$row = $res->fetchArray(SQLITE3_ASSOC);
+    // 1. Verify Token
+    $stmt = $db->prepare("SELECT email, username, expires_at FROM password_resets WHERE token = :t");
+    $stmt->bindValue(':t', $token);
+    $res = $stmt->execute();
+    $row = $res->fetchArray(SQLITE3_ASSOC);
 
-if (!$row) {
-    echo json_encode(['error' => 'Invalid or expired token']);
-    exit;
-}
+    if (!$row) {
+        echo json_encode(['error' => 'Invalid or expired token']);
+        exit;
+    }
 
-$email = $row['email'];
+    if (!empty($row['expires_at']) && (int)$row['expires_at'] < time()) {
+        $delStmt = $db->prepare("DELETE FROM password_resets WHERE token = :t");
+        $delStmt->bindValue(':t', $token);
+        $delStmt->execute();
+        echo json_encode(['error' => 'Reset token has expired. Please request a new one.']);
+        exit;
+    }
 
-// 2. Get Account Info
-$stmt = $db->prepare("SELECT account_id, username FROM users WHERE email = :e");
-$stmt->bindValue(':e', $email);
-$res = $stmt->execute();
-$userRow = $res->fetchArray(SQLITE3_ASSOC);
+    $email = $row['email'] ?? '';
+    $resetUsername = $row['username'] ?? '';
 
-if (!$userRow) {
-    echo json_encode(['error' => 'User not found (email mismatch)']);
-    exit;
-}
+    // 2. Get Account Info
+    $userRow = null;
+    if (!empty($email)) {
+        $stmt = $db->prepare("SELECT account_id, username, email FROM users WHERE email = :e COLLATE NOCASE");
+        $stmt->bindValue(':e', $email);
+        $res = $stmt->execute();
+        $userRow = $res->fetchArray(SQLITE3_ASSOC);
+    }
+    if (!$userRow && !empty($resetUsername)) {
+        $stmt = $db->prepare("SELECT account_id, username, email FROM users WHERE username = :u COLLATE NOCASE");
+        $stmt->bindValue(':u', $resetUsername);
+        $res = $stmt->execute();
+        $userRow = $res->fetchArray(SQLITE3_ASSOC);
+    }
 
-$username = strtolower($userRow['username']);
-$account_id = $userRow['account_id'];
-$hexId = sprintf('%08X', $account_id);
+    if (!$userRow) {
+        echo json_encode(['error' => 'User account not found']);
+        exit;
+    }
 
-// 3. Update Password in Newserv
-function run_shell($cmd) {
-    return newserv_shell_exec($cmd);
-}
+    $username = strtolower($userRow['username']);
+    $account_id = $userRow['account_id'];
+    $hexId = sprintf('%08X', $account_id);
+    $email = $userRow['email'] ?: $email;
 
-// Delete old license (admin force)
-run_shell("delete-license $hexId BB $username");
+    // 3. Update Password in Newserv
+    function run_shell($cmd) {
+        return newserv_shell_exec($cmd);
+    }
 
-// Add new license
-$res = run_shell("add-license $hexId BB $username $password");
-$json = json_decode($res, true);
+    // Delete old license (admin force)
+    run_shell("delete-license $hexId BB $username");
 
-// 4. Cleanup and Respond
-if ($json && isset($json['result']) && stripos($json['result'], 'updated') !== false) {
-    // Delete used token
+    // Add new license
+    $res = run_shell("add-license $hexId BB $username $password");
+    $json = json_decode($res, true);
 
-    $delStmt = $db->prepare("DELETE FROM password_resets WHERE token = :t");
-    $delStmt->bindValue(':t', $token);
-    $delStmt->execute();
+    // 4. Cleanup and Respond
+    if ($json && isset($json['result']) && stripos($json['result'], 'updated') !== false) {
+        // Delete used token
+        $delStmt = $db->prepare("DELETE FROM password_resets WHERE token = :t");
+        $delStmt->bindValue(':t', $token);
+        $delStmt->execute();
 
-    // Verify
-    send_email($email, "Password Changed", "Your password has been successfully reset.");
-    
-    echo json_encode(['success' => true]);
-} else {
-    // Determine specific error
-    echo json_encode(['error' => 'Server failed to update password. Check admin logs.', 'debug' => $res]);
+        // Notification email
+        $srvName = get_server_name();
+        send_email($email, "Password Changed - {$srvName}", "Hello $username,\n\nYour password has been successfully reset on {$srvName}.\n\nIf this wasn't you, please contact an admin immediately.");
+        
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['error' => 'Server failed to update password. Check admin logs.', 'debug' => $res]);
+    }
+} catch (Throwable $e) {
+    echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
 }
 ?>

@@ -155,13 +155,22 @@ try {
     }
 
     // 6. Notify the user of the admin email update
+    $srvName = get_server_name();
+    $srvAddr = get_server_address();
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? 0) == 443) ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'] ?? $srvAddr;
+    $resetLink = "$protocol://$host/forgot_password.php";
+
     $lang_pref = $userRow['language'] ?? 'en';
     if ($lang_pref === 'jp') {
-        $subject = "リカバリー用メールアドレス変更のお知らせ - PSOBB.IO";
-        $msg = "$username さん、\n\n管理者によりPSOBB.IOアカウント ($username) のリカバリー用メールアドレスが更新されました。\n新しいメールアドレス: $new_email\n\n今後はこのメールアドレスを使用してパスワードの再設定が可能です。\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\nPSOBB.IO チーム";
+        $subject = "リカバリー用メールアドレス変更のお知らせ - $srvName";
+        $msg = "$username さん、\n\n管理者により$srvName アカウント ($username) のリカバリー用メールアドレスが更新されました。\n新しいメールアドレス: $new_email\n\n今後はこのメールアドレスを使用してパスワードの再設定が可能です。\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\n$srvName チーム";
+    } elseif ($lang_pref === 'ru') {
+        $subject = "Email для восстановления обновлен - $srvName";
+        $msg = "Здравствуйте, $username,\n\nАдминистратор обновил адрес email для восстановления вашей учетной записи $srvName ($username).\nНовый email: $new_email\n\nТеперь вы можете использовать его для сброса пароля при необходимости:\n$resetLink\n\nЕсли вы не запрашивали это изменение, немедленно свяжитесь с администрацией сервера.\n\nУдачной охоты!\nКоманда $srvName";
     } else {
-        $subject = "Account Recovery Email Updated - PSOBB.IO";
-        $msg = "Hello $username,\n\nAn administrator has updated the recovery email address for your PSOBB.IO account ($username).\nNew recovery email: $new_email\n\nYou can now use this email address to reset your password if needed at:\nhttps://psobb.io/forgot_password.php\n\nIf you did not request this change, please contact an administrator immediately.\n\nHappy Hunting,\nPSOBB.IO Team";
+        $subject = "Account Recovery Email Updated - $srvName";
+        $msg = "Hello $username,\n\nAn administrator has updated the recovery email address for your $srvName account ($username).\nNew recovery email: $new_email\n\nYou can now use this email address to reset your password if needed at:\n$resetLink\n\nIf you did not request this change, please contact an administrator immediately.\n\nHappy Hunting,\n$srvName Team";
     }
     @send_email($new_email, $subject, $msg);
 

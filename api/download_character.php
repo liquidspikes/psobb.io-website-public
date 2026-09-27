@@ -41,10 +41,7 @@ if (empty($username)) {
 }
 
 // Locate player files directory
-$playersDir = '/opt/newserv/system/players/';
-if (!is_dir($playersDir)) {
-    $playersDir = __DIR__ . '/../../newserv/system/players/';
-}
+$playersDir = get_newserv_players_dir();
 
 // Helper to resolve files case-insensitively
 function resolve_file($dir, $filename) {

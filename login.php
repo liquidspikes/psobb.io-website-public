@@ -15,10 +15,7 @@ require_once __DIR__ . '/includes/portal/modules.php';
 // Compute created character slots dynamically
 $existing_slots = [0]; // fallback default to slot 1 (index 0)
 if (isset($_SESSION['user']['username'])) {
-    $playersDir = '/opt/newserv/system/players/';
-    if (!is_dir($playersDir)) {
-        $playersDir = __DIR__ . '/../../newserv/system/players/';
-    }
+    $playersDir = get_newserv_players_dir();
     $u = strtolower(trim($_SESSION['user']['username']));
     if (!empty($u)) {
         $found_slots = [];

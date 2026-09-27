@@ -104,46 +104,51 @@ if (empty($token)) {
 
                 // 5. Send Confirmation Notification(s)
                 $lang_pref = $userRow['language'] ?? ($_COOKIE['psobb_lang'] ?? 'en');
+                $srvName = get_server_name();
+                $srvAddr = get_server_address();
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? 0) == 443) ? "https" : "http";
+                $host = $_SERVER['HTTP_HOST'] ?? $srvAddr;
+                $resetLink = "$protocol://$host/forgot_password.php";
 
                 if ($isEmailChange) {
                     // Send to new email
                     if ($lang_pref === 'jp') {
-                        $subject = "リカバリー用メールアドレス変更完了 - PSOBB.IO";
-                        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスが $newEmail に正常に変更されました。\n\n今後はパスワードを忘れた場合でも、パスワード再設定ページから再設定が可能です：\nhttps://psobb.io/forgot_password.php\n\n良い狩りを！\nPSOBB.IO チーム";
+                        $subject = "リカバリー用メールアドレス変更完了 - $srvName";
+                        $msg = "$username さん、\n\n$srvName アカウント ($username) のリカバリー用メールアドレスが $newEmail に正常に変更されました。\n\n今後はパスワードを忘れた場合でも、パスワード再設定ページから再設定が可能です：\n$resetLink\n\n良い狩りを！\n$srvName チーム";
                     } elseif ($lang_pref === 'ru') {
-                        $subject = "Email для восстановления обновлен - PSOBB.IO";
-                        $msg = "Здравствуйте, $username,\n\nEmail для восстановления вашей учетной записи PSOBB.IO ($username) был успешно изменен на $newEmail.\n\nТеперь вы можете использовать этот адрес на странице восстановления пароля, если когда-либо забудете пароль:\nhttps://psobb.io/forgot_password.php\n\nУдачной охоты!\nКоманда PSOBB.IO";
+                        $subject = "Email для восстановления обновлен - $srvName";
+                        $msg = "Здравствуйте, $username,\n\nEmail для восстановления вашей учетной записи $srvName ($username) был успешно изменен на $newEmail.\n\nТеперь вы можете использовать этот адрес на странице восстановления пароля, если когда-либо забудете пароль:\n$resetLink\n\nУдачной охоты!\nКоманда $srvName";
                     } else {
-                        $subject = "Recovery Email Updated - PSOBB.IO";
-                        $msg = "Hello $username,\n\nYour recovery email address has been successfully updated to $newEmail for your PSOBB.IO account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\nhttps://psobb.io/forgot_password.php\n\nHappy Hunting,\nPSOBB.IO Team";
+                        $subject = "Recovery Email Updated - $srvName";
+                        $msg = "Hello $username,\n\nYour recovery email address has been successfully updated to $newEmail for your $srvName account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\n$resetLink\n\nHappy Hunting,\n$srvName Team";
                     }
                     @send_email($newEmail, $subject, $msg);
 
                     // Send security notice to old email
                     if (!empty($oldEmail)) {
                         if ($lang_pref === 'jp') {
-                            $oldSubject = "セキュリティ通知: リカバリー用メールアドレス変更 - PSOBB.IO";
-                            $oldMsg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレスが $newEmail に変更されました。\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\nPSOBB.IO チーム";
+                            $oldSubject = "セキュリティ通知: リカバリー用メールアドレス変更 - $srvName";
+                            $oldMsg = "$username さん、\n\n$srvName アカウント ($username) のリカバリー用メールアドレスが $newEmail に変更されました。\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n$srvName チーム";
                         } elseif ($lang_pref === 'ru') {
-                            $oldSubject = "Уведомление безопасности: Email для восстановления изменен - PSOBB.IO";
-                            $oldMsg = "Здравствуйте, $username,\n\nEmail для восстановления вашей учетной записи PSOBB.IO ($username) был изменен на $newEmail.\n\nЕсли вы не совершали это действие, немедленно свяжитесь с администрацией сервера.\n\nКоманда PSOBB.IO";
+                            $oldSubject = "Уведомление безопасности: Email для восстановления изменен - $srvName";
+                            $oldMsg = "Здравствуйте, $username,\n\nEmail для восстановления вашей учетной записи $srvName ($username) был изменен на $newEmail.\n\nЕсли вы не совершали это действие, немедленно свяжитесь с администрацией сервера.\n\nКоманда $srvName";
                         } else {
-                            $oldSubject = "Security Notice: Recovery Email Changed - PSOBB.IO";
-                            $oldMsg = "Hello $username,\n\nThe recovery email address for your PSOBB.IO account ($username) has been changed to $newEmail.\n\nIf you did not authorize this change, please contact an administrator immediately.\n\nPSOBB.IO Team";
+                            $oldSubject = "Security Notice: Recovery Email Changed - $srvName";
+                            $oldMsg = "Hello $username,\n\nThe recovery email address for your $srvName account ($username) has been changed to $newEmail.\n\nIf you did not authorize this change, please contact an administrator immediately.\n\n$srvName Team";
                         }
                         @send_email($oldEmail, $oldSubject, $oldMsg);
                     }
                 } else {
                     // First-time link confirmation
                     if ($lang_pref === 'jp') {
-                        $subject = "リカバリー用メールアドレス設定完了 - PSOBB.IO";
-                        $msg = "$username さん、\n\nPSOBB.IOアカウント ($username) のリカバリー用メールアドレス ($newEmail) の確認が完了し、正常に連携されました。\n\n今後はパスワードを忘れた場合でも、パスワード再設定ページから再設定が可能です：\nhttps://psobb.io/forgot_password.php\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\nPSOBB.IO チーム";
+                        $subject = "リカバリー用メールアドレス設定完了 - $srvName";
+                        $msg = "$username さん、\n\n$srvName アカウント ($username) のリカバリー用メールアドレス ($newEmail) の確認が完了し、正常に連携されました。\n\n今後はパスワードを忘れた場合でも、パスワード再設定ページから再設定が可能です：\n$resetLink\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n良い狩りを！\n$srvName チーム";
                     } elseif ($lang_pref === 'ru') {
-                        $subject = "Email для восстановления подтвержден - PSOBB.IO";
-                        $msg = "Здравствуйте, $username,\n\nВаш email для восстановления ($newEmail) успешно подтвержден и привязан к вашей учетной записи PSOBB.IO ($username).\n\nТеперь вы можете использовать этот адрес на странице восстановления пароля, если когда-либо забудете пароль:\nhttps://psobb.io/forgot_password.php\n\nЕсли вы не совершали это действие, немедленно свяжитесь с администрацией сервера.\n\nУдачной охоты!\nКоманда PSOBB.IO";
+                        $subject = "Email для восстановления подтвержден - $srvName";
+                        $msg = "Здравствуйте, $username,\n\nВаш email для восстановления ($newEmail) успешно подтвержден и привязан к вашей учетной записи $srvName ($username).\n\nТеперь вы можете использовать этот адрес на странице восстановления пароля, если когда-либо забудете пароль:\n$resetLink\n\nЕсли вы не совершали это действие, немедленно свяжитесь с администрацией сервера.\n\nУдачной охоты!\nКоманда $srvName";
                     } else {
-                        $subject = "Recovery Email Confirmed - PSOBB.IO";
-                        $msg = "Hello $username,\n\nYour recovery email address ($newEmail) has been successfully verified and linked to your PSOBB.IO account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\nhttps://psobb.io/forgot_password.php\n\nIf you did not make this change, please contact an administrator immediately.\n\nHappy Hunting,\nPSOBB.IO Team";
+                        $subject = "Recovery Email Confirmed - $srvName";
+                        $msg = "Hello $username,\n\nYour recovery email address ($newEmail) has been successfully verified and linked to your $srvName account ($username).\n\nYou can now use this email address on the Forgot Password page to reset your password if you ever lose or forget it:\n$resetLink\n\nIf you did not make this change, please contact an administrator immediately.\n\nHappy Hunting,\n$srvName Team";
                     }
                     @send_email($newEmail, $subject, $msg);
                 }

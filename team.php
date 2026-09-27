@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/api/config.php';
 $page_title = __('Team Management - PSOBB Private Server');
 $current_page = 'team';
 include 'includes/header.php';

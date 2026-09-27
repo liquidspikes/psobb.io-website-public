@@ -178,10 +178,7 @@ try {
         $streak_stmt->execute();
 
         // Calculate total account playtime across all 4 character files
-        $playersDir = '/opt/newserv/system/players/';
-        if (!is_dir($playersDir)) {
-            $playersDir = __DIR__ . '/../../newserv/system/players/';
-        }
+        $playersDir = get_newserv_players_dir();
         
         $total_play_time = 0;
         $usernames = [$username];

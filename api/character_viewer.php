@@ -36,11 +36,8 @@ if (empty($username)) {
 $username = strtolower(trim($username));
 $slot = isset($_GET['slot']) ? clamp((int)$_GET['slot'], 0, 19) : 0;
 
-// Path definition to players folder (checks production /opt first, falls back to local dev)
-$playersDir = '/opt/newserv/system/players/';
-if (!is_dir($playersDir)) {
-    $playersDir = __DIR__ . '/../../newserv/system/players/';
-}
+// Path definition to players folder
+$playersDir = get_newserv_players_dir();
 
 // Helper to clamp values
 function clamp($val, $min, $max) {

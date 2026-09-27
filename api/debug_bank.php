@@ -12,7 +12,7 @@ $username = strtolower($_SESSION['user']['username'] ?? '');
 
 echo "Username: $username\n\n";
 
-$playersDir = '/opt/newserv/system/players/';
+$playersDir = get_newserv_players_dir();
 
 // Check all possible shared bank filenames
 $candidates = [

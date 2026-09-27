@@ -34,6 +34,15 @@ echo -e "${NC}"
 # ------------------------------------------------------------------------------
 # 1. Environment & User Detection
 # ------------------------------------------------------------------------------
+NON_INTERACTIVE=0
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes|--non-interactive)
+            NON_INTERACTIVE=1
+            ;;
+    esac
+done
+
 IS_ROOT=0
 if [ "$EUID" -eq 0 ]; then
     IS_ROOT=1
@@ -256,12 +265,18 @@ echo -e "Testing NewServ REST API at: ${BOLD}$NEWSERV_URL${NC} ..."
 
 NEWSERV_REACHABLE=0
 SUMMARY_OUTPUT=""
+SERVER_OUTPUT=""
 if command -v curl >/dev/null 2>&1; then
     SUMMARY_OUTPUT=$(curl -s -m 3 "$NEWSERV_URL/y/summary" 2>/dev/null || true)
+    SERVER_OUTPUT=$(curl -s -m 3 "$NEWSERV_URL/y/server" 2>/dev/null || true)
 elif command -v php >/dev/null 2>&1; then
     SUMMARY_OUTPUT=$(php -r "
         \$ctx = stream_context_create(['http' => ['timeout' => 3]]);
         echo @file_get_contents('$NEWSERV_URL/y/summary', false, \$ctx) ?: '';
+    " 2>/dev/null || true)
+    SERVER_OUTPUT=$(php -r "
+        \$ctx = stream_context_create(['http' => ['timeout' => 3]]);
+        echo @file_get_contents('$NEWSERV_URL/y/server', false, \$ctx) ?: '';
     " 2>/dev/null || true)
 fi
 
@@ -281,6 +296,38 @@ if [ -n "$SUMMARY_OUTPUT" ] && [ "$SUMMARY_OUTPUT" != "" ]; then
             }
         " 2>/dev/null || true
     fi
+
+    # Query ServerName from /y/server if available
+    NEWSERV_SERVER_NAME=""
+    if [ -n "$SERVER_OUTPUT" ]; then
+        NEWSERV_SERVER_NAME=$(php -r "
+            \$data = @json_decode('$SERVER_OUTPUT', true);
+            if (is_array(\$data) && !empty(\$data['ServerName'])) {
+                echo trim(\$data['ServerName']);
+            }
+        " 2>/dev/null || true)
+    fi
+
+    if [ -n "$NEWSERV_SERVER_NAME" ]; then
+        echo -e "${GREEN}[✔] Auto-detected Server Name from NewServ API:${NC} ${BOLD}$NEWSERV_SERVER_NAME${NC}"
+        CURRENT_SRV_NAME=$(grep -E '^\s*SERVER_NAME\s*=' .env 2>/dev/null | cut -d '=' -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]' || true)
+        if [ "$CURRENT_SRV_NAME" = "PSOBB.IO" ] || [ -z "$CURRENT_SRV_NAME" ]; then
+            if [ "$NEWSERV_SERVER_NAME" != "newserv" ] && [ "$NEWSERV_SERVER_NAME" != "PSOBB.IO" ]; then
+                echo -e "    Syncing website server branding to: ${BOLD}$NEWSERV_SERVER_NAME${NC}"
+                if grep -qE '^\s*SERVER_NAME\s*=' .env 2>/dev/null; then
+                    sed -i.bak -E "s|^\s*SERVER_NAME\s*=.*|SERVER_NAME=\"$NEWSERV_SERVER_NAME\"|" .env && rm -f .env.bak
+                fi
+                php -r "
+                    \$path = 'config/site.json';
+                    if (file_exists(\$path)) {
+                        \$d = @json_decode(file_get_contents(\$path), true) ?: [];
+                        \$d['server_name'] = '$NEWSERV_SERVER_NAME';
+                        file_put_contents(\$path, json_encode(\$d, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                    }
+                " 2>/dev/null || true
+            fi
+        fi
+    fi
 else
     echo -e "${YELLOW}[!] NOTICE: NewServ API is currently UNREACHABLE at $NEWSERV_URL${NC}"
     echo "    This is expected if your NewServ daemon is not running yet."
@@ -290,20 +337,53 @@ else
     echo "      3. Update NEWSERV_API_URL in .env if running on a different port or Docker host."
 fi
 
-# Check for Newserv Player Directory
-PLAYERS_DIR="${PLAYERS_DIR:-/opt/newserv/system/players}"
-if [ ! -d "$PLAYERS_DIR" ]; then
-    # Check alternate local paths
-    for alt_path in "../newserv/system/players" "./newserv/system/players" "/etc/newserv/system/players"; do
-        if [ -d "$alt_path" ]; then
-            PLAYERS_DIR="$alt_path"
-            break
-        fi
-    done
+# Configure NewServ Player Directory
+CURRENT_PLAYERS_DIR="${NEWSERV_PLAYERS_DIR:-}"
+if [ -z "$CURRENT_PLAYERS_DIR" ] && [ -f ".env" ]; then
+    CURRENT_PLAYERS_DIR=$(grep -E '^\s*NEWSERV_PLAYERS_DIR\s*=' .env | cut -d '=' -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]')
+fi
+if [ -z "$CURRENT_PLAYERS_DIR" ] && [ -f "config/site.json" ]; then
+    CURRENT_PLAYERS_DIR=$(php -r '$c=@json_decode(file_get_contents("config/site.json"), true); echo $c["newserv_players_dir"] ?? "";' 2>/dev/null || true)
+fi
+if [ -z "$CURRENT_PLAYERS_DIR" ]; then
+    CURRENT_PLAYERS_DIR="/opt/newserv/system/players"
 fi
 
+echo ""
+echo -e "${BOLD}--> Configure NewServ Player Directory (.psochar / .psobank files)...${NC}"
+echo "    The website reads offline character slots, bank storage, and material usage"
+echo "    from NewServ's player save directory (system/players/)."
+
+PROMPTED_PLAYERS_DIR=""
+if [ -t 0 ] && [ "$NON_INTERACTIVE" -ne 1 ]; then
+    read -r -p "    Enter path to NewServ system/players directory [$CURRENT_PLAYERS_DIR]: " PROMPTED_PLAYERS_DIR
+fi
+
+PLAYERS_DIR="${PROMPTED_PLAYERS_DIR:-$CURRENT_PLAYERS_DIR}"
+PLAYERS_DIR=$(echo "$PLAYERS_DIR" | tr '\\' '/')
+
+# Save to .env
+if [ -f ".env" ]; then
+    if grep -qE '^\s*NEWSERV_PLAYERS_DIR\s*=' .env; then
+        sed -i.bak -E "s|^\s*NEWSERV_PLAYERS_DIR\s*=.*|NEWSERV_PLAYERS_DIR=\"$PLAYERS_DIR\"|" .env && rm -f .env.bak
+    else
+        echo "NEWSERV_PLAYERS_DIR=\"$PLAYERS_DIR\"" >> .env
+    fi
+fi
+
+# Save to config/site.json
+if [ -f "config/site.json" ]; then
+    php -r "
+        \$path = 'config/site.json';
+        \$data = @json_decode(file_get_contents(\$path), true) ?: [];
+        \$data['newserv_players_dir'] = '$PLAYERS_DIR';
+        file_put_contents(\$path, json_encode(\$data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    " 2>/dev/null || true
+fi
+echo -e "${GREEN}[✔] Saved NewServ player directory configuration:${NC} $PLAYERS_DIR"
+
 if [ -d "$PLAYERS_DIR" ]; then
-    echo -e "${GREEN}[✔] Located NewServ player profiles directory at:${NC} $PLAYERS_DIR"
+    echo -e "${GREEN}[✔] Verified directory exists at:${NC} $PLAYERS_DIR"
     if [ "$IS_ROOT" -eq 1 ]; then
         echo "    Configuring group read-access for web server ($WEB_USER)..."
         chown -R root:"$WEB_GROUP" "$PLAYERS_DIR" 2>/dev/null || true
@@ -312,7 +392,8 @@ if [ -d "$PLAYERS_DIR" ]; then
         echo -e "${GREEN}[✔] Read-access configured on player profiles.${NC}"
     fi
 else
-    echo -e "${CYAN}[i] NewServ players directory not found at $PLAYERS_DIR (skipping offline parser permissions).${NC}"
+    echo -e "${CYAN}[i] Notice: Directory does not exist yet at: $PLAYERS_DIR${NC}"
+    echo "    (Configuration saved. Ensure NewServ creates it or update NEWSERV_PLAYERS_DIR in .env or the Web Admin Settings)"
 fi
 
 # ------------------------------------------------------------------------------

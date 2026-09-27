@@ -56,8 +56,10 @@ function get_db()
 
             CREATE TABLE IF NOT EXISTS password_resets (
                 token TEXT PRIMARY KEY,
-                username TEXT NOT NULL,
-                expires_at INTEGER NOT NULL
+                username TEXT,
+                email TEXT,
+                expires_at INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS email_confirmations (
@@ -222,6 +224,25 @@ function get_db()
         $result->finalize();
         if (!$hasReceiveDiscordStreakMsg) {
             $db->exec("ALTER TABLE users ADD COLUMN receive_discord_streak_msg INTEGER DEFAULT 1");
+        }
+
+        // Ensure email, created_at, and expires_at exist in password_resets
+        $pwCols = [];
+        $result = $db->query("PRAGMA table_info(password_resets)");
+        if ($result) {
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $pwCols[] = $row['name'];
+            }
+            $result->finalize();
+        }
+        if (!in_array('email', $pwCols)) {
+            $db->exec("ALTER TABLE password_resets ADD COLUMN email TEXT");
+        }
+        if (!in_array('created_at', $pwCols)) {
+            $db->exec("ALTER TABLE password_resets ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
+        if (!in_array('expires_at', $pwCols)) {
+            $db->exec("ALTER TABLE password_resets ADD COLUMN expires_at INTEGER");
         }
 
         // --- Auto-migration for Bounty/Missions & Streaks tables ---
