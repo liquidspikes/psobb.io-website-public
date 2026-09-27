@@ -202,11 +202,15 @@ foreach ($clients as $client) {
         }
         if (!empty($unlocked_milestones)) {
             $max_m = end($unlocked_milestones);
+            $srvAddr = get_server_address();
             if ($user_lang === 'jp') {
-                $msg = ($client['Name'] ?? 'ハンター') . " おめでとうございます！\nLv{$max_m}のマイルストーン報酬をアンロックしました！\npsobb.ioで受け取ってください。";
+                $msg = ($client['Name'] ?? 'ハンター') . " おめでとうございます！\nLv{$max_m}のマイルストーン報酬をアンロックしました！\n{$srvAddr}で受け取ってください。";
                 send_personal_mail($accId, "ハンターズギルド", $msg);
+            } elseif ($user_lang === 'ru') {
+                $msg = "Поздравляем, " . ($client['Name'] ?? 'Охотник') . "!\nВы разблокировали награду за ур.{$max_m}!\nЗаберите её на сайте: {$srvAddr}";
+                send_personal_mail($accId, "Гильдия Охотников", $msg);
             } else {
-                $msg = "Congrats " . ($client['Name'] ?? 'Hunter') . "!\nYou unlocked a Lv{$max_m} Milestone Reward!\nRedeem it on the website: psobb.io";
+                $msg = "Congrats " . ($client['Name'] ?? 'Hunter') . "!\nYou unlocked a Lv{$max_m} Milestone Reward!\nRedeem it on the website: {$srvAddr}";
                 send_personal_mail($accId, "Hunters Guild", $msg);
             }
         }
@@ -233,11 +237,15 @@ foreach ($clients as $client) {
         $has_unclaimed_ms = $max_milestones > $claimed_milestones;
 
         if (!$has_claimed_daily || $has_unclaimed_ms) {
+            $srvAddr = get_server_address();
             if ($user_lang === 'jp') {
-                $msg = "ようこそ！\npsobb.ioで受け取っていない報酬があります。\nぜひ確認してください！";
+                $msg = "ようこそ！\n{$srvAddr}で受け取っていない報酬があります。\nぜひ確認してください！";
                 send_personal_mail($accId, "ハンターズギルド", $msg);
+            } elseif ($user_lang === 'ru') {
+                $msg = "С возвращением!\nУ вас есть неполученные награды на {$srvAddr}.\nНе забудьте забрать их!";
+                send_personal_mail($accId, "Гильдия Охотников", $msg);
             } else {
-                $msg = "Welcome back!\nYou have rewards waiting to be claimed on psobb.io.\nDon't forget to check them!";
+                $msg = "Welcome back!\nYou have rewards waiting to be claimed on {$srvAddr}.\nDon't forget to check them!";
                 send_personal_mail($accId, "Hunters Guild", $msg);
             }
         }
@@ -495,7 +503,16 @@ foreach ($clients as $client) {
                             $assign->execute();
                             
                             // Notify the mentee in-game via personal mail
-                            send_personal_mail($m_acc, "Hunters Guild", "You survived a Hardcore Carry! Check psobb.io to claim your rare reward.");
+                            $m_lang_row = $db->querySingle("SELECT language FROM users WHERE account_id = " . intval($m_acc), true);
+                            $m_lang = $m_lang_row['language'] ?? 'en';
+                            $srvAddr = get_server_address();
+                            if ($m_lang === 'jp') {
+                                send_personal_mail($m_acc, "ハンターズギルド", "ハードキャリーをクリアしました！{$srvAddr}でレア報酬を受け取ってください。");
+                            } elseif ($m_lang === 'ru') {
+                                send_personal_mail($m_acc, "Гильдия Охотников", "Вы выжили в хардкорном сопровождении! Заберите награду на сайте {$srvAddr}.");
+                            } else {
+                                send_personal_mail($m_acc, "Hunters Guild", "You survived a Hardcore Carry! Check {$srvAddr} to claim your rare reward.");
+                            }
                             @touch(__DIR__ . '/../db/.bounty_' . $m_acc);
                         }
                     }
@@ -589,7 +606,16 @@ foreach ($clients as $client) {
                             $assign->execute();
                             
                             // Notify the party member in-game
-                            send_personal_mail($m_acc, "Hunters Guild", "You completed a Team Bounty! Check psobb.io to claim your rare reward.");
+                            $m_lang_row = $db->querySingle("SELECT language FROM users WHERE account_id = " . intval($m_acc), true);
+                            $m_lang = $m_lang_row['language'] ?? 'en';
+                            $srvAddr = get_server_address();
+                            if ($m_lang === 'jp') {
+                                send_personal_mail($m_acc, "ハンターズギルド", "チームバウンティを達成しました！{$srvAddr}でレア報酬を受け取ってください。");
+                            } elseif ($m_lang === 'ru') {
+                                send_personal_mail($m_acc, "Гильдия Охотников", "Вы завершили командный заказ! Заберите награду на сайте {$srvAddr}.");
+                            } else {
+                                send_personal_mail($m_acc, "Hunters Guild", "You completed a Team Bounty! Check {$srvAddr} to claim your rare reward.");
+                            }
                             @touch(__DIR__ . '/../db/.bounty_' . $m_acc);
                         }
                     }
@@ -678,11 +704,15 @@ foreach ($clients as $client) {
             // Touch marker file to notify the web portal of the change (lightweight polling)
             @touch(__DIR__ . '/../db/.bounty_' . $accId);
 
+            $srvAddr = get_server_address();
             if ($user_lang === 'jp') {
-                $completion_msg = "ミッション「" . ($m['mission_title'] ?? '') . "」を達成しました！\n報酬はpsobb.ioで受け取ってください。";
+                $completion_msg = "ミッション「" . ($m['mission_title'] ?? '') . "」を達成しました！\n報酬は{$srvAddr}で受け取ってください。";
                 send_personal_mail($accId, "ハンターズギルド", $completion_msg);
+            } elseif ($user_lang === 'ru') {
+                $completion_msg = "Вы выполнили миссию: " . ($m['mission_title'] ?? 'Неизвестно') . "!\nЗаберите награду на {$srvAddr}.";
+                send_personal_mail($accId, "Гильдия Охотников", $completion_msg);
             } else {
-                $completion_msg = "You have completed the mission: " . ($m['mission_title'] ?? 'Unknown') . "!\nRedeem your reward at psobb.io.";
+                $completion_msg = "You have completed the mission: " . ($m['mission_title'] ?? 'Unknown') . "!\nRedeem your reward at {$srvAddr}.";
                 send_personal_mail($accId, "Hunters Guild", $completion_msg);
             }
         }
@@ -1210,6 +1240,12 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
                             $mail_msg .= "報酬: " . $clean_reward . "\n\n";
                             $mail_msg .= "詳細: " . mb_strimwidth($questData['description'], 0, 200, "...");
                             send_personal_mail($accId, "ハンターズギルド", $mail_msg);
+                        } elseif ($user_lang === 'ru') {
+                            $mail_msg = "Новый заказ: " . $questData['title'] . "\n";
+                            $mail_msg .= "Цель: " . $clean_obj . "\n";
+                            $mail_msg .= "Награда: " . $clean_reward . "\n\n";
+                            $mail_msg .= "Описание: " . mb_strimwidth($questData['description'], 0, 200, "...");
+                            send_personal_mail($accId, "Гильдия Охотников", $mail_msg);
                         } else {
                             $mail_msg = "New Bounty: " . $questData['title'] . "\n";
                             $mail_msg .= "Objective: " . $clean_obj . "\n";

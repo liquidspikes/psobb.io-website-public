@@ -103,37 +103,37 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 <h3><?= __("User & Account Management") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>lookup &lt;USER&gt;</code></strong><br>Find account by name or client ID.<br><em>Example:</em> <code>lookup Sonic</code></li>
-        <li><strong><code>kick &lt;USER&gt;</code></strong><br>Disconnect a user immediately.<br><em>Example:</em> <code>kick Sonic</code></li>
-        <li><strong><code>add-account [params]</code></strong><br>Create a new account. Params: <code>id</code>, <code>flags</code>, <code>user-flags</code>, <code>temporary</code>.<br><em>Example:</em> <code>add-account flags=ADMINISTRATOR</code></li>
-        <li><strong><code>update-account &lt;ID&gt; [params]</code></strong><br>Modify account (ban, flags).<br><em>Example:</em> <code>update-account 12345678 ban-duration=1w</code></li>
-        <li><strong><code>delete-account &lt;ID&gt;</code></strong><br>Permanently delete an account.</li>
-        <li><strong><code>add-license &lt;ID&gt; &lt;TYPE&gt; ...</code></strong><br>Add access key (license) to account.</li>
-        <li><strong><code>list-accounts</code></strong><br>List all registered accounts.</li>
-        <li><strong><code>on &lt;USER&gt; cc $edit secid &lt;ID&gt;</code></strong><br>Change another player's Section ID while they are online.<br><em>Example:</em> <code>on Sonic cc $edit secid Redria</code></li>
+        <li><strong><code>lookup &lt;USER&gt;</code></strong><br><?= __("Find account by name or client ID.") ?><br><em><?= __("Example:") ?></em> <code>lookup Sonic</code></li>
+        <li><strong><code>kick &lt;USER&gt;</code></strong><br><?= __("Disconnect a user immediately.") ?><br><em><?= __("Example:") ?></em> <code>kick Sonic</code></li>
+        <li><strong><code>add-account [params]</code></strong><br><?= __("Create a new account.") ?> <?= __("Params:") ?> <code>id</code>, <code>flags</code>, <code>user-flags</code>, <code>temporary</code>.<br><em><?= __("Example:") ?></em> <code>add-account flags=ADMINISTRATOR</code></li>
+        <li><strong><code>update-account &lt;ID&gt; [params]</code></strong><br><?= __("Modify account (ban, flags).") ?><br><em><?= __("Example:") ?></em> <code>update-account 12345678 ban-duration=1w</code></li>
+        <li><strong><code>delete-account &lt;ID&gt;</code></strong><br><?= __("Permanently delete an account.") ?></li>
+        <li><strong><code>add-license &lt;ID&gt; &lt;TYPE&gt; ...</code></strong><br><?= __("Add access key (license) to account.") ?></li>
+        <li><strong><code>list-accounts</code></strong><br><?= __("List all registered accounts.") ?></li>
+        <li><strong><code>on &lt;USER&gt; cc $edit secid &lt;ID&gt;</code></strong><br><?= __("Change another player's Section ID while they are online.") ?><br><em><?= __("Example:") ?></em> <code>on Sonic cc $edit secid Redria</code></li>
     </ul>
 </div>
 
 <h3><?= __("Server Control") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>announce &lt;MSG&gt;</code></strong><br>Scroll message to all players.</li>
-        <li><strong><code>announce-mail &lt;MSG&gt;</code></strong><br>Send Simple Mail to all online players.</li>
-        <li><strong><code>reload &lt;ITEM&gt;</code></strong><br>Reload config. Items: <code>quests</code>, <code>drop-tables</code>, <code>config</code>, <code>level-tables</code>, <code>all</code>.</li>
-        <li><strong><code>info-board &lt;TEXT&gt;</code></strong><br>Set info board text for current session.</li>
-        <li><strong><code>exit</code></strong><br>Shutdown the server process.</li>
-        <li><strong><code>on &lt;USER&gt; cc &lt;COMMAND&gt;</code></strong><br>Run chat command as another user.<br><em>Example:</em> <code>on Sonic cc $warp 00:11</code></li>
+        <li><strong><code>announce &lt;MSG&gt;</code></strong><br><?= __("Scroll message to all players.") ?></li>
+        <li><strong><code>announce-mail &lt;MSG&gt;</code></strong><br><?= __("Send Simple Mail to all online players.") ?></li>
+        <li><strong><code>reload &lt;ITEM&gt;</code></strong><br><?= __("Reload config.") ?> <?= __("Items:") ?> <code>quests</code>, <code>drop-tables</code>, <code>config</code>, <code>level-tables</code>, <code>all</code>.</li>
+        <li><strong><code>info-board &lt;TEXT&gt;</code></strong><br><?= __("Set info board text for current session.") ?></li>
+        <li><strong><code>exit</code></strong><br><?= __("Shutdown the server process.") ?></li>
+        <li><strong><code>on &lt;USER&gt; cc &lt;COMMAND&gt;</code></strong><br><?= __("Run chat command as another user.") ?><br><em><?= __("Example:") ?></em> <code>on Sonic cc $warp 00:11</code></li>
     </ul>
 </div>
 
 <h3><?= __("Tournaments (Ep3)") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>create-tournament &lt;NAME&gt; &lt;MAP&gt; &lt;RULES&gt;</code></strong><br>Create new tournament.</li>
-        <li><strong><code>start-tournament &lt;NAME&gt;</code></strong><br>Start tournament matches.</li>
-        <li><strong><code>describe-tournament &lt;NAME&gt;</code></strong><br>Show tournament status.</li>
-        <li><strong><code>list-tournaments</code></strong><br>List active tournaments.</li>
-        <li><strong><code>delete-tournament &lt;NAME&gt;</code></strong><br>Delete a tournament.</li>
+        <li><strong><code>create-tournament &lt;NAME&gt; &lt;MAP&gt; &lt;RULES&gt;</code></strong><br><?= __("Create new tournament.") ?></li>
+        <li><strong><code>start-tournament &lt;NAME&gt;</code></strong><br><?= __("Start tournament matches.") ?></li>
+        <li><strong><code>describe-tournament &lt;NAME&gt;</code></strong><br><?= __("Show tournament status.") ?></li>
+        <li><strong><code>list-tournaments</code></strong><br><?= __("List active tournaments.") ?></li>
+        <li><strong><code>delete-tournament &lt;NAME&gt;</code></strong><br><?= __("Delete a tournament.") ?></li>
     </ul>
 </div>
 
@@ -142,79 +142,79 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 <h3><?= __("General & Info") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>$help</code></strong>: List available commands.</li>
-        <li><strong><code>$li</code> / <code>$lobbyinfo</code></strong>: Show lobby leader/player info.</li>
-        <li><strong><code>$si</code> / <code>$server_info</code></strong>: Show server uptime/version.</li>
-        <li><strong><code>$debug</code></strong>: Toggle coordinates/debug info.</li>
-        <li><strong><code>$bank</code></strong>: Toggle Common/Character Bank.</li>
-        <li><strong><code>$matcount</code></strong>: Show material usage details.</li>
-        <li><strong><code>$password &lt;PASS&gt;</code></strong>: Set game password.</li>
+        <li><strong><code>$help</code></strong>: <?= __("List available commands.") ?></li>
+        <li><strong><code>$li</code> / <code>$lobbyinfo</code></strong>: <?= __("Show lobby leader/player info.") ?></li>
+        <li><strong><code>$si</code> / <code>$server_info</code></strong>: <?= __("Show server uptime/version.") ?></li>
+        <li><strong><code>$debug</code></strong>: <?= __("Toggle coordinates/debug info.") ?></li>
+        <li><strong><code>$bank</code></strong>: <?= __("Toggle Common/Character Bank.") ?></li>
+        <li><strong><code>$matcount</code></strong>: <?= __("Show material usage details.") ?></li>
+        <li><strong><code>$password &lt;PASS&gt;</code></strong>: <?= __("Set game password.") ?></li>
     </ul>
 </div>
 
 <h3><?= __("Moderation") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>$kick &lt;USER&gt;</code></strong>: Kick user.</li>
-        <li><strong><code>$ban &lt;USER&gt; &lt;TIME&gt;</code></strong>: Ban user (e.g. <code>$ban Sonic 1w</code>).</li>
-        <li><strong><code>$silence &lt;USER&gt;</code></strong>: Global silence for user.</li>
-        <li><strong><code>$ann &lt;MSG&gt;</code></strong>: Server announcement.</li>
-        <li><strong><code>$ann? &lt;MSG&gt;</code></strong>: Anonymous announcement.</li>
-        <li><strong><code>$ann! &lt;MSG&gt;</code></strong>: Simple Mail announcement.</li>
-        <li><strong><code>$ann?! &lt;MSG&gt;</code></strong>: Anonymous Simple Mail announcement.</li>
-        <li><strong><code>$announcerares</code></strong>: Toggle rare drop announcements.</li>
+        <li><strong><code>$kick &lt;USER&gt;</code></strong>: <?= __("Kick user.") ?></li>
+        <li><strong><code>$ban &lt;USER&gt; &lt;TIME&gt;</code></strong>: <?= __("Ban user.") ?> (<em><?= __("Example:") ?></em> <code>$ban Sonic 1w</code>)</li>
+        <li><strong><code>$silence &lt;USER&gt;</code></strong>: <?= __("Global silence for user.") ?></li>
+        <li><strong><code>$ann &lt;MSG&gt;</code></strong>: <?= __("Server announcement.") ?></li>
+        <li><strong><code>$ann? &lt;MSG&gt;</code></strong>: <?= __("Anonymous announcement.") ?></li>
+        <li><strong><code>$ann! &lt;MSG&gt;</code></strong>: <?= __("Simple Mail announcement.") ?></li>
+        <li><strong><code>$ann?! &lt;MSG&gt;</code></strong>: <?= __("Anonymous Simple Mail announcement.") ?></li>
+        <li><strong><code>$announcerares</code></strong>: <?= __("Toggle rare drop announcements.") ?></li>
     </ul>
 </div>
 
 <h3><?= __("Character & Game State") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>$warp &lt;AREA&gt;</code> / <code>$warpme</code></strong>: Warp self to area.</li>
-        <li><strong><code>$warpall &lt;AREA&gt;</code></strong>: Warp everyone to area.</li>
-        <li><strong><code>$edit &lt;SUB&gt; &lt;VAL&gt;</code></strong>: Edit stats.<br><em>Subs:</em> <code>atp</code>, <code>mst</code>, <code>evp</code>, <code>hp</code>, <code>dfp</code>, <code>ata</code>, <code>lck</code>, <code>meseta</code>, <code>exp</code>, <code>level</code>, <code>secid</code>, <code>namecolor</code>.</li>
-        <li><strong><code>$secid &lt;ID&gt;</code></strong>: Override drop ID.</li>
-        <li><strong><code>$item &lt;HEX&gt;</code> / <code>$i</code></strong>: Spawn item.</li>
-        <li><strong><code>$dropmode &lt;MODE&gt;</code></strong>: Set drop mode (`client`, `server-shared`, `server-private`).</li>
-        <li><strong><code>$infhp</code> / <code>$inftp</code></strong>: Infinite HP/TP.</li>
-        <li><strong><code>$maxlevel</code> / <code>$minlevel</code></strong>: Set Level 200 / Level 1.</li>
-        <li><strong><code>$killcount &lt;VAL&gt;</code></strong>: Set sealed item kill count.</li>
-        <li><strong><code>$save</code> / <code>$loadchar</code></strong>: Force save / reload character.</li>
-        <li><strong><code>$switchchar</code></strong>: Switch character without disconnect.</li>
+        <li><strong><code>$warp &lt;AREA&gt;</code> / <code>$warpme</code></strong>: <?= __("Warp self to area.") ?></li>
+        <li><strong><code>$warpall &lt;AREA&gt;</code></strong>: <?= __("Warp everyone to area.") ?></li>
+        <li><strong><code>$edit &lt;SUB&gt; &lt;VAL&gt;</code></strong>: <?= __("Edit stats.") ?><br><em>Subs:</em> <code>atp</code>, <code>mst</code>, <code>evp</code>, <code>hp</code>, <code>dfp</code>, <code>ata</code>, <code>lck</code>, <code>meseta</code>, <code>exp</code>, <code>level</code>, <code>secid</code>, <code>namecolor</code>.</li>
+        <li><strong><code>$secid &lt;ID&gt;</code></strong>: <?= __("Override drop ID.") ?></li>
+        <li><strong><code>$item &lt;HEX&gt;</code> / <code>$i</code></strong>: <?= __("Spawn item.") ?></li>
+        <li><strong><code>$dropmode &lt;MODE&gt;</code></strong>: <?= __("Set drop mode.") ?> (`client`, `server-shared`, `server-private`)</li>
+        <li><strong><code>$infhp</code> / <code>$inftp</code></strong>: <?= __("Infinite HP/TP.") ?></li>
+        <li><strong><code>$maxlevel</code> / <code>$minlevel</code></strong>: <?= __("Set Level 200 / Level 1.") ?></li>
+        <li><strong><code>$killcount &lt;VAL&gt;</code></strong>: <?= __("Set sealed item kill count.") ?></li>
+        <li><strong><code>$save</code> / <code>$loadchar</code></strong>: <?= __("Force save / reload character.") ?></li>
+        <li><strong><code>$switchchar</code></strong>: <?= __("Switch character without disconnect.") ?></li>
     </ul>
 </div>
 
 <h3><?= __("Quests & Events") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>$quest &lt;ID&gt;</code></strong>: Start quest.</li>
-        <li><strong><code>$event &lt;EVENT&gt;</code></strong>: Set lobby event.</li>
-        <li><strong><code>$allevent &lt;EVENT&gt;</code></strong>: Set global event.</li>
-        <li><strong><code>$qcall</code> / <code>$qcheck</code> / <code>$qclear</code></strong>: Quest flag management.</li>
-        <li><strong><code>$qset</code> / <code>$qsync</code> / <code>$qsyncall</code></strong>: Quest sync.</li>
+        <li><strong><code>$quest &lt;ID&gt;</code></strong>: <?= __("Start quest.") ?></li>
+        <li><strong><code>$event &lt;EVENT&gt;</code></strong>: <?= __("Set lobby event.") ?></li>
+        <li><strong><code>$allevent &lt;EVENT&gt;</code></strong>: <?= __("Set global event.") ?></li>
+        <li><strong><code>$qcall</code> / <code>$qcheck</code> / <code>$qclear</code></strong>: <?= __("Quest flag management.") ?></li>
+        <li><strong><code>$qset</code> / <code>$qsync</code> / <code>$qsyncall</code></strong>: <?= __("Quest sync.") ?></li>
     </ul>
 </div>
 
 <h3><?= __("Episode 3 (Card Battle)") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>$spectate</code> / <code>$spec&gt;</code></strong>: Spectator mode.</li>
-        <li><strong><code>$song &lt;ID&gt;</code> / <code>$sound</code></strong>: Play audio.</li>
-        <li><strong><code>$stat</code></strong>: Battle stats.</li>
-        <li><strong><code>$surrender</code></strong>: Surrender.</li>
-        <li><strong><code>$unset</code></strong>: Unset card.</li>
-        <li><strong><code>$dicerange &lt;MIN&gt; &lt;MAX&gt;</code></strong>: Set dice range.</li>
+        <li><strong><code>$spectate</code> / <code>$spec&gt;</code></strong>: <?= __("Spectator mode.") ?></li>
+        <li><strong><code>$song &lt;ID&gt;</code> / <code>$sound</code></strong>: <?= __("Play audio.") ?></li>
+        <li><strong><code>$stat</code></strong>: <?= __("Battle stats.") ?></li>
+        <li><strong><code>$surrender</code></strong>: <?= __("Surrender.") ?></li>
+        <li><strong><code>$unset</code></strong>: <?= __("Unset card.") ?></li>
+        <li><strong><code>$dicerange &lt;MIN&gt; &lt;MAX&gt;</code></strong>: <?= __("Set dice range.") ?></li>
     </ul>
 </div>
 
 <h3><?= __("Technical / Debug") ?></h3>
 <div class="command-block">
     <ul class="searchable">
-        <li><strong><code>$arrow</code></strong>: Debug arrows.</li>
-        <li><strong><code>$what</code> / <code>$where</code></strong>: Location info.</li>
-        <li><strong><code>$whatobj</code> / <code>$whatene</code></strong>: Identify target object/enemy.</li>
-        <li><strong><code>$readmem</code> / <code>$writemem</code></strong>: Memory access.</li>
-        <li><strong><code>$sc</code> / <code>$ss</code></strong>: Send raw packet.</li>
-        <li><strong><code>$replay-log</code></strong>: Replay log.</li>
+        <li><strong><code>$arrow</code></strong>: <?= __("Debug arrows.") ?></li>
+        <li><strong><code>$what</code> / <code>$where</code></strong>: <?= __("Location info.") ?></li>
+        <li><strong><code>$whatobj</code> / <code>$whatene</code></strong>: <?= __("Identify target object/enemy.") ?></li>
+        <li><strong><code>$readmem</code> / <code>$writemem</code></strong>: <?= __("Memory access.") ?></li>
+        <li><strong><code>$sc</code> / <code>$ss</code></strong>: <?= __("Send raw packet.") ?></li>
+        <li><strong><code>$replay-log</code></strong>: <?= __("Replay log.") ?></li>
     </ul>
 </div>
 

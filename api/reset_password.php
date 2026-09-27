@@ -49,13 +49,13 @@ try {
     // 2. Get Account Info
     $userRow = null;
     if (!empty($email)) {
-        $stmt = $db->prepare("SELECT account_id, username, email FROM users WHERE email = :e COLLATE NOCASE");
+        $stmt = $db->prepare("SELECT account_id, username, email, language FROM users WHERE email = :e COLLATE NOCASE");
         $stmt->bindValue(':e', $email);
         $res = $stmt->execute();
         $userRow = $res->fetchArray(SQLITE3_ASSOC);
     }
     if (!$userRow && !empty($resetUsername)) {
-        $stmt = $db->prepare("SELECT account_id, username, email FROM users WHERE username = :u COLLATE NOCASE");
+        $stmt = $db->prepare("SELECT account_id, username, email, language FROM users WHERE username = :u COLLATE NOCASE");
         $stmt->bindValue(':u', $resetUsername);
         $res = $stmt->execute();
         $userRow = $res->fetchArray(SQLITE3_ASSOC);
@@ -88,7 +88,14 @@ try {
 
         // Notification email
         $srvName = get_server_name();
-        send_email($email, "Password Changed - {$srvName}", "Hello $username,\n\nYour password has been successfully reset on {$srvName}.\n\nIf this wasn't you, please contact an admin immediately.");
+        $lang_pref = $userRow['language'] ?? 'en';
+        if ($lang_pref === 'jp') {
+            send_email($email, "パスワード再設定完了 - {$srvName}", "{$username} さん、\n\n{$srvName} のパスワードが正常にリセットされました。\n\n心当たりがない場合は、直ちに管理者にご連絡ください。\n\n{$srvName} チーム");
+        } elseif ($lang_pref === 'ru') {
+            send_email($email, "Пароль успешно сброшен - {$srvName}", "Здравствуйте, {$username},\n\nВаш пароль на сервере {$srvName} был успешно сброшен.\n\nЕсли это были не вы, немедленно свяжитесь с администрацией сервера.\n\nКоманда {$srvName}");
+        } else {
+            send_email($email, "Password Changed - {$srvName}", "Hello {$username},\n\nYour password has been successfully reset on {$srvName}.\n\nIf this wasn't you, please contact an admin immediately.\n\n{$srvName} Team");
+        }
         
         echo json_encode(['success' => true]);
     } else {

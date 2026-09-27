@@ -150,7 +150,7 @@ try {
             $subject = "Confirm Your $srvName Email Change";
             $msg = "Hello $username,\n\nYou requested to change the recovery email for your $srvName account ($username) from $currentEmail to: $email.\n\nPlease click the link below to confirm this change:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this change, please ignore this email. Your current recovery email ($currentEmail) will remain active.\n\nHappy Hunting,\n$srvName Team";
         }
-        $responseMsg = "Confirmation link sent to $email! Please check your inbox and click the link to confirm your email change.";
+        $responseMsg = sprintf(__("Confirmation link sent to %s! Please check your inbox and click the link to confirm your email change."), $email);
     } else {
         if ($lang_pref === 'jp') {
             $subject = "リカバリー用メールアドレスの確認 - $srvName";
@@ -162,7 +162,7 @@ try {
             $subject = "Confirm Your Recovery Email - $srvName";
             $msg = "Hello $username,\n\nYou requested to link this email address ($email) as the recovery email for your $srvName account ($username).\n\nPlease click the link below to confirm and activate this email address:\n$confirmLink\n\nThis confirmation link will expire in 24 hours.\n\nIf you did not request this, please ignore this email. Your recovery email will not be changed.\n\nHappy Hunting,\n$srvName Team";
         }
-        $responseMsg = "Confirmation email sent! Please check your inbox and click the confirmation link to finish linking your email.";
+        $responseMsg = __("Confirmation email sent! Please check your inbox and click the confirmation link to finish linking your email.");
     }
 
     @send_email($email, $subject, $msg);
