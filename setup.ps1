@@ -10,8 +10,14 @@
     Port to bind the built-in development server (default: 8000).
 .PARAMETER PhpPath
     Optional manual path to php.exe if not in PATH or standard directories.
+.PARAMETER NonInteractive
+    If specified, skips all interactive prompts and uses defaults/auto-detected values.
+.PARAMETER Yes
+    Alias for -NonInteractive.
 .EXAMPLE
     .\setup.ps1
+.EXAMPLE
+    .\setup.ps1 -Yes
 .EXAMPLE
     .\setup.ps1 -StartServer -Port 8080
 #>
@@ -20,7 +26,9 @@
 param(
     [switch]$StartServer,
     [int]$Port = 8000,
-    [string]$PhpPath = ""
+    [string]$PhpPath = "",
+    [switch]$NonInteractive,
+    [Alias("y")][switch]$Yes
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,6 +54,62 @@ function Write-WarnMsg([string]$Message) {
 
 function Write-Failure([string]$Message) {
     Write-Host "[✘] $Message" -ForegroundColor Red
+}
+
+function Set-EnvSetting([string]$key, [string]$val) {
+    if (Test-Path ".env") {
+        $lines = Get-Content ".env"
+        $found = $false
+        $newLines = @()
+        foreach ($line in $lines) {
+            if ($line -match "^\s*$([regex]::Escape($key))\s*=") {
+                $newLines += "$key=`"$val`""
+                $found = $true
+            } else {
+                $newLines += $line
+            }
+        }
+        if (-not $found) {
+            $newLines += "$key=`"$val`""
+        }
+        $newLines | Set-Content ".env" -Encoding utf8
+    }
+}
+
+function Ensure-EnvSetting([string]$key, [string]$val, [string]$comment) {
+    if (Test-Path ".env") {
+        $content = Get-Content ".env" -Raw
+        if ($content -notmatch "(?m)^\s*$([regex]::Escape($key))\s*=") {
+            $append = ""
+            if ($comment) { $append += "`r`n# $comment" }
+            $append += "`r`n$key=`"$val`"`r`n"
+            Add-Content -Path ".env" -Value $append -Encoding utf8
+            Write-Success "Added missing setting to .env: $key=`"$val`""
+        }
+    }
+}
+
+function Set-SiteJsonSetting([string]$key, [string]$val) {
+    $sitePath = "config\site.json"
+    if (Test-Path $sitePath) {
+        if ($phpExe) {
+            $script = @"
+`$p = 'config/site.json';
+if (file_exists(`$p)) {
+    `$d = @json_decode(file_get_contents(`$p), true) ?: [];
+    `$d['$key'] = '$val';
+    file_put_contents(`$p, json_encode(`$d, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+}
+"@
+            & $phpExe -r $script 2>$null
+        } else {
+            try {
+                $json = Get-Content $sitePath -Raw | ConvertFrom-Json
+                $json | Add-Member -NotePropertyName $key -NotePropertyValue $val -Force
+                $json | ConvertTo-Json -Depth 4 | Set-Content $sitePath -Encoding utf8
+            } catch {}
+        }
+    }
 }
 
 Write-Host "======================================================================" -ForegroundColor Cyan
@@ -151,10 +215,14 @@ if (-not (Test-Path ".env")) {
     } else {
         $defaultEnv = @"
 NEWSERV_API_URL="http://127.0.0.1:8443"
+NEWSERV_PLAYERS_DIR="C:/newserv/system/players"
 NEWSERV_COMMAND_PREFIX="$"
 SERVER_NAME="PSOBB.IO"
 SERVER_ADDRESS="psobb.io"
 SERVER_TAGLINE="Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."
+EXP_RATE="1x"
+DROP_RATE="1x"
+MESETA_RATE="1x"
 "@
         Set-Content -Path ".env" -Value $defaultEnv -Encoding utf8
         Write-Success "Generated baseline .env file"
@@ -163,32 +231,73 @@ SERVER_TAGLINE="Join the adventure in the ultimate private Phantasy Star Online 
     Write-Success ".env file exists"
 }
 
+# Ensure all essential settings are defined in .env
+Ensure-EnvSetting "NEWSERV_API_URL" "http://127.0.0.1:8443" "NewServ REST API base URL"
+Ensure-EnvSetting "NEWSERV_PLAYERS_DIR" "C:/newserv/system/players" "NewServ player save profiles directory (.psochar / .psobank)"
+Ensure-EnvSetting "NEWSERV_COMMAND_PREFIX" "$" "NewServ chat command prefix"
+Ensure-EnvSetting "SERVER_NAME" "PSOBB.IO" "Public server brand name"
+Ensure-EnvSetting "SERVER_ADDRESS" "psobb.io" "Public server domain or IP address"
+Ensure-EnvSetting "SERVER_TAGLINE" "Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience." "Public server descriptive tagline"
+Ensure-EnvSetting "EXP_RATE" "1x" "Displayed EXP multiplier"
+Ensure-EnvSetting "DROP_RATE" "1x" "Displayed Rare Drop multiplier"
+Ensure-EnvSetting "MESETA_RATE" "1x" "Displayed Meseta multiplier"
+
 # Baseline JSON files
 if (-not (Test-Path "config\site.json")) {
-    $siteConfig = @{
-        server_name = "PSOBB.IO"
-        server_address = "psobb.io"
-        server_tagline = "Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."
-        default_language = "auto"
-        hero_logo_url = "/img/header_logo.png"
-        exp_rate = "1x"
-        drop_rate = "1x"
-        meseta_rate = "1x"
-        discord_server = "https://discord.gg/28s84HJXha"
-        enable_registration = $true
-        enable_bounties = $true
-        enable_lfg = $true
-        enable_mods = $true
-        enable_quest_editor = $true
-        enable_discord_oauth = $true
-        client_windows_url = "/downloads/PSOBBIO-Setup_1.25.13b.exe"
-        client_mac_url = "/downloads/PSOBBIO_125.13.dmg"
-        client_raw_url = "/downloads/PSOBBIO-Linux_1.25.13.zip"
+    if (Test-Path "config\site.example.json") {
+        Copy-Item -Path "config\site.example.json" -Destination "config\site.json"
+        Write-Success "Created config/site.json from config/site.example.json"
+    } else {
+        $siteConfig = @{
+            server_name = "PSOBB.IO"
+            server_address = "psobb.io"
+            server_tagline = "Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."
+            default_language = "auto"
+            hero_logo_url = "/img/header_logo.png"
+            exp_rate = "1x"
+            drop_rate = "1x"
+            meseta_rate = "1x"
+            discord_server = "https://discord.gg/28s84HJXha"
+            newserv_players_dir = "C:/newserv/system/players"
+            enable_registration = $true
+            enable_bounties = $true
+            enable_lfg = $true
+            enable_mods = $true
+            enable_quest_editor = $true
+            enable_discord_oauth = $true
+            client_windows_url = "/downloads/PSOBBIO-Setup_1.25.13b.exe"
+            client_mac_url = "/downloads/PSOBBIO_125.13.dmg"
+            client_raw_url = "/downloads/PSOBBIO-Linux_1.25.13.zip"
+        }
+        $siteConfig | ConvertTo-Json -Depth 4 | Set-Content "config\site.json" -Encoding utf8
+        Write-Success "Created default config\site.json"
     }
-    $siteConfig | ConvertTo-Json -Depth 4 | Set-Content "config\site.json" -Encoding utf8
-    Write-Success "Created default config\site.json"
 } else {
     Write-Success "config\site.json exists"
+    # Ensure missing baseline keys exist in config/site.json
+    $ensureSiteKeysCode = @'
+$path = 'config/site.json';
+if (file_exists($path)) {
+    $d = @json_decode(file_get_contents($path), true) ?: [];
+    $changed = false;
+    $defaults = [
+        'server_name' => 'PSOBB.IO',
+        'server_address' => 'psobb.io',
+        'server_tagline' => 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.',
+        'newserv_players_dir' => 'C:/newserv/system/players'
+    ];
+    foreach ($defaults as $k => $v) {
+        if (!isset($d[$k])) {
+            $d[$k] = $v;
+            $changed = true;
+        }
+    }
+    if ($changed) {
+        file_put_contents($path, json_encode($d, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+}
+'@
+    & $phpExe -r $ensureSiteKeysCode 2>$null
 }
 
 if (-not (Test-Path "config\theme.json")) {
@@ -244,7 +353,7 @@ if (Test-Path "db\init_db.php") {
 }
 
 # ------------------------------------------------------------------------------
-# 5. NewServ Game Server Connectivity & Player Data Setup
+# 5. NewServ Game Server Connectivity & Configuration
 # ------------------------------------------------------------------------------
 Write-StepHeader "5/6" "Confirming Access to NewServ Game Server..."
 
@@ -261,12 +370,36 @@ if (Test-Path ".env") {
 Write-Host "Testing NewServ REST API at: $newservUrl ..." -ForegroundColor Gray
 
 $newservOnline = $false
+$newservServerName = ""
 try {
     $res = Invoke-RestMethod -Uri "$newservUrl/y/summary" -TimeoutSec 3 -ErrorAction Stop
     $newservOnline = $true
     Write-Success "SUCCESS: NewServ API is ONLINE & RESPONDING!"
     $clients = if ($res.num_clients) { $res.num_clients } elseif ($res.clients) { $res.clients.Count } else { "N/A" }
     Write-Host "    - Active Clients: $clients" -ForegroundColor Gray
+    Write-Host "    - Server Telemetry: Active and responding" -ForegroundColor Gray
+
+    try {
+        $srvRes = Invoke-RestMethod -Uri "$newservUrl/y/server" -TimeoutSec 3 -ErrorAction Stop
+        if ($srvRes.ServerName) {
+            $newservServerName = [string]$srvRes.ServerName.Trim()
+        }
+    } catch {}
+
+    if ($newservServerName) {
+        Write-Success "Auto-detected Server Name from NewServ API: $newservServerName"
+        $currEnvName = ""
+        foreach ($line in (Get-Content ".env")) {
+            if ($line -match '^\s*SERVER_NAME\s*=\s*["'']?(.*?)["'']?\s*$') {
+                $currEnvName = $matches[1].Trim()
+            }
+        }
+        if (($currEnvName -eq "PSOBB.IO" -or [string]::IsNullOrWhiteSpace($currEnvName)) -and $newservServerName -ne "newserv" -and $newservServerName -ne "PSOBB.IO") {
+            Write-Host "    Syncing website server branding to: $newservServerName" -ForegroundColor Cyan
+            Set-EnvSetting "SERVER_NAME" $newservServerName
+            Set-SiteJsonSetting "server_name" $newservServerName
+        }
+    }
 } catch {
     Write-WarnMsg "NewServ API is currently UNREACHABLE at $newservUrl"
     Write-Host "    This is expected if your NewServ daemon is not running yet." -ForegroundColor Gray
@@ -276,22 +409,92 @@ try {
     Write-Host "      3. Update NEWSERV_API_URL in .env if running on a different port or host." -ForegroundColor Gray
 }
 
-# Check Player Profiles Directory
-$playerPaths = @(
-    "..\newserv\system\players",
-    ".\newserv\system\players",
-    "C:\newserv\system\players"
-)
-$foundPlayers = $false
-foreach ($p in $playerPaths) {
-    if (Test-Path $p) {
-        Write-Success "Located NewServ player profiles directory at: $p"
-        $foundPlayers = $true
-        break
+# Resolve current branding and paths for interactive prompts
+$currentSrvName = "PSOBB.IO"
+$currentSrvAddr = "psobb.io"
+$currentPlayersDir = ""
+
+if (Test-Path ".env") {
+    foreach ($line in (Get-Content ".env")) {
+        if ($line -match '^\s*SERVER_NAME\s*=\s*["'']?(.*?)["'']?\s*$') { $currentSrvName = $matches[1].Trim() }
+        if ($line -match '^\s*SERVER_ADDRESS\s*=\s*["'']?(.*?)["'']?\s*$') { $currentSrvAddr = $matches[1].Trim() }
+        if ($line -match '^\s*NEWSERV_PLAYERS_DIR\s*=\s*["'']?(.*?)["'']?\s*$') { $currentPlayersDir = $matches[1].Trim() }
     }
 }
-if (-not $foundPlayers) {
-    Write-Info "NewServ players directory not found in common locations (skipping offline parser check)."
+
+if (-not $currentPlayersDir -and (Test-Path "config\site.json")) {
+    try {
+        $siteObj = Get-Content "config\site.json" -Raw | ConvertFrom-Json
+        if ($siteObj.newserv_players_dir) { $currentPlayersDir = $siteObj.newserv_players_dir }
+    } catch {}
+}
+
+# Auto-detect player dir from common locations if empty or default does not exist
+if (-not $currentPlayersDir -or -not (Test-Path $currentPlayersDir)) {
+    $commonPlayerPaths = @(
+        "..\newserv\system\players",
+        ".\newserv\system\players",
+        "C:\newserv\system\players",
+        "C:\OSPanel\home\psobb.ru\newserv\system\players"
+    )
+    foreach ($cp in $commonPlayerPaths) {
+        if (Test-Path $cp) {
+            $currentPlayersDir = $cp
+            break
+        }
+    }
+    if (-not $currentPlayersDir) {
+        $currentPlayersDir = "C:/newserv/system/players"
+    }
+}
+
+$isInteractive = (-not $NonInteractive -and -not $Yes)
+if ($isInteractive) {
+    Write-Host ""
+    Write-Host "--> Configure Public Server Identity & Branding..." -ForegroundColor Cyan
+    
+    $promptName = Read-Host "    Enter Server Brand Name [$currentSrvName]"
+    if (-not [string]::IsNullOrWhiteSpace($promptName)) { $currentSrvName = $promptName.Trim() }
+    Set-EnvSetting "SERVER_NAME" $currentSrvName
+    Set-SiteJsonSetting "server_name" $currentSrvName
+    Write-Success "Server Brand Name: $currentSrvName"
+
+    $promptAddr = Read-Host "    Enter Server Domain / Host Address [$currentSrvAddr]"
+    if (-not [string]::IsNullOrWhiteSpace($promptAddr)) { $currentSrvAddr = $promptAddr.Trim() }
+    Set-EnvSetting "SERVER_ADDRESS" $currentSrvAddr
+    Set-SiteJsonSetting "server_address" $currentSrvAddr
+    Write-Success "Server Domain / Address: $currentSrvAddr"
+
+    if (-not $newservOnline) {
+        $promptApi = Read-Host "    Enter NewServ REST API URL [$newservUrl]"
+        if (-not [string]::IsNullOrWhiteSpace($promptApi) -and $promptApi.Trim() -ne $newservUrl) {
+            $newservUrl = $promptApi.Trim()
+            Set-EnvSetting "NEWSERV_API_URL" $newservUrl
+            Write-Success "Updated NewServ API URL: $newservUrl"
+        }
+    }
+
+    Write-Host ""
+    Write-Host "--> Configure NewServ Player Directory (.psochar / .psobank files)..." -ForegroundColor Cyan
+    Write-Host "    The website reads offline character slots, bank storage, and material usage" -ForegroundColor Gray
+    Write-Host "    from NewServ's player save directory (system\players\)." -ForegroundColor Gray
+
+    $promptDir = Read-Host "    Enter path to NewServ system\players directory [$currentPlayersDir]"
+    if (-not [string]::IsNullOrWhiteSpace($promptDir)) { $currentPlayersDir = $promptDir.Trim() }
+}
+
+# Normalize directory path (forward slashes for cross-platform consistency, trim trailing slashes)
+$currentPlayersDir = $currentPlayersDir.Replace('\', '/').TrimEnd('/')
+
+Set-EnvSetting "NEWSERV_PLAYERS_DIR" $currentPlayersDir
+Set-SiteJsonSetting "newserv_players_dir" $currentPlayersDir
+Write-Success "Saved NewServ player directory configuration: $currentPlayersDir"
+
+if (Test-Path $currentPlayersDir) {
+    Write-Success "Verified directory exists at: $currentPlayersDir"
+} else {
+    Write-WarnMsg "Directory not found at: $currentPlayersDir"
+    Write-Host "    The website will function with live API queries, but offline slot/bank viewing requires this directory." -ForegroundColor Gray
 }
 
 # ------------------------------------------------------------------------------
@@ -335,9 +538,12 @@ Write-Host "====================================================================
 Write-Host "    SETUP & DIAGNOSTIC COMPLETE — SITE IS READY!                     " -ForegroundColor Cyan
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "  Server Name:         $currentSrvName" -ForegroundColor White
+Write-Host "  Server Address:      $currentSrvAddr" -ForegroundColor White
 Write-Host "  Web Portal:          http://localhost:$Port/" -ForegroundColor White
 Write-Host "  Admin Control Panel: http://localhost:$Port/admin/site_settings.php" -ForegroundColor White
-Write-Host "  NewServ API Status:  $([string]($newservOnline ? 'ONLINE' : 'UNREACHABLE'))" -ForegroundColor ($newservOnline ? "Green" : "Yellow")
+Write-Host "  NewServ API Status:  $([string]($newservOnline ? 'ONLINE' : 'UNREACHABLE')) ($newservUrl)" -ForegroundColor ($newservOnline ? "Green" : "Yellow")
+Write-Host "  NewServ Players:     $currentPlayersDir" -ForegroundColor White
 Write-Host "  Database:            SQLite (db\website.db)" -ForegroundColor White
 Write-Host ""
 Write-Host "  To launch the built-in development server:" -ForegroundColor Gray
@@ -346,6 +552,11 @@ Write-Host ""
 Write-Host "  For IIS production deployment:" -ForegroundColor Gray
 Write-Host "    - The root web.config is pre-configured with security requestFiltering to block .db and config." -ForegroundColor Gray
 Write-Host ""
+
+if ($NonInteractive -or $Yes) {
+    Write-Host "Non-interactive setup complete." -ForegroundColor Green
+    exit 0
+}
 
 if ($StartServer) {
     Write-Host "Starting PHP development server on http://localhost:$Port ..." -ForegroundColor Green
