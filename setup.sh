@@ -142,6 +142,48 @@ done
 echo ""
 echo -e "${BOLD}--> [3/6] Initializing Configuration Baselines...${NC}"
 
+# Helper: Ensure an environment variable exists in .env, append with default if missing
+ensure_env_setting() {
+    local key="$1"
+    local val="$2"
+    local comment="$3"
+    if [ -f ".env" ] && ! grep -qE "^\s*${key}\s*=" .env 2>/dev/null; then
+        if [ -n "$comment" ]; then
+            echo "" >> .env
+            echo "# $comment" >> .env
+        fi
+        echo "${key}=\"${val}\"" >> .env
+        echo -e "${GREEN}[+] Added missing setting to .env:${NC} ${BOLD}${key}=\"${val}\"${NC}"
+    fi
+}
+
+# Helper: Update or insert an environment variable in .env
+set_env_setting() {
+    local key="$1"
+    local val="$2"
+    if [ -f ".env" ]; then
+        if grep -qE "^\s*${key}\s*=" .env 2>/dev/null; then
+            sed -i.bak -E "s|^\s*${key}\s*=.*|${key}=\"${val}\"|" .env && rm -f .env.bak
+        else
+            echo "${key}=\"${val}\"" >> .env
+        fi
+    fi
+}
+
+# Helper: Update a key in config/site.json
+set_site_json_setting() {
+    local key="$1"
+    local val="$2"
+    php -r "
+        \$path = 'config/site.json';
+        if (file_exists(\$path)) {
+            \$d = @json_decode(file_get_contents(\$path), true) ?: [];
+            \$d['$key'] = '$val';
+            file_put_contents(\$path, json_encode(\$d, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        }
+    " 2>/dev/null || true
+}
+
 # .env check
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
@@ -150,10 +192,14 @@ if [ ! -f ".env" ]; then
     else
         cat > .env << 'ENV_EOF'
 NEWSERV_API_URL="http://127.0.0.1:8443"
+NEWSERV_PLAYERS_DIR="/opt/newserv/system/players"
 NEWSERV_COMMAND_PREFIX="$"
 SERVER_NAME="PSOBB.IO"
 SERVER_ADDRESS="psobb.io"
 SERVER_TAGLINE="Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience."
+EXP_RATE="1x"
+DROP_RATE="1x"
+MESETA_RATE="1x"
 ENV_EOF
         echo -e "${GREEN}[+] Generated baseline .env file${NC}"
     fi
@@ -161,9 +207,24 @@ else
     echo -e "${GREEN}[✔] .env file exists${NC}"
 fi
 
+# Ensure all essential settings are defined in .env
+ensure_env_setting "NEWSERV_API_URL" "http://127.0.0.1:8443" "NewServ REST API base URL"
+ensure_env_setting "NEWSERV_PLAYERS_DIR" "/opt/newserv/system/players" "NewServ player save profiles directory (.psochar / .psobank)"
+ensure_env_setting "NEWSERV_COMMAND_PREFIX" "$" "NewServ chat command prefix"
+ensure_env_setting "SERVER_NAME" "PSOBB.IO" "Public server brand name"
+ensure_env_setting "SERVER_ADDRESS" "psobb.io" "Public server domain or IP address"
+ensure_env_setting "SERVER_TAGLINE" "Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience." "Public server descriptive tagline"
+ensure_env_setting "EXP_RATE" "1x" "Displayed EXP multiplier"
+ensure_env_setting "DROP_RATE" "1x" "Displayed Rare Drop multiplier"
+ensure_env_setting "MESETA_RATE" "1x" "Displayed Meseta multiplier"
+
 # config/site.json
 if [ ! -f "config/site.json" ]; then
-    cat > config/site.json << 'SITE_EOF'
+    if [ -f "config/site.example.json" ]; then
+        cp config/site.example.json config/site.json
+        echo -e "${GREEN}[+] Created config/site.json from config/site.example.json${NC}"
+    else
+        cat > config/site.json << 'SITE_EOF'
 {
     "server_name": "PSOBB.IO",
     "server_address": "psobb.io",
@@ -174,6 +235,7 @@ if [ ! -f "config/site.json" ]; then
     "drop_rate": "1x",
     "meseta_rate": "1x",
     "discord_server": "https://discord.gg/28s84HJXha",
+    "newserv_players_dir": "/opt/newserv/system/players",
     "enable_registration": true,
     "enable_bounties": true,
     "enable_lfg": true,
@@ -185,9 +247,33 @@ if [ ! -f "config/site.json" ]; then
     "client_raw_url": "/downloads/PSOBBIO-Linux_1.25.13.zip"
 }
 SITE_EOF
-    echo -e "${GREEN}[+] Created default config/site.json${NC}"
+        echo -e "${GREEN}[+] Created default config/site.json${NC}"
+    fi
 else
     echo -e "${GREEN}[✔] config/site.json exists${NC}"
+    # Verify essential keys exist in config/site.json
+    php -r "
+        \$path = 'config/site.json';
+        if (file_exists(\$path)) {
+            \$d = @json_decode(file_get_contents(\$path), true) ?: [];
+            \$changed = false;
+            \$defaults = [
+                'server_name' => 'PSOBB.IO',
+                'server_address' => 'psobb.io',
+                'server_tagline' => 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.',
+                'newserv_players_dir' => '/opt/newserv/system/players'
+            ];
+            foreach (\$defaults as \$k => \$v) {
+                if (!isset(\$d[\$k])) {
+                    \$d[\$k] = \$v;
+                    \$changed = true;
+                }
+            }
+            if (\$changed) {
+                file_put_contents(\$path, json_encode(\$d, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            }
+        }
+    " 2>/dev/null || true
 fi
 
 # config/theme.json
@@ -337,6 +423,36 @@ else
     echo "      3. Update NEWSERV_API_URL in .env if running on a different port or Docker host."
 fi
 
+# Interactive Configuration of Server Identity & Branding (if running interactively)
+if [ -t 0 ] && [ "$NON_INTERACTIVE" -ne 1 ]; then
+    echo ""
+    echo -e "${BOLD}--> Configure Public Server Identity & Branding...${NC}"
+    CURRENT_SRV_NAME=$(grep -E '^\s*SERVER_NAME\s*=' .env 2>/dev/null | cut -d '=' -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]' || true)
+    CURRENT_SRV_NAME="${CURRENT_SRV_NAME:-PSOBB.IO}"
+    read -r -p "    Enter Server Brand Name [$CURRENT_SRV_NAME]: " PROMPT_SRV_NAME
+    CHOSEN_SRV_NAME="${PROMPT_SRV_NAME:-$CURRENT_SRV_NAME}"
+    set_env_setting "SERVER_NAME" "$CHOSEN_SRV_NAME"
+    set_site_json_setting "server_name" "$CHOSEN_SRV_NAME"
+    echo -e "    ${GREEN}[✔] Server Brand Name:${NC} $CHOSEN_SRV_NAME"
+
+    CURRENT_SRV_ADDR=$(grep -E '^\s*SERVER_ADDRESS\s*=' .env 2>/dev/null | cut -d '=' -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]' || true)
+    CURRENT_SRV_ADDR="${CURRENT_SRV_ADDR:-psobb.io}"
+    read -r -p "    Enter Server Domain / Host Address [$CURRENT_SRV_ADDR]: " PROMPT_SRV_ADDR
+    CHOSEN_SRV_ADDR="${PROMPT_SRV_ADDR:-$CURRENT_SRV_ADDR}"
+    set_env_setting "SERVER_ADDRESS" "$CHOSEN_SRV_ADDR"
+    set_site_json_setting "server_address" "$CHOSEN_SRV_ADDR"
+    echo -e "    ${GREEN}[✔] Server Domain / Address:${NC} $CHOSEN_SRV_ADDR"
+
+    if [ "$NEWSERV_REACHABLE" -eq 0 ]; then
+        read -r -p "    Enter NewServ REST API URL [$NEWSERV_URL]: " PROMPT_API_URL
+        if [ -n "$PROMPT_API_URL" ] && [ "$PROMPT_API_URL" != "$NEWSERV_URL" ]; then
+            set_env_setting "NEWSERV_API_URL" "$PROMPT_API_URL"
+            NEWSERV_URL="$PROMPT_API_URL"
+            echo -e "    ${GREEN}[✔] Updated NewServ API URL:${NC} $PROMPT_API_URL"
+        fi
+    fi
+fi
+
 # Configure NewServ Player Directory
 CURRENT_PLAYERS_DIR="${NEWSERV_PLAYERS_DIR:-}"
 if [ -z "$CURRENT_PLAYERS_DIR" ] && [ -f ".env" ]; then
@@ -362,24 +478,9 @@ fi
 PLAYERS_DIR="${PROMPTED_PLAYERS_DIR:-$CURRENT_PLAYERS_DIR}"
 PLAYERS_DIR=$(echo "$PLAYERS_DIR" | tr '\\' '/')
 
-# Save to .env
-if [ -f ".env" ]; then
-    if grep -qE '^\s*NEWSERV_PLAYERS_DIR\s*=' .env; then
-        sed -i.bak -E "s|^\s*NEWSERV_PLAYERS_DIR\s*=.*|NEWSERV_PLAYERS_DIR=\"$PLAYERS_DIR\"|" .env && rm -f .env.bak
-    else
-        echo "NEWSERV_PLAYERS_DIR=\"$PLAYERS_DIR\"" >> .env
-    fi
-fi
-
-# Save to config/site.json
-if [ -f "config/site.json" ]; then
-    php -r "
-        \$path = 'config/site.json';
-        \$data = @json_decode(file_get_contents(\$path), true) ?: [];
-        \$data['newserv_players_dir'] = '$PLAYERS_DIR';
-        file_put_contents(\$path, json_encode(\$data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    " 2>/dev/null || true
-fi
+# Save to .env and config/site.json using helper functions
+set_env_setting "NEWSERV_PLAYERS_DIR" "$PLAYERS_DIR"
+set_site_json_setting "newserv_players_dir" "$PLAYERS_DIR"
 echo -e "${GREEN}[✔] Saved NewServ player directory configuration:${NC} $PLAYERS_DIR"
 
 if [ -d "$PLAYERS_DIR" ]; then
