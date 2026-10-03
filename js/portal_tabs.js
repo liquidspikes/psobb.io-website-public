@@ -338,7 +338,7 @@
                 feed.innerHTML = `
                     <div style="text-align:center; padding:2rem; border:1px dashed rgba(255,170,0,0.15); border-radius:8px; color:#888;">
                         <i class="fas fa-satellite-dish" style="font-size:2rem; margin-bottom:8px; color:rgba(255,170,0,0.3);"></i><br>
-                        <span style="font-size:0.85rem;">No active LFG posts. Be the first!</span>
+                        <span style="font-size:0.85rem;">${escapeHtml(_t('No active LFG posts. Be the first!'))}</span>
                     </div>`;
                 return;
             }
@@ -537,7 +537,7 @@
                     alertEl.style.background = 'rgba(0,255,136,0.1)';
                     alertEl.style.border = '1px solid rgba(0,255,136,0.3)';
                     alertEl.style.color = '#00ff88';
-                    alertEl.innerHTML = `<i class="fas fa-rocket"></i> ${data.message}`;
+                    alertEl.innerHTML = `<i class="fas fa-rocket"></i> ${escapeHtml(_t(data.message))}`;
                     setTimeout(() => alertEl.style.display = 'none', 5000);
                 }
             } else {

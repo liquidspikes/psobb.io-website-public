@@ -78,12 +78,12 @@
                                 <i class="fas fa-mobile-alt animate-pulse"></i> <?= __('Companion App Available') ?>
                             </h3>
                             <p style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:15px;">
-                                <?= __('Install the PSOBB.io Companion App directly on your mobile screen or desktop for instant access!') ?>
+                                <?= sprintf(__('Install the %s Companion App directly on your mobile screen or desktop for instant access!'), htmlspecialchars(get_app_name())) ?>
                             </p>
                             <div id="pwa-install-android" style="display:none;">
                                 <button onclick="installPortalApp()" class="dl-btn pwa-install-btn"><i
                                         class="fas fa-download"></i>
-                                    <?= __('Install PSOBB.io Companion App') ?></button>
+                                    <?= sprintf(__('Install %s Companion App'), htmlspecialchars(get_app_name())) ?></button>
                             </div>
                             <div id="pwa-install-ios" style="display:none;">
                                 <p style="font-size:0.8rem; color:#ffaa00; margin:0; line-height:1.6;">

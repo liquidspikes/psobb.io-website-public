@@ -10,6 +10,7 @@ error_reporting(0);
 ini_set('display_errors', 0);
 require_once 'config.php';
 require_once 'db.php';
+require_once 'lang.php';
 start_secure_session();
 
 if (ob_get_length()) ob_clean();
@@ -30,7 +31,7 @@ $account_id = $_SESSION['user']['account_id'] ?? 0;
 
 if ($lobby_id === null || !$account_id) {
     http_response_code(400);
-    echo json_encode(["error" => "Invalid target game ID."]);
+    echo json_encode(["error" => __("Invalid target game ID.")]);
     exit;
 }
 
@@ -47,7 +48,7 @@ try {
     $summary_json = @file_get_contents($summary_url);
     if ($summary_json === false) {
         http_response_code(502);
-        echo json_encode(["error" => "Game server API is currently offline."]);
+        echo json_encode(["error" => __("Game server API is currently offline.")]);
         exit;
     }
     
@@ -64,7 +65,7 @@ try {
     
     if (!$active_client) {
         http_response_code(400);
-        echo json_encode(["error" => "You must be logged into a character in-game to join this game."]);
+        echo json_encode(["error" => __("You must be logged into a character in-game to join this game.")]);
         exit;
     }
     
@@ -78,7 +79,7 @@ try {
     $lobbies_json = @file_get_contents($lobbies_url);
     if ($lobbies_json === false) {
         http_response_code(502);
-        echo json_encode(["error" => "Failed to fetch lobby registry from server."]);
+        echo json_encode(["error" => __("Failed to fetch lobby registry from server.")]);
         exit;
     }
     
@@ -95,7 +96,7 @@ try {
     
     if (!$target_lobby) {
         http_response_code(404);
-        echo json_encode(["error" => "Target game not found on the server."]);
+        echo json_encode(["error" => __("Target game not found on the server.")]);
         exit;
     }
     
@@ -104,12 +105,12 @@ try {
     
     if ($char_level < $min_level) {
         http_response_code(400);
-        echo json_encode(["error" => "Your character level (Lv. $char_level) is too low for this game. Requires Lv. $min_level."]);
+        echo json_encode(["error" => sprintf(__("Your character level (Lv. %d) is too low for this game. Requires Lv. %d."), $char_level, $min_level)]);
         exit;
     }
     if ($char_level > $max_level) {
         http_response_code(400);
-        echo json_encode(["error" => "Your character level (Lv. $char_level) is too high for this game. Maximum Lv. $max_level."]);
+        echo json_encode(["error" => sprintf(__("Your character level (Lv. %d) is too high for this game. Maximum Lv. %d."), $char_level, $max_level)]);
         exit;
     }
     
@@ -189,14 +190,14 @@ try {
     
     if ($shell_res === false) {
         http_response_code(502);
-        echo json_encode(["error" => "Failed to transmit warp packet to the server."]);
+        echo json_encode(["error" => __("Failed to transmit warp packet to the server.")]);
         exit;
     }
     
     $res_data = json_decode($shell_res, true);
     echo json_encode([
         "success" => true,
-        "message" => "Warp command successfully sent! Your character will transition inside the game.",
+        "message" => __("Warp command successfully sent! Your character will transition inside the game."),
         "server_response" => $res_data,
         "debug" => [
             "command" => $shell_cmd,
@@ -207,6 +208,6 @@ try {
     ]);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(["error" => "Warp failed: " . $e->getMessage()]);
+    echo json_encode(["error" => __("Warp failed: ") . $e->getMessage()]);
 }
 ?>

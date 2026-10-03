@@ -19,7 +19,7 @@ start_secure_session();
     <title><?php echo isset($page_title) ? htmlspecialchars($page_title) : (htmlspecialchars(get_server_name()) . ' Private Server'); ?></title>
     <meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?? '' ?>">
     <link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/api/manifest.php">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">

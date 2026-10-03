@@ -36,6 +36,7 @@ $cleanString = function($val, $default = '', $max = 250) {
 };
 
 $serverName    = $cleanString($data['server_name'] ?? null, $currentConfig['server_name'] ?? 'PSOBB.IO', 60);
+$appName       = $cleanString($data['app_name'] ?? null, $currentConfig['app_name'] ?? '', 60);
 $serverAddress = $cleanString($data['server_address'] ?? null, $currentConfig['server_address'] ?? 'psobb.io', 120);
 $serverTagline = $cleanString($data['server_tagline'] ?? null, $currentConfig['server_tagline'] ?? '', 250);
 $heroLogoUrl   = $cleanString($data['hero_logo_url'] ?? null, $currentConfig['hero_logo_url'] ?? '/img/header_logo.png', 250);
@@ -55,6 +56,12 @@ $enableLfg          = !empty($data['enable_lfg']);
 $enableMods         = !empty($data['enable_mods']);
 $enableQuestEditor  = !empty($data['enable_quest_editor']);
 $enableDiscordOAuth = !empty($data['enable_discord_oauth']);
+
+$showDownloadWindows   = isset($data['show_download_windows']) ? !empty($data['show_download_windows']) : ($currentConfig['show_download_windows'] ?? true);
+$showDownloadMac       = isset($data['show_download_mac']) ? !empty($data['show_download_mac']) : ($currentConfig['show_download_mac'] ?? true);
+$showDownloadLinux     = isset($data['show_download_linux']) ? !empty($data['show_download_linux']) : ($currentConfig['show_download_linux'] ?? true);
+$showDownloadSteamDeck = isset($data['show_download_steam_deck']) ? !empty($data['show_download_steam_deck']) : ($currentConfig['show_download_steam_deck'] ?? true);
+$showDownloadRaw       = isset($data['show_download_raw']) ? !empty($data['show_download_raw']) : ($currentConfig['show_download_raw'] ?? true);
 
 $defaultLanguage = $data['default_language'] ?? ($currentConfig['default_language'] ?? 'auto');
 if (!in_array($defaultLanguage, ['auto', 'en', 'jp', 'ru'])) {
@@ -87,6 +94,7 @@ if (isset($data['portal_modules']) && is_array($data['portal_modules'])) {
 
 $newConfig = [
     'server_name'          => $serverName ?: 'PSOBB.IO',
+    'app_name'             => $appName ?: ($serverName ?: 'PSOBB.IO'),
     'server_address'       => $serverAddress ?: 'psobb.io',
     'server_tagline'       => $serverTagline,
     'default_language'     => $defaultLanguage,
@@ -101,6 +109,11 @@ $newConfig = [
     'enable_mods'          => $enableMods,
     'enable_quest_editor'  => $enableQuestEditor,
     'enable_discord_oauth' => $enableDiscordOAuth,
+    'show_download_windows'    => $showDownloadWindows,
+    'show_download_mac'        => $showDownloadMac,
+    'show_download_linux'      => $showDownloadLinux,
+    'show_download_steam_deck' => $showDownloadSteamDeck,
+    'show_download_raw'        => $showDownloadRaw,
     'client_windows_url'   => $clientWin,
     'client_mac_url'       => $clientMac,
     'client_raw_url'       => $clientRaw,

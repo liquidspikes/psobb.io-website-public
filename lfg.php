@@ -645,9 +645,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                showAlert(<?= json_encode(__('🚀 TELEPORT MATRIX ACTIVE! '), JSON_UNESCAPED_UNICODE) ?> + data.message, 'success');
+                showAlert(<?= json_encode(__('🚀 TELEPORT MATRIX ACTIVE! '), JSON_UNESCAPED_UNICODE) ?> + (typeof window.__ === 'function' ? window.__(data.message) : data.message), 'success');
             } else {
-                showAlert('<?= addslashes(__('Warp rejected by game gateway: ')) ?>' + (data.error || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
+                showAlert('<?= addslashes(__('Warp rejected by game gateway: ')) ?>' + ((typeof window.__ === 'function' && data.error ? window.__(data.error) : data.error) || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
             }
         } catch (e) {
             showAlert('<?= addslashes(__('Teleport connection lost: ')) ?>' + e.message, 'error');
@@ -678,11 +678,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                showAlert('✓ ' + data.message, 'success');
+                showAlert('✓ ' + (typeof window.__ === 'function' ? window.__(data.message) : data.message), 'success');
                 syncCharacterState();
                 pollLfgTerminal();
             } else {
-                showAlert('<?= addslashes(__('Leave group rejected: ')) ?>' + (data.error || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
+                showAlert('<?= addslashes(__('Leave group rejected: ')) ?>' + ((typeof window.__ === 'function' && data.error ? window.__(data.error) : data.error) || '<?= addslashes(__('Unknown server error.')) ?>'), 'error');
             }
         } catch (e) {
             showAlert('<?= addslashes(__('Leave group connection lost: ')) ?>' + e.message, 'error');

@@ -2513,8 +2513,8 @@ window.loadLfgFeed = async function () {
             container.innerHTML = `
                 <div style="text-align:center; color:#888; padding:3rem; border:1px dashed rgba(255,255,255,0.1); border-radius:8px;">
                     <i class="fas fa-clipboard-list" style="font-size:2.5rem; margin-bottom:10px; color:#ffaa00;"></i><br>
-                    No active LFG posts found.<br>
-                    <a href="lfg.php" style="color:#ffaa00; font-size:0.85rem;">Create one from the full LFG Terminal →</a>
+                    ${_t('No active LFG posts found.')}<br>
+                    <a href="lfg.php" style="color:#ffaa00; font-size:0.85rem;">${_t('Create one from the full LFG Terminal →')}</a>
                 </div>`;
             return;
         }

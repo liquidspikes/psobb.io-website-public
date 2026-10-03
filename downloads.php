@@ -17,7 +17,19 @@ include 'includes/header.php';
         <p><?= __('Download the patched PSO Blue Burst client for your platform. Follow the instructions after download.') ?></p>
     </div>
 
+<?php
+$cfg = get_site_config();
+$showWin = !isset($cfg['show_download_windows']) || !empty($cfg['show_download_windows']);
+$showMac = !isset($cfg['show_download_mac']) || !empty($cfg['show_download_mac']);
+$showLinux = !isset($cfg['show_download_linux']) || !empty($cfg['show_download_linux']);
+$showSteamDeck = !isset($cfg['show_download_steam_deck']) || !empty($cfg['show_download_steam_deck']);
+$showRaw = !isset($cfg['show_download_raw']) || !empty($cfg['show_download_raw']);
+
+$proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+$hostUrl = $proto . ($_SERVER['HTTP_HOST'] ?? get_server_address());
+?>
     <div class="download-grid">
+        <?php if ($showWin): ?>
         <div class="dl-card dl-windows">
             <div class="dl-icon"><i class="fab fa-windows"></i></div>
             <h3><?= __('Windows (Beta)') ?></h3>
@@ -34,7 +46,9 @@ include 'includes/header.php';
                     style="color: inherit; text-decoration: underline;">anzz1</a>
             </div>
         </div>
+        <?php endif; ?>
 
+        <?php if ($showMac): ?>
         <div class="dl-card dl-mac">
             <div class="dl-icon"><i class="fab fa-apple"></i></div>
             <h3><?= __('Mac (Alpha)') ?></h3>
@@ -46,27 +60,35 @@ include 'includes/header.php';
             <a href="<?= htmlspecialchars(get_client_download_url('mac')) ?>" class="dl-btn" download><i class="fas fa-download"></i> <?= __('Download') ?></a>
             <small><?= __('Requires Macbook Pro or Macbook Air M2 or higher') ?></small>
         </div>
+        <?php endif; ?>
 
+        <?php if ($showLinux): ?>
         <div class="dl-card dl-linux">
             <div class="dl-icon"><i class="fab fa-linux"></i></div>
-            <h3><?= __('Linux & Steam Deck') ?></h3>
+            <h3><?= $showSteamDeck ? __('Linux & Steam Deck') : __('Linux') ?></h3>
             <p><?= __('Support via Wine/Proton.') ?></p>
             <div class="dl-meta">
                 <span><i class="fas fa-hdd"></i> 1.08 GB</span>
                 <span><i class="fas fa-code-branch"></i> v1.25.13</span>
             </div>
+            <?php if ($showSteamDeck): ?>
             <div class="deck-install"
                 style="margin: 15px 0; text-align: left; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
                 <strong style="display:block; margin-bottom:5px; color:#4fc3f7;"><?= __('Steam Deck (Desktop Mode):') ?></strong>
                 <code
                     style="display:block; background:#222; padding:5px; font-size:0.85em; user-select:all; cursor:pointer;"
-                    onclick="navigator.clipboard.writeText(this.innerText); alert('<?= addslashes(__('Copied to clipboard!')) ?>');">curl -sL https://psobb.io/install-deck.sh | bash</code>
+                    onclick="navigator.clipboard.writeText(this.innerText); alert('<?= addslashes(__('Copied to clipboard!')) ?>');">curl -sL <?= htmlspecialchars($hostUrl) ?>/install-deck.sh | bash</code>
                 <small style="display:block; margin-top:5px; color:#aaa;"><?= __('(Click command to copy)') ?></small>
             </div>
             <small><?= __('Ubuntu 20.04+ or SteamOS') ?></small>
+            <?php else: ?>
+            <small><?= __('Ubuntu 20.04+ or compatible Linux distribution') ?></small>
+            <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
 
+    <?php if ($showRaw): ?>
     <div class="raw-files-section" style="margin-top: 3rem; text-align: center; background: rgba(10, 20, 30, 0.4); border: 1px dashed rgba(0, 255, 255, 0.2); padding: 2rem; border-radius: 12px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
         <h3 style="color: var(--pso-blue); margin-bottom: 0.5rem;"><i class="fas fa-file-archive" style="margin-right: 8px;"></i><?= __('Raw Client Files (Manual Setup)') ?></h3>
         <p style="max-width: 600px; margin: 0 auto 1.5rem auto; font-size: 0.95rem; color: rgba(255,255,255,0.8);">
@@ -80,6 +102,7 @@ include 'includes/header.php';
             <a href="<?= htmlspecialchars(get_client_download_url('raw')) ?>" class="dl-btn warning-btn" download><i class="fas fa-file-download"></i> <?= __('Download Raw Client Files') ?></a>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="about-content" style="margin-top: 2rem;">
         <h2><?= __('Installation Instructions') ?></h2>

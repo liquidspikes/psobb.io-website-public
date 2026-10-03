@@ -11,6 +11,7 @@ error_reporting(0);
 ini_set('display_errors', 0);
 require_once 'config.php';
 require_once 'db.php';
+require_once 'lang.php';
 start_secure_session();
 
 if (ob_get_length()) ob_clean();
@@ -29,7 +30,7 @@ $account_id = $_SESSION['user']['account_id'] ?? 0;
 
 if (!$account_id) {
     http_response_code(400);
-    echo json_encode(["error" => "Invalid session account ID"]);
+    echo json_encode(["error" => __("Invalid session account ID")]);
     exit;
 }
 
@@ -39,7 +40,7 @@ try {
     $summary_json = @file_get_contents($summary_url);
     if ($summary_json === false) {
         http_response_code(502);
-        echo json_encode(["error" => "Game server API is currently offline."]);
+        echo json_encode(["error" => __("Game server API is currently offline.")]);
         exit;
     }
     
@@ -56,7 +57,7 @@ try {
     
     if (!$active_client) {
         http_response_code(400);
-        echo json_encode(["error" => "You must be logged into a character in-game to exit a group."]);
+        echo json_encode(["error" => __("You must be logged into a character in-game to exit a group.")]);
         exit;
     }
     
@@ -87,15 +88,15 @@ try {
     
     if ($shell_res === false) {
         http_response_code(502);
-        echo json_encode(["error" => "Failed to transmit exit command to the server."]);
+        echo json_encode(["error" => __("Failed to transmit exit command to the server.")]);
         exit;
     }
     
     $res_data = json_decode($shell_res, true);
     
-    $message = "Exit command successfully sent! Your character will transition back to a lobby.";
+    $message = __("Exit command successfully sent! Your character will transition back to a lobby.");
     if ($lfg_deleted) {
-        $message = "You have left the group and your LFG listing has been removed.";
+        $message = __("You have left the group and your LFG listing has been removed.");
     }
     
     echo json_encode([
@@ -106,6 +107,6 @@ try {
     ]);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(["error" => "Exit failed: " . $e->getMessage()]);
+    echo json_encode(["error" => __("Exit failed: ") . $e->getMessage()]);
 }
 ?>

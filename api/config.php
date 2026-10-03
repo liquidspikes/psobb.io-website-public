@@ -149,6 +149,7 @@ if (!function_exists('get_site_config')) {
         $cfgPath = __DIR__ . '/../config/site.json';
         $defaults = [
             'server_name'          => 'PSOBB.IO',
+            'app_name'             => 'PSOBB.IO',
             'server_address'       => 'psobb.io',
             'server_tagline'       => 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.',
             'hero_logo_url'        => '/img/header_logo.png',
@@ -163,6 +164,11 @@ if (!function_exists('get_site_config')) {
             'enable_mods'          => true,
             'enable_quest_editor'  => true,
             'enable_discord_oauth' => true,
+            'show_download_windows'    => true,
+            'show_download_mac'        => true,
+            'show_download_linux'      => true,
+            'show_download_steam_deck' => true,
+            'show_download_raw'        => true,
             'client_windows_url'   => '/downloads/PSOBBIO-Setup_1.25.13b.exe',
             'client_mac_url'       => '/downloads/PSOBBIO_125.13.dmg',
             'client_raw_url'       => '/downloads/PSOBBIO-Linux_1.25.13.zip',
@@ -244,6 +250,16 @@ if (!function_exists('get_server_name')) {
     function get_server_name(): string {
         global $SERVER_NAME;
         return $SERVER_NAME ?: 'PSOBB.IO';
+    }
+}
+
+if (!function_exists('get_app_name')) {
+    function get_app_name(): string {
+        $cfg = get_site_config();
+        if (!empty($cfg['app_name'])) {
+            return (string)$cfg['app_name'];
+        }
+        return get_server_name();
     }
 }
 

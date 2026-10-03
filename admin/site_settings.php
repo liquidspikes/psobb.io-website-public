@@ -624,6 +624,14 @@ input:checked + .slider:before {
 
                     <div class="field-group">
                         <label>
+                            <?= __('Application Name') ?>
+                            <small><?= __('Name used in the web app / PWA installation prompts and companion app titles (defaults to Server Name if empty)') ?></small>
+                        </label>
+                        <input type="text" class="field-input" name="app_name" id="field_app_name" value="<?= htmlspecialchars($cfg['app_name'] ?? '') ?>" placeholder="<?= htmlspecialchars($cfg['server_name'] ?? 'PSOBB.IO') ?>">
+                    </div>
+
+                    <div class="field-group">
+                        <label>
                             <?= __('Server Host Address') ?>
                             <small><?= __('Address players enter in client options / patches (e.g., psobb.io, 127.0.0.1)') ?></small>
                         </label>
@@ -1003,6 +1011,67 @@ input:checked + .slider:before {
                         </label>
                         <input type="text" class="field-input" name="client_raw_url" value="<?= htmlspecialchars($cfg['client_raw_url']) ?>">
                     </div>
+
+                    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed rgba(255,255,255,0.15);">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--pso-blue); font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-eye"></i> <?= __('Visible Download Cards & Blocks') ?>
+                        </h4>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <strong><?= __('Windows Client Card') ?></strong>
+                                <span><?= __('Display the Windows download card on downloads.php') ?></span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="show_download_windows" value="1" <?= (!isset($cfg['show_download_windows']) || $cfg['show_download_windows']) ? 'checked' : '' ?>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <strong><?= __('Mac Client Card') ?></strong>
+                                <span><?= __('Display the macOS download card on downloads.php') ?></span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="show_download_mac" value="1" <?= (!isset($cfg['show_download_mac']) || $cfg['show_download_mac']) ? 'checked' : '' ?>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <strong><?= __('Linux Client Card') ?></strong>
+                                <span><?= __('Display the Linux download card on downloads.php') ?></span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="show_download_linux" value="1" <?= (!isset($cfg['show_download_linux']) || $cfg['show_download_linux']) ? 'checked' : '' ?>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <strong><?= __('Steam Deck Installation Block') ?></strong>
+                                <span><?= __('Show the Steam Deck one-line terminal installer command inside the Linux card') ?></span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="show_download_steam_deck" value="1" <?= (!isset($cfg['show_download_steam_deck']) || $cfg['show_download_steam_deck']) ? 'checked' : '' ?>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <strong><?= __('Raw Client Files Section') ?></strong>
+                                <span><?= __('Display the Raw Client Files (Manual Setup) download section on downloads.php') ?></span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="show_download_raw" value="1" <?= (!isset($cfg['show_download_raw']) || $cfg['show_download_raw']) ? 'checked' : '' ?>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Community Links -->
@@ -1369,6 +1438,12 @@ document.getElementById('site-settings-form').addEventListener('submit', async f
     payload.enable_mods         = !!formData.get('enable_mods');
     payload.enable_quest_editor = !!formData.get('enable_quest_editor');
     payload.enable_discord_oauth = !!formData.get('enable_discord_oauth');
+
+    payload.show_download_windows    = !!formData.get('show_download_windows');
+    payload.show_download_mac        = !!formData.get('show_download_mac');
+    payload.show_download_linux      = !!formData.get('show_download_linux');
+    payload.show_download_steam_deck = !!formData.get('show_download_steam_deck');
+    payload.show_download_raw        = !!formData.get('show_download_raw');
 
     // Collect Player Portal module visibility settings
     payload.portal_modules = {};
