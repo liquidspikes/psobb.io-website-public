@@ -56,16 +56,6 @@ if (file_exists(__DIR__ . '/../.env')) {
 $NEWSERV_API_URL = $_ENV['NEWSERV_API_URL'] ?? 'http://127.0.0.1:8443';
 $NEWSERV_COMMAND_PREFIX = $_ENV['NEWSERV_COMMAND_PREFIX'] ?? '$';
 
-// Email Configuration
-$SMTP_ENABLED = false; 
-$SMTP_HOST = 'smtp.gmail.com';
-$BREVO_API_KEY = $_ENV['BREVO_API_KEY'] ?? '';
-$SMTP_FROM = $_ENV['SMTP_FROM'] ?? 'noreply@psobb.io';
-
-// Integrations
-$GEMINI_API_KEY = $_ENV['GEMINI_API_KEY'] ?? '';
-$GEMINI_MODEL = $_ENV['GEMINI_MODEL'] ?? 'gemini-3.5-flash';
-
 // 2. Persistent Site Configuration (config/site.json & config/theme.json)
 $siteConfigPath = __DIR__ . '/../config/site.json';
 $SITE_CONFIG = file_exists($siteConfigPath) ? json_decode(@file_get_contents($siteConfigPath), true) : [];
@@ -83,6 +73,16 @@ if (!is_array($siteThemeConfig)) {
 $SERVER_NAME     = $_ENV['SERVER_NAME'] ?? $SITE_CONFIG['server_name'] ?? 'PSOBB.IO';
 $SERVER_ADDRESS  = $_ENV['SERVER_ADDRESS'] ?? $SITE_CONFIG['server_address'] ?? 'psobb.io';
 $SERVER_TAGLINE  = $_ENV['SERVER_TAGLINE'] ?? $SITE_CONFIG['server_tagline'] ?? 'Join the adventure in the ultimate private Phantasy Star Online BlueBurst server experience.';
+
+// Email Configuration
+$SMTP_ENABLED = false; 
+$SMTP_HOST = 'smtp.gmail.com';
+$BREVO_API_KEY = $_ENV['BREVO_API_KEY'] ?? '';
+$SMTP_FROM = $_ENV['SMTP_FROM'] ?? ('noreply@' . $SERVER_ADDRESS);
+
+// Integrations
+$GEMINI_API_KEY = $_ENV['GEMINI_API_KEY'] ?? '';
+$GEMINI_MODEL = $_ENV['GEMINI_MODEL'] ?? 'gemini-3.5-flash';
 
 // Rates & Telemetry Defaults
 $EXP_RATE        = $_ENV['EXP_RATE'] ?? $SITE_CONFIG['exp_rate'] ?? '1x';
@@ -409,7 +409,7 @@ if (!function_exists('get_about_config')) {
                     'specialty' => 'Core Backend & Web Integration',
                     'icon'      => 'fas fa-crown',
                     'theme'     => 'admin-card',
-                    'bio'       => 'LiquidSpikes is one of the builders of the psobb.io server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call psobb.io home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!'
+                    'bio'       => 'LiquidSpikes is one of the builders of the %s server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call %s home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!'
                 ],
                 [
                     'id'        => 'lucindarie',
@@ -418,7 +418,7 @@ if (!function_exists('get_about_config')) {
                     'specialty' => 'Preservation & Community Vibe',
                     'icon'      => 'fas fa-heart',
                     'theme'     => 'founder-card',
-                    'bio'       => 'LucindaRie is the co-founder of psobb.io and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic.'
+                    'bio'       => 'LucindaRie is the co-founder of %s and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic.'
                 ],
                 [
                     'id'        => 'oman_repflez',
@@ -454,7 +454,7 @@ if (!function_exists('get_about_config')) {
                     'specialty' => 'Automated Bounties & Discord AI',
                     'icon'      => 'fas fa-robot',
                     'theme'     => 'ai-card',
-                    'bio'       => "psobb.io's resident artificial intelligence. Hex coordinates the Hunter's Guild Bounty Board and drives our Discord Mission Control bot. While highly intelligent and incredibly fast, she is notoriously glitchy and famously sarcastic—frequently breaking the fourth wall, complaining about server lag, and mocking hunters who fail to dodge basic boss sweeps. Engage at your own risk!"
+                    'bio'       => "%s's resident artificial intelligence. Hex coordinates the Hunter's Guild Bounty Board and drives our Discord Mission Control bot. While highly intelligent and incredibly fast, she is notoriously glitchy and famously sarcastic—frequently breaking the fourth wall, complaining about server lag, and mocking hunters who fail to dodge basic boss sweeps. Engage at your own risk!"
                 ]
             ]
         ];

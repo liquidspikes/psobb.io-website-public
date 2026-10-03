@@ -170,12 +170,12 @@ async function handleLogin(e) {
             // Login Success
             sessionStorage.setItem('psobb_user', JSON.stringify(data));
 
-            // Only prompt to link email after successful credentials login if user has a legacy placeholder email (<username>_legacy@psobb.io) or no valid email and no pending confirmation
+            // Only prompt to link email after successful credentials login if user has a legacy placeholder email (<username>_legacy@<domain>) or no valid email and no pending confirmation
             const isLegacy = Boolean(
                 (data.is_legacy_email ||
                 !data.has_email ||
                 !data.email ||
-                (typeof data.email === 'string' && data.email.toLowerCase().endsWith('_legacy@psobb.io'))) &&
+                (typeof data.email === 'string' && data.email.toLowerCase().includes('_legacy@'))) &&
                 !data.is_pending_email
             );
 

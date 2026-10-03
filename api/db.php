@@ -556,7 +556,8 @@ function get_db(bool $reset = false)
 function send_email($to, $subject, $message)
 {
     global $BREVO_API_KEY, $SMTP_FROM;
-    $from = $SMTP_FROM ?: 'pso@psobb.io';
+    $fallbackFrom = function_exists('get_server_address') ? ('noreply@' . get_server_address()) : 'noreply@localhost';
+    $from = $SMTP_FROM ?: $fallbackFrom;
 
     // Strip any CRLF characters from headers to prevent email header injection
     $to = preg_replace('/[\r\n]/', '', trim((string)$to));

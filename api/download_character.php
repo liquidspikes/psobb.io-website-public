@@ -107,7 +107,7 @@ if ($sharedBankFile) {
 }
 
 // Add a readme for context
-$readme = "PSOBB.io Character Export\n";
+$readme = get_server_name() . " Character Export\n";
 $readme .= "========================\n\n";
 $readme .= "Character: {$charName}\n";
 $readme .= "Slot: " . ($slot + 1) . "\n";

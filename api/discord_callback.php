@@ -84,7 +84,7 @@ try {
         // Create a stub row so we can store their Discord ID integration
         $ins = $db->prepare("INSERT INTO users (username, email, account_id, discord_id) VALUES (:u, :e, :aid, :did)");
         $ins->bindValue(':u', strtolower($username), SQLITE3_TEXT);
-        $ins->bindValue(':e', strtolower($username) . "_legacy@psobb.io", SQLITE3_TEXT);
+        $ins->bindValue(':e', strtolower($username) . "_legacy@" . get_server_address(), SQLITE3_TEXT);
         $ins->bindValue(':aid', $_SESSION['user']['account_id'], SQLITE3_INTEGER);
         $ins->bindValue(':did', $discord_id, SQLITE3_TEXT);
         $ins->execute();

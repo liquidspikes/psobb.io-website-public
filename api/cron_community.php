@@ -87,7 +87,8 @@ function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
         $prompt .= "The event has just started! Announce it to the server and rally the players to participate.";
         $db_flag = 'announced_start';
     } elseif ($milestone_type === '100') {
-        $prompt .= "The server just completed 100% of the goal! Announce their victory and tell them they can claim their reward at psobb.io.";
+        $srvAddr = get_server_address();
+        $prompt .= "The server just completed 100% of the goal! Announce their victory and tell them they can claim their reward at {$srvAddr}.";
         $db_flag = 'completed_at'; // Special case, standard completion handles it
     } else {
         $prompt .= "The server just reached the {$pct_str} milestone for this goal! Give a quick, encouraging status update to keep players motivated.";
@@ -127,8 +128,9 @@ function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
     
     // Fallback if AI fails to respond
     if (empty($message)) {
+        $srvAddr = get_server_address();
         if ($milestone_type === 'start') $message = "[Mission Control] Global Event Started! / [指令室] グローバルイベント開始！";
-        elseif ($milestone_type === '100') $message = "[Mission Control] Global Event Completed! Claim your reward at psobb.io. / [指令室] グローバルイベント達成！報酬はpsobb.ioで。";
+        elseif ($milestone_type === '100') $message = "[Mission Control] Global Event Completed! Claim your reward at {$srvAddr}. / [指令室] グローバルイベント達成！報酬は{$srvAddr}で。";
         else $message = "[Mission Control] Global Event reached {$pct_str}! Keep it up! / [指令室] 目標{$pct_str}達成！この調子で頑張れ！";
     }
 

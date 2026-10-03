@@ -33,9 +33,9 @@ try {
     $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
 
     $rawEmail = $row ? trim($row['email'] ?? '') : '';
-    $isLegacy = empty($rawEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $rawEmail);
+    $isLegacy = empty($rawEmail) || (bool)preg_match('/_legacy@/i', $rawEmail);
     $displayEmail = $isLegacy ? '' : $rawEmail;
-    $legacyEmail = $isLegacy ? ($rawEmail ?: ($username . '_legacy@psobb.io')) : '';
+    $legacyEmail = $isLegacy ? ($rawEmail ?: ($username . '_legacy@' . get_server_address())) : '';
 
     // Check for pending email confirmation
     $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (

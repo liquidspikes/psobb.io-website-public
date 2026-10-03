@@ -1,6 +1,6 @@
-# psobb.io API Reference
+# PSOBB API Reference
 
-Backend HTTP API for the psobb.io website. Every endpoint is a standalone PHP
+Backend HTTP API for the website. Every endpoint is a standalone PHP
 file under `/api/` and responds with `Content-Type: application/json` (a few
 return binary/image data — noted where relevant).
 
@@ -26,7 +26,7 @@ return binary/image data — noted where relevant).
 
 ## Conventions
 
-**Base path:** `https://psobb.io/api/`
+**Base path:** `/api/` (or `https://<server-address>/api/`)
 
 **Auth types** (see [Authentication](#authentication--sessions)):
 

@@ -1048,11 +1048,11 @@ foreach ($clients as $client) {
         
         // 1 in 100 chance for Hex to take over the mission!
         if (mt_rand(1, 100) === 1) {
-            $quest_giver = 'Hex (the PSOBB.io AI Assistant)';
+            $quest_giver = 'Hex (the ' . get_server_name() . ' AI Assistant)';
         }
         
         $hex_twist = "";
-        if ($quest_giver === 'Hex (the PSOBB.io AI Assistant)') {
+        if (str_starts_with($quest_giver, 'Hex')) {
             $hex_twist = "\nSPECIAL DIRECTIVE FOR HEX: Since Hex is an AI Assistant, she MUST give the mission with a sarcastic, fourth-wall-breaking, or highly humorous twist! She might complain about server lag, digital paperwork, the server admin 'LiquidSpikes' and his 'vibe-coded garbage', or the player's past performance.";
         }
 
@@ -1147,7 +1147,7 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
                         }
                         
                         // Hex, team bounties always give out pure rare loot!
-                        if ($quest_giver === 'Hex (the PSOBB.io AI Assistant)' || $selected_goal === 'HARDCORE_MENTOR' || $selected_goal === 'DIVERSE_PARTY_BOSS') {
+                        if (str_starts_with($quest_giver, 'Hex') || $selected_goal === 'HARDCORE_MENTOR' || $selected_goal === 'DIVERSE_PARTY_BOSS') {
                             $rareChance = 100;
                             $rare_count = 0; // Bypass the 1-rare limit
                         }

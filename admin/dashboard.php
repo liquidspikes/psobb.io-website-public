@@ -478,7 +478,7 @@ function renderFilteredAccounts(accounts) {
         let flagsStr = a.Flags ? '0x' + a.Flags.toString(16).toUpperCase() : '<?= addslashes(__("None")) ?>';
         let name = a.WebUsername || (a.BBLicenses && a.BBLicenses[0] ? a.BBLicenses[0].UserName : '<?= addslashes(__("Unknown")) ?>');
         let email = a.WebEmail || '-';
-        let isLegacyEmail = typeof email === 'string' && email.toLowerCase().endsWith('_legacy@psobb.io');
+        let isLegacyEmail = typeof email === 'string' && email.toLowerCase().includes('_legacy@');
         let emailDisplay = isLegacyEmail ? `<span style="color:#ffaa00;" title="${email}">${email}</span> <span style="font-size:0.75rem; background:rgba(255,170,0,0.2); border:1px solid #ffaa00; padding:1px 4px; border-radius:3px; color:#ffaa00;"><?= __('Legacy') ?></span>` : email;
         let discordId = a.WebDiscordID || '-';
         let created = a.WebCreatedAt ? new Date(a.WebCreatedAt).toLocaleString() : '-';
@@ -529,7 +529,7 @@ function openAdminEditEmailModal(accountId, username, currentEmail) {
     document.getElementById('aee-account-id').textContent = accountId || 'N/A';
     document.getElementById('aee-username').textContent = username || 'Unknown';
     
-    const isLegacy = currentEmail && currentEmail.toLowerCase().endsWith('_legacy@psobb.io');
+    const isLegacy = currentEmail && currentEmail.toLowerCase().includes('_legacy@');
     document.getElementById('aee-email-input').value = isLegacy ? '' : (currentEmail || '');
     
     const err = document.getElementById('aee-error');

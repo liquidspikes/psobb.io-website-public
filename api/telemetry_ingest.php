@@ -1,6 +1,6 @@
 <?php
 /**
- * PSOBB.io - Agent Telemetry Receiver (telemetry_ingest.php)
+ * PSOBB - Agent Telemetry Receiver (telemetry_ingest.php)
  * 
  * Secure wrapper to accept the Python agent's JSON POST requests 
  * and stash them in a flat file for the public dashboard to consume.

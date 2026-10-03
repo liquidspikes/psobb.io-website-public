@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared utility functions for the psobb.io platform.
+ * Shared utility functions for the PSOBB platform.
  * Include via require_once from any script that needs these helpers.
  */
 require_once __DIR__ . '/config.php';

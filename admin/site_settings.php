@@ -1108,6 +1108,7 @@ input:checked + .slider:before {
 let initialCrew = <?= json_encode($aboutCfg['crew'] ?? []) ?>;
 
 // Default template crew in case user clicks Reset Defaults
+const currentServerName = <?= json_encode(get_server_name()) ?>;
 const defaultCrewTemplate = [
     {
         id: "liquidspikes",
@@ -1116,7 +1117,7 @@ const defaultCrewTemplate = [
         specialty: "Core Backend & Web Integration",
         icon: "fas fa-crown",
         theme: "admin-card",
-        bio: "LiquidSpikes is one of the builders of the psobb.io server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call psobb.io home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!"
+        bio: `LiquidSpikes is one of the builders of the ${currentServerName} server infrastructure. He helps manage the backend clusters, keeps the database ticking, and maintains the web dashboard. He is incredibly grateful to the amazing community of hunters who call ${currentServerName} home—thank you so much for playing, exploring, and keeping this timeless Sega classic alive!`
     },
     {
         id: "lucindarie",
@@ -1125,7 +1126,7 @@ const defaultCrewTemplate = [
         specialty: "Preservation & Community Vibe",
         icon: "fas fa-heart",
         theme: "founder-card",
-        bio: "LucindaRie is the co-founder of psobb.io and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic."
+        bio: `LucindaRie is the co-founder of ${currentServerName} and the wife of LiquidSpikes. She cares deeply about preserving the original aesthetic and design inspiration of Phantasy Star Online. LucindaRie acts as our creative guide, ensuring our features and community spaces stay fully aligned with the timeless, nostalgic magic of the 2004 classic.`
     },
     {
         id: "oman_repflez",
@@ -1161,7 +1162,7 @@ const defaultCrewTemplate = [
         specialty: "Automated Bounties & Discord AI",
         icon: "fas fa-robot",
         theme: "ai-card",
-        bio: "psobb.io's resident artificial intelligence. Hex coordinates the Hunter's Guild Bounty Board and drives our Discord Mission Control bot. While highly intelligent and incredibly fast, she is notoriously glitchy and famously sarcastic—frequently breaking the fourth wall, complaining about server lag, and mocking hunters who fail to dodge basic boss sweeps. Engage at your own risk!"
+        bio: `${currentServerName}'s resident artificial intelligence. Hex coordinates the Hunter's Guild Bounty Board and drives our Discord Mission Control bot. While highly intelligent and incredibly fast, she is notoriously glitchy and famously sarcastic—frequently breaking the fourth wall, complaining about server lag, and mocking hunters who fail to dodge basic boss sweeps. Engage at your own risk!`
     }
 ];
 

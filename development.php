@@ -121,7 +121,7 @@ include 'includes/header.php';
         <h1><div class="pulse-ring"></div> <?= __('Development Resources') ?></h1>
         <p style="color: #94a3b8; font-family: 'Exo 2', sans-serif; font-size: 1.1rem; max-width: 800px; margin-top: 10px; line-height: 1.6;">
             <strong><?= __('[PIONEER 2 ARCHIVE ACCESS]') ?></strong><br>
-            <?= __('Welcome to the centralized development hub for PSOBB.IO. This portal provides direct access to our core infrastructure, repositories, and active development environments. Whether you are debugging server logic, modifying the client, or building new game features, the resources here will serve as your primary toolkit.') ?>
+            <?= sprintf(__('Welcome to the centralized development hub for %s. This portal provides direct access to our core infrastructure, repositories, and active development environments. Whether you are debugging server logic, modifying the client, or building new game features, the resources here will serve as your primary toolkit.'), htmlspecialchars(get_server_name())) ?>
         </p>
     </div>
 
@@ -131,12 +131,12 @@ include 'includes/header.php';
             <p><?= __('Access our private source control and live development environments. These are restricted environments intended only for active contributors.') ?></p>
             
             <div class="resource-grid">
-                <a href="https://gitlab.psobb.io" target="_blank" class="resource-card">
+                <a href="https://gitlab.<?= htmlspecialchars(get_server_address()) ?>" target="_blank" class="resource-card">
                     <h3><i class="fab fa-gitlab"></i> <?= __('GitLab Repository') ?></h3>
-                    <p><?= __('The primary source code repository for the PSOBB.IO website, backend APIs, and community tools. Manage issues, review merge requests, and deploy code.') ?></p>
+                    <p><?= sprintf(__('The primary source code repository for the %s website, backend APIs, and community tools. Manage issues, review merge requests, and deploy code.'), htmlspecialchars(get_server_name())) ?></p>
                 </a>
                 
-                <a href="https://pioneer0.psobb.io" target="_blank" class="resource-card">
+                <a href="https://pioneer0.<?= htmlspecialchars(get_server_address()) ?>" target="_blank" class="resource-card">
                     <h3><i class="fas fa-satellite-dish"></i> <?= __('Pioneer 0 (Dev Server)') ?></h3>
                     <p><?= __('Our staging and development game server environment. Used for live-testing new quests, drop tables, and backend modifications before public deployment.') ?></p>
                 </a>

@@ -1,6 +1,6 @@
 <?php
 /**
- * PSOBB.io Player Portal: Custom Module Example
+ * PSOBB Player Portal: Custom Module Example
  * 
  * Instructions:
  * 1. Remove the `.sample` extension from this file (rename to `my_module.php`).

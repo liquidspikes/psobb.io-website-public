@@ -23,7 +23,7 @@ $showFeatures = !empty($aboutCfg['show_features']);
 $showTechSpecs = !empty($aboutCfg['show_tech_specs']);
 $crewMembers = $aboutCfg['crew'] ?? [];
 
-$page_title = $heroTitle . ' - ' . $serverName . ' Private Server';
+$page_title = $heroTitle . ' - ' . sprintf(__('%s Private Server'), $serverName);
 $current_page = 'about';
 include 'includes/header.php';
 ?>
@@ -434,9 +434,14 @@ include 'includes/header.php';
                         <?php endif; ?>
                     </div>
                 </div>
-                <?php if (!empty($member['bio'])): ?>
+                <?php if (!empty($member['bio'])): 
+                    $bioRaw = __($member['bio']);
+                    $bioRendered = (strpos($bioRaw, '%s') !== false)
+                        ? sprintf($bioRaw, $serverName, $serverName, $serverName)
+                        : str_ireplace(['psobb.io', 'PSOBB.IO'], $serverName, $bioRaw);
+                ?>
                 <p class="crew-bio">
-                    <?= htmlspecialchars(__($member['bio'])) ?>
+                    <?= htmlspecialchars($bioRendered) ?>
                 </p>
                 <?php endif; ?>
             </div>

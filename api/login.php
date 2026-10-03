@@ -107,24 +107,25 @@ try {
         $receive_system_mail = $row && isset($row['receive_system_mail']) ? (int)$row['receive_system_mail'] : 1;
         $receive_discord_streak_msg = $row && isset($row['receive_discord_streak_msg']) ? (int)$row['receive_discord_streak_msg'] : 1;
 
+        $legacyPlaceholder = $username . '_legacy@' . get_server_address();
         if ($row === false) {
             // Create user row for legacy/in-game created accounts on first website login
             $ins = $db->prepare("INSERT OR IGNORE INTO users (username, email, account_id, receive_system_mail, receive_discord_streak_msg) VALUES (:u, :e, :aid, 1, 1)");
             $ins->bindValue(':u', $username, SQLITE3_TEXT);
-            $ins->bindValue(':e', $username . "_legacy@psobb.io", SQLITE3_TEXT);
+            $ins->bindValue(':e', $legacyPlaceholder, SQLITE3_TEXT);
             $ins->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
             $ins->execute();
-            $dbEmail = $username . "_legacy@psobb.io";
+            $dbEmail = $legacyPlaceholder;
         } else {
             // Self-healing: ensure account_id in SQLite is perfectly in sync with NewServ's active AccountID
             $upd = $db->prepare("UPDATE users SET account_id = :aid WHERE username = :username");
             $upd->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
             $upd->bindValue(':username', $username, SQLITE3_TEXT);
             $upd->execute();
-            $dbEmail = $row['email'] ?? ($username . "_legacy@psobb.io");
+            $dbEmail = $row['email'] ?? $legacyPlaceholder;
         }
 
-        $isLegacyEmail = empty($dbEmail) || (bool)preg_match('/_legacy@psobb\.io$/i', $dbEmail);
+        $isLegacyEmail = empty($dbEmail) || (bool)preg_match('/_legacy@/i', $dbEmail);
         $cleanEmail = $isLegacyEmail ? '' : $dbEmail;
         $legacyEmail = $isLegacyEmail ? $dbEmail : '';
 

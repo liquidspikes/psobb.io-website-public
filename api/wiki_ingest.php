@@ -1,6 +1,6 @@
 <?php
 /**
- * PSOBB.io - Wiki Agent Ingest (wiki_ingest.php)
+ * PSOBB - Wiki Agent Ingest (wiki_ingest.php)
  * 
  * Secure wrapper to accept the Python Wiki Agent's JSON POST requests 
  * and directly append Markdown data to the live Docsify files.

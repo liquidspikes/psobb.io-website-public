@@ -11,7 +11,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= __("Admin Manual - psobb.io") ?></title>
+    <title><?= sprintf(__("Admin Manual - %s"), htmlspecialchars(get_server_name())) ?></title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap">
     <style>

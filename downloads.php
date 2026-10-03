@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/api/config.php';
-$page_title = __('Downloads - PSOBB Private Server');
+$page_title = sprintf(__('%s - %s Private Server'), __('Downloads'), get_server_name());
 $current_page = 'downloads';
 include 'includes/header.php';
 ?>
@@ -77,7 +77,7 @@ $hostUrl = $proto . ($_SERVER['HTTP_HOST'] ?? get_server_address());
                 <strong style="display:block; margin-bottom:5px; color:#4fc3f7;"><?= __('Steam Deck (Desktop Mode):') ?></strong>
                 <code
                     style="display:block; background:#222; padding:5px; font-size:0.85em; user-select:all; cursor:pointer;"
-                    onclick="navigator.clipboard.writeText(this.innerText); alert('<?= addslashes(__('Copied to clipboard!')) ?>');">curl -sL <?= htmlspecialchars($hostUrl) ?>/install-deck.sh | bash</code>
+                    onclick="navigator.clipboard.writeText(this.innerText); alert('<?= addslashes(__('Copied to clipboard!')) ?>');">curl -sL <?= htmlspecialchars($hostUrl) ?>/install-deck.sh | bash -s -- --host=<?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? get_server_address()) ?></code>
                 <small style="display:block; margin-top:5px; color:#aaa;"><?= __('(Click command to copy)') ?></small>
             </div>
             <small><?= __('Ubuntu 20.04+ or SteamOS') ?></small>

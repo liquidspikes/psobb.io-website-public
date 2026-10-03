@@ -1,13 +1,27 @@
 #!/bin/bash
 
-# PSOBB.IO Steam Deck Installer & Uninstaller
+# PSOBB Steam Deck Installer & Uninstaller
 
 INSTALL_DIR="$HOME/Games/PSOBBIO"
 
+IS_UNINSTALL=0
+SERVER_HOST="${SERVER_HOST:-psobb.io}"
+for arg in "$@"; do
+    case "$arg" in
+        -uninstall|--uninstall)
+            IS_UNINSTALL=1
+            ;;
+        --host=*)
+            SERVER_HOST="${arg#*=}"
+            ;;
+    esac
+done
+BASE_URL="${BASE_URL:-https://$SERVER_HOST}"
+
 # Check if uninstall argument is passed
-if [ "$1" == "-uninstall" ] || [ "$1" == "--uninstall" ]; then
+if [ "$IS_UNINSTALL" -eq 1 ]; then
     echo "============================================"
-    echo "  PSOBB.IO Steam Deck Uninstaller"
+    echo "  Steam Deck Uninstaller"
     echo "============================================"
     echo ""
     
@@ -308,7 +322,7 @@ PYTHON_EOF
     echo "============================================"
     echo "  Uninstall Complete!"
     echo "============================================"
-    echo "PSOBB.IO has been completely removed."
+    echo "PSOBB has been completely removed."
     echo "Please restart Steam to apply shortcut changes."
     echo "============================================"
     exit 0
@@ -323,7 +337,7 @@ for cmd in unzip python3 curl; do
 done
 
 INSTALL_DIR="$HOME/Games/PSOBBIO"
-ZIP_URL="https://psobb.io/downloads/PSOBBIO-Linux_1.25.13.zip"
+ZIP_URL="$BASE_URL/downloads/PSOBBIO-Linux_1.25.13.zip"
 ZIP_FILE="$INSTALL_DIR/psobbio.zip"
 
 echo "Installing PSOBB to $INSTALL_DIR..."
@@ -399,10 +413,10 @@ echo "Configuration updated. Using bundled Widescreen Patch (d3d8.dll)."
 
 # Download Artwork
 echo "Downloading Steam artwork..."
-LOGO_URL="https://psobb.io/img/steam_logo.png"
-HERO_URL="https://psobb.io/img/steam_hero.png"
-ICON_URL="https://psobb.io/img/steam_icon.png"
-PORTRAIT_URL="https://psobb.io/img/steam_portrait.png"
+LOGO_URL="$BASE_URL/img/steam_logo.png"
+HERO_URL="$BASE_URL/img/steam_hero.png"
+ICON_URL="$BASE_URL/img/steam_icon.png"
+PORTRAIT_URL="$BASE_URL/img/steam_portrait.png"
 
 curl -L -o "$INSTALL_DIR/steam_logo.png" "$LOGO_URL"
 curl -L -o "$INSTALL_DIR/steam_hero.png" "$HERO_URL"
@@ -422,7 +436,7 @@ fi
 TEMPLATE_DIR="$STEAM_DIR/controller_base/templates"
 mkdir -p "$TEMPLATE_DIR"
 
-CONTROLLER_URL="https://psobb.io/psobb_io_controller.vdf"
+CONTROLLER_URL="$BASE_URL/psobb_io_controller.vdf"
 curl -L -o "$TEMPLATE_DIR/psobb_io_controller.vdf" "$CONTROLLER_URL" 2>/dev/null || {
     echo "Warning: Could not download controller layout. You can configure controls manually in Steam."
 }
@@ -953,5 +967,5 @@ echo "The custom launch options for widescreen and"
 echo "frame generation are already configured."
 echo ""
 echo "  9. (Optional) To uninstall in the future:"
-echo "     curl -sL https://psobb.io/install-deck.sh | bash -s -- -uninstall"
+echo "     curl -sL $BASE_URL/install-deck.sh | bash -s -- -uninstall --host=$SERVER_HOST"
 echo "============================================"

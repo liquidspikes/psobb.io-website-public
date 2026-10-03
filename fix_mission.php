@@ -1,5 +1,5 @@
 <?php
-require_once '/var/www/html/psobb.io-website/api/db.php';
+require_once __DIR__ . '/api/db.php';
 $db = get_db();
 
 // Tier 1 Weapons list for safe defaults
