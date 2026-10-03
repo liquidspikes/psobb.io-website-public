@@ -133,7 +133,6 @@ psobb.io-website-public/
 │   └── website.db         SQLite database (not in VCS)
 ├── admin/                Admin dashboard pages
 ├── css/  js/  img/       Static assets
-├── decryption/           PSO data-format / wiki decryption tooling
 ├── quest-editor/         Browser-based quest editor
 ├── DEVELOPER_GUIDE.md    High-level architecture narrative
 └── README.md             This file

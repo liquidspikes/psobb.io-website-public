@@ -16,3 +16,8 @@ db/.cron_player_state.json
 db/*.lock
 api/agent_state.json
 scratch/
+
+# Private site features
+decryption.php
+decryption/
+js/decryption.js

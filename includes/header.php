@@ -117,8 +117,10 @@ start_secure_session();
                         <a href="/quest-editor"
                             class="<?php echo ($current_page == 'quest-editor') ? 'active' : ''; ?>"><?= __('Quest Editor') ?></a>
                         <?php endif; ?>
+                        <?php if (is_feature_enabled('decryption')): ?>
                         <a href="/decryption.php"
                             class="<?php echo ($current_page == 'decryption') ? 'active' : ''; ?>"><?= __('Data Decryption') ?></a>
+                        <?php endif; ?>
                         <a href="/development.php"
                             class="<?php echo ($current_page == 'development') ? 'active' : ''; ?>"><?= __('Dev Resources') ?></a>
                     </div>

@@ -316,7 +316,7 @@ $NEWSERV_PLAYERS_DIR = get_newserv_players_dir();
 if (!function_exists('is_feature_enabled')) {
     /**
      * Check if a modular site feature is enabled.
-     * Supports: 'registration', 'bounties', 'lfg', 'mods', 'quest_editor', 'discord_oauth'
+     * Supports: 'registration', 'bounties', 'lfg', 'mods', 'quest_editor', 'discord_oauth', 'decryption'
      */
     function is_feature_enabled(string $feature): bool {
         $feature = strtolower(trim($feature));
@@ -328,6 +328,9 @@ if (!function_exists('is_feature_enabled')) {
         $cfgKey = 'enable_' . $feature;
         if (isset($cfg[$cfgKey])) {
             return (bool)$cfg[$cfgKey];
+        }
+        if ($feature === 'decryption') {
+            return file_exists(dirname(__DIR__) . '/decryption.php');
         }
         return true;
     }

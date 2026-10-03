@@ -148,20 +148,26 @@ include 'includes/header.php';
             <p><?= __('Direct links to our custom-built web tools for analyzing and modifying the game client and server data.') ?></p>
 
             <div class="resource-grid">
+                <?php if (is_feature_enabled('mods')): ?>
                 <a href="/mods.php" class="resource-card">
                     <h3><i class="fas fa-laptop-code"></i> <?= __('Client Mods') ?></h3>
                     <p><?= __('Configure and generate patched executable files, widescreen fixes, and modern UI enhancements for the game client.') ?></p>
                 </a>
+                <?php endif; ?>
                 
+                <?php if (is_feature_enabled('quest_editor')): ?>
                 <a href="/quest-editor" class="resource-card">
                     <h3><i class="fas fa-map-marked-alt"></i> <?= __('Quest Editor') ?></h3>
                     <p><?= __('Web-based interface for visualizing, modifying, and creating custom quests, NPC spawns, and map layouts.') ?></p>
                 </a>
+                <?php endif; ?>
 
+                <?php if (is_feature_enabled('decryption')): ?>
                 <a href="/decryption.php" class="resource-card">
                     <h3><i class="fas fa-microchip"></i> <?= __('Decompilation Matrix') ?></h3>
                     <p><?= __('Live telemetry from our autonomous decompilation pipeline as it byte-matches C++ source against original MSVC 2003 machine code.') ?></p>
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
