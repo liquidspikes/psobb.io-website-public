@@ -13,5 +13,6 @@ api/bot_secret.php
 db/*.log
 api/*.log
 db/.cron_player_state.json
+db/*.lock
 api/agent_state.json
 scratch/
