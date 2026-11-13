@@ -2898,6 +2898,19 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'MAT_DEF': return `Use ${target} Def Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_EVADE': return `Use ${target} Evade Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_LUCK': return `Use ${target} Luck Material${parseInt(target) !== 1 ? 's' : ''}`;
+        // Bounty System Rework weeklies: targets are "N@Difficulty" (episode number for AREA_SWEEP)
+        case 'AREA_SWEEP':
+        case 'BOSS_HUNT':
+        case 'ENEMY_HUNT':
+        case 'RARE_HUNT': {
+            const [n, diff = 'Normal'] = String(target).split('@');
+            const where = diff === 'Ultimate' ? 'on Ultimate' : `on ${diff} or higher`;
+            if (goalType === 'AREA_SWEEP') return `[Weekly] Visit every area of Episode ${n} ${where}`;
+            const one = Number(n) === 1;
+            const what = goalType === 'BOSS_HUNT' ? (one ? 'boss' : 'bosses') : goalType === 'RARE_HUNT' ? (one ? 'rare enemy' : 'rare enemies') : (one ? 'enemy' : 'enemies');
+            return `[Weekly] Defeat ${Number(n).toLocaleString()} ${what} ${where}`;
+        }
+        case 'PENDING': return 'Waiting for a free slot: the objective is set when it becomes active';
         default: return `${goalType}: ${target}`;
     }
 }
@@ -2965,7 +2978,18 @@ window.loadMyBounties = async function () {
 
         // --- Bounties ---
         const completed = data.bounties.filter(b => b.status === 'ready_to_redeem');
-        const inProgress = data.bounties.filter(b => b.status === 'in_progress');
+        const inProgress = data.bounties.filter(b => b.status === 'in_progress' || b.status === 'rerolling' || b.status === 'queued');
+        // Bounty System Rework: tier, kind, expiry and weekly progress (absent on older bounties)
+        const tierColors = { 'Common': '#c8c8c8', 'Uncommon': '#1eff64', 'Rare': '#4da6ff', 'Ultra Rare': '#c77dff', 'Mythic Rare': '#ffcc33' };
+        const bountyTags = (b) => {
+            if (!b.tier_label) return '';
+            const col = tierColors[b.tier_label] || '#c8c8c8';
+            return `<div style="margin-top:4px; font-size:0.65rem; font-family:'Share Tech Mono',monospace;">
+                <span style="border:1px solid ${col}; color:${col}; border-radius:3px; padding:1px 6px; text-transform:uppercase;">${_t(b.tier_label)}</span>
+                <span style="color:rgba(255,255,255,0.55); margin-left:6px;">${_t(b.kind || '')}</span>
+                ${b.expires_in ? `<span style="color:#ffaa00; margin-left:6px;">${_t(b.expires_in)}</span>` : ''}
+            </div>`;
+        };
 
         // Claimable bounties
         if (completed.length > 0) {
@@ -2996,19 +3020,22 @@ window.loadMyBounties = async function () {
                 activeSection.style.display = 'block';
                 activeList.innerHTML = inProgress.map(b => {
                     const reward = b.reward_decoded || b.reward_item_string || '';
-                    const objective = describeBountyObjective(b.goal_type, b.goal_target);
+                    const objective = b.status === 'rerolling' ? _t('Rerolling: a new objective arrives the next time this character is online')
+                        : describeBountyObjective(b.goal_type, b.goal_target) + (b.progress_text ? ` (${b.progress_text})` : '');
+                    const statusLabel = b.status === 'queued' ? _t('UP NEXT') : b.status === 'rerolling' ? _t('REROLLING') : _t('IN PROGRESS');
                     return `
                     <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,10,20,0.4); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                             <div style="flex:1; min-width:0;">
-                                <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${b.title}</span>
+                                <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${b.title || _t('Bounty waiting for a free slot')}</span>
+                                ${bountyTags(b)}
                                 <div style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:6px;">📋 <strong>${_t('Objective:')}</strong> ${objective}</div>
                                 <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${b.character_name || 'Unknown'}</div>
-                                ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}</div>` : ''}
+                                ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}${b.stats_hidden ? ` <span style="color:rgba(255,255,255,0.4);">(${_t('stats roll on claim')})</span>` : ''}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('IN PROGRESS')}</span>
-                                <button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('✕ Abandon')}</button>
+                                <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${statusLabel}</span>
+                                ${b.status === 'rerolling' ? '' : `<button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('✕ Abandon')}</button>`}
                             </div>
                         </div>
                     </div>`;

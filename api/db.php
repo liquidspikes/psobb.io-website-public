@@ -342,6 +342,32 @@ function get_db(bool $reset = false)
         if (!$hasMissionCreatedAt) {
             $db->exec("ALTER TABLE missions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
         }
+
+        // --- Bounty System Rework (api/bounty_system.php) ---
+        // missions: tier (common..mythic), cadence (daily/weekly), pool (standard/drop/battle/challenge),
+        //   source (login/completion/boss/rare_enemy/battle/challenge), reward_spec (JSON: item bases whose
+        //   stats roll on claim), meta (JSON: e.g. the difficulty a drop came from).
+        // player_missions: period_key (the reset period it was earned in), expires_at (unix), earned_at,
+        //   activated_at, rerolled (0/1), progress (JSON, weekly objectives).
+        // Rows from before the rework keep NULLs here and behave exactly as before.
+        $bountyCols = [
+            'missions' => ['tier' => 'TEXT', 'cadence' => 'TEXT', 'pool' => 'TEXT', 'source' => 'TEXT', 'reward_spec' => 'TEXT', 'meta' => 'TEXT'],
+            'player_missions' => ['period_key' => 'TEXT', 'expires_at' => 'INTEGER', 'earned_at' => 'INTEGER', 'activated_at' => 'INTEGER', 'rerolled' => 'INTEGER DEFAULT 0', 'progress' => 'TEXT'],
+        ];
+        foreach ($bountyCols as $bTable => $bCols) {
+            $bHave = [];
+            $result = $db->query("PRAGMA table_info($bTable)");
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $bHave[] = $row['name'];
+            }
+            $result->finalize();
+            foreach ($bCols as $bName => $bDef) {
+                if (!in_array($bName, $bHave, true)) {
+                    $db->exec("ALTER TABLE $bTable ADD COLUMN $bName $bDef");
+                }
+            }
+        }
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_player_missions_scope ON player_missions(account_id, character_name, status)");
         
         // --- Auto-migration for Community Event Participants & Game Mods ---
         $db->exec("

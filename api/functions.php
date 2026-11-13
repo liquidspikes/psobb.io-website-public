@@ -205,6 +205,73 @@ function boss_display_name($target_floor, $ep, $title = '', $desc = '')
     return "Boss at Floor $target_floor";
 }
 
+// ---------------------------------------------------------------------------
+// Weekly objectives of the Bounty System Rework (see api/bounty_system.php)
+// ---------------------------------------------------------------------------
+
+function bounty_episode_floors($episode)
+{
+    if ($episode == 2) return range(1, 11);  // VR Temple, VR Spaceship, CCA, Jungle, Mountain, Seaside, Seabed
+    if ($episode == 4) return range(1, 8);   // Crater routes and interior, Subterranean Desert
+    return range(1, 10);                     // Forest, Caves, Mines, Ruins
+}
+
+function bounty_episode_area_names($episode)
+{
+    if ($episode == 2) return 'the VR Temple, the VR Spaceship, the Central Control Area, the Jungle, the Mountain, the Seaside and the Seabed';
+    if ($episode == 4) return 'every Crater route, the Crater interior and the Subterranean Desert';
+    return 'the Forest, the Caves, the Mines and the Ruins';
+}
+
+/**
+ * Splits a weekly target "N@Difficulty" or "E@Difficulty".
+ */
+function bounty_parse_weekly_target($target)
+{
+    $p = explode('@', (string) $target, 2);
+    return [(int) $p[0], $p[1] ?? 'Normal'];
+}
+
+/**
+ * Human-readable objective for the rework's weekly types (getClearObjective() calls this).
+ */
+function bounty_weekly_objective_text($type, $target)
+{
+    list($n, $diff) = bounty_parse_weekly_target($target);
+    $or_higher = ($diff === 'Ultimate') ? 'on Ultimate' : "on $diff or higher";
+    switch ($type) {
+        case 'AREA_SWEEP':
+            return "Visit every area of Episode $n $or_higher";
+        case 'BOSS_HUNT':
+            return "Defeat $n " . ($n === 1 ? 'boss' : 'bosses') . " $or_higher";
+        case 'ENEMY_HUNT':
+            return "Defeat $n " . ($n === 1 ? 'enemy' : 'enemies') . " $or_higher";
+        case 'RARE_HUNT':
+            return "Defeat $n " . ($n === 1 ? 'rare enemy' : 'rare enemies') . " $or_higher";
+    }
+    return '';
+}
+
+/**
+ * Progress line for the board, e.g. "4 / 10 areas".
+ */
+function bounty_progress_text($type, $target, $progress_json)
+{
+    $p = json_decode((string) $progress_json, true) ?: [];
+    list($n) = bounty_parse_weekly_target($target);
+    switch ($type) {
+        case 'AREA_SWEEP':
+            return count($p['visited'] ?? []) . ' / ' . count(bounty_episode_floors($n)) . ' areas';
+        case 'BOSS_HUNT':
+            return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'boss' : 'bosses');
+        case 'ENEMY_HUNT':
+            return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'enemy' : 'enemies');
+        case 'RARE_HUNT':
+            return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'rare enemy' : 'rare enemies');
+    }
+    return '';
+}
+
 function getClearObjective($type, $target, $title = '', $desc = '')
 {
     switch ($type) {
@@ -453,6 +520,13 @@ function getClearObjective($type, $target, $title = '', $desc = '')
             return $has_the
                 ? __('[Ep %s] Defeat the %s in under %s seconds', $ep, htmlspecialchars(__($boss)), htmlspecialchars($time_limit))
                 : __('[Ep %s] Defeat %s in under %s seconds', $ep, htmlspecialchars(__($boss)), htmlspecialchars($time_limit));
+        case 'AREA_SWEEP':
+        case 'BOSS_HUNT':
+        case 'ENEMY_HUNT':
+        case 'RARE_HUNT':
+            return __('[Weekly] %s', htmlspecialchars(__(bounty_weekly_objective_text($type, $target))));
+        case 'PENDING':
+            return __('Waiting for a free slot: the objective is set when it becomes active');
         case 'SPEEDRUN_FLOOR':
             list($target_floor, $time_limit) = explode('_', $target);
             $floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
@@ -612,7 +686,19 @@ function renderRewardString($rewardStr)
                     $map = json_decode(file_get_contents($map_path), true);
                     $reverse_map = array_flip($map);
                     if (isset($reverse_map[$base])) {
-                        $weaponName = ucwords($reverse_map[$base]);
+                        // item_map.json lists stackable items as "telepipe x1"; drop that suffix
+                        $weaponName = preg_replace('/\s+x1$/i', '', ucwords($reverse_map[$base]));
+                    }
+                }
+                // A few item_map.json entries are bare numbers (e.g. 030E15 => "3"); use the
+                // newserv name list instead for those and for codes item_map.json lacks.
+                if ($weaponName === $base || ctype_digit(trim($weaponName))) {
+                    static $names_v4 = null;
+                    if ($names_v4 === null) {
+                        $names_v4 = json_decode((string) @file_get_contents(__DIR__ . '/names-v4.json'), true) ?: [];
+                    }
+                    if (!empty($names_v4[$base])) {
+                        $weaponName = $names_v4[$base];
                     }
                 }
             }

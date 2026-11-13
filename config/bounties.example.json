@@ -1,0 +1,29 @@
+{
+    "_comment": "Copy to config/bounties.json and keep only the keys you want to change. Every key and its default is in bounty_default_config() in api/bounty_system.php; see api/BOUNTY_SYSTEM.md.",
+    "enabled": true,
+    "limit_scope": "character",
+    "reset": { "daily_hour": 0, "weekly_day": 1, "timezone": "America/Chicago" },
+    "pools": {
+        "standard": {
+            "daily": { "active": 3, "free_cap": 5 },
+            "weekly": { "active": 3, "free_cap": 10 }
+        },
+        "drop": { "active": 5, "held_max": 10 },
+        "battle": { "daily": { "active": 3, "cap": 3 } },
+        "challenge": { "weekly": { "active": 3, "cap": 3 } }
+    },
+    "earn": {
+        "login_daily_chance": 10,
+        "login_weekly_chance": 3,
+        "completion_grants": 1,
+        "battle_chance": 25,
+        "challenge_chance": 25,
+        "free_tier_weights": [60, 30, 10]
+    },
+    "drops": {
+        "boss_chance": { "Normal": 5, "Hard": 8, "Very Hard": 12, "Ultimate": 18 },
+        "rare_enemy_chance": { "Normal": 10, "Hard": 15, "Very Hard": 20, "Ultimate": 30 },
+        "solo_in_multi_mythic_multiplier": 1.5,
+        "rare_weekly_chance": 50
+    }
+}

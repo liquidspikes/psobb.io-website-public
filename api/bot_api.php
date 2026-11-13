@@ -33,6 +33,7 @@ set_exception_handler(function ($e) {
 require_once 'config.php';
 require_once 'db.php';
 require_once 'functions.php';
+require_once 'bounty_system.php';
 
 header('Content-Type: application/json');
 
@@ -501,7 +502,8 @@ if ($action === 'get_player') {
     $stmt->bindValue(':acc', $user['account_id'], SQLITE3_INTEGER);
     $login_days = $stmt->execute()->fetchArray(SQLITE3_ASSOC)['login_days'] ?? 0;
 
-    $stmt = $db->prepare("SELECT m.title, m.description, m.goal_type, m.goal_target, pm.status
+    $stmt = $db->prepare("SELECT m.title, m.description, m.goal_type, m.goal_target, pm.status, pm.character_name,
+                                 m.tier, m.cadence, m.pool, pm.expires_at, pm.progress
                           FROM player_missions pm
                           JOIN missions m ON pm.mission_id = m.id
                           WHERE pm.account_id = :acc");
@@ -510,6 +512,11 @@ if ($action === 'get_player') {
     $missions = [];
     while ($m = $mRes->fetchArray(SQLITE3_ASSOC)) {
         $m['friendly_objective'] = getClearObjective($m['goal_type'], $m['goal_target'], $m['title'], $m['description']);
+        // Bounty System Rework fields (null on bounties from before the rework)
+        $m['tier_label'] = $m['tier'] ? bounty_tier_label($m['tier']) : null;
+        $m['kind'] = $m['cadence'] ? bounty_kind_label($m['pool'], $m['cadence']) : null;
+        $m['progress_text'] = in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT'], true) ? bounty_progress_text($m['goal_type'], $m['goal_target'], $m['progress']) : null;
+        unset($m['progress']);
         $missions[] = $m;
     }
 
