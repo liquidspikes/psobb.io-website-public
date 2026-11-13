@@ -1037,9 +1037,9 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             $baseItemName = trim($matches[2]);
         }
 
-        // Photon Drops, Spheres and Crystals stack to 99: drop one stack (byte 5 = count), not one
-        // item per count. Bounties pay up to 99 Photon Drops.
-        if ($multiplier > 1 && preg_match('/^03100[0-2]$/i', $baseItemName)) {
+        // Photon Drops, Spheres and Crystals, Secret Tickets and Photon Tickets stack to 99 (tool class
+        // 0x10 on BB): drop one stack (byte 5 = count), not one item per count.
+        if ($multiplier > 1 && preg_match('/^03100[0-4]$/i', $baseItemName)) {
             $data = hex2bin(str_pad(strtoupper($baseItemName), 32, '0'));
             $data[5] = chr(min(99, $multiplier));
             $baseItemName = strtoupper(bin2hex($data));

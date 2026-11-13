@@ -110,7 +110,7 @@
         }
     },
     "reward_engine": {
-        "_comment": "Rewards from the drop data (api/bounty_rewards.php). exchange_allow: exchange-only items (hex codes) allowed as Mythic Rare rewards.",
+        "_comment": "Rewards from the drop data (api/bounty_rewards.php). Exchange items stay with their exchanges; bounties pay their tokens (exchange_tokens), and Mythic Rare has a mythic_exchange_chance (%) of an exchange-only item. exchange_allow: exchange items to add to the Mythic Rare pool outright.",
         "drop_rate_multiplier": 10,
         "exchange_allow": [],
         "max_attribute": 90,
@@ -136,6 +136,15 @@
                 99,
                 150
             ]
+        },
+        "mythic_exchange_chance": 3,
+        "exchange_tokens": {
+            "chance": {
+                "uncommon": 20,
+                "rare": 35,
+                "ultra": 60,
+                "mythic": 100
+            }
         }
     }
 }

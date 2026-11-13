@@ -348,10 +348,37 @@ for ($i = 0; $i < 600; $i++) {
     if ($tier === 'mythic') {
         check(strpos($rolled, BOUNTY_PHOTON_SPHERE) !== false, 'Mythic Rare pays a Photon Sphere');
     }
+    $tokens_seen = 0;
     foreach ($spec['items'] as $it) {
         $code = strtoupper(substr(explode(' ', $it['base'])[0], 0, 6));
         $d = $items[$code] ?? null;
+        if (!empty($it['token'])) {
+            // Exchange tokens: Uncommon to Mythic Rare, at most one, from the token list
+            $tokens_seen++;
+            $tc = $rc['exchange_tokens'];
+            check($tier !== 'common', 'no exchange tokens on Common bounties');
+            check(in_array($code, array_merge(['031209', '031003', '031004', '031002', '031200', '031201', '031202'], $tc['enemy_parts']), true), "token $code is an exchange token");
+            preg_match('/ x(\d+)$/', $it['base'], $qm);
+            $q = (int) ($qm[1] ?? 1);
+            list($qlo, $qhi) = $tc['kinds'][$it['token']]['qty'][$tier];
+            check($q >= $qlo && $q <= $qhi, "token quantity $q for $tier {$it['token']}");
+            if ($it['token'] === 'enemy_part' && $area['drop_settings']) {
+                $here = array_filter($tc['enemy_parts'], function ($p) use ($items, $area) { return (bool) array_intersect($area['drop_settings'], $items[$p]['drop_settings']); });
+                if ($here) {
+                    check(in_array($code, $here, true), "enemy part $code comes from $setting");
+                }
+            }
+            if ($it['token'] === 'weapons_badge') {
+                $metal = ['uncommon' => ['031200'], 'rare' => ['031200', '031201'], 'ultra' => ['031201', '031202'], 'mythic' => ['031202']][$tier];
+                check(in_array($code, $metal, true), "$tier badge metal ($code)");
+            }
+            continue;
+        }
         if (in_array($tier, ['rare', 'ultra', 'mythic'], true) && $d) {
+            if ($tier === 'mythic' && strpos((string) $spec['pool'], 'exchange item') === 0) {
+                check(bounty_is_mythic_exchange_item($code, $d, $rc), "Mythic exchange reward $code is allowed");
+                continue;
+            }
             check(!in_array($d['obtained'], ['challenge_prize', 'not_obtainable', 'seasonal_drop_only', 'exchange_only', 'combination_only'], true), "$tier reward $code is allowed ({$d['obtained']})");
             check(!bounty_is_challenge_reserved($d, $rc), "$tier reward $code is not reserved for Challenge full runs");
             $r = (float) $d['drop_rate_by_section'][bounty_section_index($sec)];
@@ -367,6 +394,10 @@ for ($i = 0; $i < 600; $i++) {
                 check((bool) array_intersect($area['drop_settings'], $d['drop_settings']), "$tier reward $code drops in $setting");
             }
         }
+    }
+    check($tokens_seen <= 1, 'at most one exchange token');
+    if ($tier === 'mythic') {
+        check($tokens_seen === 1, 'Mythic Rare always pays an exchange token');
     }
     foreach (explode(', ', $rolled) as $part) {
         if (preg_match('/ (\d+)\/(\d+)\/(\d+)\/(\d+)(?:\/(\d+))?$/', $part, $mm)) {
@@ -412,6 +443,44 @@ foreach (['rare', 'ultra', 'mythic'] as $tier) {
     }
 }
 check($worst >= 10, 'every item is at least 10x as likely from a bounty as from a kill (worst ' . round($worst, 1) . 'x)');
+
+// Exchange items stay with their exchanges: Mythic Rare pays one only rarely, never the Item Ticket
+// shop's or Dr. Osto's (their tokens are paid instead), never tokens or combination results
+$ex = bounty_mythic_exchange_items();
+check(count($ex) > 50, 'Mythic exchange pool has items (' . count($ex) . ')');
+foreach ($ex as $code) {
+    $d = $items[$code];
+    check(!array_filter($d['exchanges'], function ($e) { return strpos($e, 'Item Present') === 0; }), "$code is not an Item Ticket shop item");
+    check(!array_intersect($d['quest_rewards'], ["Dr. Osto's Research", 'Unsealed Door']), "$code is not a Dr. Osto trade");
+    check(empty($d['combinations']), "$code is not a combination result");
+}
+foreach (['031209', '031003', '031200', '031000', '031001', '00CA00', '001800', '008E01', '006D01'] as $code) {
+    check(!in_array($code, $ex, true), "$code is not in the Mythic exchange pool");
+}
+$hunter = ['Level' => 150, 'CharClass' => 'RAcast', 'SectionID' => 'Oran'];
+$nex = 0;
+$tok = array_fill_keys(BOUNTY_TIERS, 0);
+for ($i = 0; $i < 4000; $i++) {
+    $sp = bounty_build_reward_spec_v2('mythic', $hunter, bounty_reward_area('ep1_mines', 1));
+    if (strpos((string) $sp['pool'], 'exchange item') === 0) {
+        $nex++;
+    }
+}
+check($nex >= 40 && $nex <= 240, "Mythic Rare pays an exchange item about 3% of the time ($nex / 4000)");
+foreach (['common', 'uncommon', 'rare', 'ultra'] as $t) {
+    for ($i = 0; $i < 2000; $i++) {
+        $sp = bounty_build_reward_spec_v2($t, $hunter, bounty_reward_area('ep1_mines', 1));
+        foreach ($sp['items'] as $it) {
+            if (!empty($it['token'])) {
+                $tok[$t]++;
+            }
+        }
+    }
+}
+check($tok['common'] === 0, 'Common bounties pay no tokens');
+foreach (['uncommon' => 20, 'rare' => 35, 'ultra' => 60] as $t => $pct) {
+    check(abs($tok[$t] / 2000 * 100 - $pct) < 5, "$t pays a token about $pct% of the time ({$tok[$t]} / 2000)");
+}
 
 // Challenge Mode: paces, objectives, the full-run reserve
 check(bounty_challenge_pace_seconds(1, 9, 9, 'S') === 70 * 60, 'Ep1 Stage 9 S pace is 70 min');

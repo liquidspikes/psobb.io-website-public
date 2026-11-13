@@ -28,7 +28,9 @@ The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.ph
 | Uncommon | Free, drop, Battle and Challenge bounties | 1–2 pieces of common equipment for the hunter's class, picked 10 levels ahead, with light stats |
 | Rare | Free, drop, Battle and Challenge bounties | One rare that drops 1/500 to 1/5000 a kill for the hunter's Section ID, usable by their class, from the bounty's area |
 | Ultra Rare | Drops in a party of 2 or more, and Challenge bounties | One rare that drops rarer than 1/5000 a kill for the hunter's Section ID (or never for it), for any class, from the bounty's area |
-| Mythic Rare | Drops when playing alone, and Challenge full runs | One quest-reward item no enemy or box drops (or an allowed exchange item), for any class. Combination results are never rewards. A Challenge full run pays one of the rarest drops in the game instead. Always one Photon Sphere |
+| Mythic Rare | Drops when playing alone, and Challenge full runs | One quest-reward item no enemy or box drops, for any class; 3% of the time an exchange-only item instead. A Challenge full run pays one of the rarest drops in the game. Always one Photon Sphere and one exchange token |
+
+Uncommon to Mythic Rare bounties can also pay an **exchange token** (below).
 
 - Free bounties are Common 60%, Uncommon 30% and Rare 10%. Challenge bounties are Common 45%, Uncommon 30%, Rare 17%, Ultra Rare 6% and Mythic Rare 2%. The drop odds depend on difficulty; see `drops.tier_weights`.
 - Ultra and Mythic drops are weeklies. A Rare drop is a weekly half the time. The rest are dailies.
@@ -47,7 +49,7 @@ Rare, Ultra Rare and Mythic Rare items come from Blue Burst's own drop data, in 
 | Common rares | 1/500 or better | none: normal play is already the best source |
 | Rare | 1/500 to 1/5000 | Rare |
 | Very rare | rarer than 1/5000, or not for this Section ID | Ultra Rare |
-| Never dropped | quest-reward items (combination results are never rewards) | Mythic Rare |
+| Never dropped | quest-reward items | Mythic Rare |
 | Rarest in the game | rarer than 1/5000 for every Section ID (35 items) | Mythic Rare Challenge full runs only |
 
 **The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill of its best enemy for that Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 380,000 item chances).
@@ -84,12 +86,37 @@ A pool smaller than 6 items widens: first to lower strength classes, then to the
 - They scale down to half at level 1 (except Mythic Rare). Challenge bounties scale with their stages' length (×0.5 to ×2).
 - 99 Photon Drops make one Photon Sphere, the Gallon's Shop exchange rate. A bounty pays at most one Photon Sphere, and the rest (up to 99) as one stack of Photon Drops.
 
+**Exchange tokens.** Exchange-only items stay with their exchanges. Bounties pay what the exchanges take instead, on top of the reward:
+
+| Tier | Chance of a token |
+|---|---|
+| Common | none |
+| Uncommon | 20% |
+| Rare | 35% |
+| Ultra Rare | 60% |
+| Mythic Rare | always |
+
+| Token | Exchange | How likely | How many (Uncommon / Rare / Ultra / Mythic) |
+|---|---|---|---|
+| Enemy part, from the bounty's area or episode | Dr. Osto's Research, the Unsealed Door | 30 | 1 / 1 / 1–2 / 1–2 |
+| Item Ticket | Item Present (Item Ticket shop) | 25 | 1 / 1 / 1 / 1–2 |
+| Secret Ticket | Good Luck! lottery | 15 | 1 / 1 / 1–2 / 1–2 |
+| Photon Ticket | Gallon's Plan (10, 15 or 20 Tickets) | 15 | 1 / 1–2 / 2–4 / 3–6 |
+| Photon Crystal | Black Paper's deals, Dr. Montague | 10 | none / 1 / 1 / 1–2 |
+| Weapons Badge | AOL CUP | 10 | Bronze / Bronze or Silver / Silver or Gold / Gold |
+
+- The enemy parts are the 19 that Dr. Osto trades for weapons. An Episode 4 bounty, whose areas have none, pays another token.
+- Photon Tickets, Secret Tickets and Photon Crystals stack (to 99) and arrive as one stack.
+- Tokens are extras, outside the 10x rule. The commonest enemy parts (Dragon's Claw drops 1 in 23) already come faster from kills.
+
+**Exchange-only items.** A Mythic Rare bounty (not a Challenge full run) has a 3% chance (`mythic_exchange_chance`) of paying one of 84 exchange-only items instead of its usual item. Left out: the Item Ticket shop's and Dr. Osto's items (bounties pay their tokens), the tokens themselves, and combination results. `exchange_allow` can still add exchange items to the Mythic Rare pool outright.
+
 **Never rewards.**
 
 - Challenge Mode prizes: the S-rank weapons, Gods Shields Suzaku and Byakko, Yellow Ring, and Hunter, Ranger and Force Field.
+- Combination results: Merges, combination Mags and weapons.
 - Items that can't be obtained, and the Easter Egg (a seasonal drop).
 - Seasonal quest tools and the Dirty Lifejacket.
-- Exchange-only items, until they are reviewed: list the ones to allow in `reward_engine.exchange_allow`.
 
 Bounties started before this update keep their old reward and roll it with `roll_profiles`, under the same limits (2 attributes, 90, hit 50).
 

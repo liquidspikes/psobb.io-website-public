@@ -22,7 +22,11 @@
  *    and no bounty pays more than one Photon Sphere.
  *  - Challenge Mode prizes are never bounty rewards. The rarest drops in the game (rarer than 1/5000
  *    a kill for every Section ID) are reserved for Mythic Rare Challenge Mode full runs.
- *  - Exchange-only items stay out until listed in rewards.exchange_allow (config/bounties.json).
+ *  - Exchange-only items stay with their exchanges. Instead, Uncommon to Mythic Rare bounties pay the
+ *    tokens those exchanges take: Item Tickets, Secret Tickets, Photon Tickets, Photon Crystals,
+ *    Weapons Badges, and the enemy parts Dr. Osto trades for (from the bounty's area).
+ *  - Mythic Rare has a small chance (3%) of an exchange-only item instead, except the Item Ticket
+ *    shop's and Dr. Osto's, whose tokens bounties already pay.
  *
  * Data: api/data/bounty_items.json and api/data/bounty_areas.json, generated from newserv's tables
  * and quests by tools/bounty_data/build.py.
@@ -54,8 +58,31 @@ function bounty_reward_defaults()
         // Item categories Mythic Rare draws from (items no enemy or box drops). Combination results
         // (Merges, combination Mags and weapons) are never rewards.
         'mythic_categories' => ['quest_reward_only'],
-        // Exchange-only items allowed as rewards (hex codes). Empty until reviewed: see EXCHANGE_REVIEW.md.
+        // Exchange-only items to add to the Mythic Rare pool outright (hex codes). Normally empty: exchange
+        // items stay with their exchanges, bounties pay their tokens, and Mythic Rare has a small chance of one.
         'exchange_allow' => [],
+        // Chance (%) that a Mythic Rare bounty (not a Challenge full run) pays an exchange-only item
+        // instead of its usual item. Not the Item Ticket shop's or Dr. Osto's items: bounties pay their
+        // tokens. Not tokens, combination results or 'never' items.
+        'mythic_exchange_chance' => 3,
+        // Exchange tokens: the chance (%) per tier of one on top of the reward, and how likely each kind is.
+        // qty: [min, max] per tier. Enemy parts come from the bounty's area (or episode).
+        'exchange_tokens' => [
+            'chance' => ['uncommon' => 20, 'rare' => 35, 'ultra' => 60, 'mythic' => 100],
+            'kinds' => [
+                'enemy_part' => ['weight' => 30, 'qty' => ['uncommon' => [1, 1], 'rare' => [1, 1], 'ultra' => [1, 2], 'mythic' => [1, 2]]],
+                'item_ticket' => ['code' => '031209', 'weight' => 25, 'qty' => ['uncommon' => [1, 1], 'rare' => [1, 1], 'ultra' => [1, 1], 'mythic' => [1, 2]]],
+                'secret_ticket' => ['code' => '031003', 'weight' => 15, 'qty' => ['uncommon' => [1, 1], 'rare' => [1, 1], 'ultra' => [1, 2], 'mythic' => [1, 2]]],
+                'photon_ticket' => ['code' => '031004', 'weight' => 15, 'qty' => ['uncommon' => [1, 1], 'rare' => [1, 2], 'ultra' => [2, 4], 'mythic' => [3, 6]]],
+                'photon_crystal' => ['code' => '031002', 'weight' => 10, 'qty' => ['rare' => [1, 1], 'ultra' => [1, 1], 'mythic' => [1, 2]]],
+                'weapons_badge' => ['weight' => 10, 'qty' => ['uncommon' => [1, 1], 'rare' => [1, 1], 'ultra' => [1, 1], 'mythic' => [1, 1]]],
+            ],
+            // Weapons Badge metal by tier: [Bronze, Silver, Gold] weights
+            'badge_metal' => ['uncommon' => [100, 0, 0], 'rare' => [70, 30, 0], 'ultra' => [0, 70, 30], 'mythic' => [0, 0, 100]],
+            // The enemy parts Dr. Osto's Research and the Unsealed Door trade for weapons
+            'enemy_parts' => ['030D00', '030D01', '030D02', '030D03', '030D04', '030D06', '030D07', '030D08', '030D09', '030D0A',
+                              '030D0B', '030D0C', '030D0D', '030D0E', '030D0F', '030D10', '030D11', '030D12', '030D13'],
+        ],
         // Never rewards: seasonal event tools from quests, joke items, and Photon Drops/Spheres (paid separately).
         'never' => ['03120A', '031210', '031212', '031401', '031402', '031500', '031502', '031700', '01013C',
                     '031000', '031001', '031003'],
@@ -220,6 +247,104 @@ function bounty_item_allowed($code, array $it, array $rc)
             return in_array($code, $rc['exchange_allow'], true);
     }
     return true;
+}
+
+/**
+ * Exchange-only items a Mythic Rare bounty may pay, rarely: not the Item Ticket shop's or Dr. Osto's
+ * (bounties pay their tokens), not tokens themselves, not combination results.
+ */
+function bounty_is_mythic_exchange_item($code, array $it, array $rc)
+{
+    if (($it['obtained'] ?? '') !== 'exchange_only' || in_array($code, $rc['never'], true) || !empty($it['combinations'])) {
+        return false;
+    }
+    $tokens = ['031209', '031003', '031004', '031002', '031200', '031201', '031202', '031800', '030E07'];
+    if (in_array($code, $tokens, true) || in_array($code, [BOUNTY_PHOTON_DROP, BOUNTY_PHOTON_SPHERE], true)) {
+        return false; // tokens, currency, the Tablet and the Heart Key
+    }
+    foreach ($it['exchanges'] ?? [] as $e) {
+        if (strpos($e, 'Item Present') === 0) {
+            return false;
+        }
+    }
+    foreach ($it['quest_rewards'] ?? [] as $q) {
+        if ($q === "Dr. Osto's Research" || $q === 'Unsealed Door') {
+            return false;
+        }
+    }
+    return true;
+}
+
+function bounty_mythic_exchange_items()
+{
+    static $codes = null;
+    if ($codes === null) {
+        $rc = bounty_reward_cfg();
+        $codes = [];
+        foreach (bounty_item_data() as $code => $it) {
+            if (bounty_is_mythic_exchange_item($code, $it, $rc)) {
+                $codes[] = $code;
+            }
+        }
+    }
+    return $codes;
+}
+
+/**
+ * An exchange token on top of a reward (Uncommon to Mythic Rare), or null.
+ *
+ * @return array|null item entry: base ("031004 x3"), cat Tool, token kind
+ */
+function bounty_pick_exchange_token($tier, array $area)
+{
+    $cfg = bounty_reward_cfg()['exchange_tokens'];
+    if (mt_rand(1, 100) > (int) ($cfg['chance'][$tier] ?? 0)) {
+        return null;
+    }
+    $weights = [];
+    foreach ($cfg['kinds'] as $kind => $k) {
+        if (isset($k['qty'][$tier]) && (float) $k['weight'] > 0) {
+            $weights[$kind] = (float) $k['weight'];
+        }
+    }
+    // Enemy parts from the bounty's area, else its episode; none there (Episode 4): another token
+    $parts = [];
+    $items = bounty_item_data();
+    foreach ([0, 1] as $wide) {
+        foreach ($cfg['enemy_parts'] as $code) {
+            $it = $items[$code] ?? null;
+            if (!$it) {
+                continue;
+            }
+            $here = $wide === 0
+                ? ($area['drop_settings'] && array_intersect($area['drop_settings'], $it['drop_settings'] ?? []))
+                : (bool) array_intersect(array_map(function ($e) { return 'Ep' . (int) $e; }, $area['episodes'] ?? []), $it['drop_episodes'] ?? []);
+            if ($here) {
+                $parts[] = $code;
+            }
+        }
+        if ($parts) {
+            break;
+        }
+    }
+    if (!$parts) {
+        unset($weights['enemy_part']);
+    }
+    if (!$weights) {
+        return null;
+    }
+    $kind = bounty_weighted_float_pick($weights);
+    list($lo, $hi) = $cfg['kinds'][$kind]['qty'][$tier];
+    $qty = mt_rand((int) $lo, (int) $hi);
+    if ($kind === 'enemy_part') {
+        $code = $parts[array_rand($parts)];
+    } elseif ($kind === 'weapons_badge') {
+        $w = $cfg['badge_metal'][$tier] ?? [100, 0, 0];
+        $code = ['031200', '031201', '031202'][(int) bounty_weighted_float_pick(array_filter([(float) $w[0], (float) $w[1], (float) $w[2]]))];
+    } else {
+        $code = $cfg['kinds'][$kind]['code'];
+    }
+    return ['base' => $code . ($qty > 1 ? " x$qty" : ''), 'cat' => 'Tool', 'profile' => null, 'token' => $kind];
 }
 
 /**
@@ -586,6 +711,15 @@ function bounty_build_reward_spec_v2($tier, array $client, array $area, array $o
         case 'ultra':
         case 'mythic':
             $pool_tier = !empty($opts['challenge_reserve']) ? 'challenge_reserve' : $tier;
+            if ($pool_tier === 'mythic' && mt_rand(1, 10000) <= (int) round(100 * (float) bounty_reward_cfg()['mythic_exchange_chance'])) {
+                // Rarely, an item otherwise only found at an exchange
+                $ex = bounty_mythic_exchange_items();
+                if ($ex) {
+                    $add_item($ex[array_rand($ex)], 'mythic');
+                    $pool_note = 'exchange item (' . count($ex) . ')';
+                    break;
+                }
+            }
             $pool = bounty_reward_pool($pool_tier, $ctx);
             $chances = bounty_pool_chances($pool['items']);
             $pool_note = count($chances) . ' items (' . $pool['widened'] . ')';
@@ -602,6 +736,12 @@ function bounty_build_reward_spec_v2($tier, array $client, array $area, array $o
                 $pool_note = 'reward tables (no data match)';
             }
             break;
+    }
+
+    // Exchange tokens on top (Uncommon to Mythic Rare)
+    $token = bounty_pick_exchange_token($tier, $area);
+    if ($token) {
+        $items[] = $token;
     }
 
     $scale = (float) ($opts['scale'] ?? 1.0);
