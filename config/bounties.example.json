@@ -115,28 +115,6 @@
         "exchange_allow": [],
         "max_attribute": 90,
         "max_hit": 50,
-        "photon_drops": {
-            "common": [
-                0,
-                2
-            ],
-            "uncommon": [
-                1,
-                5
-            ],
-            "rare": [
-                4,
-                15
-            ],
-            "ultra": [
-                20,
-                60
-            ],
-            "mythic": [
-                99,
-                150
-            ]
-        },
         "mythic_exchange_chance": 3,
         "exchange_tokens": {
             "chance": {
@@ -144,6 +122,22 @@
                 "rare": 35,
                 "ultra": 60,
                 "mythic": 100
+            }
+        },
+        "photon": {
+            "drop_chance": {
+                "common": 15,
+                "uncommon": 25,
+                "rare": 40,
+                "ultra": 60,
+                "mythic": 80
+            },
+            "sphere_chance": {
+                "common": 0.5,
+                "uncommon": 1,
+                "rare": 2,
+                "ultra": 5,
+                "mythic": 15
             }
         }
     }

@@ -18,8 +18,8 @@
  *  - Weapons get at most 2 attributes plus hit. The first always matches the enemies of the area
  *    (by their share of Native, A.Beast, Machine and Dark enemies there). Attributes never pass 90 and
  *    hit never passes 50. Both scale with the tier and the hunter's level.
- *  - Photon Drops are paid like a currency. 99 Photon Drops make a Photon Sphere (the exchange rate),
- *    and no bounty pays more than one Photon Sphere.
+ *  - Photon Drops and Photon Spheres each have a chance on every bounty, rising with the tier. No
+ *    bounty pays more than one Photon Sphere (worth 99 Photon Drops at the exchange).
  *  - Challenge Mode prizes are never bounty rewards. The rarest drops in the game (rarer than 1/5000
  *    a kill for every Section ID) are reserved for Mythic Rare Challenge Mode full runs.
  *  - Exchange-only items stay with their exchanges. Instead, Uncommon to Mythic Rare bounties pay the
@@ -100,9 +100,15 @@ function bounty_reward_defaults()
         ],
         'max_attribute' => 90,
         'max_hit' => 50,
-        // Photon Drops paid per tier, [min, max] at level 200 (half at level 1; Mythic is not scaled).
-        // 99 or more pays one Photon Sphere plus the rest in Photon Drops.
-        'photon_drops' => ['common' => [0, 2], 'uncommon' => [1, 5], 'rare' => [4, 15], 'ultra' => [20, 60], 'mythic' => [99, 150]],
+        // Photon Drops and Photon Spheres: each rolls on its own on every bounty, so neither is given.
+        // drop_chance / sphere_chance in %; drops = [min, max] at level 200 (half at level 1), scaled
+        // for Challenge Mode by the stages' length; a stack holds 99. At most one Photon Sphere a
+        // bounty (1 Sphere = 99 Drops at Gallon's Shop).
+        'photon' => [
+            'drop_chance' => ['common' => 15, 'uncommon' => 25, 'rare' => 40, 'ultra' => 60, 'mythic' => 80],
+            'drops' => ['common' => [1, 2], 'uncommon' => [1, 5], 'rare' => [3, 12], 'ultra' => [10, 40], 'mythic' => [20, 60]],
+            'sphere_chance' => ['common' => 0.5, 'uncommon' => 1, 'rare' => 2, 'ultra' => 5, 'mythic' => 15],
+        ],
     ];
 }
 
@@ -618,23 +624,22 @@ function bounty_roll_armor_stats($profile, $level, $cat, $def_range, $evp_range)
 // ---------------------------------------------------------------------------
 
 /**
- * Photon Drops paid by a bounty, as items: one Photon Sphere at most (99 Photon Drops by exchange)
- * and the rest in Photon Drops (a stack holds 99).
+ * Photon Drops and a Photon Sphere, each by its own roll: a stack of Photon Drops (up to 99) some of
+ * the time, and a Photon Sphere (never more than one) rarely.
  *
- * @param float $scale extra multiplier (Challenge Mode: the stages' length)
- * @return array ['value' => total in Photon Drops, 'spheres' => 0|1, 'drops' => n]
+ * @param float $scale extra multiplier on the number of Drops (Challenge Mode: the stages' length)
+ * @return array ['value' => total in Photon Drops (a Sphere = 99), 'spheres' => 0|1, 'drops' => n]
  */
 function bounty_photon_reward($tier, $level, $scale = 1.0)
 {
-    $range = bounty_reward_cfg()['photon_drops'][$tier] ?? [0, 0];
-    $v = mt_rand((int) $range[0], (int) $range[1]);
-    if ($tier !== 'mythic') {
-        $v = (int) round($v * (0.5 + 0.5 * max(1, min(200, (int) $level)) / 200) * $scale);
-    } else {
-        $v = (int) round($v * max(1.0, $scale));
+    $p = bounty_reward_cfg()['photon'];
+    $drops = 0;
+    if (mt_rand(1, 10000) <= (int) round(100 * (float) ($p['drop_chance'][$tier] ?? 0))) {
+        $range = $p['drops'][$tier] ?? [1, 1];
+        $v = mt_rand((int) $range[0], (int) $range[1]) * (0.5 + 0.5 * max(1, min(200, (int) $level)) / 200) * $scale;
+        $drops = max(1, min(99, (int) round($v)));
     }
-    $spheres = ($v >= 99) ? 1 : 0;
-    $drops = min(99, $v - 99 * $spheres);
+    $spheres = (mt_rand(1, 10000) <= (int) round(100 * (float) ($p['sphere_chance'][$tier] ?? 0))) ? 1 : 0;
     return ['value' => $spheres * 99 + $drops, 'spheres' => $spheres, 'drops' => $drops];
 }
 

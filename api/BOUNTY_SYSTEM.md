@@ -24,11 +24,11 @@ The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.ph
 
 | Tier | Where it comes from | Reward (stats rolled on claim) |
 |---|---|---|
-| Common | Free, drop, Battle and Challenge bounties | 2–3 tools and consumables in stacks, picked by level, plus a few Photon Drops and Meseta |
+| Common | Free, drop, Battle and Challenge bounties | 2–3 tools and consumables in stacks, picked by level, plus Meseta |
 | Uncommon | Free, drop, Battle and Challenge bounties | 1–2 pieces of common equipment for the hunter's class, picked 10 levels ahead, with light stats |
 | Rare | Free, drop, Battle and Challenge bounties | One rare that drops 1/500 to 1/5000 a kill for the hunter's Section ID, usable by their class, from the bounty's area |
 | Ultra Rare | Drops in a party of 2 or more, and Challenge bounties | One rare that drops rarer than 1/5000 a kill for the hunter's Section ID (or never for it), for any class, from the bounty's area |
-| Mythic Rare | Drops when playing alone, and Challenge full runs | One quest-reward item no enemy or box drops, for any class; 3% of the time an exchange-only item instead. A Challenge full run pays one of the rarest drops in the game. Always one Photon Sphere and one exchange token |
+| Mythic Rare | Drops when playing alone, and Challenge full runs | One quest-reward item no enemy or box drops, for any class; 3% of the time an exchange-only item instead. A Challenge full run pays one of the rarest drops in the game. Always one exchange token |
 
 Uncommon to Mythic Rare bounties can also pay an **exchange token** (below).
 
@@ -77,14 +77,16 @@ A pool smaller than 6 items widens: first to lower strength classes, then to the
 
 **Armor and shields.** DEF and EVP bonuses come from the item's own bonus range, scaled by tier and level. Armor slots: Uncommon 0–1, Rare 1–3, Ultra Rare 2–4, Mythic Rare 3–4.
 
-**Photon Drops** are paid like a currency, as items:
+**Photon Drops and Photon Spheres** roll on every bounty, each on its own, so neither is a given:
 
 | Tier | Common | Uncommon | Rare | Ultra Rare | Mythic Rare |
 |---|---|---|---|---|---|
-| Photon Drops (at level 200) | 0–2 | 1–5 | 4–15 | 20–60 | 99–150 |
+| Chance of Photon Drops | 15% | 25% | 40% | 60% | 80% |
+| How many (at level 200) | 1–2 | 1–5 | 3–12 | 10–40 | 20–60 |
+| Chance of a Photon Sphere | 0.5% | 1% | 2% | 5% | 15% |
 
-- They scale down to half at level 1 (except Mythic Rare). Challenge bounties scale with their stages' length (×0.5 to ×2).
-- 99 Photon Drops make one Photon Sphere, the Gallon's Shop exchange rate. A bounty pays at most one Photon Sphere, and the rest (up to 99) as one stack of Photon Drops.
+- The number of Drops falls to half at level 1, and Challenge bounties scale it with their stages' length (×0.5 to ×2). Drops come as one stack of at most 99.
+- A bounty pays at most one Photon Sphere (worth 99 Photon Drops at Gallon's Shop).
 
 **Exchange tokens.** Exchange-only items stay with their exchanges. Bounties pay what the exchanges take instead, on top of the reward:
 

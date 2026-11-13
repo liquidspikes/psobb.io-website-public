@@ -345,9 +345,6 @@ for ($i = 0; $i < 600; $i++) {
     if (preg_match('/' . BOUNTY_PHOTON_DROP . ' x(\d+)/', $rolled, $mm)) {
         check((int) $mm[1] <= 99, 'Photon Drops fit one stack');
     }
-    if ($tier === 'mythic') {
-        check(strpos($rolled, BOUNTY_PHOTON_SPHERE) !== false, 'Mythic Rare pays a Photon Sphere');
-    }
     $tokens_seen = 0;
     foreach ($spec['items'] as $it) {
         $code = strtoupper(substr(explode(' ', $it['base'])[0], 0, 6));
@@ -419,7 +416,21 @@ for ($i = 0; $i < 600; $i++) {
         }
     }
 }
-check($spheres_max === 1, 'Photon Spheres are paid');
+check($spheres_max === 1, 'Photon Spheres are paid sometimes');
+
+// Photon Drops and Spheres roll on their own: neither is given every time
+$pc = $rc['photon'];
+foreach (BOUNTY_TIERS as $t) {
+    $nd = $ns = 0;
+    for ($i = 0; $i < 4000; $i++) {
+        $ph = bounty_photon_reward($t, 200);
+        $nd += $ph['drops'] > 0 ? 1 : 0;
+        $ns += $ph['spheres'];
+        check($ph['spheres'] <= 1 && $ph['drops'] <= 99, 'at most one Sphere and one stack of Drops');
+    }
+    check(abs($nd / 40 - $pc['drop_chance'][$t]) < 4, "$t pays Photon Drops about {$pc['drop_chance'][$t]}% of the time (" . ($nd / 40) . '%)');
+    check(abs($ns / 40 - $pc['sphere_chance'][$t]) < max(1.0, $pc['sphere_chance'][$t] / 3), "$t pays a Photon Sphere about {$pc['sphere_chance'][$t]}% of the time (" . ($ns / 40) . '%)');
+}
 
 // The 10x rule, for every Section ID at a few levels and areas
 $m10 = (float) $rc['drop_rate_multiplier'];
