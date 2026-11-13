@@ -919,6 +919,11 @@ foreach ([1, 2, 4] as $ep) {
                 check(isset(bounty_rare_enemy_data()[$h['target']]['episodes']['Ep' . $ep]), "{$h['target']} is met in Episode $ep");
             }
             check(($c['difficulty'] === 'Ultimate') === ($tier === 'mythic'), "a level 150 $tier contract is on " . ($tier === 'mythic' ? 'Ultimate' : 'Very Hard'));
+            if ($c['goal'] === 'EPISODE_RUN') {
+                // Told from the episode's deepest area, which knows every area the run crosses
+                check($c['setting_id'] === ['1' => 'ep1_ruins', '2' => 'ep2_seabed', '4' => 'ep4_desert'][(string) $ep], "an Episode $ep run is told from its deepest area ({$c['setting_id']})");
+                check(strpos($c['location_override'], 'Dark Falz') === false && strpos($c['location_override'], 'Vol Opt') === false, 'a run names no guardian its card keeps hidden');
+            }
         }
     }
 }
@@ -1096,6 +1101,21 @@ list($done, $p) = $hunt($db, $m, ['episode' => 2] + $run_lobby, [77 => ['DEL_RAP
 check(!$done && (int) $p['count'] === 2, 'Del Rappies of the Crater count; a kill in another episode\'s game does not');
 
 // Wording
+foreach (['BOSS_HUNT' => 'Defeat 5 bosses on Very Hard or higher', 'ENEMY_HUNT' => 'Defeat 480 enemies on Very Hard or higher', 'RARE_HUNT' => 'Defeat 1 rare enemy on Very Hard or higher'] as $g => $want) {
+    $t = bounty_weekly_objective_text($g, ($g === 'BOSS_HUNT' ? '5' : ($g === 'ENEMY_HUNT' ? '480' : '1')) . '@Very Hard');
+    check($t === "$want (a kill by anyone in your game counts)", "weekly $g says the whole game's kills count ($t)");
+}
+check(bounty_weekly_objective_text('AREA_SWEEP', '2@Hard') === 'Visit every area of Episode 2 on Hard or higher', 'an area sweep has no kill note');
+check(bounty_episode_setting(1) === 'ep1_ruins' && bounty_episode_setting(2) === 'ep2_seabed' && bounty_episode_setting(4) === 'ep4_desert', 'whole-episode jobs use the deepest area\'s card');
+$sweeps = [];
+for ($i = 0; $i < 400 && count($sweeps) < 3; $i++) {
+    $o = bounty_pick_rework_objective($ct, ['id' => 0, 'mission_id' => 0, 'status' => 'queued', 'tier' => 'common', 'cadence' => 'weekly', 'pool' => 'standard', 'meta' => null], 0, []);
+    if ($o['selected_goal'] === 'AREA_SWEEP') {
+        $sweeps[$o['mission_episode']] = $o['setting_id'];
+    }
+}
+ksort($sweeps);
+check($sweeps === [1 => 'ep1_ruins', 2 => 'ep2_seabed', 4 => 'ep4_desert'], 'an area sweep is told from its episode\'s deepest area (' . json_encode($sweeps) . ')');
 check(bounty_contract_objective_text('RARE_TARGET', 'KONDRIEU:3:4@Ultimate') === 'Defeat 3 Kondrieus in Episode 4 on Ultimate (a kill by anyone in your game counts)', 'hunt wording');
 check(bounty_contract_objective_text('RARE_TARGET', 'AL_RAPPY:1:1@Ultimate') === 'Defeat an Al Rappy in Episode 1 on Ultimate (a kill by anyone in your game counts)', 'hunt wording (an)');
 check(strpos(bounty_contract_objective_text('EPISODE_RUN', '1:timed:150@Very Hard'), 'Full Episode 1 run in one game on Very Hard or higher: every area and all 4 bosses, within 2 h 30 min') === 0, 'timed run wording');

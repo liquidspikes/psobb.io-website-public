@@ -1198,7 +1198,7 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
                 $ep = [1, 2, 4][array_rand([1, 2, 4])];
                 $obj['selected_target_id'] = "$ep@$diff";
                 $obj['mission_episode'] = $ep;
-                $obj['setting_id'] = bounty_lore()['world']['hubs'][(string) $ep] ?? $obj['setting_id'];
+                $obj['setting_id'] = bounty_episode_setting($ep);
                 $obj['location_override'] = "This is a week-long job that takes the hunter through every area of Episode $ep (" . bounty_episode_area_names($ep) . ") $at; the client should have a reason to want all of them visited.";
                 break;
             case 'BOSS_HUNT':

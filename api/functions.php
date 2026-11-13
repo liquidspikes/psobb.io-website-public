@@ -256,11 +256,11 @@ function bounty_weekly_objective_text($type, $target)
         case 'AREA_SWEEP':
             return "Visit every area of Episode $n $or_higher";
         case 'BOSS_HUNT':
-            return "Defeat $n " . ($n === 1 ? 'boss' : 'bosses') . " $or_higher";
+            return "Defeat $n " . ($n === 1 ? 'boss' : 'bosses') . " $or_higher (a kill by anyone in your game counts)";
         case 'ENEMY_HUNT':
-            return "Defeat $n " . ($n === 1 ? 'enemy' : 'enemies') . " $or_higher";
+            return "Defeat $n " . ($n === 1 ? 'enemy' : 'enemies') . " $or_higher (a kill by anyone in your game counts)";
         case 'RARE_HUNT':
-            return "Defeat $n " . ($n === 1 ? 'rare enemy' : 'rare enemies') . " $or_higher";
+            return "Defeat $n " . ($n === 1 ? 'rare enemy' : 'rare enemies') . " $or_higher (a kill by anyone in your game counts)";
     }
     return '';
 }
@@ -465,11 +465,16 @@ function bounty_parse_hunt_target($target)
     return ['target' => (string) ($p[0] ?? ''), 'count' => max(1, (int) ($p[1] ?? 1)), 'episode' => in_array($ep, [1, 2, 4], true) ? $ep : 1, 'difficulty' => $diff];
 }
 
+/**
+ * The guardians a full run defeats, as the story prompt names them: as people in the episode's
+ * deepest area know them (bounty_episode_setting()). Episode 1's are told without the names its
+ * cards keep hidden (Vol Opt, Dark Falz).
+ */
 function bounty_contract_boss_names($episode)
 {
     if ($episode == 2) return ['Barba Ray', 'Gol Dragon', 'Gal Gryphon', 'Olga Flow'];
     if ($episode == 4) return ['Saint-Milion, Shambertin or Kondrieu'];
-    return ['the Dragon', 'De Rol Le', 'Vol Opt', 'Dark Falz'];
+    return ['the Dragon beneath the Dome', 'the giant worm of the underground waterway', "the Mines' main computer", 'whatever was let loose at the heart of the ruins'];
 }
 
 function bounty_creature_label($id, $plural = false)

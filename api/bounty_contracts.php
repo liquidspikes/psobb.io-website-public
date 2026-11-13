@@ -150,7 +150,7 @@ function bounty_pick_contract_objective(array $client, array $row, $tier)
         'target' => $target,
         'friendly' => bounty_contract_objective_text('EPISODE_RUN', $target),
         'episode' => $ep,
-        'setting_id' => $hub,
+        'setting_id' => bounty_episode_setting($ep),
         'difficulty' => $diff,
         'location_override' => "This is a contract for a full expedition through Episode $ep in one outing: " . bounty_episode_area_names($ep)
             . ', and every guardian there (' . implode(', ', $bosses) . "), $at. $party $never",

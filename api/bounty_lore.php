@@ -158,6 +158,30 @@ function bounty_pick_hub_setting()
 }
 
 /**
+ * The setting for a job that crosses a whole episode (a visit to every area, a full run): the card
+ * of the episode's deepest area. Its moment comes after every area before it was found, so its
+ * story can name all of them. The hub cards are set earlier: Episode 4's is the first days after the
+ * meteor, before anyone knew of the Subterranean Desert, which a full run ends in.
+ */
+function bounty_episode_setting($episode)
+{
+    $lore = bounty_lore();
+    $best = null;
+    $deepest = -1;
+    foreach ($lore['settings'] ?? [] as $sid => $s) {
+        if ((int) ($s['episode'] ?? 0) !== (int) $episode) {
+            continue;
+        }
+        $top = max(array_map('intval', $s['floors'] ?? [0]) ?: [0]);
+        if ($top > $deepest) {
+            $deepest = $top;
+            $best = $sid;
+        }
+    }
+    return $best ?? ($lore['world']['hubs'][(string) $episode] ?? ['1' => 'ep1_pioneer2', '2' => 'ep2_lab', '4' => 'ep4_pioneer2'][(string) $episode] ?? 'ep1_pioneer2');
+}
+
+/**
  * Picks a quest giver from the setting's era-appropriate cast.
  *
  * @return array|null ['id'=>ns_id, ...card] or null if the setting has no cast.
