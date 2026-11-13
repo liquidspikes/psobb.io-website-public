@@ -2,15 +2,38 @@
     "_comment": "Copy to config/bounties.json and keep only the keys you want to change. Every key and its default is in bounty_default_config() in api/bounty_system.php; see api/BOUNTY_SYSTEM.md.",
     "enabled": true,
     "limit_scope": "character",
-    "reset": { "daily_hour": 0, "weekly_day": 1, "timezone": "America/Chicago" },
+    "reset": {
+        "daily_hour": 0,
+        "weekly_day": 1,
+        "timezone": "America/Chicago"
+    },
     "pools": {
         "standard": {
-            "daily": { "active": 3, "free_cap": 5 },
-            "weekly": { "active": 3, "free_cap": 10 }
+            "daily": {
+                "active": 3,
+                "free_cap": 5
+            },
+            "weekly": {
+                "active": 3,
+                "free_cap": 10
+            }
         },
-        "drop": { "active": 5, "held_max": 10 },
-        "battle": { "daily": { "active": 3, "cap": 3 } },
-        "challenge": { "weekly": { "active": 3, "cap": 3 } }
+        "drop": {
+            "active": 5,
+            "held_max": 10
+        },
+        "battle": {
+            "daily": {
+                "active": 3,
+                "cap": 3
+            }
+        },
+        "challenge": {
+            "weekly": {
+                "active": 3,
+                "cap": 3
+            }
+        }
     },
     "earn": {
         "login_daily_chance": 10,
@@ -18,12 +41,101 @@
         "completion_grants": 1,
         "battle_chance": 25,
         "challenge_chance": 25,
-        "free_tier_weights": [60, 30, 10]
+        "free_tier_weights": [
+            60,
+            30,
+            10
+        ]
     },
     "drops": {
-        "boss_chance": { "Normal": 5, "Hard": 8, "Very Hard": 12, "Ultimate": 18 },
-        "rare_enemy_chance": { "Normal": 10, "Hard": 15, "Very Hard": 20, "Ultimate": 30 },
+        "boss_chance": {
+            "Normal": 5,
+            "Hard": 8,
+            "Very Hard": 12,
+            "Ultimate": 18
+        },
+        "rare_enemy_chance": {
+            "Normal": 10,
+            "Hard": 15,
+            "Very Hard": 20,
+            "Ultimate": 30
+        },
         "solo_in_multi_mythic_multiplier": 1.5,
         "rare_weekly_chance": 50
+    },
+    "challenge": {
+        "tier_weights": [
+            45,
+            30,
+            17,
+            6,
+            2
+        ],
+        "rank_hours": {
+            "1": {
+                "S": 7,
+                "A": 13
+            },
+            "2": {
+                "S": 5,
+                "A": 7
+            }
+        },
+        "stage_minutes": {
+            "1": [
+                13,
+                47,
+                40,
+                45,
+                40,
+                50,
+                60,
+                55,
+                70
+            ],
+            "2": [
+                65,
+                55,
+                45,
+                85,
+                50
+            ]
+        }
+    },
+    "battle": {
+        "wins": {
+            "common": 1,
+            "uncommon": 2,
+            "rare": 3
+        }
+    },
+    "reward_engine": {
+        "_comment": "Rewards from the drop data (api/bounty_rewards.php). exchange_allow: exchange-only items (hex codes) allowed as Mythic Rare rewards.",
+        "drop_rate_multiplier": 10,
+        "exchange_allow": [],
+        "max_attribute": 90,
+        "max_hit": 50,
+        "photon_drops": {
+            "common": [
+                0,
+                2
+            ],
+            "uncommon": [
+                1,
+                5
+            ],
+            "rare": [
+                4,
+                15
+            ],
+            "ultra": [
+                20,
+                60
+            ],
+            "mythic": [
+                99,
+                150
+            ]
+        }
     }
 }

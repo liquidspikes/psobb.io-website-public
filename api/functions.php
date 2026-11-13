@@ -252,12 +252,169 @@ function bounty_weekly_objective_text($type, $target)
     return '';
 }
 
+// ---------------------------------------------------------------------------
+// Challenge Mode and Battle Mode bounties of the rework
+// ---------------------------------------------------------------------------
+
+/**
+ * Splits a Challenge target "E:first-last:limit_seconds:pace" ("1:6-6:3000:S").
+ * pace is S, A or B; limit 0 = any time (B).
+ */
+function bounty_parse_challenge_target($target)
+{
+    $p = explode(':', (string) $target);
+    $range = explode('-', $p[1] ?? '1-1');
+    $first = max(1, (int) ($range[0] ?? 1));
+    $last = max($first, (int) ($range[1] ?? $first));
+    $ep = ((int) ($p[0] ?? 1) === 2) ? 2 : 1;
+    return ['episode' => $ep, 'first' => $first, 'last' => $last, 'limit' => max(0, (int) ($p[2] ?? 0)), 'pace' => $p[3] ?? 'B'];
+}
+
+function bounty_challenge_stage_total($episode)
+{
+    return ((int) $episode === 2) ? 5 : 9;
+}
+
+/**
+ * "1 h 05 min", "50 min".
+ */
+function bounty_duration_text($seconds)
+{
+    $m = (int) ceil(max(0, (int) $seconds) / 60);
+    if ($m < 60) {
+        return "$m min";
+    }
+    return intdiv($m, 60) . ' h' . (($m % 60) ? ' ' . sprintf('%02d', $m % 60) . ' min' : '');
+}
+
+function bounty_challenge_objective_text($target)
+{
+    $c = bounty_parse_challenge_target($target);
+    $ep = $c['episode'];
+    $pace = ['S' => 'S pace', 'A' => 'A pace', 'B' => ''][$c['pace']] ?? '';
+    $under = $c['limit'] > 0 ? ' under ' . bounty_duration_text($c['limit']) : '';
+    if ($c['first'] === 1 && $c['last'] >= bounty_challenge_stage_total($ep)) {
+        $rank = ($c['pace'] === 'S') ? 'S rank' : (($c['pace'] === 'A') ? 'A rank or better' : '');
+        return "Complete an Episode $ep Challenge Mode run (Stages 1–{$c['last']})"
+            . ($c['limit'] > 0 ? " with a combined time$under ($rank)" : '');
+    }
+    if ($c['first'] === $c['last']) {
+        return "Clear Episode $ep Challenge Mode Stage {$c['first']}" . ($c['limit'] > 0 ? " in$under ($pace)" : '');
+    }
+    return "Clear Episode $ep Challenge Mode Stages {$c['first']}–{$c['last']}"
+        . ($c['limit'] > 0 ? " with a combined time$under ($pace)" : '');
+}
+
+/**
+ * The eight Battle Mode rule sets (api/data/battle_rule_sets.json), by quest number.
+ */
+function bounty_battle_rule_sets()
+{
+    static $sets = null;
+    if ($sets === null) {
+        $sets = [];
+        $raw = @file_get_contents(__DIR__ . '/data/battle_rule_sets.json');
+        foreach (($raw ? json_decode($raw, true) : []) ?: [] as $b) {
+            $sets[(int) $b['quest_number']] = $b;
+        }
+    }
+    return $sets;
+}
+
+/**
+ * Battle K's name and its rules in a few words, from the rule set in its quest script.
+ *
+ * @return array ['name' => 'Battle 3: Warp Battle', 'rules' => 'Spaceship; everyone at Lv5 ...']
+ */
+function bounty_battle_rule_summary($quest)
+{
+    // In-game titles (BB English quest descriptions)
+    $names = [501 => 'Most Kills Wins: Beginner', 502 => 'Most Kills Wins (Level 1)', 503 => 'Warp Battle',
+              504 => 'Meseta Battle (Level 2)', 505 => 'Meseta Battle (No Revivals)', 506 => 'Most Kills Wins (Level 20)',
+              507 => 'Obstacle Race', 508 => 'Trap Hell'];
+    $q = (int) $quest;
+    $b = bounty_battle_rule_sets()[$q] ?? null;
+    $name = 'Battle ' . ($q - 500) . (isset($names[$q]) ? ': ' . $names[$q] : '');
+    if (!$b) {
+        return ['name' => $name, 'rules' => ''];
+    }
+    $r = $b['rules'];
+    $out = [];
+    $out[] = (stripos($b['description'], 'PALACE') !== false) ? 'Palace' : 'Spaceship';
+    $out[] = !empty($r['replace_char'])
+        ? 'everyone at Lv' . ((int) ($r['char_level'] ?? 0) + 1) . (!empty($r['death_level_up']) ? ' (+' . (int) $r['death_level_up'] . ' per death)' : '')
+        : 'your own level';
+    if (!empty($r['teams'])) {
+        $out[] = 'teams of 2';
+    }
+    $out[] = (($r['weapons_armor'] ?? '') === 'own equipment') ? 'your own gear' : 'start with nothing';
+    if (($r['mags'] ?? '') === 'forbidden') {
+        $out[] = 'no Mags';
+    }
+    if (($r['tech_disks'] ?? '') === 'level-limited') {
+        $out[] = 'techniques up to Lv' . ((int) ($r['max_tech_level'] ?? 0) + 1);
+    }
+    $resp = $r['respawn'] ?? '';
+    $out[] = ($resp === 'limited lives') ? ((int) ($r['lives'] ?? 0)) . ' lives' : (($resp === 'no revival') ? 'no revival' : 'unlimited revivals');
+    if (empty($r['forbid_scape_dolls'])) {
+        $out[] = 'Scape Dolls allowed';
+    }
+    if ((float) ($b['scores']['per_meseta'] ?? 0) > 0 && stripos($b['description'], 'Meseta') !== false) {
+        $out[] = 'scored on Meseta held';
+    } elseif (($r['meseta'] ?? '') === 'forbidden') {
+        $out[] = 'no Meseta';
+    }
+    $traps = $b['traps'] ?? [];
+    if ($traps && max($traps) >= 10) {
+        $out[] = max($traps) . ' of each ' . implode('/', array_keys(array_filter($traps, function ($n) { return $n >= 10; }))) . ' trap';
+    }
+    $out[] = (int) ($r['time_limit_minutes'] ?? 10) . ' min';
+    return ['name' => $name, 'rules' => implode(', ', $out)];
+}
+
+/**
+ * Battle target "quest:wins" ("503:2").
+ */
+function bounty_parse_battle_target($target)
+{
+    $p = explode(':', (string) $target);
+    return [(int) ($p[0] ?? 501), max(1, (int) ($p[1] ?? 1))];
+}
+
+function bounty_battle_objective_text($target)
+{
+    list($q, $n) = bounty_parse_battle_target($target);
+    $s = bounty_battle_rule_summary($q);
+    return "Win $n Battle Mode " . ($n === 1 ? 'match' : 'matches') . " of {$s['name']}" . ($s['rules'] ? " ({$s['rules']})" : '');
+}
+
 /**
  * Progress line for the board, e.g. "4 / 10 areas".
  */
 function bounty_progress_text($type, $target, $progress_json)
 {
     $p = json_decode((string) $progress_json, true) ?: [];
+    if ($type === 'CHALLENGE_RUN') {
+        $c = bounty_parse_challenge_target($target);
+        $best = $p['best'] ?? [];
+        $need = $c['last'] - $c['first'] + 1;
+        $have = 0;
+        $sum = 0;
+        for ($st = $c['first']; $st <= $c['last']; $st++) {
+            if (isset($best[(string) $st])) {
+                $have++;
+                $sum += (int) $best[(string) $st];
+            }
+        }
+        if ($need === 1) {
+            return $have ? 'Best: ' . bounty_duration_text($sum) : 'Not cleared yet';
+        }
+        return "$have / $need stages" . ($have ? ', ' . bounty_duration_text($sum) . ' so far' : '');
+    }
+    if ($type === 'BATTLE_RULE_WINS') {
+        list(, $n) = bounty_parse_battle_target($target);
+        return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'win' : 'wins');
+    }
     list($n) = bounty_parse_weekly_target($target);
     switch ($type) {
         case 'AREA_SWEEP':
@@ -525,8 +682,12 @@ function getClearObjective($type, $target, $title = '', $desc = '')
         case 'ENEMY_HUNT':
         case 'RARE_HUNT':
             return __('[Weekly] %s', htmlspecialchars(__(bounty_weekly_objective_text($type, $target))));
+        case 'CHALLENGE_RUN':
+            return __('[Challenge] %s', htmlspecialchars(__(bounty_challenge_objective_text($target))));
+        case 'BATTLE_RULE_WINS':
+            return __('[Battle] %s', htmlspecialchars(__(bounty_battle_objective_text($target))));
         case 'PENDING':
-            return __('Waiting for a free slot: the objective is set when it becomes active');
+            return __('Waiting for a free slot: the objective and reward are set when it becomes active');
         case 'SPEEDRUN_FLOOR':
             list($target_floor, $time_limit) = explode('_', $target);
             $floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
@@ -874,6 +1035,15 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
         } else if (preg_match('/^(\d+)x\s+(.*)$/i', $rawItem, $matches)) {
             $multiplier = intval($matches[1]);
             $baseItemName = trim($matches[2]);
+        }
+
+        // Photon Drops, Spheres and Crystals stack to 99: drop one stack (byte 5 = count), not one
+        // item per count. Bounties pay up to 99 Photon Drops.
+        if ($multiplier > 1 && preg_match('/^03100[0-2]$/i', $baseItemName)) {
+            $data = hex2bin(str_pad(strtoupper($baseItemName), 32, '0'));
+            $data[5] = chr(min(99, $multiplier));
+            $baseItemName = strtoupper(bin2hex($data));
+            $multiplier = 1;
         }
 
         if ($multiplier > 50)

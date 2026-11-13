@@ -1,0 +1,152 @@
+{
+ "episodes": {
+  "Ep1": {
+   "stages": [
+    {
+     "stage": 1,
+     "file": "c88101-bb-e.bin",
+     "areas": [
+      1,
+      3
+     ]
+    },
+    {
+     "stage": 2,
+     "file": "c88102-bb-e.bin",
+     "areas": [
+      4,
+      8
+     ]
+    },
+    {
+     "stage": 3,
+     "file": "c88103-bb-e.bin",
+     "areas": [
+      9,
+      13
+     ]
+    },
+    {
+     "stage": 4,
+     "file": "c88104-bb-e.bin",
+     "areas": [
+      14,
+      19
+     ]
+    },
+    {
+     "stage": 5,
+     "file": "c88105-bb-e.bin",
+     "areas": [
+      20,
+      24
+     ]
+    },
+    {
+     "stage": 6,
+     "file": "c88106-bb-e.bin",
+     "areas": [
+      25,
+      30
+     ]
+    },
+    {
+     "stage": 7,
+     "file": "c88107-bb-e.bin",
+     "areas": [
+      31,
+      35
+     ]
+    },
+    {
+     "stage": 8,
+     "file": "c88108-bb-e.bin",
+     "areas": [
+      36,
+      40
+     ]
+    },
+    {
+     "stage": 9,
+     "file": "c88109-bb-e.bin",
+     "areas": [
+      41,
+      46
+     ]
+    }
+   ],
+   "rank_seconds": {
+    "B": 356400,
+    "A": 46800,
+    "S": 25200
+   },
+   "prizes": [
+    "01022C",
+    "01022E"
+   ]
+  },
+  "Ep2": {
+   "stages": [
+    {
+     "stage": 1,
+     "file": "d88201-bb-e.bin",
+     "areas": [
+      1,
+      7
+     ]
+    },
+    {
+     "stage": 2,
+     "file": "d88202-bb-e.bin",
+     "areas": [
+      8,
+      14
+     ]
+    },
+    {
+     "stage": 3,
+     "file": "d88203-bb-e.bin",
+     "areas": [
+      15,
+      20
+     ]
+    },
+    {
+     "stage": 4,
+     "file": "d88204-bb-e.bin",
+     "areas": [
+      21,
+      27
+     ]
+    },
+    {
+     "stage": 5,
+     "file": "d88205-bb-e.bin",
+     "areas": [
+      28,
+      29
+     ]
+    }
+   ],
+   "rank_seconds": {
+    "B": 356400,
+    "A": 25200,
+    "S": 18000
+   },
+   "prizes": [
+    "010118",
+    "010119",
+    "01011A",
+    "010266"
+   ]
+  }
+ },
+ "prize_names": {
+  "01022E": "GODS SHIELD BYAKKO",
+  "010119": "RANGER FIELD",
+  "01011A": "FORCE FIELD",
+  "010266": "YELLOW RING",
+  "01022C": "GODS SHIELD SUZAKU",
+  "010118": "HUNTER FIELD"
+ }
+}

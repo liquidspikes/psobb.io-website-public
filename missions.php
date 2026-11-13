@@ -44,6 +44,10 @@ function bounty_card_tags(array $b)
  */
 function bounty_card_reward(array $b)
 {
+    if (trim((string) ($b['reward_item_string'] ?? '')) === '') {
+        // Waiting bounties: the reward comes from the area the objective sends the hunter to
+        return '<span style="color:rgba(255,255,255,0.6);">' . __('Chosen when it starts, from the area it sends you to') . '</span>';
+    }
     $html = renderRewardString($b['reward_item_string']);
     if (!empty($b['reward_spec']) && bounty_reward_has_hidden_stats(json_decode($b['reward_spec'], true))) {
         $html .= '<div style="font-size:0.72rem; color:rgba(255,255,255,0.5); margin-top:3px;">' . __('Attributes, hit, slots and bonuses are rolled when you claim.') . '</div>';
@@ -877,7 +881,7 @@ if ($account_id) {
                         <?php endforeach; ?>
                         <?php if (!empty($up_next)): ?>
                             <h4 style="margin: 0.8rem 0 0.4rem; font-size: 0.9rem; color: rgba(255,255,255,0.85);"><?= __('Up next') ?></h4>
-                            <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin: 0 0 0.5rem;"><?= __('These start by themselves, oldest first, as soon as a slot of their kind frees up. The objective and story are written then.') ?></p>
+                            <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin: 0 0 0.5rem;"><?= __('These start by themselves, oldest first, as soon as a slot of their kind frees up. The objective, story and reward are set then.') ?></p>
                             <?php foreach ($up_next as $q): ?>
                                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.08);">
                                     <div style="font-size: 0.8rem;">
@@ -937,7 +941,7 @@ if ($account_id) {
                                         <span class="bounty-meta-label"><?= __('Directive') ?></span>
                                         <span class="bounty-meta-val" style="color: #ffffff;"><?= ($b['status'] ?? '') === 'rerolling' ? '—' : getClearObjective($b['goal_type'], $b['goal_target'], $b['title'], $b['description']) ?></span>
                                     </div>
-                                    <?php $prog = in_array($b['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT'], true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
+                                    <?php $prog = in_array($b['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
                                     <?php if ($prog !== ''): ?>
                                     <div class="bounty-meta-row">
                                         <span class="bounty-meta-label"><?= __('Progress') ?></span>
@@ -983,6 +987,10 @@ if ($account_id) {
                         <?= __('Bosses and rare enemies can drop extra bounties into 5 separate drop slots (10 held at most). Ultra Rare drops need a party of 2 or more; Mythic Rare drops only come when you play alone. Battle Mode earns up to 3 dailies and Challenge Mode up to 3 weeklies.') ?>
                         <br><br>
                         <?= __('Tiers run Common, Uncommon, Rare, Ultra Rare and Mythic Rare. Unfinished bounties expire at the daily or weekly reset; finished ones wait in the Claim Center. Team bounties can be rerolled once for free. Reward stats stay hidden until you claim.') ?>
+                        <br><br>
+                        <?= __('Rewards come from the drops of the area a bounty sends you to, at least 10 times as often as a kill would drop them for your Section ID. Weapons get at most two attributes, matched to that area\'s enemies, plus hit. Bounties also pay Photon Drops, and at most one Photon Sphere.') ?>
+                        <br><br>
+                        <?= __('Challenge Mode bounties name a stage and a pace (S pace is the stage\'s share of the S-rank time). Ultra Rare ones span several stages and Mythic Rare ones are full runs, which pay some of the rarest drops in the game. Battle Mode bounties name the rule set to win under.') ?>
                     <?php else: ?>
                     <?= __('Missions are automatically assigned to your characters as you play! You can hold up to 3 active bounties per character at a time. Check back regularly or log into the game to receive your next assignment from the Hunter\'s Guild!') ?>
                     <?php endif; ?>

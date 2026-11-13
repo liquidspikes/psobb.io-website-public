@@ -183,7 +183,8 @@ foreach ($clients as $client) {
     $curr_playtime = $client['PlayTimeSeconds'] ?? 0;
     $prev_playtime = $prev_state['playtime'] ?? $curr_playtime;
     
-    $curr_chal = count($client['ChallengeTimes'] ?? []);
+    // Cleared Challenge stages (newserv reports every stage's time; 0 = not cleared)
+    $curr_chal = count(array_filter(array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []), function ($t) { return (int) $t > 0; }));
     $prev_chal = $prev_state['chal'] ?? $curr_chal;
     
     $curr_mats = ($client['NumHPMaterialsUsed'] ?? 0) + ($client['NumTPMaterialsUsed'] ?? 0) + ($client['NumPowerMaterialsUsed'] ?? 0) + ($client['NumDefMaterialsUsed'] ?? 0) + ($client['NumMindMaterialsUsed'] ?? 0) + ($client['NumEvadeMaterialsUsed'] ?? 0) + ($client['NumLuckMaterialsUsed'] ?? 0);

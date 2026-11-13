@@ -266,8 +266,8 @@ foreach ($clients as $client) {
     // However, new missions will strictly be tied to a character.
     // New kills since the last pass (boss events from cron_boss_tracker.php; enemy and rare-enemy
     // counts from newserv's EnemyKillCount / RareEnemyKillCount when the server reports them)
-    $kills = bounty_kill_deltas($client, $prev_state, $boss_kill_events[$stateKey] ?? []);
     $lobby_info = ($lobby_id !== null) ? ($lobby_info_map[$lobby_id] ?? null) : null;
+    $kills = bounty_kill_deltas($client, $prev_state, $boss_kill_events[$stateKey] ?? [], $lobby_info);
     $completed_this_pass = [];
 
     $stmt = $db->prepare("SELECT pm.id, pm.mission_id, u.discord_id, pm.character_name, m.title AS mission_title, m.description AS mission_desc, m.goal_type, m.goal_target, m.reward_item_string,
@@ -354,8 +354,9 @@ foreach ($clients as $client) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'CHALLENGE_STAGES') {
+            // newserv always reports all 9 + 5 stage times (0 = not cleared), so count the cleared ones
             $c_times = array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []);
-            if (count($c_times) >= (int)$m['goal_target']) {
+            if (count(array_filter($c_times, function ($t) { return (int) $t > 0; })) >= (int)$m['goal_target']) {
                 $completed = true;
             }
         } elseif (strpos($m['goal_type'], 'MAT') === 0) {
@@ -709,8 +710,8 @@ foreach ($clients as $client) {
                     }
                 }
             }
-        } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT'], true)) {
-            // Weekly objectives of the Bounty System Rework (progress kept in player_missions.progress)
+        } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true)) {
+            // Objectives of the Bounty System Rework with progress (kept in player_missions.progress)
             $completed = bounty_evaluate_weekly($db, $m, $client, $lobby_info, $kills, $lobby_info_map);
         }
 

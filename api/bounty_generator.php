@@ -150,8 +150,9 @@ function bounty_pick_objective(array $client, $curr_f, array $active_mission_typ
             $selected_target_friendly = $selected_target_id . " total Battle Mode wins";
             break;
         case 'CHALLENGE_STAGES':
+            // newserv reports every stage's time (0 = not cleared): count the cleared ones
             $c_times = array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []);
-            $selected_target_id = count($c_times) + 1;
+            $selected_target_id = count(array_filter($c_times, function ($t) { return (int) $t > 0; })) + 1;
             $selected_target_friendly = $selected_target_id . " total Challenge Stages cleared";
             break;
         case 'EXPLORATION':

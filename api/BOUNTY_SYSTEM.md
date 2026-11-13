@@ -2,7 +2,7 @@
 
 This implements the [Bounty System Rework](https://feedback.psobb.io/posts/12/bounty-system-rework) feedback post: bounty tiers, daily and weekly bounties, slots and earning caps, bounties that drop from bosses and rare enemies, Battle and Challenge Mode pools, expiry at the reset, a free reroll for team bounties, and rewards by tier whose stats stay hidden until the claim.
 
-All of it is in `api/bounty_system.php`. The numbers are in `bounty_default_config()` and can be overridden in `config/bounties.json`; `config/bounties.example.json` shows the format. Setting `"enabled": false` brings back the original flow: up to 3 bounties, with a 10% chance of a new one each minute.
+The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.php`. The numbers are in `bounty_default_config()` and `bounty_reward_defaults()` and can be overridden in `config/bounties.json` (rewards under `reward_engine`); `config/bounties.example.json` shows the format. Setting `"enabled": false` brings back the original flow: up to 3 bounties, with a 10% chance of a new one each minute.
 
 ## At a glance
 
@@ -12,7 +12,7 @@ All of it is in `api/bounty_system.php`. The numbers are in `bounty_default_conf
 | Weekly | 3 | Being logged in (3% chance a minute), plus one for each weekly finished | 10 earned per week |
 | Drop | 5, their own | Boss kills (5–18% chance by difficulty) and rare-enemy kills (10–30%) | At most 10 held (active + waiting); after that nothing drops |
 | Battle Mode | 3 dailies | Playing Battle Mode (25% chance a minute) | 3 per day |
-| Challenge Mode | 3 weeklies | Playing Challenge Mode (25% chance a minute) | 3 per week |
+| Challenge Mode | 3 weeklies, any tier | Playing Challenge Mode (25% chance a minute) | 3 per week |
 
 - Slots and caps are per character by default. Set `"limit_scope": "account"` to share them across an account's characters.
 - A bounty earned while its slots are full waits under **Up next** on the bounty board. When a slot of its kind frees up, the oldest waiting bounty starts. The objective and the story are written at that point, so they are set against the hunter's level and stats on the day it starts.
@@ -22,19 +22,76 @@ All of it is in `api/bounty_system.php`. The numbers are in `bounty_default_conf
 
 ## Tiers
 
-| Tier | Where it comes from | Reward (bases shown on the board; stats rolled on claim) |
+| Tier | Where it comes from | Reward (stats rolled on claim) |
 |---|---|---|
-| Common | Free and drop bounties | 2–3 tools and consumables in stacks, picked by level, plus Meseta |
-| Uncommon | Free and drop bounties | 1–2 pieces of common equipment for the hunter's class, picked 10 levels ahead. Light stats: up to 2 attributes, small DEF/EVP bonuses, 0–1 slots |
-| Rare | Free and drop bounties | One rare (weapon, armor, shield or unit), or common equipment with better attributes and a chance of hit %. Picked 10 levels ahead |
-| Ultra Rare | Drops only, in a party of 2 or more (Multi mode) | A Mag cell, a Mag-evolution item or a combination item, plus rare equipment picked 50 levels ahead for **any** class. Strong stats |
-| Mythic Rare | Drops only, when playing alone (Solo mode, or alone in a Multi-mode room, where the odds are ×1.5) | Parasitic Gene "Flow", a Photon Crystal or a Heaven Striker Coat, plus rare equipment picked 50 levels ahead for any class. The strongest stats |
+| Common | Free, drop, Battle and Challenge bounties | 2–3 tools and consumables in stacks, picked by level, plus a few Photon Drops and Meseta |
+| Uncommon | Free, drop, Battle and Challenge bounties | 1–2 pieces of common equipment for the hunter's class, picked 10 levels ahead, with light stats |
+| Rare | Free, drop, Battle and Challenge bounties | One rare that drops 1/500 to 1/5000 a kill for the hunter's Section ID, usable by their class, from the bounty's area |
+| Ultra Rare | Drops in a party of 2 or more, and Challenge bounties | One rare that drops rarer than 1/5000 a kill for the hunter's Section ID (or never for it), for any class, from the bounty's area |
+| Mythic Rare | Drops when playing alone, and Challenge full runs | One item no enemy or box drops (combination and quest-reward items), for any class. A Challenge full run pays one of the rarest drops in the game instead. Always one Photon Sphere |
 
-- Free bounties are Common 60%, Uncommon 30% and Rare 10%. The drop odds depend on difficulty; see `drops.tier_weights`.
+- Free bounties are Common 60%, Uncommon 30% and Rare 10%. Challenge bounties are Common 45%, Uncommon 30%, Rare 17%, Ultra Rare 6% and Mythic Rare 2%. The drop odds depend on difficulty; see `drops.tier_weights`.
 - Ultra and Mythic drops are weeklies. A Rare drop is a weekly half the time. The rest are dailies.
 - Nothing drops in Battle or Challenge Mode games.
-- Attribute and hit caps scale with the difficulty the bounty came from: Normal ×0.6, Hard ×0.8, Very Hard ×1.0, Ultimate ×1.2. Values move in steps of 5.
-- The item bases are picked when the bounty is earned, and the board shows them. Attributes, hit, slots and DEF/EVP bonuses roll once, when the player claims. The result is saved before the item is dropped, so a failed drop retries with the same item. The claim message tells the player what they got.
+- **The reward is chosen when the bounty starts**, because it comes from the area the objective sends the hunter to. Waiting bounties show "Chosen when it starts". A reroll keeps the reward.
+- The board shows the item and its Photon Drops and Meseta. Attributes, hit, slots and DEF/EVP bonuses roll once, when the player claims. The result is saved before the item is dropped, so a failed drop retries with the same item. The claim message tells the player what they got.
+
+## Rewards
+
+Rare, Ultra Rare and Mythic Rare items come from Blue Burst's own drop data, in `api/data/bounty_items.json` (see Data, below).
+
+**Rarity, per Section ID.** An item's rate is its best chance per kill (or per box) for the hunter's own Section ID, over every enemy, box, area and difficulty that drops it. Rare enemies count with their spawn chance (1/500; Kondrieu 1/10). Final bosses always drop.
+
+| Band | Rate per kill | Bounty tier |
+|---|---|---|
+| Common rares | 1/500 or better | none: normal play is already the best source |
+| Rare | 1/500 to 1/5000 | Rare |
+| Very rare | rarer than 1/5000, or not for this Section ID | Ultra Rare |
+| Never dropped | combination and quest-reward items | Mythic Rare |
+| Rarest in the game | rarer than 1/5000 for every Section ID (35 items) | Mythic Rare Challenge full runs only |
+
+**The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill of its best enemy for that Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 380,000 item chances).
+
+**Area.** Items must drop in the bounty's area:
+
+- an objective in a place (a floor, a boss) uses that place's lore setting;
+- a drop whose objective isn't tied to a place uses the area it dropped in;
+- a Challenge bounty uses its stages' areas;
+- anything else uses its episode.
+
+A pool smaller than 6 items widens: first to lower strength classes, then to the whole episode, then anywhere. The spec records how far it widened (`pool`).
+
+**Strength class.** The item's level requirement for the hunter's class (for units, mags and tools, a level from its stars). It must be no higher than the hunter's level plus a head start (Rare +10, Ultra Rare +30, Mythic Rare +50), and at most one class (`1–20, 21–40, 41–60, 61–80, 81–100, 101–130, 131–160, 161–200`) below that. Rare items must be usable by the hunter's class; Ultra and Mythic Rare may be for any class.
+
+**Weapon stats.**
+
+- At most 2 attributes, plus hit.
+- The first attribute is drawn from the area's enemies, by their share of Native, A.Beast, Machine and Dark enemies there (`api/data/bounty_areas.json`). Boss objectives weigh in the boss's own class.
+- The second attribute comes from the area's other enemy classes. Where the area has only one class (each Episode 1 area), it comes from the rest of the episode.
+- Caps at level 200: Uncommon 30, Rare 50, Ultra Rare 70, Mythic Rare 90. They scale down to 40% at level 1.
+- Hit: Rare 25% chance (up to 25), Ultra Rare 45% (up to 40), Mythic Rare 65% (up to 50).
+- Attributes never pass 90 and hit never passes 50. Values move in steps of 5.
+- A Challenge full-run weapon always has 2 attributes of 60–90 and hit 30–50, at any level.
+
+**Armor and shields.** DEF and EVP bonuses come from the item's own bonus range, scaled by tier and level. Armor slots: Uncommon 0–1, Rare 1–3, Ultra Rare 2–4, Mythic Rare 3–4.
+
+**Photon Drops** are paid like a currency, as items:
+
+| Tier | Common | Uncommon | Rare | Ultra Rare | Mythic Rare |
+|---|---|---|---|---|---|
+| Photon Drops (at level 200) | 0–2 | 1–5 | 4–15 | 20–60 | 99–150 |
+
+- They scale down to half at level 1 (except Mythic Rare). Challenge bounties scale with their stages' length (×0.5 to ×2).
+- 99 Photon Drops make one Photon Sphere, the Gallon's Shop exchange rate. A bounty pays at most one Photon Sphere, and the rest (up to 99) as one stack of Photon Drops.
+
+**Never rewards.**
+
+- Challenge Mode prizes: the S-rank weapons, Gods Shields Suzaku and Byakko, Yellow Ring, and Hunter, Ranger and Force Field.
+- Items that can't be obtained, and the Easter Egg (a seasonal drop).
+- Seasonal quest tools and the Dirty Lifejacket.
+- Exchange-only items, until they are reviewed: list the ones to allow in `reward_engine.exchange_allow`.
+
+Bounties started before this update keep their old reward and roll it with `roll_profiles`, under the same limits (2 attributes, 90, hit 50).
 
 ## Objectives
 
@@ -47,7 +104,27 @@ All of it is in `api/bounty_system.php`. The numbers are in `bounty_default_conf
   - `LEVEL`: gain 3–5 levels.
 
   Each counts only in Normal-mode or Solo games at that difficulty or higher. Weeklies never require Ultimate, except Mythic Rare ones. Progress is saved in `player_missions.progress` and shown on the board, for example "4 / 10 areas".
-- **Battle Mode** bounties ask for 1–2 more Battle wins. **Challenge Mode** bounties ask for 2–4 more Challenge stages.
+- **Battle Mode** bounties (`BATTLE_RULE_WINS`, target `quest:wins`, e.g. `503:2`) ask for 1–3 wins (Common, Uncommon, Rare) under one of the eight rule sets, named on the board with its rules:
+
+  > Win 2 Battle Mode matches of Battle 3: Warp Battle (Spaceship, everyone at Lv5 (+3 per death), start with nothing, no Mags, techniques up to Lv1, 10 lives, no Meseta, 10 of each slow/confuse/freeze trap, 10 min)
+
+  The rules come from the battle quests' own scripts (`api/data/battle_rule_sets.json`). Blue Burst reports battle records when the player leaves the game, so a win is credited to the battle quest (501–508) the character was last seen in.
+- **Challenge Mode** bounties (`CHALLENGE_RUN`, target `episode:first-last:limit_seconds:pace`) name stages and a pace:
+
+  | Tier | Objective | Example |
+  |---|---|---|
+  | Common | one stage, any time (B) | Clear Episode 1 Challenge Mode Stage 4 |
+  | Uncommon | one stage at A pace | … Stage 6 in under 1 h 33 min (A pace) |
+  | Rare | one stage at S pace | … Stage 6 in under 50 min (S pace) |
+  | Ultra Rare | 2–3 stages at S pace or 3–4 at A pace, on their combined time | … Stages 3–5 with a combined time under 3 h 54 min (A pace) |
+  | Mythic Rare | a full run, at S-rank pace | Complete an Episode 1 Challenge Mode run (Stages 1–9) with a combined time under 7 h (S rank) |
+
+  - Each stage's **S pace** is its share of the S-rank time. They add up to the S-rank limits (7 h and 5 h): Ep1 13, 47, 40, 45, 40, 50, 60, 55, 70 min; Ep2 65, 55, 45, 85, 50 min.
+  - **A pace** is S pace × A/S, using the limits in newserv's stage scripts: Ep1 13 h / 7 h, Ep2 7 h / 5 h. Some wikis give 9 h for Episode 2 A rank; the script's 7 h is what the game checks on this server.
+  - **B rank** has no real limit (99 h), so B is any clear.
+  - Several stages are judged on their combined time, as the game judges rank. The best time per stage since the bounty started counts, so a faster replay helps.
+  - The stage offered is one the character can enter: up to their highest cleared stage + 1 (stages unlock in order). Full runs start at Stage 1.
+  - All stages are played on Normal with fixed levels and gear, so the objective has no difficulty.
 - **Reroll:** a bounty that needs a particular party (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`) can be rerolled once for free from the board (`api/reroll_bounty.php`). It keeps its tier, reward and slot. It gets a new objective and story the next time the character is online. The new objective is never another team objective, and it cannot be rerolled again.
 - Gemini still writes every story through the lore-grounded prompt (`api/bounty_lore.php`). The prompt now also gives the tier and kind ("Rare (weekly)"), and for drops what the hunter defeated. Weekly hunts aren't tied to one area.
 
@@ -59,11 +136,17 @@ All of it is in `api/bounty_system.php`. The numbers are in `bounty_default_conf
 - **JSON endpoints.** `api/my_bounties.php` and `api/my_bounties_all.php` return the new fields: `tier_label`, `kind`, `expires_in`, `progress_text`, `stats_hidden` and `can_reroll`. They also include waiting and rerolling bounties and a `slots` summary. `api/bot_api.php` adds `tier_label`, `kind` and `progress_text` to each mission.
 - **Reward names.** `renderRewardString()` drops the `x1` that `item_map.json` puts on stackable items ("Telepipe x4", not "Telepipe X1 x4"). For the few codes whose `item_map.json` name is a bare number (030E15 showed as "3"), it uses newserv's `names-v4.json` instead.
 
-## Kill tracking: the newserv patch
+## Kill and clear tracking: the newserv patches
 
-`ENEMY_HUNT`, `RARE_HUNT` and rare-enemy drops need three fields that stock newserv doesn't report: `EnemyKillCount`, `RareEnemyKillCount` and `LastRareEnemyKilled` in `/y/clients`. The patch `0001-Report-enemy-and-rare-enemy-kill-counts-in-y-clients.patch` (for fuzziqersoftware/newserv) adds them. It counts the killing blow for each player, in `on_enemy_exp_request_bb`, using newserv's own rare-enemy test.
+Two small patches for fuzziqersoftware/newserv add fields to `/y/clients`:
 
-Without the patch the site still works. Weeklies just don't offer the two kill objectives, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
+1. `0001-Report-enemy-and-rare-enemy-kill-counts-in-y-clients.patch`: `EnemyKillCount`, `RareEnemyKillCount` and `LastRareEnemyKilled`. It counts the killing blow for each player, in `on_enemy_exp_request_bb`, using newserv's own rare-enemy test. `ENEMY_HUNT`, `RARE_HUNT` and rare-enemy drops need it.
+2. `0002-Report-Challenge-Mode-stage-clears-in-y-clients.patch`: `ChallengeClearCount` and `LastChallengeClear` (`QuestNumber`, `StageNumber`, `Seconds`). It counts each stage clear when the stage's time is set (6x95), once per player. Challenge quests are numbered 881NN (Episode 1 stage NN) and 882NN (Episode 2).
+
+Without the patches the site still works:
+
+- Weeklies don't offer the two kill objectives, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
+- Challenge clears are read from changes to the stage record times (`ChallengeTimesEp1Online`, `ChallengeTimesEp2Online`). That misses replays slower than the record.
 
 ## Bounty states
 
@@ -89,19 +172,38 @@ Bounties from before the rework have no cadence. They keep working as before: th
 
 1. Expire anything past its reset.
 2. For each online player:
-   1. Work out kills since the last pass.
+   1. Work out kills, Challenge clears and Battle wins since the last pass.
    2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()`.
    3. Then `bounty_tick_for_client()`:
       - roll drops for new boss and rare-enemy kills;
       - earn bounties for completions, being logged in and Battle/Challenge play (each under its cap);
-      - start at most one waiting or rerolling bounty. Each start is one Gemini call.
+      - start at most one waiting or rerolling bounty: its objective, story (one Gemini call) and reward.
 3. Kill counters are saved in the cron's player state file. Kills from before a character was first seen don't count.
+
+## Data
+
+`api/data/` is generated from newserv's Blue Burst tables and quests:
+
+```
+python3 tools/bounty_data/build.py --newserv /path/to/newserv
+```
+
+| File | What it holds |
+|---|---|
+| `bounty_items.json` | Every BB item: name, kind, stars, how it is obtained, rate per Section ID, best source, where it drops (lore setting and episode), level requirement per class, DEF/EVP ranges, exchanges, quest rewards, combinations |
+| `bounty_areas.json` | Each lore setting, floor and Challenge stage: its drop setting and its enemies' class shares |
+| `battle_rule_sets.json` | The eight Battle Mode rule sets, decoded from the quest scripts |
+| `challenge_mode.json` | Challenge stages, rank limits and prizes, from the stage scripts |
+| `quest_item_lists.json` | Items each BB quest can create |
+
+`tools/bounty_data/enemy_settings.json` maps enemies and boxes to lore settings, and `tools/bounty_data/area_classes.json` holds each area's enemy-class shares (from the BB spawn files; classes from community enemy databases, cross-checked against the Episode III card data).
 
 ## Testing
 
 ```
-php api/test_bounty_system.php   # caps, queue, drops, tier rules, pools, weeklies, expiry, reroll, reward rolls
-php api/test_bounty_lore.php     # the lore-grounded prompt
+php api/test_bounty_system.php        # caps, queue, drops, tier rules, pools, objectives, expiry, reroll, rewards
+php api/test_bounty_lore.php          # the lore-grounded prompt
+php tools/bounty_data/pool_report.php # every reward pool: sizes and the 10x rule
 ```
 
 `test_bounty_system.php` uses a throwaway database and answers Gemini prompts itself, so it needs no game server or API key. `GEMINI_API_BASE` in `.env` can point the Gemini call at a stub server when running the real cron against a test game server.
@@ -111,4 +213,7 @@ php api/test_bounty_lore.php     # the lore-grounded prompt
 - A cap counts bounties *earned* per reset. Bounties earned past the 3 + 3 slots wait under Up next instead of being lost.
 - Drops have their own 5 slots and a 10-held limit, so they never block the free dailies and weeklies.
 - "Mythic only solo" covers both Solo mode and being alone in a Multi-mode room. The second gets the ×1.5 odds.
-- The "+10 / +50 levels" for equipment is applied to the level used to pick from the level-scaled reward tables. The item requirement data in `item_hex.txt` comes from several game versions and isn't reliable enough to read directly.
+- The 10x rule compares one bounty of a tier with one kill of the item's best source, for the hunter's Section ID. Rares commoner than 1/500 a kill are left to normal play, where they already come often.
+- Mythic Rare items don't drop, so they aren't tied to an area.
+- Uncommon equipment still comes from the level-scaled reward tables (common items drop everywhere).
+- A bounty's level, for strength and stat caps, is the hunter's level when it starts.

@@ -55,10 +55,14 @@ try {
         $row['tier_label'] = $row['tier'] ? bounty_tier_label($row['tier']) : null;
         $row['kind'] = $row['cadence'] ? bounty_kind_label($row['pool'], $row['cadence']) : null;
         $row['expires_in'] = (!empty($row['expires_at']) && $row['status'] !== 'ready_to_redeem') ? bounty_expiry_text($row['expires_at']) : null;
-        $row['progress_text'] = in_array($row['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT'], true) ? bounty_progress_text($row['goal_type'], $row['goal_target'], $row['progress']) : null;
+        $row['progress_text'] = in_array($row['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true) ? bounty_progress_text($row['goal_type'], $row['goal_target'], $row['progress']) : null;
         $row['stats_hidden'] = $row['reward_spec'] ? bounty_reward_has_hidden_stats(json_decode($row['reward_spec'], true)) : false;
         $row['can_reroll'] = $row['status'] === 'in_progress' && $row['cadence'] && (int) $row['rerolled'] === 0 && in_array($row['goal_type'], bounty_config()['reroll_goal_types'], true);
         unset($row['reward_spec'], $row['progress']);
+        // Objectives whose wording needs server data (Challenge paces, Battle rule sets)
+        $row['objective_text'] = in_array($row['goal_type'], ['CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true)
+            ? html_entity_decode(strip_tags(getClearObjective($row['goal_type'], $row['goal_target'])), ENT_QUOTES)
+            : null;
         // Decode reward_item_string hex into readable item name using canonical function
         if (!empty($row['reward_item_string'])) {
             $row['reward_decoded'] = renderRewardString($row['reward_item_string']);

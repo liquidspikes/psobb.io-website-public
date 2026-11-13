@@ -24,6 +24,7 @@
  */
 require_once __DIR__ . '/bounty_generator.php';
 require_once __DIR__ . '/reward_tables.php';
+require_once __DIR__ . '/bounty_rewards.php';
 
 const BOUNTY_TIERS = ['common', 'uncommon', 'rare', 'ultra', 'mythic'];
 
@@ -85,8 +86,32 @@ function bounty_default_config()
             'weekly_tiers' => ['ultra', 'mythic'],
             'rare_weekly_chance' => 50,
         ],
-        // Points 15-16: levels of "growth" added when picking equipment from the level-scaled pools.
-        'level_delta' => ['common' => 10, 'uncommon' => 10, 'rare' => 10, 'ultra' => 50, 'mythic' => 50],
+        // Challenge Mode bounties (weeklies earned by playing Challenge Mode).
+        'challenge' => [
+            // Tier odds: Common, Uncommon, Rare, Ultra Rare, Mythic Rare.
+            'tier_weights' => [45, 30, 17, 6, 2],
+            // Each stage's S-rank pace in minutes (they add up to the S-rank limit: 7 h and 5 h).
+            'stage_minutes' => ['1' => [13, 47, 40, 45, 40, 50, 60, 55, 70], '2' => [65, 55, 45, 85, 50]],
+            // Rank limits in hours, from newserv's BB stage scripts (set_cmode_rank_threshold).
+            // A stage's A pace is its S pace times A/S. B has no real limit (99 h), so B = any clear.
+            'rank_hours' => ['1' => ['S' => 7, 'A' => 13], '2' => ['S' => 5, 'A' => 7]],
+            // Objectives by tier: [min stages, max stages, pace]. 0 stages = a full run of the episode.
+            // Several stages are judged on their combined time, like the game's own rank.
+            'tier_objectives' => [
+                'common' => [[1, 1, 'B']],
+                'uncommon' => [[1, 1, 'A']],
+                'rare' => [[1, 1, 'S']],
+                'ultra' => [[2, 3, 'S'], [3, 4, 'A']],
+                'mythic' => [[0, 0, 'S']],
+            ],
+            // Photon Drops and Meseta scale with the objective's S-pace minutes over this many.
+            'reward_minutes' => 50,
+        ],
+        // Battle Mode bounties (dailies earned by playing Battle Mode): win N matches of one rule set.
+        'battle' => [
+            'quests' => [501, 502, 503, 504, 505, 506, 507, 508],
+            'wins' => ['common' => 1, 'uncommon' => 2, 'rare' => 3],
+        ],
         // Point 14: these objectives can be rerolled once.
         'reroll_goal_types' => ['MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS'],
         'rewards' => [
@@ -99,27 +124,14 @@ function bounty_default_config()
                 ['030800', 2, 3, 3, 1], ['030A00', 1, 3, 5, 10], ['030A01', 1, 2, 4, 40],
                 ['030A02', 1, 1, 2, 80], ['030900', 1, 1, 1, 50],
             ],
-            // Point 18: Ultra Rare = Mag Cells and combination items. [hex, weight]
-            'ultra_items' => [
-                ['030C00', 6], ['030C01', 6], ['030C02', 4], ['030C03', 4], ['030C04', 4], ['030C05', 4],
-                ['030E0B', 3], ['030E0C', 3], ['030E0D', 2], ['030E0E', 2], ['030E0F', 3], ['030E10', 3],
-                ['030E11', 3], ['030E12', 3], ['030E13', 3], ['030E14', 3], ['030E15', 3], ['030E26', 2],
-                ['031806', 2], ['031807', 3], ['031808', 3], ['03180A', 3],
-                ['03180B', 2], ['03180C', 2], ['03180D', 2], ['03180E', 2], ['03180F', 2],
-                ['030D00', 3], ['030D0A', 3], ['030D0D', 3], ['030E00', 3], ['030E05', 4], ['030E06', 3],
-                ['030E09', 3], ['030E27', 3], ['031802', 3], ['031804', 3],
-            ],
-            // Point 18: Mythic Rare = the server's most coveted drops. [hex, weight]
-            'mythic_items' => [
-                ['030E01', 10], // Parasitic Gene "Flow" (PGF)
-                ['031002', 4],  // Photon Crystal
-                ['031803', 2],  // Heaven Striker Coat
-            ],
+            // Rare, Ultra Rare and Mythic Rare items come from the drop data: see 'reward_engine'
+            // (api/bounty_rewards.php, bounty_reward_defaults()).
             // Meseta per tier before the level multiplier (1 + level / 50), randomised ±50%.
             'meseta' => ['common' => 1000, 'uncommon' => 2500, 'rare' => 5000, 'ultra' => 15000, 'mythic' => 30000],
         ],
-        // Point 19: hidden stats rolled on claim, by profile; attribute and hit caps are scaled by
-        // difficulty (Normal 0.6, Hard 0.8, Very Hard 1.0, Ultimate 1.2), in steps of 5.
+        // Hidden stats for bounties earned before the data-driven rewards (api/bounty_rewards.php,
+        // whose settings are under 'reward_engine'). Caps scale by difficulty (Normal 0.6 ...
+        // Ultimate 1.2), in steps of 5, never past 2 attributes, 90 per attribute or 50 hit.
         'roll_profiles' => [
             'uncommon' => ['attrs' => [0, 2], 'attr_max' => 20, 'hit_chance' => 0, 'hit_max' => 0, 'slots' => [0, 1], 'bonus_max' => 10],
             'rare_common' => ['attrs' => [1, 3], 'attr_max' => 45, 'hit_chance' => 30, 'hit_max' => 20, 'slots' => [1, 3], 'bonus_max' => 20],
@@ -269,6 +281,7 @@ function bounty_lobby_info_map(array $lobbies)
             'difficulty' => $l['Difficulty'] ?? 'Normal',
             'mode' => $l['Mode'] ?? 'Normal',
             'players' => $players,
+            'quest_number' => isset($l['Quest']['Metadata']['QuestNumber']) ? (int) $l['Quest']['Metadata']['QuestNumber'] : null,
         ];
     }
     return $out;
@@ -441,81 +454,19 @@ function bounty_strip_rolled_stats($base, $cat)
 }
 
 /**
- * Builds the reward when the bounty is earned. Item bases are chosen now (and shown on the
- * board); attributes, hit, slots and DEF/EVP bonuses are only rolled on claim.
- *
- * @return array ['tier', 'difficulty', 'items' => [['base', 'cat', 'profile']], 'meseta']
+ * What the board shows before the claim: item bases, Photon Drops and Meseta; no stats.
+ * Empty while the bounty waits (its reward is chosen when it starts).
  */
-function bounty_build_reward_spec($tier, $level, $class, $difficulty)
+function bounty_reward_display($spec)
 {
-    $cfg = bounty_config();
-    $delta = (int) ($cfg['level_delta'][$tier] ?? 10);
-    $grow = min(200, (int) $level + $delta);
-    $items = [];
-    $pick_cat = function () {
-        $r = mt_rand(1, 100);
-        return ($r <= 45) ? 'Weapon' : (($r <= 75) ? 'Armor' : 'Shield');
-    };
-    switch ($tier) {
-        case 'common':
-            $pool = [];
-            foreach ($cfg['rewards']['common_items'] as $i => $ci) {
-                if ($level >= ($ci[4] ?? 1)) {
-                    $pool[$i] = $ci[3];
-                }
-            }
-            $n = mt_rand(2, 3);
-            for ($k = 0; $k < $n && $pool; $k++) {
-                $i = bounty_weighted_pick($pool);
-                unset($pool[$i]);
-                $ci = $cfg['rewards']['common_items'][$i];
-                $qty = mt_rand($ci[1], $ci[2]);
-                $items[] = ['base' => $ci[0] . ($qty > 1 ? " x$qty" : ''), 'cat' => 'Tool', 'profile' => null];
-            }
-            break;
-        case 'uncommon':
-            $n = mt_rand(1, 2);
-            for ($k = 0; $k < $n; $k++) {
-                $cat = $pick_cat();
-                $items[] = ['base' => bounty_strip_rolled_stats(get_common_reward_item($grow, $class, $cat), $cat), 'cat' => $cat, 'profile' => 'uncommon'];
-            }
-            break;
-        case 'rare':
-            $cat = (mt_rand(1, 100) <= 70) ? $pick_cat() : 'Unit';
-            if ($cat !== 'Unit' && mt_rand(0, 1)) {
-                // "better attributes / hit %" on standard equipment
-                $items[] = ['base' => bounty_strip_rolled_stats(get_common_reward_item($grow, $class, $cat), $cat), 'cat' => $cat, 'profile' => 'rare_common'];
-            } else {
-                $items[] = ['base' => bounty_strip_rolled_stats(get_reward_item($grow, $class, $cat), $cat), 'cat' => $cat, 'profile' => 'rare'];
-            }
-            break;
-        case 'ultra':
-        case 'mythic':
-            $list = $cfg['rewards'][$tier . '_items'];
-            $w = [];
-            foreach ($list as $i => $it) {
-                $w[$i] = $it[1];
-            }
-            $items[] = ['base' => $list[bounty_weighted_pick($w)][0], 'cat' => 'Tool', 'profile' => null];
-            // Point 16: may be for any class
-            $cat = (mt_rand(1, 100) <= 80) ? $pick_cat() : 'Unit';
-            $items[] = ['base' => bounty_strip_rolled_stats(get_reward_item($grow, bounty_random_class(), $cat), $cat), 'cat' => $cat, 'profile' => $tier];
-            break;
+    if (!is_array($spec) || !isset($spec['items'])) {
+        return '';
     }
-    $base = (int) ($cfg['rewards']['meseta'][$tier] ?? 1000);
-    $meseta = (int) (round($base * (1 + $level / 50) * mt_rand(50, 150) / 100 / 100) * 100);
-    return ['tier' => $tier, 'difficulty' => $difficulty, 'items' => $items, 'meseta' => max(100, $meseta)];
-}
-
-/**
- * What the board shows before the claim: item bases only, no stats.
- */
-function bounty_reward_display(array $spec)
-{
     $parts = [];
     foreach ($spec['items'] as $it) {
         $parts[] = $it['base'];
     }
+    $parts = array_merge($parts, bounty_photon_parts($spec));
     $parts[] = $spec['meseta'] . ' Meseta';
     return implode(', ', $parts);
 }
@@ -544,9 +495,14 @@ function bounty_scaled_cap($cap, $difficulty)
 
 /**
  * Point 19: rolls the hidden stats and returns the final reward string for the game server.
+ * Specs from before the data-driven rewards (no 'version') roll with roll_profiles, under the
+ * same limits: 2 attributes at most, attributes up to 90 and hit up to 50.
  */
 function bounty_roll_reward_string(array $spec)
 {
+    if ((int) ($spec['version'] ?? 1) >= 2) {
+        return bounty_roll_reward_string_v2($spec);
+    }
     $profiles = bounty_config()['roll_profiles'];
     $diff = $spec['difficulty'] ?? 'Normal';
     $parts = [];
@@ -555,16 +511,16 @@ function bounty_roll_reward_string(array $spec)
         $p = $it['profile'] ? ($profiles[$it['profile']] ?? null) : null;
         if ($p && $it['cat'] === 'Weapon') {
             $stats = [0, 0, 0, 0];
-            $n = mt_rand($p['attrs'][0], $p['attrs'][1]);
+            $n = min(2, mt_rand($p['attrs'][0], $p['attrs'][1]));
             $idx = [0, 1, 2, 3];
             shuffle($idx);
-            $cap = bounty_scaled_cap($p['attr_max'], $diff);
+            $cap = min(90, bounty_scaled_cap($p['attr_max'], $diff));
             for ($i = 0; $i < $n; $i++) {
                 $stats[$idx[$i]] = mt_rand(1, (int) ($cap / 5)) * 5;
             }
             $hit = 0;
             if ($p['hit_chance'] > 0 && mt_rand(1, 100) <= $p['hit_chance']) {
-                $hit = mt_rand(1, max(1, (int) (bounty_scaled_cap($p['hit_max'], $diff) / 5))) * 5;
+                $hit = mt_rand(1, max(1, (int) (min(50, bounty_scaled_cap($p['hit_max'], $diff)) / 5))) * 5;
             }
             if (array_sum($stats) > 0 || $hit > 0) {
                 $s .= ' ' . implode('/', $stats) . ($hit > 0 ? "/$hit" : '');
@@ -589,28 +545,23 @@ function bounty_roll_reward_string(array $spec)
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a queued bounty: its tier, pool, cadence and reward now; its objective and story
+ * Creates a queued bounty: its tier, pool and cadence now; its objective, story and reward
  * when it is activated.
  *
  * @return int|null player_missions id
  */
 function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $source, array $meta = [])
 {
-    $level = (int) ($client['Level'] ?? 1);
-    $class = (string) ($client['CharClass'] ?? 'HUmar');
-    $difficulty = $meta['difficulty'] ?? bounty_recommended_difficulty($level);
-    $spec = bounty_build_reward_spec($tier, $level, $class, $difficulty);
+    // The reward is chosen when the bounty starts (bounty_fill()), once its area is known.
     $now = time();
     list(, $expires) = bounty_period_bounds($cadence, $now);
 
     $ins = $db->prepare("INSERT INTO missions (title, description, goal_type, goal_target, reward_item_string, tier, cadence, pool, source, reward_spec, meta)
-                         VALUES ('', '', 'PENDING', '', :ri, :tier, :cad, :pool, :src, :spec, :meta)");
-    $ins->bindValue(':ri', bounty_reward_display($spec), SQLITE3_TEXT);
+                         VALUES ('', '', 'PENDING', '', '', :tier, :cad, :pool, :src, NULL, :meta)");
     $ins->bindValue(':tier', $tier, SQLITE3_TEXT);
     $ins->bindValue(':cad', $cadence, SQLITE3_TEXT);
     $ins->bindValue(':pool', $pool, SQLITE3_TEXT);
     $ins->bindValue(':src', $source, SQLITE3_TEXT);
-    $ins->bindValue(':spec', json_encode($spec), SQLITE3_TEXT);
     $ins->bindValue(':meta', json_encode($meta), SQLITE3_TEXT);
     if (!$ins->execute()) {
         return null;
@@ -652,7 +603,18 @@ function bounty_try_mode_earn($db, $acc, $char, array $client, $pool)
     if (bounty_earned_count($db, $acc, $char, $pool, $cadence) >= $cap) {
         return null;
     }
-    return bounty_earn($db, $acc, $char, $client, $pool, $cadence, bounty_roll_free_tier(), $pool);
+    $tier = ($pool === 'challenge') ? bounty_roll_challenge_tier() : bounty_roll_free_tier();
+    return bounty_earn($db, $acc, $char, $client, $pool, $cadence, $tier, $pool);
+}
+
+/**
+ * Challenge Mode bounties can be any tier: Ultra Rare ones span several stages, Mythic Rare ones
+ * are full runs.
+ */
+function bounty_roll_challenge_tier()
+{
+    $w = bounty_config()['challenge']['tier_weights'];
+    return bounty_weighted_pick(array_combine(BOUNTY_TIERS, array_map('floatval', array_pad($w, 5, 0))));
 }
 
 /**
@@ -661,7 +623,7 @@ function bounty_try_mode_earn($db, $acc, $char, array $client, $pool)
  * @param string $trigger 'boss' or 'rare'
  * @return array|null ['id', 'tier', 'cadence'] if one dropped
  */
-function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $what = '')
+function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $what = '', $floor = null)
 {
     $cfg = bounty_config();
     if (!$lobby || empty($lobby['is_game'])) {
@@ -682,11 +644,16 @@ function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $wha
     $weekly = in_array($tier, $cfg['drops']['weekly_tiers'], true)
         || ($tier === 'rare' && mt_rand(1, 100) <= (int) $cfg['drops']['rare_weekly_chance']);
     $cadence = $weekly ? 'weekly' : 'daily';
+    $where = bounty_area_for_floor((int) ($lobby['episode'] ?? 1), $floor ?? (int) ($client['LocationFloor'] ?? -1));
     $id = bounty_earn($db, $acc, $char, $client, 'drop', $cadence, $tier, $trigger === 'rare' ? 'rare_enemy' : 'boss', [
         'difficulty' => $lobby['difficulty'],
         'mode' => $lobby['mode'],
         'party' => (int) $lobby['players'],
         'dropped_by' => $what,
+        // Where it dropped: its reward comes from there if its objective isn't tied to an area
+        'episode' => (int) ($lobby['episode'] ?? 1),
+        'area' => $where['setting'] ?? null,
+        'area_attributes' => $where['attributes'] ?? null,
     ]);
     return $id ? ['id' => $id, 'tier' => $tier, 'cadence' => $cadence] : null;
 }
@@ -696,13 +663,82 @@ function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $wha
 // ---------------------------------------------------------------------------
 
 /**
+ * Challenge stages cleared since the last pass: [[episode, stage, seconds], ...].
+ * With the newserv patch (ChallengeClearCount / LastChallengeClear in /y/clients) every clear
+ * counts. Without it, a clear shows when a stage's record time in ChallengeTimesEp1Online /
+ * ChallengeTimesEp2Online changes, which misses replays slower than the record.
+ *
+ * @return array [clears, state to save]
+ */
+function bounty_challenge_clear_deltas(array $client, array $prev_state)
+{
+    $clears = [];
+    $state = [];
+    if (isset($client['ChallengeClearCount'])) {
+        $cur = (int) $client['ChallengeClearCount'];
+        $state['bounty_challenge_clears'] = $cur;
+        if (isset($prev_state['bounty_challenge_clears'])) {
+            $prev = (int) $prev_state['bounty_challenge_clears'];
+            $new = ($cur >= $prev) ? $cur - $prev : $cur; // lower = reconnected
+            $last = $client['LastChallengeClear'] ?? null;
+            if ($new > 0 && is_array($last)) {
+                $qn = (int) ($last['QuestNumber'] ?? -1);
+                // Challenge quests are numbered 881NN (Episode 1) and 882NN (Episode 2)
+                if ($qn >= 88101 && $qn <= 88299 && in_array(intdiv($qn, 100), [881, 882], true)) {
+                    $clears[] = [intdiv($qn, 100) - 880, $qn % 100, (int) ($last['Seconds'] ?? 0)];
+                }
+            }
+        }
+        return [$clears, $state];
+    }
+    foreach ([1, 2] as $ep) {
+        $times = array_map('intval', $client["ChallengeTimesEp{$ep}Online"] ?? []);
+        $state["bounty_challenge_times_ep{$ep}"] = $times;
+        $prev = $prev_state["bounty_challenge_times_ep{$ep}"] ?? null;
+        if (!is_array($prev)) {
+            continue; // first sight
+        }
+        foreach ($times as $i => $t) {
+            if ($t > 0 && $t !== (int) ($prev[$i] ?? 0)) {
+                $clears[] = [$ep, $i + 1, $t];
+            }
+        }
+    }
+    return [$clears, $state];
+}
+
+/**
+ * Battle wins since the last pass, credited to the rule set (battle quest number) the character
+ * was last seen playing. Blue Burst reports battle records when the player leaves the game, so a
+ * win shows up after the battle room is left.
+ *
+ * @return array [['quest' => n|null, 'wins' => n], state to save]
+ */
+function bounty_battle_win_deltas(array $client, array $prev_state, $lobby)
+{
+    $quest = $prev_state['bounty_battle_quest'] ?? null;
+    if ($lobby && !empty($lobby['is_game']) && ($lobby['mode'] ?? '') === 'Battle' && !empty($lobby['quest_number'])) {
+        $quest = (int) $lobby['quest_number'];
+    }
+    $cur = (int) ($client['BattlePlaceCounts'][0] ?? 0);
+    $wins = 0;
+    if (isset($prev_state['bounty_battle_firsts'])) {
+        $prev = (int) $prev_state['bounty_battle_firsts'];
+        $wins = ($cur > $prev) ? $cur - $prev : 0;
+    }
+    return [['quest' => $quest, 'wins' => $wins], ['bounty_battle_firsts' => $cur, 'bounty_battle_quest' => $quest]];
+}
+
+/**
  * New kills since the last cron pass. Enemy and rare-enemy counts need the newserv patch
  * (EnemyKillCount / RareEnemyKillCount in /y/clients); boss kills come from cron_boss_tracker.php.
  *
  * @return array enemy, rare, rare_name, has_counters, boss_events (new ones), state (to save)
  */
-function bounty_kill_deltas(array $client, array $prev_state, array $boss_events)
+function bounty_kill_deltas(array $client, array $prev_state, array $boss_events, $lobby = null)
 {
+    list($clears, $cstate) = bounty_challenge_clear_deltas($client, $prev_state);
+    list($battle, $bstate) = bounty_battle_win_deltas($client, $prev_state, $lobby);
     $has = isset($client['EnemyKillCount']);
     $enemy = $rare = 0;
     if ($has) {
@@ -731,7 +767,9 @@ function bounty_kill_deltas(array $client, array $prev_state, array $boss_events
         'rare_name' => $client['LastRareEnemyKilled'] ?? '',
         'has_counters' => $has,
         'boss_events' => $new_events,
-        'state' => [
+        'challenge_clears' => $clears,
+        'battle_wins' => $battle,
+        'state' => $cstate + $bstate + [
             'bounty_enemy_kills' => $has ? (int) $client['EnemyKillCount'] : null,
             'bounty_rare_kills' => $has ? (int) ($client['RareEnemyKillCount'] ?? 0) : null,
             // First sight of a player: don't treat kills from before tracking began as new.
@@ -767,7 +805,7 @@ function bounty_weekly_difficulty($level, $tier)
  */
 function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kills, array $lobby_map)
 {
-    list($n, $diff) = bounty_parse_weekly_target($m['goal_target']);
+    list($n, $diff) = in_array($m['goal_type'], ['CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true) ? [0, 'Normal'] : bounty_parse_weekly_target($m['goal_target']);
     $need = bounty_difficulty_rank($diff);
     $p = json_decode((string) ($m['progress'] ?? ''), true) ?: [];
     $here_ok = $lobby && !empty($lobby['is_game']) && in_array($lobby['mode'], ['Normal', 'Solo'], true)
@@ -799,6 +837,41 @@ function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kil
                 }
             }
             $done = (int) ($p['count'] ?? 0) >= $n;
+            break;
+        case 'CHALLENGE_RUN':
+            // Best time per stage since the bounty started; done when every stage is cleared within
+            // the limit (several stages: on their combined time, like the game's rank).
+            $c = bounty_parse_challenge_target($m['goal_target']);
+            $best = $p['best'] ?? [];
+            foreach ($kills['challenge_clears'] ?? [] as list($ep, $stage, $secs)) {
+                if ($ep === $c['episode'] && $stage >= $c['first'] && $stage <= $c['last'] && $secs > 0) {
+                    $k = (string) $stage;
+                    if (!isset($best[$k]) || $secs < (int) $best[$k]) {
+                        $best[$k] = $secs;
+                        $changed = true;
+                    }
+                }
+            }
+            $p['best'] = $best;
+            $sum = 0;
+            $all = true;
+            for ($st = $c['first']; $st <= $c['last']; $st++) {
+                if (!isset($best[(string) $st])) {
+                    $all = false;
+                    break;
+                }
+                $sum += (int) $best[(string) $st];
+            }
+            $done = $all && ($c['limit'] === 0 || $sum <= $c['limit']);
+            break;
+        case 'BATTLE_RULE_WINS':
+            list($quest, $need_wins) = bounty_parse_battle_target($m['goal_target']);
+            $bw = $kills['battle_wins'] ?? ['quest' => null, 'wins' => 0];
+            if ($bw['wins'] > 0 && (int) $bw['quest'] === $quest) {
+                $p['count'] = (int) ($p['count'] ?? 0) + (int) $bw['wins'];
+                $changed = true;
+            }
+            $done = (int) ($p['count'] ?? 0) >= $need_wins;
             break;
         case 'ENEMY_HUNT':
         case 'RARE_HUNT':
@@ -844,19 +917,31 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
     $obj['location_override'] = null;
 
     if ($pool === 'battle') {
-        $wins = (int) ($client['BattlePlaceCounts'][0] ?? 0);
-        $obj['selected_goal'] = 'BATTLE_WINS';
-        $obj['selected_target_id'] = $wins + mt_rand(1, 2);
-        $obj['selected_target_friendly'] = $obj['selected_target_id'] . ' total Battle Mode wins';
+        $target = bounty_pick_battle_objective($tier);
+        list($quest) = bounty_parse_battle_target($target);
+        $rules = bounty_battle_rule_summary($quest);
+        $obj['selected_goal'] = 'BATTLE_RULE_WINS';
+        $obj['selected_target_id'] = $target;
+        $obj['selected_target_friendly'] = bounty_battle_objective_text($target);
         $obj['is_location_goal'] = false;
         list($obj['mission_episode'], $obj['setting_id']) = bounty_pick_hub_setting();
+        $obj['location_override'] = "This job is won in sanctioned battle-simulation bouts between hunters, fought in a simulator rather than on Ragol, under these rules: {$rules['name']} ({$rules['rules']}). Do not set it in a field area.";
     } elseif ($pool === 'challenge') {
-        $done = count(array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []));
-        $obj['selected_goal'] = 'CHALLENGE_STAGES';
-        $obj['selected_target_id'] = $done + mt_rand(2, 4);
-        $obj['selected_target_friendly'] = $obj['selected_target_id'] . ' total Challenge Stages cleared';
+        $ch = bounty_pick_challenge_objective($client, $tier);
+        $obj['selected_goal'] = 'CHALLENGE_RUN';
+        $obj['selected_target_id'] = $ch['target'];
+        $obj['selected_target_friendly'] = bounty_challenge_objective_text($ch['target']);
         $obj['is_location_goal'] = false;
-        list($obj['mission_episode'], $obj['setting_id']) = bounty_pick_hub_setting();
+        $obj['mission_episode'] = $ch['episode'];
+        $obj['setting_id'] = bounty_lore()['world']['hubs'][(string) $ch['episode']] ?? (($ch['episode'] === 2) ? 'ep2_lab' : 'ep1_pioneer2');
+        $obj['location_override'] = 'This job is a Challenge Mode trial: a set course where the team starts over with basic, issued gear and must clear it against the clock. '
+            . ($ch['full'] ? "It is the whole Episode {$ch['episode']} course, start to finish, a long and demanding run." : 'Name the course only in general terms.');
+        $obj['difficulty'] = 'Normal'; // every Challenge stage is played on Normal
+        $obj['reward_area'] = bounty_challenge_reward_area($ch['episode'], $ch['first'], $ch['last']);
+        $obj['reward_opts'] = [
+            'challenge_reserve' => $ch['full'] && $tier === 'mythic',
+            'scale' => max(0.5, min(2.0, $ch['minutes'] / max(1, (int) bounty_config()['challenge']['reward_minutes']))),
+        ];
     } elseif ($cadence === 'weekly') {
         $diff = bounty_weekly_difficulty($level, $tier);
         $choices = ['AREA_SWEEP', 'AREA_SWEEP', 'BOSS_HUNT', 'BOSS_HUNT'];
@@ -911,6 +996,9 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         'Bounty tier: ' . bounty_tier_label($tier) . ' (' . strtolower(bounty_kind_label($pool, $cadence)) . '). '
         . (in_array($tier, ['ultra', 'mythic'], true) ? 'An exceptional job: let the client and the stakes be worthy of it.' : 'Let the stakes fit the tier.'),
     ];
+    if ($pool === 'challenge' && $tier === 'mythic') {
+        $obj['extra_lines'][] = 'Its reward is one of the rarest finds on Ragol, kept for hunters who complete a full trial run.';
+    }
     if ($cadence === 'weekly' && $pool !== 'challenge') {
         $obj['extra_lines'][] = 'It runs for the rest of the week, so it is a longer piece of work than a day job.';
     }
@@ -923,6 +1011,151 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         }
     }
     return $obj;
+}
+
+// ---------------------------------------------------------------------------
+// Challenge Mode and Battle Mode objectives
+// ---------------------------------------------------------------------------
+
+/**
+ * Highest Challenge stage the character has cleared in an episode (0 = none). Stages unlock in
+ * order, so a character can play any stage up to this + 1.
+ */
+function bounty_challenge_highest_cleared(array $client, $episode)
+{
+    $h = 0;
+    foreach (($client["ChallengeTimesEp{$episode}Online"] ?? []) as $i => $t) {
+        if ((int) $t > 0) {
+            $h = max($h, $i + 1);
+        }
+    }
+    return $h;
+}
+
+/**
+ * Time limit, in seconds, for stages first..last at a pace: S = the stages' S-rank pace,
+ * A = that times the A/S rank limits, B = no limit (0).
+ */
+function bounty_challenge_pace_seconds($episode, $first, $last, $pace)
+{
+    if ($pace !== 'S' && $pace !== 'A') {
+        return 0;
+    }
+    $c = bounty_config()['challenge'];
+    $mins = $c['stage_minutes'][(string) $episode] ?? [];
+    $rh = $c['rank_hours'][(string) $episode] ?? ['S' => 1, 'A' => 1];
+    $ratio = ($pace === 'A') ? ((float) $rh['A'] / max(0.01, (float) $rh['S'])) : 1.0;
+    $total = 0;
+    for ($st = $first; $st <= $last; $st++) {
+        $total += (int) ceil((float) ($mins[$st - 1] ?? 60) * $ratio);
+    }
+    return $total * 60;
+}
+
+/**
+ * A Challenge objective for a tier: one stage (Common: any clear, Uncommon: A pace, Rare: S pace),
+ * a run of stages on their combined time (Ultra Rare), or a full run of the episode (Mythic Rare).
+ * Stages start no later than one past the character's progress.
+ *
+ * @return array target, episode, first, last, minutes (S pace), full
+ */
+function bounty_pick_challenge_objective(array $client, $tier)
+{
+    $c = bounty_config()['challenge'];
+    $ep = mt_rand(0, 1) ? 1 : 2;
+    $mins = $c['stage_minutes'][(string) $ep];
+    $n = count($mins);
+    $choices = $c['tier_objectives'][$tier] ?? [[1, 1, 'B']];
+    list($kmin, $kmax, $pace) = $choices[array_rand($choices)];
+    $full = ((int) $kmin <= 0);
+    if ($full) {
+        $first = 1;
+        $last = $n;
+    } else {
+        $k = max(1, min($n, mt_rand((int) $kmin, (int) $kmax)));
+        $h = bounty_challenge_highest_cleared($client, $ep);
+        $first = mt_rand(1, max(1, min($h + 1, $n - $k + 1)));
+        $last = $first + $k - 1;
+    }
+    $limit = bounty_challenge_pace_seconds($ep, $first, $last, $pace);
+    return [
+        'target' => "$ep:$first-$last:$limit:$pace",
+        'episode' => $ep,
+        'first' => $first,
+        'last' => $last,
+        'minutes' => array_sum(array_slice($mins, $first - 1, $last - $first + 1)),
+        'full' => $full,
+    ];
+}
+
+/**
+ * The reward area of Challenge stages: items that drop in their areas, weapon attributes that fit
+ * their enemies (weighted by each stage's length).
+ */
+function bounty_challenge_reward_area($episode, $first, $last)
+{
+    $stages = bounty_area_data()['challenge_stages'][(string) $episode] ?? [];
+    $mins = bounty_config()['challenge']['stage_minutes'][(string) $episode] ?? [];
+    $settings = [];
+    $attr = array_fill_keys(BOUNTY_ATTRS, 0.0);
+    $wsum = 0.0;
+    for ($st = $first; $st <= $last; $st++) {
+        $info = $stages[$st - 1] ?? null;
+        if (!$info) {
+            continue;
+        }
+        $settings[] = $info['drop_setting'];
+        $w = (float) ($mins[$st - 1] ?? 1);
+        foreach (BOUNTY_ATTRS as $a) {
+            $attr[$a] += (float) ($info['attributes'][$a] ?? 0) * $w;
+        }
+        $wsum += $w;
+    }
+    if ($wsum > 0) {
+        foreach ($attr as $a => $v) {
+            $attr[$a] = round($v / $wsum, 3);
+        }
+    }
+    $area = bounty_reward_area(null, $episode, $wsum > 0 ? $attr : null, $settings);
+    $area['label'] = "challenge_ep{$episode}_" . (($first === $last) ? "stage{$first}" : "stages{$first}-{$last}");
+    return $area;
+}
+
+function bounty_pick_battle_objective($tier)
+{
+    $b = bounty_config()['battle'];
+    $quests = $b['quests'] ?: [501];
+    $q = (int) $quests[array_rand($quests)];
+    return $q . ':' . max(1, (int) ($b['wins'][$tier] ?? 1));
+}
+
+/**
+ * Where a bounty's reward comes from: its Challenge stages; else its objective's area (a boss's
+ * own enemy class weighs in for boss objectives); else, for a drop whose objective isn't tied to
+ * an area, the area it dropped in; else its episode.
+ */
+function bounty_objective_reward_area(array $obj, array $row)
+{
+    if (!empty($obj['reward_area'])) {
+        return $obj['reward_area'];
+    }
+    $meta = json_decode((string) ($row['meta'] ?? ''), true) ?: [];
+    $setting = $obj['setting_id'] ?? null;
+    $card = bounty_area_data()['settings'][$setting] ?? null;
+    if ((!$card || !empty($card['hub'])) && !empty($meta['area'])) {
+        return bounty_reward_area($meta['area'], $meta['episode'] ?? null, $meta['area_attributes'] ?? null);
+    }
+    $area = bounty_reward_area($setting, $obj['mission_episode'] ?? null);
+    if (in_array($obj['selected_goal'] ?? '', ['BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS'], true)) {
+        $bt = parse_boss_target((string) $obj['selected_target_id']);
+        $boss = bounty_area_for_floor($bt['episode'] ?? ($obj['mission_episode'] ?? 1), $bt['floor']);
+        if ($boss) {
+            foreach (BOUNTY_ATTRS as $a) {
+                $area['attributes'][$a] = round(0.5 * (float) ($area['attributes'][$a] ?? 0) + 0.5 * (float) ($boss['attributes'][$a] ?? 0), 3);
+            }
+        }
+    }
+    return $area;
 }
 
 // ---------------------------------------------------------------------------
@@ -947,11 +1180,19 @@ function bounty_fill($db, array $row, array $client, array $ctx)
     if (!$story) {
         return false; // stays queued/rerolling; tried again next pass
     }
-    $u = $db->prepare("UPDATE missions SET title = :t, description = :d, goal_type = :g, goal_target = :gt WHERE id = :mid");
+    // The reward is chosen now, from the bounty's area (a reroll keeps the reward it has)
+    $spec = json_decode((string) ($row['reward_spec'] ?? ''), true);
+    if (!is_array($spec) || !isset($spec['items'])) {
+        $spec = bounty_build_reward_spec_v2($row['tier'], $client, bounty_objective_reward_area($obj, $row), $obj['reward_opts'] ?? []);
+        $row['reward_item_string'] = bounty_reward_display($spec);
+    }
+    $u = $db->prepare("UPDATE missions SET title = :t, description = :d, goal_type = :g, goal_target = :gt, reward_spec = :spec, reward_item_string = :ri WHERE id = :mid");
     $u->bindValue(':t', $story['title'], SQLITE3_TEXT);
     $u->bindValue(':d', $story['description'], SQLITE3_TEXT);
     $u->bindValue(':g', $obj['selected_goal'], SQLITE3_TEXT);
     $u->bindValue(':gt', (string) $obj['selected_target_id'], SQLITE3_TEXT);
+    $u->bindValue(':spec', json_encode($spec), SQLITE3_TEXT);
+    $u->bindValue(':ri', (string) $row['reward_item_string'], SQLITE3_TEXT);
     $u->bindValue(':mid', (int) $row['mission_id'], SQLITE3_INTEGER);
     $u->execute();
     $p = $db->prepare("UPDATE player_missions SET status = 'in_progress', activated_at = :now, progress = '{}' WHERE id = :id");
@@ -986,7 +1227,7 @@ function bounty_fill($db, array $row, array $client, array $ctx)
 function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
 {
     list($scope, $sb) = bounty_scope($acc, $char);
-    $base = "SELECT pm.id, pm.mission_id, pm.status, m.tier, m.cadence, m.pool, m.meta, m.reward_item_string
+    $base = "SELECT pm.id, pm.mission_id, pm.status, m.tier, m.cadence, m.pool, m.meta, m.reward_item_string, m.reward_spec
              FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE $scope";
     $fetch = function ($sql_tail, array $binds = []) use ($db, $base, $sb) {
         $stmt = $db->prepare("$base $sql_tail");
@@ -1053,7 +1294,7 @@ function bounty_tick_for_client($db, array $client, array $ctx)
     $drops = [];
     foreach ($kills['boss_events'] as $e) {
         $el = $ctx['lobby_map'][$e['lobby_id'] ?? -1] ?? $lobby;
-        $d = bounty_try_drop($db, $acc, $char, $client, $el, 'boss', 'a boss');
+        $d = bounty_try_drop($db, $acc, $char, $client, $el, 'boss', 'a boss', isset($e['floor']) ? (int) $e['floor'] : null);
         if ($d) $drops[] = $d;
     }
     for ($i = 0; $i < $kills['rare']; $i++) {

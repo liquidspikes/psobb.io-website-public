@@ -2910,7 +2910,17 @@ function describeBountyObjective(goalType, goalTarget) {
             const what = goalType === 'BOSS_HUNT' ? (one ? 'boss' : 'bosses') : goalType === 'RARE_HUNT' ? (one ? 'rare enemy' : 'rare enemies') : (one ? 'enemy' : 'enemies');
             return `[Weekly] Defeat ${Number(n).toLocaleString()} ${what} ${where}`;
         }
-        case 'PENDING': return 'Waiting for a free slot: the objective is set when it becomes active';
+        case 'CHALLENGE_RUN': {
+            // "E:first-last:limitSeconds:pace" (the API also sends the full wording as objective_text)
+            const [ep, range = '1-1'] = String(target).split(':');
+            const [a, b = a] = range.split('-');
+            return a === b ? `[Challenge] Clear Episode ${ep} Challenge Mode Stage ${a}` : `[Challenge] Clear Episode ${ep} Challenge Mode Stages ${a}–${b}`;
+        }
+        case 'BATTLE_RULE_WINS': {
+            const [quest, wins = '1'] = String(target).split(':');
+            return `[Battle] Win ${wins} Battle Mode match${Number(wins) !== 1 ? 'es' : ''} of Battle ${Number(quest) - 500}`;
+        }
+        case 'PENDING': return 'Waiting for a free slot: the objective and reward are set when it becomes active';
         default: return `${goalType}: ${target}`;
     }
 }
@@ -3019,9 +3029,9 @@ window.loadMyBounties = async function () {
             if (activeSection && activeList) {
                 activeSection.style.display = 'block';
                 activeList.innerHTML = inProgress.map(b => {
-                    const reward = b.reward_decoded || b.reward_item_string || '';
+                    const reward = b.reward_decoded || b.reward_item_string || (b.status === 'queued' ? _t('Chosen when it starts, from the area it sends you to') : '');
                     const objective = b.status === 'rerolling' ? _t('Rerolling: a new objective arrives the next time this character is online')
-                        : describeBountyObjective(b.goal_type, b.goal_target) + (b.progress_text ? ` (${b.progress_text})` : '');
+                        : (b.objective_text ? `[${b.goal_type === 'BATTLE_RULE_WINS' ? 'Battle' : 'Challenge'}] ${b.objective_text.replace(/^\[(Battle|Challenge)\] /, '')}` : describeBountyObjective(b.goal_type, b.goal_target)) + (b.progress_text ? ` (${b.progress_text})` : '');
                     const statusLabel = b.status === 'queued' ? _t('UP NEXT') : b.status === 'rerolling' ? _t('REROLLING') : _t('IN PROGRESS');
                     return `
                     <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,10,20,0.4); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">

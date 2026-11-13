@@ -515,7 +515,7 @@ if ($action === 'get_player') {
         // Bounty System Rework fields (null on bounties from before the rework)
         $m['tier_label'] = $m['tier'] ? bounty_tier_label($m['tier']) : null;
         $m['kind'] = $m['cadence'] ? bounty_kind_label($m['pool'], $m['cadence']) : null;
-        $m['progress_text'] = in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT'], true) ? bounty_progress_text($m['goal_type'], $m['goal_target'], $m['progress']) : null;
+        $m['progress_text'] = in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true) ? bounty_progress_text($m['goal_type'], $m['goal_target'], $m['progress']) : null;
         unset($m['progress']);
         $missions[] = $m;
     }
