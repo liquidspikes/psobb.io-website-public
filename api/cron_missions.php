@@ -106,6 +106,21 @@ while (time() - $script_start < 55) {
     $floor_clear_events = file_exists($floor_clears_file) ? json_decode(file_get_contents($floor_clears_file), true) : [];
     if (!is_array($floor_clear_events)) $floor_clear_events = [];
 
+    // Each player's level when they joined their current game. Carry objectives measure the level gap
+    // with these, so carried players who level up on the way to the boss still count.
+    $game_join_level = [];
+    foreach ($clients as $gc) {
+        if (!isset($gc['Account']['AccountID'], $gc['EXP'])) continue;
+        $gk = $gc['Account']['AccountID'] . '_' . ($gc['Name'] ?? 'Unknown');
+        $glob = $gc['LobbyID'] ?? null;
+        $gps = $player_states[$gk] ?? [];
+        $game_join_level[$gk] = ($glob !== null && ($gps['game_lobby'] ?? null) === $glob && isset($gps['game_join_level']))
+            ? (int) $gps['game_join_level'] : (int) ($gc['Level'] ?? 1);
+    }
+    $join_level_of = function (array $c) use ($game_join_level) {
+        return $game_join_level[($c['Account']['AccountID'] ?? '') . '_' . ($c['Name'] ?? 'Unknown')] ?? (int) ($c['Level'] ?? 200);
+    };
+
 // 2. Iterate through all currently active players.
 foreach ($clients as $client) {
     if (!isset($client['Account']['AccountID'])) continue;
@@ -458,13 +473,13 @@ foreach ($clients as $client) {
                 echo "[CRON] Boss kill confirmed via tracker for {$charName} on floor {$tracker_kill['floor']} (EXP +{$tracker_kill['exp_delta']}, arena time {$tracker_kill['time_in_arena']}s)\n";
                 if ($m['goal_type'] === 'MENTOR_BOSS') {
                     $mentored = false;
-                    $my_level = $client['Level'] ?? 1;
+                    $my_level = $join_level_of($client); // levels as they were when each joined the game
                     $my_lobby = $client['LobbyID'] ?? -1;
                     
                     if ($my_lobby !== -1) {
                         foreach ($clients as $other_client) {
                             if (($other_client['LobbyID'] ?? -2) === $my_lobby && ($other_client['Account']['AccountID'] ?? -1) !== ($client['Account']['AccountID'] ?? -1)) {
-                                if (($other_client['Level'] ?? 200) <= ($my_level - 5)) {
+                                if ($join_level_of($other_client) <= ($my_level - 5)) {
                                     $mentored = true;
                                     break;
                                 }
@@ -494,7 +509,7 @@ foreach ($clients as $client) {
                 // =====================================================================
                 } elseif ($m['goal_type'] === 'HARDCORE_MENTOR') {
                     $mentees = [];
-                    $my_level = $client['Level'] ?? 1;
+                    $my_level = $join_level_of($client); // levels as they were when each joined the game
                     $my_lobby = $client['LobbyID'] ?? -1;
                     
                     // Scan all connected clients for party members in the same lobby
@@ -502,7 +517,7 @@ foreach ($clients as $client) {
                     if ($my_lobby !== -1) {
                         foreach ($clients as $other_client) {
                             if (($other_client['LobbyID'] ?? -2) === $my_lobby && ($other_client['Account']['AccountID'] ?? -1) !== ($client['Account']['AccountID'] ?? -1)) {
-                                if (($other_client['Level'] ?? 200) <= ($my_level - 10)) {
+                                if ($join_level_of($other_client) <= ($my_level - 10)) {
                                     $mentees[] = $other_client;
                                 }
                             }
@@ -868,6 +883,8 @@ foreach ($clients as $client) {
         'patrol' => $current_patrols,
         'patrol_seen' => $current_patrol_seen,
         'floor_entered_time' => $floor_entered_time,
+        'game_lobby' => $client['LobbyID'] ?? null,
+        'game_join_level' => $game_join_level[$stateKey] ?? (int) $curr_level,
     ] + $bounty_state;
 }
 
