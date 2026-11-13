@@ -114,6 +114,14 @@ function bounty_default_config()
         ],
         // Point 14: these objectives can be rerolled once.
         'reroll_goal_types' => ['MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS'],
+        // Objectives the rework never offers, because a day or a week is no fair measure of them:
+        // Meseta held (a bank withdrawal meets it, spending undoes it) and materials used (most drop
+        // too rarely to find in a day, they are capped per character, and using them is a build choice).
+        // Set one to false in config/bounties.json to offer it again.
+        'excluded_goal_types' => ['MESETA' => true, 'MAT_HP' => true, 'MAT_TP' => true, 'MAT_POWER' => true, 'MAT_DEF' => true,
+                                  'MAT_MIND' => true, 'MAT_EVADE' => true, 'MAT_LUCK' => true],
+        // Play time is counted from when the bounty starts (PLAY_HOURS), not as a total.
+        'play_hours' => 1,
         'rewards' => [
             // Point 17: Common = tools and consumables. [hex, min qty, max qty, weight, min level]
             'common_items' => [
@@ -805,7 +813,7 @@ function bounty_weekly_difficulty($level, $tier)
  */
 function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kills, array $lobby_map)
 {
-    list($n, $diff) = in_array($m['goal_type'], ['CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true) ? [0, 'Normal'] : bounty_parse_weekly_target($m['goal_target']);
+    list($n, $diff) = in_array($m['goal_type'], ['CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? [0, 'Normal'] : bounty_parse_weekly_target($m['goal_target']);
     $need = bounty_difficulty_rank($diff);
     $p = json_decode((string) ($m['progress'] ?? ''), true) ?: [];
     $here_ok = $lobby && !empty($lobby['is_game']) && in_array($lobby['mode'], ['Normal', 'Solo'], true)
@@ -873,6 +881,18 @@ function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kil
             }
             $done = (int) ($p['count'] ?? 0) >= $need_wins;
             break;
+        case 'PLAY_HOURS':
+            // Play time since the bounty started (newserv's PlayTimeSeconds for the character)
+            list($need_s, $start) = bounty_parse_play_target($m['goal_target']);
+            if (isset($client['PlayTimeSeconds'])) {
+                $played = max(0, (int) $client['PlayTimeSeconds'] - $start);
+                if (intdiv($played, 60) !== intdiv((int) ($p['seconds'] ?? 0), 60)) {
+                    $changed = true; // saved once a minute
+                }
+                $p['seconds'] = $played;
+            }
+            $done = (int) ($p['seconds'] ?? 0) >= $need_s;
+            break;
         case 'ENEMY_HUNT':
         case 'RARE_HUNT':
             $add = ($m['goal_type'] === 'ENEMY_HUNT') ? $kills['enemy'] : $kills['rare'];
@@ -907,7 +927,7 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
     $pool = $row['pool'];
     $cadence = $row['cadence'];
     $level = (int) ($client['Level'] ?? 1);
-    $exclude = ['BATTLE_WINS', 'CHALLENGE_STAGES'];
+    $exclude = array_merge(['BATTLE_WINS', 'CHALLENGE_STAGES'], array_keys(array_filter(bounty_config()['excluded_goal_types'])));
     if (($row['status'] ?? '') === 'rerolling') {
         // A reroll replaces a team objective; don't hand back another one.
         $exclude = array_merge($exclude, bounty_config()['reroll_goal_types']);
@@ -915,6 +935,13 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
     $base = bounty_pick_objective($client, $curr_f, $active_types, ['exclude' => $exclude]);
     $obj = $base;
     $obj['location_override'] = null;
+    if ($obj['selected_goal'] === 'PLAYTIME') {
+        // "Reach N total hours" becomes play time counted from now: "<seconds needed>:<play time now>"
+        $hours = max(1, (int) bounty_config()['play_hours']);
+        $obj['selected_goal'] = 'PLAY_HOURS';
+        $obj['selected_target_id'] = ($hours * 3600) . ':' . (int) ($client['PlayTimeSeconds'] ?? 0);
+        $obj['selected_target_friendly'] = ($hours === 1) ? '1 hour of play' : "$hours hours of play";
+    }
 
     if ($pool === 'battle') {
         $target = bounty_pick_battle_objective($tier);

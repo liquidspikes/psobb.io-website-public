@@ -126,7 +126,11 @@ Bounties started before this update keep their old reward and roll it with `roll
 
 ## Objectives
 
-- **Dailies** use the existing objectives (bosses, speedruns, patrols, items, techniques, materials and so on). Battle and Challenge objectives are kept for their own pools.
+- **Dailies** use the existing objectives (bosses, speedruns, patrols, items, techniques and so on). Battle and Challenge objectives are kept for their own pools.
+  - A day or a week is no fair measure of some old objectives, so the rework never offers them (`excluded_goal_types`; set one to `false` to offer it again):
+    - **Hold N Meseta.** A bank withdrawal meets it at once, and spending undoes it.
+    - **Use N materials.** Most materials drop too rarely to find in a day (HP and Power Materials average about 1 in 1,300 and 1 in 860 a kill, Luck about 1 in 7,900). They are capped per character, and how to spend them is a build choice.
+  - **Play time** is counted from when the bounty starts: `PLAY_HOURS` (`<seconds needed>:<play time at the start>`) asks for 1 hour of play (`play_hours`) instead of a total like "121 total hours". The board shows how much has been played.
 - **Weeklies** use new, longer objectives:
   - `AREA_SWEEP` (`E@Difficulty`): visit every area of Episode E.
   - `BOSS_HUNT` (`N@Difficulty`): defeat N bosses.

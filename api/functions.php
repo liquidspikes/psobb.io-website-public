@@ -381,6 +381,24 @@ function bounty_parse_battle_target($target)
     return [(int) ($p[0] ?? 501), max(1, (int) ($p[1] ?? 1))];
 }
 
+/**
+ * Play-time target "<seconds needed>:<play time when the bounty started>" ("3600:435600").
+ */
+function bounty_parse_play_target($target)
+{
+    $p = explode(':', (string) $target);
+    return [max(60, (int) ($p[0] ?? 3600)), max(0, (int) ($p[1] ?? 0))];
+}
+
+function bounty_play_objective_text($target)
+{
+    list($need) = bounty_parse_play_target($target);
+    $h = intdiv($need, 3600);
+    $m = intdiv($need % 3600, 60);
+    $t = ($h ? $h . ' ' . ($h === 1 ? 'hour' : 'hours') : '') . ($h && $m ? ' ' : '') . ($m ? "$m min" : '');
+    return "Play for $t";
+}
+
 function bounty_battle_objective_text($target)
 {
     list($q, $n) = bounty_parse_battle_target($target);
@@ -410,6 +428,14 @@ function bounty_progress_text($type, $target, $progress_json)
             return $have ? 'Best: ' . bounty_duration_text($sum) : 'Not cleared yet';
         }
         return "$have / $need stages" . ($have ? ', ' . bounty_duration_text($sum) . ' so far' : '');
+    }
+    if ($type === 'PLAY_HOURS') {
+        list($need) = bounty_parse_play_target($target);
+        $mins = function ($s) {
+            $m = intdiv(max(0, (int) $s), 60);
+            return ($m >= 60) ? intdiv($m, 60) . ' h' . (($m % 60) ? ' ' . sprintf('%02d', $m % 60) . ' min' : '') : "$m min";
+        };
+        return $mins(min($need, (int) ($p['seconds'] ?? 0))) . ' / ' . $mins($need) . ' played';
     }
     if ($type === 'BATTLE_RULE_WINS') {
         list(, $n) = bounty_parse_battle_target($target);
@@ -442,6 +468,8 @@ function getClearObjective($type, $target, $title = '', $desc = '')
             return __('Earn Level Ups (Any Character)');
         case 'MAT_CONSUME':
             return __('Consume Any Materials');
+        case 'PLAY_HOURS':
+            return __(bounty_play_objective_text($target)) . ' ' . __('(counted from when the bounty starts)');
         case 'PLAYTIME':
             if ($target === 'ANY')
                 return __('Accumulate Playtime (Server-wide Tracker)');

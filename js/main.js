@@ -2862,6 +2862,12 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'LEVEL': return `Reach Level ${target}`;
         case 'MESETA': return `Accumulate ${Number(target).toLocaleString()} Meseta`;
         case 'PLAYTIME': return `Accumulate ${Number(target).toLocaleString()} seconds of play time`;
+        case 'PLAY_HOURS': {
+            // "<seconds needed>:<play time when the bounty started>"
+            const need = parseInt(String(target).split(':')[0], 10) || 3600;
+            const h = Math.floor(need / 3600), m = Math.floor((need % 3600) / 60);
+            return `Play for ${h ? `${h} hour${h !== 1 ? 's' : ''}` : ''}${h && m ? ' ' : ''}${m ? `${m} min` : ''} (counted from when the bounty starts)`;
+        }
         case 'BOSS_ARENA':
         case 'MENTOR_BOSS':
         case 'HARDCORE_MENTOR':

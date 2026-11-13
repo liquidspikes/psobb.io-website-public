@@ -2,6 +2,17 @@
     "_comment": "Copy to config/bounties.json and keep only the keys you want to change. Every key and its default is in bounty_default_config() in api/bounty_system.php; see api/BOUNTY_SYSTEM.md.",
     "enabled": true,
     "limit_scope": "character",
+    "excluded_goal_types": {
+        "MESETA": true,
+        "MAT_HP": true,
+        "MAT_TP": true,
+        "MAT_POWER": true,
+        "MAT_DEF": true,
+        "MAT_MIND": true,
+        "MAT_EVADE": true,
+        "MAT_LUCK": true
+    },
+    "play_hours": 1,
     "reset": {
         "daily_hour": 0,
         "weekly_day": 1,

@@ -597,6 +597,34 @@ for ($i = 0; $i < 200; $i++) {
     }
 }
 
+// Dailies never ask to hold Meseta or use materials; play time counts from the start
+$excluded = array_keys(array_filter(bounty_config()['excluded_goal_types']));
+check(in_array('MESETA', $excluded, true) && count(preg_grep('/^MAT_/', $excluded)) === 7, 'Meseta and all seven material objectives are excluded');
+$fresh = client('Pell', 60, ['Meseta' => 5000, 'PlayTimeSeconds' => 435600, 'NumHPMaterialsUsed' => 0, 'NumTPMaterialsUsed' => 0, 'NumPowerMaterialsUsed' => 0,
+    'NumDefMaterialsUsed' => 0, 'NumMindMaterialsUsed' => 0, 'NumEvadeMaterialsUsed' => 0, 'NumLuckMaterialsUsed' => 0]);
+$daily_row = ['id' => 0, 'mission_id' => 0, 'status' => 'queued', 'tier' => 'common', 'cadence' => 'daily', 'pool' => 'standard', 'meta' => null];
+$seen = [];
+for ($i = 0; $i < 800; $i++) {
+    $o = bounty_pick_rework_objective($fresh, $daily_row, 0, []);
+    $seen[$o['selected_goal']] = $o['selected_target_id'];
+}
+check(!array_intersect(array_keys($seen), array_merge($excluded, ['PLAYTIME'])), 'rework dailies offer no Meseta, material or total-play-time objective (' . implode(', ', array_keys($seen)) . ')');
+check(($seen['PLAY_HOURS'] ?? null) === '3600:435600', 'play time is 1 hour counted from the play time at the start (' . ($seen['PLAY_HOURS'] ?? 'not offered') . ')');
+check(html_entity_decode(strip_tags(getClearObjective('PLAY_HOURS', '3600:435600'))) === 'Play for 1 hour (counted from when the bounty starts)', 'the board says "Play for 1 hour"');
+bounty_config(['excluded_goal_types' => ['MAT_EVADE' => false]]);
+$again = false;
+for ($i = 0; $i < 800 && !$again; $i++) {
+    $again = bounty_pick_rework_objective($fresh, $daily_row, 0, [])['selected_goal'] === 'MAT_EVADE';
+}
+check($again, 'an excluded objective comes back when config sets it to false');
+bounty_config(['excluded_goal_types' => ['MAT_EVADE' => true]]);
+$pid = weekly_row($db, 'Pell', 'PLAY_HOURS', '3600:435600');
+check(!bounty_evaluate_weekly($db, wrow($db, $pid), client('Pell', 60, ['PlayTimeSeconds' => 435600 + 1830]), null, no_kills(), []), 'half an hour of play is not done');
+check(bounty_progress_text('PLAY_HOURS', '3600:435600', wrow($db, $pid)['progress']) === '30 min / 1 h played', 'the board shows the time played (' . bounty_progress_text('PLAY_HOURS', '3600:435600', wrow($db, $pid)['progress']) . ')');
+check(!bounty_evaluate_weekly($db, wrow($db, $pid), client('Pell', 60, ['PlayTimeSeconds' => 435600 + 3599]), null, no_kills(), []), 'a second short of an hour is not done');
+check(bounty_evaluate_weekly($db, wrow($db, $pid), client('Pell', 60, ['PlayTimeSeconds' => 435600 + 3600]), null, no_kills(), []), 'an hour of play since the start: done');
+check(!bounty_evaluate_weekly($db, wrow($db, weekly_row($db, 'Pell', 'PLAY_HOURS', '3600:500000')), client('Pell', 60, ['PlayTimeSeconds' => 500000 + 600]), null, no_kills(), []), 'play time before the bounty started does not count');
+
 // The board names items by newserv's name where item_map.json's last name for a code is wrong
 $names = ['031200' => 'Weapons Bronze Badge', '031201' => 'Weapons Silver Badge', '031202' => 'Weapons Gold Badge', '01024B' => 'Assist Barrier',
           '008A00' => 'Sange', '010223' => 'Regene Gear Adv.', '031209' => 'Item Ticket', '031003' => 'Secret Ticket', '031004' => 'Photon Ticket',

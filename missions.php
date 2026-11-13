@@ -951,7 +951,7 @@ if ($account_id) {
                                         <span class="bounty-meta-label"><?= __('Directive') ?></span>
                                         <span class="bounty-meta-val" style="color: #ffffff;"><?= ($b['status'] ?? '') === 'rerolling' ? '—' : getClearObjective($b['goal_type'], $b['goal_target'], $b['title'], $b['description']) ?></span>
                                     </div>
-                                    <?php $prog = in_array($b['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
+                                    <?php $prog = in_array($b['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
                                     <?php if ($prog !== ''): ?>
                                     <div class="bounty-meta-row">
                                         <span class="bounty-meta-label"><?= __('Progress') ?></span>

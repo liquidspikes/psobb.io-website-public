@@ -710,7 +710,7 @@ foreach ($clients as $client) {
                     }
                 }
             }
-        } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true)) {
+        } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true)) {
             // Objectives of the Bounty System Rework with progress (kept in player_missions.progress)
             $completed = bounty_evaluate_weekly($db, $m, $client, $lobby_info, $kills, $lobby_info_map);
         }

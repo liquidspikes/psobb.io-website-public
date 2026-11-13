@@ -298,6 +298,7 @@ function bounty_goal_meaning($goal, $target = null)
         'MESETA' => 'Hold at least that much Meseta at once (saved up, not spent).',
         'LEVEL' => 'Grow stronger through field experience until reaching that level.',
         'PLAYTIME' => 'Put in that much total time on duty as a Hunter.',
+        'PLAY_HOURS' => 'Put in that much time on duty as a Hunter, counted from when the job is taken.',
         'ITEM' => 'Find a weapon of that type on Ragol and carry it back.',
         'TECHNIQUE' => 'Learn that technique (Forces and some Hunters and Rangers learn techniques from technique disks).',
         'BATTLE_WINS' => 'Win first place in that many sanctioned battle-simulation bouts between hunters.',
