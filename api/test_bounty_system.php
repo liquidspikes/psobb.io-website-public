@@ -433,6 +433,24 @@ foreach (BOUNTY_TIERS as $t) {
     check(abs($ns / 40 - $pc['sphere_chance'][$t]) < max(1.0, $pc['sphere_chance'][$t] / 3), "$t pays a Photon Sphere about {$pc['sphere_chance'][$t]}% of the time (" . ($ns / 40) . '%)');
 }
 
+// Rewards come from every Section ID's table, including items the hunter's own never drops
+$redria = array_search('redria', BOUNTY_SECTION_IDS, true);
+$pool = bounty_reward_pool('rare', ['section' => $redria, 'class' => array_search('HUcast', BOUNTY_CHAR_CLASSES, true), 'level' => 152,
+    'area' => bounty_reward_area('ep1_ruins', 1)]);
+check(isset($pool['items']['009400']) && $pool['items']['009400'] == 0, 'a Redria hunter can win Morning Glory, which Redria never finds');
+foreach (range(0, 9) as $sec) {
+    $foreign = 0;
+    foreach (['rare', 'ultra'] as $tier) {
+        foreach ([60, 120, 200] as $lv) {
+            foreach (['ep1_ruins', 'ep2_seabed', 'ep4_desert'] as $st) {
+                $p = bounty_reward_pool($tier, ['section' => $sec, 'class' => 0, 'level' => $lv, 'area' => bounty_reward_area($st, null)]);
+                $foreign += count(array_filter($p['items'], function ($r) { return $r == 0; }));
+            }
+        }
+    }
+    check($foreign > 0, BOUNTY_SECTION_IDS[$sec] . " pools hold items only other Section IDs find ($foreign)");
+}
+
 // The 10x rule, for every Section ID at a few levels and areas
 $m10 = (float) $rc['drop_rate_multiplier'];
 $worst = INF;
