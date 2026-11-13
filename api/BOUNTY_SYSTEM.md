@@ -26,8 +26,8 @@ The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.ph
 |---|---|---|
 | Common | Free, drop, Battle and Challenge bounties | 2–3 tools and consumables in stacks, picked by level, plus Meseta |
 | Uncommon | Free, drop, Battle and Challenge bounties | 1–2 pieces of common equipment for the hunter's class, picked 10 levels ahead, with light stats |
-| Rare | Free, drop, Battle and Challenge bounties | One rare from any Section ID's drop table that drops 1/500 to 1/1500 a kill server-wide, usable by the hunter's class, from the bounty's area |
-| Ultra Rare | Drops in a party of 2 or more, and Challenge bounties | One rare from any Section ID's drop table that drops rarer than 1/1500 a kill server-wide, for any class, from the bounty's area |
+| Rare | Free, drop, Battle and Challenge bounties | One rare from any Section ID's drop table in the Rare band (1/5,000 to 1/20,000 a kill server-wide, by effort), usable by the hunter's class, from the bounty's area |
+| Ultra Rare | Drops in a party of 2 or more, and Challenge bounties | One rare from any Section ID's drop table rarer than the Rare band (1/20,000 a kill server-wide, by effort), for any class, from the bounty's area |
 | Mythic Rare | Drops when playing alone, and Challenge full runs | One quest-reward item no enemy or box drops, for any class; 3% of the time an exchange-only item instead. A Challenge full run pays one of the rarest drops in the game. Always one exchange token |
 
 Uncommon to Mythic Rare bounties can also pay an **exchange token** (below).
@@ -42,19 +42,31 @@ Uncommon to Mythic Rare bounties can also pay an **exchange token** (below).
 
 Rare, Ultra Rare and Mythic Rare items come from Blue Burst's own drop data, in `api/data/bounty_items.json` (see Data, below).
 
-**Rarity, server-wide.** Rewards come from every Section ID's drop table, not only the hunter's. An item's rate for a Section ID is its best chance per kill (or per box) there, over every enemy, box, area and difficulty that drops it. Rare enemies count with their spawn chance (1/500; Kondrieu 1/10), and final bosses always drop. Its **server-wide rate** is the average over the ten Section IDs, counting 0 where a Section ID never gets it.
+**Rarity, by effort.** A drop's chance per kill of one enemy says little on its own. An area full of Boomas makes a Booma drop easy to farm. Only 1 in 500 Hildebears is a Hildeblue, and a boss is met once per run of its area. So an item's rate is measured in the place a player would farm it, counting how many of each enemy and box that place has:
+
+- A **place** is a single floor, or an area's full run with its boss (Forest 1 and 2 with the Dragon, Ruins 1 to 3 with Dark Falz, and so on).
+- **Drops per run** = for each source in the place, how many of it the place has × its chance per kill (or per box).
+  - A rare form counts on its base enemy's spawns, with its replacement chance (1/500; Kondrieu 1/10; Merikle and Mericus 1/5).
+  - A boss counts once per run (Saint-Milion and Shambertin half each; Barba Ray's ten joints ten).
+- **Rate** = drops per run ÷ enemies killed in the run, for the best place, difficulty and Section ID.
+- The counts come from newserv's Blue Burst map files (`tools/bounty_data/maps.py`), averaged over each floor's online layouts.
+- A few enemies only appear in quests (the Control Tower's Del Lily, Ill Gill and Epsilon, and random Mericarols). No free-play map has them, so they count as one enemy type among a typical area's dozen.
+
+For example, Red Ring drops about 1 in 37 Dark Falz kills for Whitill. One Dark Falz comes per Ruins run of about 514 enemies, so its rate is about 1 in 18,800 kills. A Booma drop at 1 in 500 a kill, in Forest 1 where about half the enemies are Boomas, comes to about 1 in 1,000.
+
+An item's **server-wide rate** is the average of its rate over the ten Section IDs, counting 0 where a Section ID never gets it. At about 500 kills an hour, 1 in 5,000 is one drop in ten hours of farming the best place.
 
 | Band | Server-wide rate per kill | Bounty tier |
 |---|---|---|
-| Common rares | 1/500 or better | none: normal play is already the best source |
-| Rare | 1/500 to 1/1500 | Rare |
-| Very rare | rarer than 1/1500 | Ultra Rare |
+| Common rares | 1/5,000 or better | none: normal play is already the best source |
+| Rare | 1/5,000 to 1/20,000 | Rare |
+| Very rare | rarer than 1/20,000 | Ultra Rare |
 | Never dropped | quest-reward items | Mythic Rare |
-| Rarest in the game | rarer than 1/5000 for every Section ID (35 items) | Mythic Rare Challenge full runs only |
+| Rarest in the game | rarer than 1/75,000 for every Section ID | Mythic Rare Challenge full runs only |
 
-An item that drops 1/500 or better for the hunter's **own** Section ID is left to normal play for them, whatever its band.
+An item that drops 1/5,000 or better for the hunter's **own** Section ID is left to normal play for them, whatever its band.
 
-**The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill of its best enemy for the hunter's own Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 300,000 item chances).
+**The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill in the best place to farm it, for the hunter's own Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 230,000 item chances).
 
 **Area.** Items must drop in the bounty's area:
 
@@ -256,7 +268,7 @@ php tools/bounty_data/pool_report.php # every reward pool: sizes and the 10x rul
 - A cap counts bounties *earned* per reset. Bounties earned past the 3 + 3 slots wait under Up next instead of being lost.
 - Drops have their own 5 slots and a 10-held limit, so they never block the free dailies and weeklies.
 - "Mythic only solo" covers both Solo mode and being alone in a Multi-mode room. The second gets the ×1.5 odds.
-- The 10x rule compares one bounty of a tier with one kill of the item's best source, for the hunter's own Section ID. Rares commoner than 1/500 a kill, server-wide or for the hunter's own Section ID, are left to normal play, where they already come often.
+- The 10x rule compares one bounty of a tier with one kill in the best place to farm the item, for the hunter's own Section ID. Rares commoner than 1/5,000 a kill, server-wide or for the hunter's own Section ID, are left to normal play, where they already come often.
 - Mythic Rare items don't drop, so they aren't tied to an area.
 - Uncommon equipment still comes from the level-scaled reward tables (common items drop everywhere).
 - A bounty's level, for strength and stat caps, is the hunter's level when it starts.

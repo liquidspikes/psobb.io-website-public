@@ -4,7 +4,7 @@ Builds the item data the Bounty System Rework uses to pick rewards, from a newse
 
     python3 tools/bounty_data/build.py --newserv /path/to/newserv [--out api/data]
 
-Reads newserv's Blue Burst tables and quests (no server needs to run):
+Reads newserv's Blue Burst tables, quests and maps (no server needs to run):
   system/tables/rare-table-v4.json           rare drops: enemy/box, section ID, difficulty, rate
   system/tables/common-table-v3-v4.json      each enemy's chance to drop anything (DAR), common tool classes
   system/tables/item-parameter-table-bb-v4.json   stars (rarity), class usability, equip requirements, combinations
@@ -13,6 +13,7 @@ Reads newserv's Blue Burst tables and quests (no server needs to run):
   system/config.example.json                 rare-enemy spawn rates; Coren / Black Paper's Deal / Gallon's Plan prizes
   system/quests/**/*-bb-e.bin                each quest's list of items it may create (BB quest header),
                                              battle rule sets and Challenge Mode rank times / prizes (scripts)
+  system/maps/bb-v4/map_*e.dat, *o.dat      enemies and item boxes placed on each floor (maps.py), to measure rarity
 
 Writes:
   bounty_items.json        one entry per item: rarity data, how else it is obtained, equip level per class
@@ -23,14 +24,18 @@ Writes:
 
 Drop rate model (matches newserv's ItemCreator): an enemy first rolls its drop-anything chance (DAR), then its rare
 specs; a box rolls its rare specs directly. Rare enemy forms are scaled by their spawn chance (1/500, Kondrieu 1/10,
-Mericus/Merikle 1/5). Rates are per kill or per box, for Normal (multiplayer) games; seasonal Rappies are recorded
-but not counted as normal drops.
+Mericus/Merikle 1/5). Seasonal Rappies are recorded but not counted as normal drops.
+
+Rarity is by effort (maps.py): with how many of each enemy and box each floor has, from system/maps/bb-v4, an
+item's rate is its drops per enemy killed in the best place to farm it, a floor or an area's run with its boss.
+best_source_rate keeps the plain chance per kill (or per box) of that place's main source.
 """
 import argparse, collections, glob, json, os, re, struct, sys
 from fractions import Fraction
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from prs import prs_decompress
+import maps
 
 SECTIONS = ['Viridia', 'Greennill', 'Skyly', 'Bluefull', 'Purplenum', 'Pinkal', 'Redria', 'Oran', 'Yellowboze', 'Whitill']
 DIFFS = ['Normal', 'Hard', 'VeryHard', 'Ultimate']
@@ -277,6 +282,9 @@ def main():
                                 'ep': ep, 'diff': diff, 'sec': sec, 'where': where, 'rate': pr * kill_dar * spawn,
                                 'seasonal': where in SEASONAL_ENEMIES})
 
+    # --- How many of each enemy and box each place has (newserv's BB maps)
+    places, floor_data = maps.farming_places(a.newserv)
+
     # --- Which bounty setting each drop source belongs to
     es = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'enemy_settings.json')))
     setting_of = {}
@@ -423,9 +431,32 @@ def main():
         st = stars(code, d) if d else 0
         rare = st >= 9
         src = [s for s in sources.get(code, []) if not s['seasonal']]
+        # Rarity by effort: in each place to farm (a floor, or an area run with its boss), the item's drops per run
+        # (each source's rate x how many of it the place has) per enemy killed there; the best place counts.
+        runs = collections.defaultdict(float)   # (section, difficulty, place) -> drops per run
+        top = {}                                # same key -> (largest share, its source)
+        cands = []
+        for s in src:
+            met = False
+            for i, pl in enumerate(places):
+                if pl['episode'] != s['ep']:
+                    continue
+                n = maps.count_for(pl, s['where'])
+                if n <= 0:
+                    continue
+                met = True
+                key = (s['sec'], s['diff'], i)
+                runs[key] += n * s['rate']
+                if key not in top or n * s['rate'] > top[key][0]:
+                    top[key] = (n * s['rate'], s)
+            if not met:   # only met in quests (the Control Tower)
+                cands.append(dict(s, rate=s['rate'] * maps.QUEST_ONLY_SHARE, source_rate=s['rate'], place='quests'))
+        for (sec, diff, i), drops in runs.items():
+            s = top[(sec, diff, i)][1]
+            cands.append(dict(s, rate=drops / places[i]['kills'], source_rate=s['rate'], place=places[i]['name']))
         per_sec = [0.0] * 10
-        for s in src: per_sec[s['sec']] = max(per_sec[s['sec']], s['rate'])
-        best = max(src, key=lambda s: s['rate']) if src else None
+        for c in cands: per_sec[c['sec']] = max(per_sec[c['sec']], c['rate'])
+        best = max(cands, key=lambda c: c['rate']) if cands else None
         a0, a1, a2 = int(code[0:2], 16), int(code[2:4], 16), int(code[4:6], 16)
         if a0 == 3: common = code in common_tools or a1 == 2
         elif rare: common = False
@@ -454,6 +485,9 @@ def main():
             'drop_rate_by_section': [round(x, 9) for x in per_sec],
             'best_drop_rate': round(best['rate'], 9) if best else 0,
             'best_drop_source': f"{best['ep']} {best['diff']} {SECTIONS[best['sec']]} {best['where']}" if best else None,
+            # the best place's main source, per kill of that enemy (or per box)
+            'best_source_rate': round(best['source_rate'], 9) if best else 0,
+            'best_place': best['place'] if best else None,
             'drop_sources': len(src),
             'drop_settings': sorted({sid for s in src for sid in setting_of.get((s['ep'], s['where']), [])}),
             'drop_episodes': sorted({s['ep'] for s in src}),
@@ -519,10 +553,13 @@ def main():
         battle.append({'quest_number': qnum, 'name': qname, 'description': desc, 'rules': rd, 'traps': traps, 'scores': scores})
 
     os.makedirs(a.out, exist_ok=True)
-    meta = {'generated_from': 'newserv system/tables and system/quests (Blue Burst)', 'rate_unit': 'per kill or per box, Normal-mode games'}
+    meta = {'generated_from': 'newserv system/tables, system/quests and system/maps (Blue Burst)',
+            'rate_unit': 'drops per enemy killed in the best place to farm the item (a floor, or an area run with its '
+                         'boss), counting how many of each enemy and box the place has; Normal-mode games',
+            'places': {p['name']: {'kills': p['kills'], 'setting': p['setting']} for p in places}}
     json.dump({'meta': meta, 'items': items}, open(os.path.join(a.out, 'bounty_items.json'), 'w'), indent=0, ensure_ascii=False, sort_keys=True)
     json.dump(battle, open(os.path.join(a.out, 'battle_rule_sets.json'), 'w'), indent=1, ensure_ascii=False)
-    json.dump({'episodes': challenge, 'prize_names': {c: names.get(c) for c in challenge_prizes}},
+    json.dump({'episodes': challenge, 'prize_names': {c: names.get(c) for c in sorted(challenge_prizes)}},
               open(os.path.join(a.out, 'challenge_mode.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump(quests, open(os.path.join(a.out, 'quest_item_lists.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump(build_areas(os.path.dirname(os.path.abspath(__file__))), open(os.path.join(a.out, 'bounty_areas.json'), 'w'), indent=1, ensure_ascii=False)

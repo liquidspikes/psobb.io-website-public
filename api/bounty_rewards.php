@@ -7,13 +7,17 @@
  *
  *  - Items come from the drop data of the bounty's area (its lore setting, or its Challenge stages),
  *    widening to the episode only when the area has too few items for the hunter.
+ *  - Rarity is measured by effort: an item's rate is its drops per enemy killed in the best place to
+ *    farm it (a floor, or an area's run with its boss), counting how many of each enemy the place has,
+ *    how often rare forms appear, and boxes. So a boss drop counts as one per run, and a rare-enemy
+ *    drop as one per that enemy's spawns.
  *  - Rare and Ultra Rare items come from every Section ID's drop table, sorted by their server-wide
- *    rate (the average over the ten Section IDs). Rare: 1/500 to 1/1500 a kill. Ultra Rare: rarer.
- *    Items that drop 1/500 or better for the hunter's own Section ID are left to normal play.
+ *    rate (the average over the ten Section IDs). Rare: 1/5,000 to 1/20,000 a kill. Ultra Rare: rarer.
+ *    Items that drop 1/5,000 or better for the hunter's own Section ID are left to normal play.
  *    Mythic Rare: quest-reward items no enemy or box drops, plus any allowed exchange items.
  *    Combination results are never rewards.
  *  - The 10x rule: every item in a pool is at least 10 times as likely from one bounty of that tier
- *    as from one kill of its best enemy (or one box) in normal play, for that Section ID.
+ *    as from one kill in the best place to farm it, for that Section ID.
  *  - Strength class: the item's level requirement for the hunter's class, at most one class above
  *    the hunter's level plus the tier's head start (Rare +10, Ultra +30, Mythic +50).
  *  - Weapons get at most 2 attributes plus hit. The first always matches the enemies of the area
@@ -22,7 +26,7 @@
  *  - Photon Drops have a chance on every bounty, rising with the tier. Photon Spheres have a chance
  *    only on Ultra Rare and Mythic Rare bounties, and no bounty pays more than one (a Sphere is worth
  *    99 Photon Drops at the exchange).
- *  - Challenge Mode prizes are never bounty rewards. The rarest drops in the game (rarer than 1/5000
+ *  - Challenge Mode prizes are never bounty rewards. The rarest drops in the game (rarer than 1/75,000
  *    a kill for every Section ID) are reserved for Mythic Rare Challenge Mode full runs.
  *  - Exchange-only items stay with their exchanges. Instead, Uncommon to Mythic Rare bounties pay the
  *    tokens those exchanges take: Item Tickets, Secret Tickets, Photon Tickets, Photon Crystals,
@@ -46,15 +50,16 @@ function bounty_reward_defaults()
 {
     return [
         // Item rarity bands, by the item's server-wide rate: the average over the ten Section IDs of
-        // the best chance per kill (or per box), counting 0 where a Section ID never gets it. So a
-        // bounty can pay from any Section ID's drop table. Rare: rare_min_rate to rare_max_rate
-        // (1/1500 to 1/500); Ultra Rare: rarer than rare_min_rate.
-        'rare_min_rate' => 1 / 1500,
-        'rare_max_rate' => 1 / 500,
-        // Left to normal play: items that drop 1/500 or better for the hunter's own Section ID.
-        'own_section_common_rate' => 1 / 500,
+        // its drops per enemy killed in the best place to farm it (tools/bounty_data/maps.py), counting
+        // 0 where a Section ID never gets it. So a bounty can pay from any Section ID's drop table.
+        // At about 500 kills an hour, 1/5,000 is one in ten hours of farming the best place.
+        // Rare: rare_min_rate to rare_max_rate (1/20,000 to 1/5,000); Ultra Rare: rarer.
+        'rare_min_rate' => 1 / 20000,
+        'rare_max_rate' => 1 / 5000,
+        // Left to normal play: items that drop 1/5,000 or better for the hunter's own Section ID.
+        'own_section_common_rate' => 1 / 5000,
         // Reserved for Mythic Rare Challenge Mode full runs: drops rarer than this for every Section ID.
-        'challenge_reserve_max_rate' => 1 / 5000,
+        'challenge_reserve_max_rate' => 1 / 75000,
         // The 10x rule: each pool item's chance from one bounty >= this x its best chance per kill.
         'drop_rate_multiplier' => 10,
         // Strength class: levels added to the hunter's level before choosing the class.
@@ -371,7 +376,7 @@ function bounty_item_average_rate(array $it)
 }
 
 /**
- * Items reserved for Mythic Rare Challenge Mode full runs: drops rarer than 1/5000 a kill for
+ * Items reserved for Mythic Rare Challenge Mode full runs: drops rarer than 1/75,000 a kill for
  * every Section ID.
  */
 function bounty_is_challenge_reserved(array $it, array $rc)

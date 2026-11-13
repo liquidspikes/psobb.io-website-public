@@ -49,4 +49,4 @@ foreach ($stats as $tier => $s) {
     arsort($s['widened']);
     foreach ($s['widened'] as $w => $c) printf("    %-28s %5d\n", $w, $c);
 }
-printf("10x rule: %d item chances checked, %d below 10x their best per-kill rate\n", $checked, $violations);
+printf("10x rule: %d item chances checked, %d below 10x their rate for the Section ID\n", $checked, $violations);
