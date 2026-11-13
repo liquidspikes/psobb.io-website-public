@@ -998,7 +998,7 @@ if ($account_id) {
                         <br><br>
                         <?= __('Tiers run Common, Uncommon, Rare, Ultra Rare and Mythic Rare. Unfinished bounties expire at the daily or weekly reset; finished ones wait in the Claim Center. Team bounties can be rerolled once for free. Reward stats stay hidden until you claim.') ?>
                         <br><br>
-                        <?= __('Rewards come from the drops of the area a bounty sends you to, at least 10 times as often as a kill would drop them for your Section ID. Weapons get at most two attributes, matched to that area\'s enemies, plus hit. Bounties also pay Photon Drops, and at most one Photon Sphere.') ?>
+                        <?= __('Rewards come from the drops of the area a bounty sends you to, at least 10 times as often as a kill would drop them for your Section ID. Weapons get at most two attributes, matched to that area\'s enemies, plus hit. Bounties may also pay Photon Drops, and Ultra Rare and Mythic Rare bounties may pay a Photon Sphere (never more than one).') ?>
                         <br><br>
                         <?= __('Challenge Mode bounties name a stage and a pace (S pace is the stage\'s share of the S-rank time). Ultra Rare ones span several stages and Mythic Rare ones are full runs, which pay some of the rarest drops in the game. Battle Mode bounties name the rule set to win under.') ?>
                     <?php else: ?>

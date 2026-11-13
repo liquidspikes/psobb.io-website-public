@@ -79,13 +79,13 @@ A pool smaller than 6 items widens: first to lower strength classes, then to the
 
 **Armor and shields.** DEF and EVP bonuses come from the item's own bonus range, scaled by tier and level. Armor slots: Uncommon 0–1, Rare 1–3, Ultra Rare 2–4, Mythic Rare 3–4.
 
-**Photon Drops and Photon Spheres** roll on every bounty, each on its own, so neither is a given:
+**Photon Drops and Photon Spheres** each roll on their own, so neither is a given. Drops can come with any tier; a Sphere only with Ultra Rare and Mythic Rare:
 
 | Tier | Common | Uncommon | Rare | Ultra Rare | Mythic Rare |
 |---|---|---|---|---|---|
 | Chance of Photon Drops | 15% | 25% | 40% | 60% | 80% |
 | How many (at level 200) | 1–2 | 1–5 | 3–12 | 10–40 | 20–60 |
-| Chance of a Photon Sphere | 0.5% | 1% | 2% | 5% | 15% |
+| Chance of a Photon Sphere | none | none | none | 5% | 15% |
 
 - The number of Drops falls to half at level 1, and Challenge bounties scale it with their stages' length (×0.5 to ×2). Drops come as one stack of at most 99.
 - A bounty pays at most one Photon Sphere (worth 99 Photon Drops at Gallon's Shop).

@@ -339,8 +339,11 @@ for ($i = 0; $i < 600; $i++) {
     if ($tier === 'common') {
         check($shown === $rolled, 'common rewards have nothing hidden');
     }
-    // Photon Drops: a currency, at most one Photon Sphere
+    // Photon Drops: a currency, at most one Photon Sphere, and Spheres only from Ultra Rare and Mythic Rare
     check(substr_count($rolled, BOUNTY_PHOTON_SPHERE) <= 1, 'at most one Photon Sphere');
+    if (in_array($tier, ['common', 'uncommon', 'rare'], true)) {
+        check(strpos($rolled, BOUNTY_PHOTON_SPHERE) === false, "$tier bounties never pay a Photon Sphere");
+    }
     $spheres_max = max($spheres_max, substr_count($rolled, BOUNTY_PHOTON_SPHERE));
     if (preg_match('/' . BOUNTY_PHOTON_DROP . ' x(\d+)/', $rolled, $mm)) {
         check((int) $mm[1] <= 99, 'Photon Drops fit one stack');
@@ -430,7 +433,11 @@ foreach (BOUNTY_TIERS as $t) {
         check($ph['spheres'] <= 1 && $ph['drops'] <= 99, 'at most one Sphere and one stack of Drops');
     }
     check(abs($nd / 40 - $pc['drop_chance'][$t]) < 4, "$t pays Photon Drops about {$pc['drop_chance'][$t]}% of the time (" . ($nd / 40) . '%)');
-    check(abs($ns / 40 - $pc['sphere_chance'][$t]) < max(1.0, $pc['sphere_chance'][$t] / 3), "$t pays a Photon Sphere about {$pc['sphere_chance'][$t]}% of the time (" . ($ns / 40) . '%)');
+    if (in_array($t, ['common', 'uncommon', 'rare'], true)) {
+        check($pc['sphere_chance'][$t] == 0 && $ns === 0, "$t never pays a Photon Sphere ($ns in 4000)");
+    } else {
+        check($pc['sphere_chance'][$t] > 0 && abs($ns / 40 - $pc['sphere_chance'][$t]) < max(1.0, $pc['sphere_chance'][$t] / 3), "$t pays a Photon Sphere about {$pc['sphere_chance'][$t]}% of the time (" . ($ns / 40) . '%)');
+    }
 }
 
 // Rewards come from every Section ID's table, including items the hunter's own never drops
