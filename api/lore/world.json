@@ -1,0 +1,27 @@
+{
+  "summary": [
+    "Coral, the home world, is dying, and its ten-nation alliance's Pioneer Project is moving its people to the planet Ragol.",
+    "Pioneer 1 set out in A.U.W. 3076, reached Ragol in 3077 and built a colony around the Central Dome.",
+    "Pioneer 2 left Coral in A.U.W. 3083 and reached orbit above Ragol in 3084, just as a huge explosion at the Central Dome cut off all contact with the colony.",
+    "Pioneer 2's people still live aboard the ship in orbit. Principal Colin Tyrell's government sends Hunters down to find out what happened, and the Hunter's Guild posts smaller jobs for anyone who will take them.",
+    "Hunters, Rangers and Forces take the Guild's work for Meseta. They travel down by teleporter, come back by telepipe, carry Mags, and take unidentified weapons to the Tekker.",
+    "In A.U.W. 3085 the Lab finds the island of Gal Da Val; by the end of that year Olga Flow has fallen beneath it and Dark Falz in the ruins.",
+    "In A.U.W. 3086 a meteor strikes Ragol, and the hunters are sent into the Crater and the Subterranean Desert beneath it."
+  ],
+  "rules": [
+    "Canon is fixed. Never contradict the setting card or the client card, and never state, hint at or confirm anything listed as a hidden truth.",
+    "The world summary runs to A.U.W. 3086, but the job is set at the setting card's moment: anything later has not happened yet and nobody knows it.",
+    "Write a NEW, small, self-contained job. Invent only minor local details: a minor named client or relative, a missing patrol or survey team, a lost keepsake, a damaged device, a request for readings or samples, a delivery, an escort, a wager, a grudge.",
+    "Do not invent new species, factions, organisations, technologies, ships, places or major events. Use only creatures, places and groups named in the setting card.",
+    "Do not kill, rescue, find, unmask or reveal any canon character, and do not resolve any open mystery. At most, a rumour.",
+    "Characters speak from their moment: they know only what the setting card says people know at that time.",
+    "The client's reason must lead naturally to the fixed objective, and must make sense for that objective (a boss to defeat, a place to explore, a sum of Meseta to hold, a technique to learn).",
+    "Keep the tone of the Guild's own postings: practical requests with personal stakes, a little humour, no grand prophecy. Avoid stock phrases such as 'whispers of', 'echoes of', 'ancient signals' and 'fragmented logs' unless the setting card names such a thing.",
+    "Use in-world words. Say 'the Caves' or 'deep in the Mines', not menu labels or game terms such as floor, level cap, drop rate, EXP, server or player."
+  ],
+  "hubs": {
+    "1": "ep1_pioneer2",
+    "2": "ep2_lab",
+    "4": "ep4_pioneer2"
+  }
+}
