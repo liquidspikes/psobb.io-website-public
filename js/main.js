@@ -2891,7 +2891,7 @@ function describeBountyObjective(goalType, goalTarget) {
             const timeLimit = parts[1] ? ` in under ${Math.floor(parts[1] / 60)}m ${parts[1] % 60}s` : '';
             return `Speedrun ${areaName}${timeLimit}`;
         }
-        case 'PATROL': return `Patrol ${areaFloorMap[target] || 'Area ' + target} (10 ticks)`;
+        case 'PATROL': return `Patrol ${areaFloorMap[target] || 'Area ' + target} for 10 minutes`;
         case 'EXPLORATION': return `Explore ${areaFloorMap[target] || 'Area ' + target}`;
         case 'ITEM': return `Obtain the target item`;
         case 'TECHNIQUE': return `Learn technique: ${target}`;

@@ -286,6 +286,7 @@ foreach ($clients as $client) {
     $completed_any = false;
     $last_completed_type = "training";
     $current_patrols = [];
+    $current_patrol_seen = [];
     $active_mission_types = [];
 
     while ($m = $res->fetchArray(SQLITE3_ASSOC)) {
@@ -373,15 +374,21 @@ foreach ($clients as $client) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'PATROL') { 
+            // "Survive and patrol the area for 10 minutes": seconds actually spent on the floor. It used to
+            // count cron passes (about 10 s apart), so ten of them finished it in under two minutes.
+            // A gap between passes counts for at most a minute, so a pause or a restart adds little.
+            $patrol_secs = (int) ($prev_state['patrol'][$m['id']] ?? 0);
             if (($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
-                $patrol_progress = ($prev_state['patrol'][$m['id']] ?? 0) + 1;
-                $current_patrols[$m['id']] = $patrol_progress;
-                if ($patrol_progress >= 10) {
+                $seen = (int) ($prev_state['patrol_seen'][$m['id']] ?? 0);
+                if ($seen > 0) {
+                    $patrol_secs += min(60, max(0, time() - $seen));
+                }
+                $current_patrol_seen[$m['id']] = time();
+                if ($patrol_secs >= 600) {
                     $completed = true;
                 }
-            } else {
-                $current_patrols[$m['id']] = $prev_state['patrol'][$m['id']] ?? 0;
             }
+            $current_patrols[$m['id']] = $patrol_secs;
         } elseif ($m['goal_type'] === 'EXPLORATION') {
             // LocationFloor tracks exactly which area the player is currently occupying
             if (($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
@@ -832,6 +839,7 @@ foreach ($clients as $client) {
         'last_boss_arena_time' => $last_boss_arena_time,
         'pre_boss_floor' => $pre_boss_floor,
         'patrol' => $current_patrols,
+        'patrol_seen' => $current_patrol_seen,
         'floor_entered_time' => $floor_entered_time,
     ] + $bounty_state;
 }

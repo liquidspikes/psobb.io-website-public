@@ -134,6 +134,7 @@ Bounties started before this update keep their old reward and roll it with `roll
     - dailies ask for a level up to about level 115 (a day's play is about 167,000 EXP on Ultimate);
     - weeklies ask for one up to about level 169 (a week's play is about 833,000 EXP);
     - a hunter close to the next level can still get one.
+  - **Patrol** ("survive and patrol the area for 10 minutes") counts the seconds actually spent on that floor. It used to count cron passes, which run about 10 seconds apart, so ten of them finished it in under two minutes. A gap between passes counts for at most a minute.
   - **Play time** is counted from when the bounty starts: `PLAY_HOURS` (`<seconds needed>:<play time at the start>`) asks for 1 hour of play (`play_hours`) instead of a total like "121 total hours". The board shows how much has been played.
 - **Weeklies** use new, longer objectives:
   - `AREA_SWEEP` (`E@Difficulty`): visit every area of Episode E.
