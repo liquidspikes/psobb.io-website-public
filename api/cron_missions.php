@@ -171,7 +171,9 @@ foreach ($clients as $client) {
     //   Ep4: 9=Saint-Milion
     // Note: Floor IDs overlap across episodes (e.g. 12 = De Rol Le in Ep1, Gal Gryphon in Ep2).
     // This is acceptable because we only use these for EXP-delta-based kill detection.
-    if (in_array($curr_f, [11, 12, 13, 14, 15, 9])) {
+    $room_episode = ($lobby_id !== null) ? ($lobby_info_map[$lobby_id]['episode'] ?? null) : null;
+    $arena_floors = bounty_boss_arena_floors($room_episode); // floor numbers repeat across episodes
+    if (in_array($curr_f, $arena_floors)) {
         $last_boss_arena = $curr_f;
         $last_boss_arena_time = time();
     }
@@ -181,9 +183,8 @@ foreach ($clients as $client) {
     // (which reuses floor IDs across episodes), we need to know which dungeon they came from.
     // We strictly check $curr_f > 0 so that town/lobby (floor 0) is ignored, preserving 
     // the actual preceding dungeon floor if they go back to Pioneer 2/Lab to restock.
-    $boss_floors = [9, 11, 12, 13, 14, 15];
     $pre_boss_floor = $prev_state['pre_boss_floor'] ?? -1;
-    if (!in_array($curr_f, $boss_floors) && $curr_f > 0) {
+    if (!in_array($curr_f, $arena_floors) && $curr_f > 0) {
         $pre_boss_floor = $curr_f;
     }
 
@@ -445,7 +446,8 @@ foreach ($clients as $client) {
                     if (!empty($m['activated_at']) && (int) $kill_evt['time'] < (int) $m['activated_at']) continue;
                     // For ANY_DRAGON, match any dragon floor
                     if ($original_target === 'ANY_DRAGON') {
-                        if (in_array($kill_evt['floor'], [11, 15])) {
+                        $kep = $kill_evt['episode'] ?? null; // the tracker's room episode, when it knew it
+                        if (($kill_evt['floor'] === 11 && ($kep === null || (int) $kep === 1)) || ($kill_evt['floor'] === 15 && ($kep === null || (int) $kep === 2))) {
                             $tracker_kill = $kill_evt;
                             break;
                         }
@@ -458,6 +460,10 @@ foreach ($clients as $client) {
                             '14_2' => [1, 2], '15_2' => [3, 4], '9_4' => [5, 6, 7, 8],
                         ];
                         $comp_key = "{$check_floor}_{$episode}";
+                        if (isset($kill_evt['episode']) && (int) $kill_evt['episode'] !== (int) $episode) {
+                            echo "[CRON] Boss tracker kill on floor {$check_floor} rejected: Episode {$kill_evt['episode']} room, bounty is Episode {$episode}\n";
+                            continue;
+                        }
                         $valid = $valid_preceding_floors[$comp_key] ?? null;
                         if ($valid !== null && $kill_evt['pre_boss_floor'] >= 0 && !in_array($kill_evt['pre_boss_floor'], $valid)) {
                             echo "[CRON] Boss tracker kill on floor {$check_floor} rejected: pre_boss_floor={$kill_evt['pre_boss_floor']} wrong episode\n";
@@ -707,6 +713,10 @@ foreach ($clients as $client) {
                     if ($kill_evt['floor'] !== $speedrun_target_id) continue;
                     if (!empty($m['activated_at']) && (int) $kill_evt['time'] < (int) $m['activated_at']) continue;
                     
+                    if (isset($kill_evt['episode']) && (int) $kill_evt['episode'] !== (int) $episode) {
+                        echo "[CRON] SPEEDRUN_BOSS tracker kill on floor {$speedrun_target_id} rejected: Episode {$kill_evt['episode']} room\n";
+                        continue;
+                    }
                     // Episode validation via pre_boss_floor
                     $valid = $valid_preceding[$comp_key] ?? null;
                     if ($valid !== null && $kill_evt['pre_boss_floor'] >= 0 && !in_array($kill_evt['pre_boss_floor'], $valid)) {

@@ -212,6 +212,12 @@ Without the patches the site still works:
 - Weeklies don't offer the two kill objectives, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
 - Challenge clears are read from changes to the stage record times (`ChallengeTimesEp1Online`, `ChallengeTimesEp2Online`). That misses replays slower than the record.
 
+### Boss kills: arenas by episode
+
+`cron_boss_tracker.php` counts a boss kill when a player gains EXP in a boss arena. It used to treat floors 9 and 11–15 as arenas in every room, but newserv's floor numbers repeat across episodes. So floor 9 (the Episode 4 arena) is also Ruins 2 in Episode 1 and the Seaside in Episode 2, and floor 11 (the Dragon) is also the lower Seabed in Episode 2. Killing ordinary enemies in those three areas recorded boss kills, and those fake kills rolled bounty drops and counted for `BOSS_HUNT`. In Episode 2, Olga Flow's arena is entered straight from the lower Seabed, which the tracker also took for an arena, so Olga Flow kills were usually missed.
+
+The tracker now reads each room's episode from `/y/lobbies`. The arenas are 11–14 in Episode 1, 12–15 in Episode 2 and 9 in Episode 4 (`bounty_boss_arena_floors()` has the same list). A lobby has no arena, and a room the tracker hasn't seen falls back to the old list. Kill and floor events now carry `episode`. A kill on an "exit" (the player left the arena before the EXP showed) keeps the arena's own room. `BOSS_ARENA`, the carry objectives and `SPEEDRUN_BOSS` reject a kill from a room of another episode, and `ANY_DRAGON` takes floor 11 only from Episode 1 and floor 15 only from Episode 2.
+
 newserv always lists all 14 online stages in those two lists (9 and 5). A cleared stage shows its record time in seconds; a stage never cleared shows 65535, which is how newserv decodes an empty record. `challenge_time_cleared()` treats 65535 (and 0) as not cleared. That matters for three things: which stages a Challenge bounty may ask for (up to one past the highest cleared), the clear tracking above, and the original "clear N Challenge stages" objective (`CHALLENGE_STAGES`, used when the rework is off). That objective now asks for one more than the stages cleared so far, says it is a total of the 14 stages, and isn't offered once all 14 are cleared. Before, it counted the 14 list entries rather than the cleared stages, so its target was always 15 and could never be met.
 
 ## Bounty states

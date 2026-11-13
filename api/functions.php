@@ -216,6 +216,19 @@ function bounty_episode_floors($episode)
     return range(1, 10);                     // Forest, Caves, Mines, Ruins
 }
 
+/**
+ * Boss arena floors by episode (as api/cron_boss_tracker.php reads them). Floor numbers repeat
+ * across episodes: 9 is Ruins 2 in Episode 1 and the Seaside in Episode 2, 11 the lower Seabed in
+ * Episode 2. With no episode known, the old episode-blind list.
+ */
+function bounty_boss_arena_floors($episode)
+{
+    if ($episode == 1) return [11, 12, 13, 14];  // Dragon, De Rol Le, Vol Opt, Dark Falz
+    if ($episode == 2) return [12, 13, 14, 15];  // Gal Gryphon, Olga Flow, Barba Ray, Gol Dragon
+    if ($episode == 4) return [9];               // Saint-Milion / Shambertin / Kondrieu
+    return [9, 11, 12, 13, 14, 15];
+}
+
 function bounty_episode_area_names($episode)
 {
     if ($episode == 2) return 'the VR Temple, the VR Spaceship, the Central Control Area, the Jungle, the Mountain, the Seaside and the Seabed';

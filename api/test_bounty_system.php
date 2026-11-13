@@ -768,6 +768,11 @@ foreach ($names as $code => $want) {
     check(strcasecmp($got, $want) === 0, "the board names $code \"$want\" (got \"$got\")");
 }
 
+// Boss arenas are read per episode: floor 9 is Ruins 2 / the Seaside outside Episode 4, 11 the lower Seabed in Episode 2
+check(bounty_boss_arena_floors(1) === [11, 12, 13, 14] && bounty_boss_arena_floors(2) === [12, 13, 14, 15] && bounty_boss_arena_floors(4) === [9], 'boss arena floors per episode');
+check(!in_array(9, bounty_boss_arena_floors(1)) && !in_array(9, bounty_boss_arena_floors(2)) && !in_array(11, bounty_boss_arena_floors(2)), 'Ruins 2, the Seaside and the lower Seabed are not boss arenas');
+check(!array_intersect(bounty_boss_arena_floors(1), bounty_episode_floors(1)) && !array_intersect(bounty_boss_arena_floors(2), bounty_episode_floors(2)) && !array_intersect(bounty_boss_arena_floors(4), bounty_episode_floors(4)), 'no field floor is also a boss arena in its episode');
+
 @unlink($tmp_db);
 @unlink(__DIR__ . '/../db/.bounty_9001'); // activation marker for the test account
 @unlink("$tmp_db-wal");
