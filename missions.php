@@ -96,7 +96,7 @@ while ($row = $lb_res->fetchArray(SQLITE3_ASSOC)) {
 // -------------------------------------------------------------------------
 $active_bounties = [];
 $ab_query = "SELECT pm.id as pm_id, m.id as mission_id, pm.account_id as bounty_account_id, COALESCE(u.display_name, 'Hunter #' || u.account_id) as hunter_name, pm.character_name, m.title, m.description, m.goal_type, m.goal_target, m.reward_item_string,
-                    pm.status, pm.expires_at, pm.progress, pm.rerolled, m.tier, m.cadence, m.pool, m.reward_spec
+                    pm.status, pm.expires_at, pm.progress, pm.rerolled, m.tier, m.cadence, m.pool, m.reward_spec, m.meta
              FROM player_missions pm 
              JOIN missions m ON pm.mission_id = m.id 
              JOIN users u ON pm.account_id = u.account_id 
@@ -949,7 +949,7 @@ if ($account_id) {
                                 <div class="bounty-meta">
                                     <div class="bounty-meta-row">
                                         <span class="bounty-meta-label"><?= __('Directive') ?></span>
-                                        <span class="bounty-meta-val" style="color: #ffffff;"><?= ($b['status'] ?? '') === 'rerolling' ? '—' : getClearObjective($b['goal_type'], $b['goal_target'], $b['title'], $b['description']) ?></span>
+                                        <span class="bounty-meta-val" style="color: #ffffff;"><?= ($b['status'] ?? '') === 'rerolling' ? '—' : getClearObjective($b['goal_type'], $b['goal_target'], $b['title'], $b['description'], bounty_meta_min_difficulty($b['meta'] ?? null)) ?></span>
                                     </div>
                                     <?php $prog = in_array($b['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
                                     <?php if ($prog !== ''): ?>
@@ -996,7 +996,7 @@ if ($account_id) {
                         <br><br>
                         <?= __('Bosses and rare enemies can drop extra bounties into 5 separate drop slots (10 held at most). Ultra Rare drops need a party of 2 or more; Mythic Rare drops only come when you play alone. Battle Mode earns up to 3 dailies and Challenge Mode up to 3 weeklies.') ?>
                         <br><br>
-                        <?= __('Tiers run Common, Uncommon, Rare, Ultra Rare and Mythic Rare. Unfinished bounties expire at the daily or weekly reset; finished ones wait in the Claim Center. Team bounties can be rerolled once for free. Reward stats stay hidden until you claim.') ?>
+                        <?= __('Tiers run Common, Uncommon, Rare, Ultra Rare and Mythic Rare, and the higher the tier, the harder the job: Common dailies are errands, Uncommon ones a boss or a timed floor, Rare ones a boss under time or with a team, and Uncommon and Rare ones count only on the difficulty they name. Unfinished bounties expire at the daily or weekly reset; finished ones wait in the Claim Center. Team bounties can be rerolled once for free. Reward stats stay hidden until you claim.') ?>
                         <br><br>
                         <?= __('Rewards come from the drops of the area a bounty sends you to, at least 10 times as often as a kill would drop them for your Section ID. Weapons get at most two attributes, matched to that area\'s enemies, plus hit. Bounties may also pay Photon Drops, and Ultra Rare and Mythic Rare bounties may pay a Photon Sphere (never more than one).') ?>
                         <br><br>

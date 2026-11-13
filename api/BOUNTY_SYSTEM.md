@@ -139,6 +139,15 @@ Bounties started before this update keep their old reward and roll it with `roll
 ## Objectives
 
 - **Dailies** use the existing objectives (bosses, speedruns, patrols, items, techniques and so on). Battle and Challenge objectives are kept for their own pools.
+  - **The effort fits the tier** (`daily_objective_tier`, for free and dropped dailies). A Rare bounty is never an errand:
+
+    | Tier | Objectives | Counts on |
+    |---|---|---|
+    | Common | Visit a floor, patrol it for 10 minutes, find an item, learn a technique, play for 1 hour | any difficulty |
+    | Uncommon | Defeat a boss, clear a floor in a time, reach a level | one difficulty below the Rare one (none below Hard) |
+    | Rare | Defeat a boss in a time, with a newer hunter, in a hardcore party or in a party of different classes | the difficulty weeklies use for the hunter's level: Hard from 20, Very Hard from 40 (Ultimate is for Mythic Rare weeklies) |
+
+    An objective type the table doesn't list (one set back on in `excluded_goal_types`) is Common. The difficulty is saved in `missions.meta` (`min_difficulty`) when the bounty starts, the story is set on it, and the board adds it to the objective, for example "Defeat the Dragon (on Very Hard or higher)". Visits, patrols and floor times count only in a game of that difficulty or higher, and a boss kill only when its own game was.
   - A day or a week is no fair measure of some old objectives, so the rework never offers them (`excluded_goal_types`; set one to `false` to offer it again):
     - **Hold N Meseta.** A bank withdrawal meets it at once, and spending undoes it.
     - **Use N materials.** Most materials drop too rarely to find in a day (HP and Power Materials average about 1 in 1,300 and 1 in 860 a kill, Luck about 1 in 7,900). They are capped per character, and how to spend them is a build choice.
@@ -149,11 +158,13 @@ Bounties started before this update keep their old reward and roll it with `roll
   - **Patrol** ("survive and patrol the area for 10 minutes") counts the seconds actually spent on that floor. It used to count cron passes, which run about 10 seconds apart, so ten of them finished it in under two minutes. A gap between passes counts for at most a minute.
   - **Play time** is counted from when the bounty starts: `PLAY_HOURS` (`<seconds needed>:<play time at the start>`) asks for 1 hour of play (`play_hours`) instead of a total like "121 total hours". The board shows how much has been played.
 - **Weeklies** use new, longer objectives:
-  - `AREA_SWEEP` (`E@Difficulty`): visit every area of Episode E.
-  - `BOSS_HUNT` (`N@Difficulty`): defeat N bosses.
-  - `ENEMY_HUNT` (`N@Difficulty`): defeat N enemies.
-  - `RARE_HUNT` (`N@Difficulty`): defeat N rare enemies (Ultra and Mythic only).
-  - `LEVEL`: gain up to 5 levels (3–5 when they fit; see below).
+  - `AREA_SWEEP` (`E@Difficulty`): visit every area of Episode E (Common to Rare).
+  - `BOSS_HUNT` (`N@Difficulty`): defeat N bosses (3–5, ×1.2 Uncommon, ×1.5 Rare, ×2 Ultra Rare, ×2.5 Mythic Rare).
+  - `ENEMY_HUNT` (`N@Difficulty`): defeat N enemies (150–300, ×1.5 Uncommon, ×2.5 Rare, ×4 Ultra Rare, ×6 Mythic Rare: at about 500 an hour, a Mythic Rare one is 2 to 3½ hours).
+  - `RARE_HUNT` (`N@Difficulty`): defeat N rare enemies (Ultra Rare 1–2, Mythic Rare 2–3).
+  - `LEVEL`: gain up to 5 levels (3–5 when they fit; see below; Common to Rare).
+
+  Ultra Rare and Mythic Rare weeklies are hunts only (bosses, enemies, rare enemies): visiting every area, or a few levels that take minutes at a low level, is too light for them.
 
   Each counts only in Normal-mode or Solo games at that difficulty or higher. Weeklies never require Ultimate, except Mythic Rare ones. Progress is saved in `player_missions.progress` and shown on the board, for example "4 / 10 areas".
 - **Battle Mode** bounties (`BATTLE_RULE_WINS`, target `quest:wins`, e.g. `503:2`) ask for 1–3 wins (Common, Uncommon, Rare) under one of the eight rule sets, named on the board with its rules:
@@ -227,7 +238,7 @@ Bounties from before the rework have no cadence. They keep working as before: th
 1. Expire anything past its reset.
 2. For each online player:
    1. Work out kills, Challenge clears and Battle wins since the last pass.
-   2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()`.
+   2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()`. A daily with a `min_difficulty` skips the pass when the game is easier, and sees only boss kills made in a game of that difficulty.
    3. Then `bounty_tick_for_client()`:
       - roll drops for new boss and rare-enemy kills;
       - earn bounties for completions, being logged in and Battle/Challenge play (each under its cap);

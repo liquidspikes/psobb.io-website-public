@@ -503,7 +503,7 @@ if ($action === 'get_player') {
     $login_days = $stmt->execute()->fetchArray(SQLITE3_ASSOC)['login_days'] ?? 0;
 
     $stmt = $db->prepare("SELECT m.title, m.description, m.goal_type, m.goal_target, pm.status, pm.character_name,
-                                 m.tier, m.cadence, m.pool, pm.expires_at, pm.progress
+                                 m.tier, m.cadence, m.pool, m.meta, pm.expires_at, pm.progress
                           FROM player_missions pm
                           JOIN missions m ON pm.mission_id = m.id
                           WHERE pm.account_id = :acc");
@@ -511,12 +511,12 @@ if ($action === 'get_player') {
     $mRes = $stmt->execute();
     $missions = [];
     while ($m = $mRes->fetchArray(SQLITE3_ASSOC)) {
-        $m['friendly_objective'] = getClearObjective($m['goal_type'], $m['goal_target'], $m['title'], $m['description']);
+        $m['friendly_objective'] = getClearObjective($m['goal_type'], $m['goal_target'], $m['title'], $m['description'], bounty_meta_min_difficulty($m['meta'] ?? null));
         // Bounty System Rework fields (null on bounties from before the rework)
         $m['tier_label'] = $m['tier'] ? bounty_tier_label($m['tier']) : null;
         $m['kind'] = $m['cadence'] ? bounty_kind_label($m['pool'], $m['cadence']) : null;
         $m['progress_text'] = in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($m['goal_type'], $m['goal_target'], $m['progress']) : null;
-        unset($m['progress']);
+        unset($m['progress'], $m['meta']);
         $missions[] = $m;
     }
 

@@ -12,6 +12,11 @@
         "MAT_EVADE": true,
         "MAT_LUCK": true
     },
+    "daily_objective_tier": {
+        "EXPLORATION": "common", "PATROL": "common", "ITEM": "common", "TECHNIQUE": "common", "PLAYTIME": "common",
+        "BOSS_ARENA": "uncommon", "SPEEDRUN_FLOOR": "uncommon", "LEVEL": "uncommon",
+        "SPEEDRUN_BOSS": "rare", "MENTOR_BOSS": "rare", "HARDCORE_MENTOR": "rare", "DIVERSE_PARTY_BOSS": "rare"
+    },
     "play_hours": 1,
     "level": {
         "hours": {

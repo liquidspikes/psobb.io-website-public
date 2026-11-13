@@ -688,6 +688,77 @@ foreach (['daily' => [60, 100, 112, 118, 130, 160], 'weekly' => [60, 120, 150, 1
     }
 }
 
+// The effort of a daily fits its tier: errands for Common, a boss or a timed area for Uncommon,
+// a boss under time or with a team for Rare; Uncommon and Rare count only on a fitting difficulty
+$want = ['common' => ['EXPLORATION', 'PATROL', 'ITEM', 'TECHNIQUE', 'PLAY_HOURS'], 'uncommon' => ['BOSS_ARENA', 'SPEEDRUN_FLOOR', 'LEVEL'],
+         'rare' => ['SPEEDRUN_BOSS', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS']];
+foreach ([25, 60, 122] as $lv) {
+    $hunter = $at($lv);
+    $hunter['CharClass'] = 'FOmarl';
+    foreach ($want as $tier => $types) {
+        $row = ['id' => 0, 'mission_id' => 0, 'status' => 'queued', 'tier' => $tier, 'cadence' => 'daily', 'pool' => 'standard', 'meta' => null];
+        $got = [];
+        $mins = [];
+        for ($i = 0; $i < 300; $i++) {
+            $o = bounty_pick_rework_objective($hunter, $row, 0, []);
+            $got[$o['selected_goal']] = true;
+            $mins[$o['min_difficulty'] ?? 'any'] = true;
+            if ($o['min_difficulty']) {
+                check($o['difficulty'] === $o['min_difficulty'], "a $tier daily's story difficulty is its minimum");
+            }
+        }
+        $extra = array_diff(array_keys($got), $types);
+        check(!$extra, "level $lv $tier dailies use only their tier's objectives (" . implode(', ', array_keys($got)) . ')');
+        $expect = bounty_daily_min_difficulty($lv, $tier);
+        check(array_keys($mins) === [$expect ?? 'any'] || ($tier === 'common' && array_keys($mins) === ['any'])
+            || ($tier === 'uncommon' && !array_diff(array_keys($mins), [$expect ?? 'any', 'any'])), "level $lv $tier daily minimum difficulty is " . ($expect ?? 'any') . ' (' . implode(', ', array_keys($mins)) . ')');
+    }
+}
+check(bounty_daily_min_difficulty(122, 'common') === null, 'Common dailies count on any difficulty');
+check(bounty_daily_min_difficulty(122, 'rare') === 'Very Hard' && bounty_daily_min_difficulty(122, 'uncommon') === 'Hard', 'level 122: Rare on Very Hard, Uncommon on Hard');
+check(bounty_daily_min_difficulty(45, 'rare') === 'Very Hard' && bounty_daily_min_difficulty(45, 'uncommon') === 'Hard', 'level 45: Rare on Very Hard, Uncommon on Hard');
+check(bounty_daily_min_difficulty(25, 'rare') === 'Hard' && bounty_daily_min_difficulty(25, 'uncommon') === null, 'level 25: Rare on Hard, Uncommon anywhere');
+check(bounty_daily_min_difficulty(10, 'rare') === null, 'level 10: no requirement (only Normal is open)');
+$t = html_entity_decode(strip_tags(getClearObjective('BOSS_ARENA', '11', 'Hunt the Sil Dragon', '', 'Very Hard')), ENT_QUOTES);
+check(substr($t, -strlen('(on Very Hard or higher)')) === '(on Very Hard or higher)', "the board adds the difficulty ($t)");
+check(strpos(getClearObjective('BOSS_ARENA', '11', 'Hunt the Sil Dragon', '', 'Ultimate'), '(on Ultimate)') !== false, 'and says "on Ultimate" for Ultimate');
+check(strpos(getClearObjective('ITEM', '000100', '', '', 'Hard'), 'or higher') === false, 'not on objectives that are not in an area');
+check(bounty_meta_min_difficulty('{"min_difficulty":"Hard","x":1}') === 'Hard' && bounty_meta_min_difficulty(null) === null && bounty_meta_min_difficulty('{"min_difficulty":"Normal"}') === null, 'the minimum is read back from missions.meta');
+// Activating a Rare daily stores its minimum in missions.meta
+ob_start();
+$rid = bounty_earn($db, 9001, 'Rook', $at(100) + ['Name' => 'Rook'], 'standard', 'daily', 'rare', 'login');
+ob_end_clean();
+$rook = $at(100);
+$rook['Name'] = 'Rook';
+tick($db, $rook);
+$rm = $db->querySingle("SELECT m.meta FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE pm.id = $rid");
+check(bounty_meta_min_difficulty($rm) === 'Very Hard', "an activated Rare daily keeps its minimum in meta ($rm)");
+
+// Battle dailies never carry a minimum difficulty (their objective has no area)
+$brow = ['id' => 0, 'mission_id' => 0, 'status' => 'queued', 'tier' => 'rare', 'cadence' => 'daily', 'pool' => 'battle', 'meta' => null];
+$bmins = [];
+for ($i = 0; $i < 100; $i++) {
+    $bmins[bounty_pick_rework_objective($at(100), $brow, 0, [])['min_difficulty'] ?? 'none'] = true;
+}
+check(array_keys($bmins) === ['none'], 'Battle dailies have no minimum difficulty (' . implode(', ', array_keys($bmins)) . ')');
+
+// Ultra Rare and Mythic Rare weeklies are hunts, never an area visit or a few levels
+foreach (['ultra', 'mythic'] as $tier) {
+    $row = ['id' => 0, 'mission_id' => 0, 'status' => 'queued', 'tier' => $tier, 'cadence' => 'weekly', 'pool' => 'drop', 'meta' => null];
+    $got = [];
+    for ($i = 0; $i < 300; $i++) {
+        $o = bounty_pick_rework_objective($at(30) + ['EnemyKillCount' => 100, 'RareEnemyKillCount' => 0], $row, 0, []);
+        $got[$o['selected_goal']] = true;
+        if ($o['selected_goal'] === 'ENEMY_HUNT') {
+            check((int) $o['selected_target_id'] >= ($tier === 'mythic' ? 900 : 600), "$tier enemy hunts ask for at least an hour or two of kills ({$o['selected_target_id']})");
+        }
+        if ($o['selected_goal'] === 'RARE_HUNT' && $tier === 'mythic') {
+            check((int) $o['selected_target_id'] >= 2, "mythic rare hunts ask for at least 2 rare enemies ({$o['selected_target_id']})");
+        }
+    }
+    check(!array_diff(array_keys($got), ['BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT']) && isset($got['RARE_HUNT']), "$tier weeklies are boss, enemy and rare hunts (" . implode(', ', array_keys($got)) . ')');
+}
+
 // The board names items by newserv's name where item_map.json's last name for a code is wrong
 $names = ['031200' => 'Weapons Bronze Badge', '031201' => 'Weapons Silver Badge', '031202' => 'Weapons Gold Badge', '01024B' => 'Assist Barrier',
           '008A00' => 'Sange', '010223' => 'Regene Gear Adv.', '031209' => 'Item Ticket', '031003' => 'Secret Ticket', '031004' => 'Photon Ticket',

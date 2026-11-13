@@ -21,7 +21,8 @@ require_once __DIR__ . '/bounty_lore.php';
  * @param array $client               the player's /y/clients entry
  * @param int   $curr_f               the player's current LocationFloor (so a target is never "where you stand")
  * @param array $active_mission_types goal types the player already has active (avoid duplicates)
- * @param array $opts                 'exclude' => goal types never to offer (e.g. the mode-specific ones)
+ * @param array $opts                 'exclude' => goal types never to offer (e.g. the mode-specific ones);
+ *                                    'only' => goal types to choose from, when any of them is available
  * @return array selected_goal, selected_target_id, selected_target_friendly, mission_episode, setting_id,
  *               is_location_goal, level, class, class_id, class_map, difficulty
  */
@@ -121,6 +122,13 @@ function bounty_pick_objective(array $client, $curr_f, array $active_mission_typ
     // Goal types this pool never offers (e.g. the Battle/Challenge objectives, which have pools of their own)
     if (!empty($opts['exclude'])) {
         $available_goals = array_values(array_diff($available_goals, $opts['exclude']));
+    }
+    // Goal types this bounty may use (e.g. the ones that fit its tier); ignored if none of them is available
+    if (!empty($opts['only'])) {
+        $only = array_values(array_intersect($available_goals, $opts['only']));
+        if ($only) {
+            $available_goals = $only;
+        }
     }
 
     // Filter out any goal types the player already has active to prevent duplicate missions

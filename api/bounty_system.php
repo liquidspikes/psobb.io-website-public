@@ -120,6 +120,14 @@ function bounty_default_config()
         // Set one to false in config/bounties.json to offer it again.
         'excluded_goal_types' => ['MESETA' => true, 'MAT_HP' => true, 'MAT_TP' => true, 'MAT_POWER' => true, 'MAT_DEF' => true,
                                   'MAT_MIND' => true, 'MAT_EVADE' => true, 'MAT_LUCK' => true],
+        // Daily objectives by tier, so the effort fits the reward (free and dropped dailies): errands for
+        // Common, a boss or a timed area for Uncommon, a boss under time or with a team for Rare. Each
+        // objective type names its tier; change one in config/bounties.json to move it.
+        'daily_objective_tier' => [
+            'EXPLORATION' => 'common', 'PATROL' => 'common', 'ITEM' => 'common', 'TECHNIQUE' => 'common', 'PLAYTIME' => 'common',
+            'BOSS_ARENA' => 'uncommon', 'SPEEDRUN_FLOOR' => 'uncommon', 'LEVEL' => 'uncommon',
+            'SPEEDRUN_BOSS' => 'rare', 'MENTOR_BOSS' => 'rare', 'HARDCORE_MENTOR' => 'rare', 'DIVERSE_PARTY_BOSS' => 'rare',
+        ],
         // Play time is counted from when the bounty starts (PLAY_HOURS), not as a total.
         'play_hours' => 1,
         // "Reach level N" is offered only when the EXP still needed fits in a day's or a week's play:
@@ -816,6 +824,22 @@ function bounty_weekly_difficulty($level, $tier)
     return $d;
 }
 
+/**
+ * The lowest difficulty a daily area or boss objective counts on, by tier (null = any): Rare on the
+ * difficulty weeklies use for the hunter's level, Uncommon one below it, Common anywhere.
+ */
+function bounty_daily_min_difficulty($level, $tier)
+{
+    $order = ['Normal', 'Hard', 'Very Hard', 'Ultimate'];
+    $step = ['uncommon' => 1, 'rare' => 0][$tier] ?? null;
+    if ($step === null) {
+        return null;
+    }
+    $i = (int) array_search(bounty_weekly_difficulty($level, $tier), $order, true);
+    $d = $order[max(0, $i - $step)];
+    return ($d === 'Normal') ? null : $d;
+}
+
 function bounty_level_data()
 {
     static $d = null;
@@ -993,9 +1017,28 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         // A reroll replaces a team objective; don't hand back another one.
         $exclude = array_merge($exclude, bounty_config()['reroll_goal_types']);
     }
-    $base = bounty_pick_objective($client, $curr_f, $active_types, ['exclude' => $exclude]);
+    $pick_opts = ['exclude' => $exclude];
+    if ($cadence === 'daily' && !in_array($pool, ['battle', 'challenge'], true)) {
+        // the objective types that fit this tier (bounty_pick_objective falls back if none is available);
+        // a type daily_objective_tier doesn't list (such as a material objective set back on) is Common
+        $tiers = bounty_config()['daily_objective_tier'];
+        $all = array_unique(array_merge(array_keys($tiers), ['PLAYTIME', 'ITEM', 'EXPLORATION', 'PATROL', 'BOSS_ARENA', 'MESETA', 'LEVEL', 'TECHNIQUE',
+            'MAT_HP', 'MAT_TP', 'MAT_POWER', 'MAT_DEF', 'MAT_MIND', 'MAT_EVADE', 'MAT_LUCK', 'SPEEDRUN_BOSS', 'SPEEDRUN_FLOOR', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS']));
+        $pick_opts['only'] = array_values(array_filter($all, function ($g) use ($tiers, $tier) {
+            return ($tiers[$g] ?? 'common') === $tier;
+        }));
+    }
+    $base = bounty_pick_objective($client, $curr_f, $active_types, $pick_opts);
     $obj = $base;
     $obj['location_override'] = null;
+    $obj['min_difficulty'] = null;
+    if ($cadence === 'daily' && !in_array($pool, ['battle', 'challenge'], true) && in_array($obj['selected_goal'], BOUNTY_DAILY_PLACE_GOALS, true)) {
+        // Uncommon and Rare dailies in an area or at a boss count only on a difficulty that fits the hunter
+        $obj['min_difficulty'] = bounty_daily_min_difficulty($level, $tier);
+        if ($obj['min_difficulty']) {
+            $obj['difficulty'] = $obj['min_difficulty'];
+        }
+    }
     if ($obj['selected_goal'] === 'LEVEL') {
         $obj['selected_target_id'] = min(200, $level + mt_rand(1, max(1, $day_levels)));
         $obj['selected_target_friendly'] = 'Level ' . $obj['selected_target_id'];
@@ -1036,21 +1079,27 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         ];
     } elseif ($cadence === 'weekly') {
         $diff = bounty_weekly_difficulty($level, $tier);
-        $choices = ['AREA_SWEEP', 'AREA_SWEEP', 'BOSS_HUNT', 'BOSS_HUNT'];
+        // Ultra Rare and Mythic Rare weeklies are hunts only: visiting every area or a few levels
+        // (minutes at a low level) is too light for them.
+        $top = in_array($tier, ['ultra', 'mythic'], true);
+        $choices = $top ? ['BOSS_HUNT', 'BOSS_HUNT'] : ['AREA_SWEEP', 'AREA_SWEEP', 'BOSS_HUNT', 'BOSS_HUNT'];
         if (isset($client['EnemyKillCount'])) {
             $choices[] = 'ENEMY_HUNT';
             $choices[] = 'ENEMY_HUNT';
-            if (in_array($tier, ['ultra', 'mythic'], true)) {
+            if ($top) {
+                $choices[] = 'RARE_HUNT';
                 $choices[] = 'RARE_HUNT';
             }
         }
         $week_levels = bounty_realistic_levels($client, 'weekly');
-        if ($week_levels >= 1) {
+        if ($week_levels >= 1 && !$top) {
             $choices[] = 'LEVEL';
         }
-        $choices = array_values(array_diff($choices, $active_types)) ?: ['AREA_SWEEP'];
+        $choices = array_values(array_diff($choices, $active_types)) ?: [$top ? 'BOSS_HUNT' : 'AREA_SWEEP'];
         $goal = $choices[array_rand($choices)];
         $scale = ['common' => 1.0, 'uncommon' => 1.2, 'rare' => 1.5, 'ultra' => 2.0, 'mythic' => 2.5][$tier] ?? 1.0;
+        // Enemy counts grow faster than boss counts: about 500 kills is an hour on the floor
+        $kill_scale = ['common' => 1.0, 'uncommon' => 1.5, 'rare' => 2.5, 'ultra' => 4.0, 'mythic' => 6.0][$tier] ?? 1.0;
         $obj['selected_goal'] = $goal;
         $obj['is_location_goal'] = false;
         list($obj['mission_episode'], $obj['setting_id']) = bounty_pick_hub_setting();
@@ -1070,10 +1119,10 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
                 $obj['selected_target_id'] = (int) round(mt_rand(3, 5) * $scale) . "@$diff";
                 break;
             case 'ENEMY_HUNT':
-                $obj['selected_target_id'] = (int) (round(mt_rand(150, 300) * $scale / 10) * 10) . "@$diff";
+                $obj['selected_target_id'] = (int) (round(mt_rand(150, 300) * $kill_scale / 10) * 10) . "@$diff";
                 break;
             case 'RARE_HUNT':
-                $obj['selected_target_id'] = mt_rand(1, 2) . "@$diff";
+                $obj['selected_target_id'] = (($tier === 'mythic') ? mt_rand(2, 3) : mt_rand(1, 2)) . "@$diff";
                 break;
             case 'LEVEL':
                 $obj['selected_target_id'] = min(200, $level + mt_rand(min(3, $week_levels), $week_levels));
@@ -1279,7 +1328,13 @@ function bounty_fill($db, array $row, array $client, array $ctx)
         $spec = bounty_build_reward_spec_v2($row['tier'], $client, bounty_objective_reward_area($obj, $row), $obj['reward_opts'] ?? []);
         $row['reward_item_string'] = bounty_reward_display($spec);
     }
-    $u = $db->prepare("UPDATE missions SET title = :t, description = :d, goal_type = :g, goal_target = :gt, reward_spec = :spec, reward_item_string = :ri WHERE id = :mid");
+    $meta = json_decode((string) ($row['meta'] ?? ''), true) ?: [];
+    unset($meta['min_difficulty']);
+    if (!empty($obj['min_difficulty'])) {
+        $meta['min_difficulty'] = $obj['min_difficulty'];
+    }
+    $u = $db->prepare("UPDATE missions SET title = :t, description = :d, goal_type = :g, goal_target = :gt, reward_spec = :spec, reward_item_string = :ri, meta = :meta WHERE id = :mid");
+    $u->bindValue(':meta', $meta ? json_encode($meta) : null, $meta ? SQLITE3_TEXT : SQLITE3_NULL);
     $u->bindValue(':t', $story['title'], SQLITE3_TEXT);
     $u->bindValue(':d', $story['description'], SQLITE3_TEXT);
     $u->bindValue(':g', $obj['selected_goal'], SQLITE3_TEXT);
@@ -1294,7 +1349,7 @@ function bounty_fill($db, array $row, array $client, array $ctx)
     $p->execute();
 
     $label = bounty_tier_label($row['tier']) . ' · ' . bounty_kind_label($row['pool'], $row['cadence']);
-    $obj_text = getClearObjective($obj['selected_goal'], (string) $obj['selected_target_id'], $story['title'], $story['description']);
+    $obj_text = getClearObjective($obj['selected_goal'], (string) $obj['selected_target_id'], $story['title'], $story['description'], $obj['min_difficulty'] ?? null);
     $reward = renderRewardString($row['reward_item_string']);
     $srv = get_server_address();
     $lang = $ctx['user_lang'];

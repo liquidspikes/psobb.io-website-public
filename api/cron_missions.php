@@ -271,7 +271,7 @@ foreach ($clients as $client) {
     $completed_this_pass = [];
 
     $stmt = $db->prepare("SELECT pm.id, pm.mission_id, u.discord_id, pm.character_name, m.title AS mission_title, m.description AS mission_desc, m.goal_type, m.goal_target, m.reward_item_string,
-                                 pm.activated_at, pm.progress, m.tier, m.cadence, m.pool
+                                 pm.activated_at, pm.progress, m.tier, m.cadence, m.pool, m.meta
                           FROM player_missions pm 
                           JOIN missions m ON pm.mission_id = m.id 
                           JOIN users u ON pm.account_id = u.account_id
@@ -294,6 +294,29 @@ foreach ($clients as $client) {
         $active_mission_count++;
         $active_mission_types[] = $m['goal_type'];
         $completed = false;
+
+        // Uncommon and Rare dailies in an area or at a boss count only on their difficulty or higher
+        // (missions.meta min_difficulty, set when the bounty starts)
+        $min_diff = bounty_meta_min_difficulty($m['meta'] ?? null);
+        $saved_boss_events = null;
+        if ($min_diff && in_array($m['goal_type'], BOUNTY_DAILY_PLACE_GOALS, true)) {
+            $need_rank = bounty_difficulty_rank($min_diff);
+            $here_ok = $lobby_info && !empty($lobby_info['is_game']) && bounty_difficulty_rank($lobby_info['difficulty'] ?? 'Normal') >= $need_rank;
+            if (in_array($m['goal_type'], ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR'], true) && !$here_ok) {
+                if ($m['goal_type'] === 'PATROL') {
+                    $current_patrols[$m['id']] = (int) ($prev_state['patrol'][$m['id']] ?? 0);
+                }
+                continue;
+            }
+            if (isset($boss_kill_events[$stateKey])) {
+                // only boss kills in a game of that difficulty (the kill's own game, or this one)
+                $saved_boss_events = $boss_kill_events[$stateKey];
+                $boss_kill_events[$stateKey] = array_values(array_filter($saved_boss_events, function ($e) use ($lobby_info_map, $lobby_info, $need_rank) {
+                    $l = $lobby_info_map[$e['lobby_id'] ?? -1] ?? $lobby_info;
+                    return !$l || bounty_difficulty_rank($l['difficulty'] ?? 'Normal') >= $need_rank;
+                }));
+            }
+        }
         
         // 4. Mission Evaluation Engine
         if ($m['goal_type'] === 'MESETA' && ($client['Meseta'] ?? 0) >= (int)$m['goal_target']) {
@@ -719,6 +742,10 @@ foreach ($clients as $client) {
         } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true)) {
             // Objectives of the Bounty System Rework with progress (kept in player_missions.progress)
             $completed = bounty_evaluate_weekly($db, $m, $client, $lobby_info, $kills, $lobby_info_map);
+        }
+
+        if ($saved_boss_events !== null) {
+            $boss_kill_events[$stateKey] = $saved_boss_events;
         }
 
         // 5. Completion Handling

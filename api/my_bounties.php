@@ -39,7 +39,7 @@ try {
         SELECT pm.id AS player_mission_id, pm.mission_id, pm.character_name, pm.status,
                pm.accepted_at, pm.completed_at,
                m.title, m.description, m.goal_type, m.goal_target, m.reward_item_string,
-               m.tier, m.cadence, m.pool, m.reward_spec, pm.expires_at, pm.progress, pm.rerolled
+               m.tier, m.cadence, m.pool, m.reward_spec, m.meta, pm.expires_at, pm.progress, pm.rerolled
         FROM player_missions pm
         JOIN missions m ON pm.mission_id = m.id
         WHERE pm.account_id = :accId 
@@ -58,7 +58,12 @@ try {
         $row['progress_text'] = in_array($row['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($row['goal_type'], $row['goal_target'], $row['progress']) : null;
         $row['stats_hidden'] = $row['reward_spec'] ? bounty_reward_has_hidden_stats(json_decode($row['reward_spec'], true)) : false;
         $row['can_reroll'] = $row['status'] === 'in_progress' && $row['cadence'] && (int) $row['rerolled'] === 0 && in_array($row['goal_type'], bounty_config()['reroll_goal_types'], true);
-        unset($row['reward_spec'], $row['progress']);
+        // "(on Hard or higher)": the difficulty an Uncommon or Rare daily counts on
+        $min_diff = bounty_meta_min_difficulty($row['meta'] ?? null);
+        $row['min_difficulty_text'] = ($min_diff && in_array($row['goal_type'], BOUNTY_DAILY_PLACE_GOALS, true))
+            ? ($min_diff === 'Ultimate' ? __('(on Ultimate)') : __('(on %s or higher)', __($min_diff)))
+            : null;
+        unset($row['reward_spec'], $row['progress'], $row['meta']);
         // Objectives whose wording needs server data (Challenge paces, Battle rule sets)
         $row['objective_text'] = in_array($row['goal_type'], ['CHALLENGE_RUN', 'BATTLE_RULE_WINS'], true)
             ? html_entity_decode(strip_tags(getClearObjective($row['goal_type'], $row['goal_target'])), ENT_QUOTES)

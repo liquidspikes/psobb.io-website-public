@@ -480,8 +480,25 @@ function challenge_stages_cleared(array $client)
     return $n;
 }
 
-function getClearObjective($type, $target, $title = '', $desc = '')
+// Daily objectives that happen in an area or at a boss (Uncommon and Rare ones may need a difficulty)
+const BOUNTY_DAILY_PLACE_GOALS = ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR', 'BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS'];
+
+/**
+ * The lowest difficulty a bounty's objective counts on, from its missions.meta (null = any).
+ */
+function bounty_meta_min_difficulty($meta)
 {
+    $m = is_array($meta) ? $meta : (json_decode((string) $meta, true) ?: []);
+    $d = $m['min_difficulty'] ?? null;
+    return in_array($d, ['Hard', 'Very Hard', 'Ultimate'], true) ? $d : null;
+}
+
+function getClearObjective($type, $target, $title = '', $desc = '', $min_difficulty = null)
+{
+    if ($min_difficulty && in_array($type, BOUNTY_DAILY_PLACE_GOALS, true)) {
+        $at = ($min_difficulty === 'Ultimate') ? __('(on Ultimate)') : __('(on %s or higher)', __($min_difficulty));
+        return getClearObjective($type, $target, $title, $desc) . ' ' . $at;
+    }
     switch ($type) {
         case 'MESETA':
             if ($target === 'ANY')

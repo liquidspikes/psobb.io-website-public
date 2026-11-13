@@ -3037,7 +3037,7 @@ window.loadMyBounties = async function () {
                 activeList.innerHTML = inProgress.map(b => {
                     const reward = b.reward_decoded || b.reward_item_string || (b.status === 'queued' ? _t('Chosen when it starts, from the area it sends you to') : '');
                     const objective = b.status === 'rerolling' ? _t('Rerolling: a new objective arrives the next time this character is online')
-                        : (b.objective_text ? `[${b.goal_type === 'BATTLE_RULE_WINS' ? 'Battle' : 'Challenge'}] ${b.objective_text.replace(/^\[(Battle|Challenge)\] /, '')}` : describeBountyObjective(b.goal_type, b.goal_target)) + (b.progress_text ? ` (${b.progress_text})` : '');
+                        : (b.objective_text ? `[${b.goal_type === 'BATTLE_RULE_WINS' ? 'Battle' : 'Challenge'}] ${b.objective_text.replace(/^\[(Battle|Challenge)\] /, '')}` : describeBountyObjective(b.goal_type, b.goal_target)) + (b.min_difficulty_text ? ` ${b.min_difficulty_text}` : '') + (b.progress_text ? ` (${b.progress_text})` : '');
                     const statusLabel = b.status === 'queued' ? _t('UP NEXT') : b.status === 'rerolling' ? _t('REROLLING') : _t('IN PROGRESS');
                     return `
                     <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,10,20,0.4); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">

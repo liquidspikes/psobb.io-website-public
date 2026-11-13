@@ -41,7 +41,7 @@ try {
         SELECT pm.id AS player_mission_id, pm.mission_id, pm.character_name, pm.status,
                pm.accepted_at, pm.completed_at,
                m.title, m.description, m.goal_type, m.goal_target, m.reward_item_string,
-               m.tier, m.cadence, m.pool, m.reward_spec, pm.expires_at, pm.progress, pm.rerolled
+               m.tier, m.cadence, m.pool, m.reward_spec, m.meta, pm.expires_at, pm.progress, pm.rerolled
         FROM player_missions pm
         JOIN missions m ON pm.mission_id = m.id
         WHERE pm.account_id = :accId 
@@ -67,13 +67,15 @@ try {
         $row['progress_text'] = in_array($row['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($row['goal_type'], $row['goal_target'], $row['progress']) : null;
         $row['stats_hidden'] = $row['reward_spec'] ? bounty_reward_has_hidden_stats(json_decode($row['reward_spec'], true)) : false;
         $row['can_reroll'] = $row['status'] === 'in_progress' && $row['cadence'] && (int) $row['rerolled'] === 0 && in_array($row['goal_type'], bounty_config()['reroll_goal_types'], true);
-        unset($row['reward_spec'], $row['progress']);
+        $min_diff = bounty_meta_min_difficulty($row['meta'] ?? null);
+        unset($row['reward_spec'], $row['progress'], $row['meta']);
         // Add human-readable objective
         $row['objective'] = getClearObjective(
             $row['goal_type'], 
             $row['goal_target'], 
             $row['title'], 
-            $row['description']
+            $row['description'],
+            $min_diff
         );
         // Add rendered reward string (decode hex to item names)
         $row['reward_display'] = renderRewardString($row['reward_item_string']);
