@@ -336,15 +336,19 @@ function bounty_floor_phrase($floor)
  * @param array|null $giver      from bounty_pick_giver(), or null when Hex gives the job
  * @param array      $job        hunter_name, level, class, completed_line, goal, objective,
  *                               difficulty, is_location_goal, quest_giver, hex_twist, recent_titles,
- *                               floor (Ep1 field floor for EXPLORATION/PATROL/SPEEDRUN_FLOOR)
- *                               and target (the raw goal_target, e.g. a technique name)
+ *                               floor (Ep1 field floor for EXPLORATION/PATROL/SPEEDRUN_FLOOR),
+ *                               target (the raw goal_target, e.g. a technique name), and optionally
+ *                               extra_lines (more job lines) and location_override (replaces the
+ *                               where-to-go line)
  * @return string
  */
 function bounty_build_prompt($setting_id, $giver, array $job)
 {
     $lore = bounty_lore();
     $setting_name = $lore['settings'][$setting_id]['name'] ?? $setting_id;
-    if (!empty($job['is_location_goal'])) {
+    if (!empty($job['location_override'])) {
+        $location_instruction = $job['location_override'];
+    } elseif (!empty($job['is_location_goal'])) {
         $location_instruction = "The job takes place in {$setting_name}, and the story must give the hunter a clear reason to go there for this objective.";
     } else {
         $location_instruction = "This objective has no fixed place: set the job aboard Pioneer 2 (the setting's home is {$setting_name}) or wherever this client would be at this moment, and do not send the hunter to any particular area of Ragol.";
@@ -357,10 +361,10 @@ function bounty_build_prompt($setting_id, $giver, array $job)
 THE JOB (the server has fixed the mechanics; do not change them):
 - Objective category: {$job['goal']}
 - Objective: {$job['objective']}" . (bounty_goal_meaning($job['goal'], $job['target'] ?? null) !== '' ? "\n- What it asks of the hunter: " . bounty_goal_meaning($job['goal'], $job['target'] ?? null) : '') . (!empty($job['floor']) && bounty_floor_phrase($job['floor']) !== '' ? "\n- In the story, call the place " . bounty_floor_phrase($job['floor']) . "." : '') . "
-- Difficulty: {$job['difficulty']} (the hunter is Level {$job['level']}). For a fight, let the danger match it; for an objective with no fight, let it set how much is at stake for the client.
+- Difficulty: {$job['difficulty']} (the hunter is Level {$job['level']}). For a fight, let the danger match it; for an objective with no fight, let it set how much is at stake for the client." . (empty($job['extra_lines']) ? '' : "\n- " . implode("\n- ", (array) $job['extra_lines'])) . "
 - {$location_instruction}
-- The client is {$job['quest_giver']}. Tell it from their side, in their voice.{$job['hex_twist']}
-- Give the client a believable, specific reason to want exactly this objective done now. Mention the hunter by name once.
+- The client is " . preg_replace_callback('/^(A|An|The) /', fn($m) => strtolower($m[0]), $job['quest_giver']) . ". Tell it from their side, in their voice.{$job['hex_twist']}
+- Give the client a believable, specific reason to want exactly this objective done now (a client who never explains themselves can set terms instead). Mention the hunter by name once.
 - The objective names its target for the hunter's records only. If the setting card says people do not yet know a creature's name or nature, the client must describe it only as people would at this moment (for example, \"whatever waits at the heart of the ruins\").
 - Description: 2 to 4 sentences, under 600 characters. Title: 2 to 6 words, specific and fresh.
 - Recently posted titles on this server: [ {$job['recent_titles']} ]. Do not repeat their titles, plots or tropes.
