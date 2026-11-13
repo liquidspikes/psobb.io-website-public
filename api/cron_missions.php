@@ -354,9 +354,8 @@ foreach ($clients as $client) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'CHALLENGE_STAGES') {
-            // newserv always reports all 9 + 5 stage times (0 = not cleared), so count the cleared ones
-            $c_times = array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []);
-            if (count(array_filter($c_times, function ($t) { return (int) $t > 0; })) >= (int)$m['goal_target']) {
+            // newserv always reports all 9 + 5 stage times (65535 = not cleared), so count the cleared ones
+            if (challenge_stages_cleared($client) >= (int)$m['goal_target']) {
                 $completed = true;
             }
         } elseif (strpos($m['goal_type'], 'MAT') === 0) {

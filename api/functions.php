@@ -455,6 +455,31 @@ function bounty_progress_text($type, $target, $progress_json)
     return '';
 }
 
+/**
+ * newserv reports every Challenge stage's record time, cleared or not: ChallengeTimesEp1Online holds
+ * 9 stages and ChallengeTimesEp2Online 5. A cleared stage shows its time in seconds; a stage never
+ * cleared shows 65535, which is how newserv decodes an empty record (0 is treated the same way).
+ */
+function challenge_time_cleared($t)
+{
+    $t = (int) $t;
+    return $t > 0 && $t < 0xFFFF;
+}
+
+/**
+ * How many of the 14 online Challenge stages (Episode 1: 9, Episode 2: 5) the character has cleared.
+ */
+function challenge_stages_cleared(array $client)
+{
+    $n = 0;
+    foreach (array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []) as $t) {
+        if (challenge_time_cleared($t)) {
+            $n++;
+        }
+    }
+    return $n;
+}
+
 function getClearObjective($type, $target, $title = '', $desc = '')
 {
     switch ($type) {
@@ -477,7 +502,7 @@ function getClearObjective($type, $target, $title = '', $desc = '')
         case 'CHALLENGE_STAGES':
             if ($target === 'ANY')
                 return __('Clear Any Challenge Mode Stages');
-            return __('Complete %s Challenge Mode stages', htmlspecialchars($target));
+            return __('Clear Challenge Mode stages until %s of the 14 are cleared (each stage counts once)', htmlspecialchars($target));
         case 'ITEM':
             // Legacy items are stored as "ID:Name". Generated base weapons are stored just as "String".
             // If the string is a pure Hex payload, reverse map it back to an English string.

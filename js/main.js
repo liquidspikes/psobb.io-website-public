@@ -2896,7 +2896,7 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'ITEM': return `Obtain the target item`;
         case 'TECHNIQUE': return `Learn technique: ${target}`;
         case 'BATTLE_WINS': return `Win ${target} Battle Mode match${parseInt(target) !== 1 ? 'es' : ''}`;
-        case 'CHALLENGE_STAGES': return `Complete ${target} Challenge Mode stage${parseInt(target) !== 1 ? 's' : ''}`;
+        case 'CHALLENGE_STAGES': return `Clear Challenge Mode stages until ${target} of the 14 are cleared (each stage counts once)`;
         case 'MAT_HP': return `Use ${target} HP Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_TP': return `Use ${target} TP Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_POWER': return `Use ${target} Power Material${parseInt(target) !== 1 ? 's' : ''}`;

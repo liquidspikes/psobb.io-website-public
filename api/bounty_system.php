@@ -717,7 +717,8 @@ function bounty_challenge_clear_deltas(array $client, array $prev_state)
             continue; // first sight
         }
         foreach ($times as $i => $t) {
-            if ($t > 0 && $t !== (int) ($prev[$i] ?? 0)) {
+            // a new or faster record (65535 = never cleared)
+            if (challenge_time_cleared($t) && $t !== (int) ($prev[$i] ?? 0)) {
                 $clears[] = [$ep, $i + 1, $t];
             }
         }
@@ -1117,7 +1118,7 @@ function bounty_challenge_highest_cleared(array $client, $episode)
 {
     $h = 0;
     foreach (($client["ChallengeTimesEp{$episode}Online"] ?? []) as $i => $t) {
-        if ((int) $t > 0) {
+        if (challenge_time_cleared($t)) {
             $h = max($h, $i + 1);
         }
     }

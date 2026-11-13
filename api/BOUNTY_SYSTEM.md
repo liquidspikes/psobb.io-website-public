@@ -187,6 +187,8 @@ Without the patches the site still works:
 - Weeklies don't offer the two kill objectives, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
 - Challenge clears are read from changes to the stage record times (`ChallengeTimesEp1Online`, `ChallengeTimesEp2Online`). That misses replays slower than the record.
 
+newserv always lists all 14 online stages in those two lists (9 and 5). A cleared stage shows its record time in seconds; a stage never cleared shows 65535, which is how newserv decodes an empty record. `challenge_time_cleared()` treats 65535 (and 0) as not cleared. That matters for three things: which stages a Challenge bounty may ask for (up to one past the highest cleared), the clear tracking above, and the original "clear N Challenge stages" objective (`CHALLENGE_STAGES`, used when the rework is off). That objective now asks for one more than the stages cleared so far, says it is a total of the 14 stages, and isn't offered once all 14 are cleared. Before, it counted the 14 list entries rather than the cleared stages, so its target was always 15 and could never be met.
+
 ## Bounty states
 
 `player_missions.status`:

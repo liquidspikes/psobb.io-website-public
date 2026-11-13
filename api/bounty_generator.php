@@ -69,6 +69,10 @@ function bounty_pick_objective(array $client, $curr_f, array $active_mission_typ
     elseif ($level >= 20) $difficulty = 'Hard';
     
     $available_goals = ['PLAYTIME', 'ITEM', 'BATTLE_WINS', 'CHALLENGE_STAGES', 'EXPLORATION', 'PATROL', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA'];
+    if (challenge_stages_cleared($client) >= 14) {
+        // every stage is already cleared, so there is no new one to clear
+        $available_goals = array_values(array_diff($available_goals, ['CHALLENGE_STAGES']));
+    }
     if ($meseta <= 940000) $available_goals[] = 'MESETA';
     if ($level < 200) $available_goals[] = 'LEVEL';
 
@@ -150,9 +154,8 @@ function bounty_pick_objective(array $client, $curr_f, array $active_mission_typ
             $selected_target_friendly = $selected_target_id . " total Battle Mode wins";
             break;
         case 'CHALLENGE_STAGES':
-            // newserv reports every stage's time (0 = not cleared): count the cleared ones
-            $c_times = array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []);
-            $selected_target_id = count(array_filter($c_times, function ($t) { return (int) $t > 0; })) + 1;
+            // newserv reports all 14 stages' times, cleared or not: count the cleared ones (one more = a new stage)
+            $selected_target_id = challenge_stages_cleared($client) + 1;
             $selected_target_friendly = $selected_target_id . " total Challenge Stages cleared";
             break;
         case 'EXPLORATION':

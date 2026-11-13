@@ -200,7 +200,8 @@ check(bounty_roll_drop_tier(['is_game' => true, 'difficulty' => 'Ultimate', 'mod
 // 4. Battle (3 dailies) and Challenge (3 weeklies)
 // ---------------------------------------------------------------------------
 bounty_config(['earn' => ['battle_chance' => 100, 'challenge_chance' => 100]]);
-$e = client('Ember', 80, ['ChallengeTimesEp1Online' => [900, 3000, 0, 0, 0, 0, 0, 0, 0], 'ChallengeTimesEp2Online' => [0, 0, 0, 0, 0]]);
+// newserv shows a stage never cleared as 65535
+$e = client('Ember', 80, ['ChallengeTimesEp1Online' => [900, 3000, 65535, 65535, 65535, 65535, 65535, 65535, 65535], 'ChallengeTimesEp2Online' => array_fill(0, 5, 65535)]);
 for ($i = 0; $i < 8; $i++) {
     tick($db, $e, $battle);
 }
@@ -525,7 +526,7 @@ check(bounty_challenge_pace_seconds(1, 9, 9, 'A') === 130 * 60, 'Ep1 Stage 9 A p
 check(bounty_challenge_pace_seconds(1, 1, 9, 'S') === 7 * 3600, 'Ep1 full run S pace is the 7 h S-rank limit');
 check(bounty_challenge_pace_seconds(2, 1, 5, 'S') === 5 * 3600, 'Ep2 full run S pace is the 5 h S-rank limit');
 check(bounty_challenge_pace_seconds(2, 4, 4, 'B') === 0, 'B pace has no limit');
-$fresh = client('Fresh', 50, ['ChallengeTimesEp1Online' => array_fill(0, 9, 0), 'ChallengeTimesEp2Online' => array_fill(0, 5, 0)]);
+$fresh = client('Fresh', 50, ['ChallengeTimesEp1Online' => array_fill(0, 9, 65535), 'ChallengeTimesEp2Online' => array_fill(0, 5, 65535)]);
 for ($i = 0; $i < 300; $i++) {
     $tier = BOUNTY_TIERS[$i % 5];
     $o = bounty_pick_challenge_objective($fresh, $tier);
@@ -561,9 +562,37 @@ list($cl) = bounty_challenge_clear_deltas(['ChallengeClearCount' => 4, 'LastChal
 check($cl === [[1, 4, 2500]], 'a clear counted by newserv (Ep1 Stage 4, 2500 s)');
 list($cl) = bounty_challenge_clear_deltas(['ChallengeClearCount' => 1, 'LastChallengeClear' => ['QuestNumber' => 88202, 'Seconds' => 3100]], $st);
 check($cl === [[2, 2, 3100]], 'a clear after reconnecting (Ep2 Stage 2)');
-list($cl, $st2) = bounty_challenge_clear_deltas(['ChallengeTimesEp1Online' => [700, 0, 0], 'ChallengeTimesEp2Online' => [0, 0]], []);
-list($cl) = bounty_challenge_clear_deltas(['ChallengeTimesEp1Online' => [650, 2800, 0], 'ChallengeTimesEp2Online' => [0, 0]], $st2);
+list($cl, $st2) = bounty_challenge_clear_deltas(['ChallengeTimesEp1Online' => [700, 65535, 65535], 'ChallengeTimesEp2Online' => [65535, 65535]], []);
+list($cl) = bounty_challenge_clear_deltas(['ChallengeTimesEp1Online' => [650, 2800, 65535], 'ChallengeTimesEp2Online' => [65535, 65535]], $st2);
 check($cl === [[1, 1, 650], [1, 2, 2800]], 'without the counters, changed record times count as clears');
+
+// newserv shows a stage never cleared as 65535 (its decoding of an empty record), not 0
+check(!challenge_time_cleared(65535) && !challenge_time_cleared(0) && challenge_time_cleared(2400), '65535 and 0 mean not cleared');
+$real = ['ChallengeTimesEp1Online' => [700, 2800, 65535, 65535, 65535, 65535, 65535, 65535, 65535], 'ChallengeTimesEp2Online' => array_fill(0, 5, 65535)];
+check(challenge_stages_cleared($real) === 2, 'two of the 14 stages cleared (' . challenge_stages_cleared($real) . ')');
+check(bounty_challenge_highest_cleared($real, 1) === 2 && bounty_challenge_highest_cleared($real, 2) === 0, 'highest stage cleared skips the 65535s');
+list($cl, $st3) = bounty_challenge_clear_deltas($real, []);
+$real2 = $real;
+$real2['ChallengeTimesEp1Online'][2] = 2500;
+list($cl) = bounty_challenge_clear_deltas($real2, $st3);
+check($cl === [[1, 3, 2500]], 'a first clear of Stage 3 (65535 to 2500) counts');
+// The original "clear N Challenge stages" objective: one more than the stages cleared so far
+$picked = null;
+for ($i = 0; $i < 2000 && !$picked; $i++) {
+    $o = bounty_pick_objective(client('Stager', 60, $real), 0, []);
+    if ($o['selected_goal'] === 'CHALLENGE_STAGES') {
+        $picked = $o;
+    }
+}
+check($picked && (int) $picked['selected_target_id'] === 3, 'the stage-count objective asks for 3 with 2 cleared (' . ($picked['selected_target_id'] ?? 'not offered') . ')');
+check(challenge_stages_cleared($real) < 3 && challenge_stages_cleared($real2) >= 3, 'and a new stage clear completes it');
+check(strpos(getClearObjective('CHALLENGE_STAGES', '3'), 'until 3 of the 14 are cleared') !== false, 'the board says it is a total of the 14 stages');
+$all = ['ChallengeTimesEp1Online' => array_fill(0, 9, 2000), 'ChallengeTimesEp2Online' => array_fill(0, 5, 3000)];
+$offered = false;
+for ($i = 0; $i < 2000 && !$offered; $i++) {
+    $offered = bounty_pick_objective(client('Stager', 60, $all), 0, [])['selected_goal'] === 'CHALLENGE_STAGES';
+}
+check(!$offered, 'not offered once all 14 stages are cleared');
 
 $cid = weekly_row($db, 'Gale', 'CHALLENGE_RUN', '1:3-4:' . bounty_challenge_pace_seconds(1, 3, 4, 'A') . ':A');
 $kk = no_kills();
