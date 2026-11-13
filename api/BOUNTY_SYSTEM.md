@@ -125,7 +125,7 @@ A pool smaller than 6 items widens: first to lower strength classes, then to the
 - Photon Tickets, Secret Tickets and Photon Crystals stack (to 99) and arrive as one stack.
 - Tokens are extras, outside the 10x rule. The commonest enemy parts (Dragon's Claw drops 1 in 23) already come faster from kills.
 
-**Exchange-only items.** A Mythic Rare bounty (not a Challenge full run) has a 3% chance (`mythic_exchange_chance`) of paying one of 84 exchange-only items instead of its usual item. Left out: the Item Ticket shop's and Dr. Osto's items (bounties pay their tokens), the tokens themselves, and combination results. `exchange_allow` can still add exchange items to the Mythic Rare pool outright.
+**Exchange-only items.** A Mythic Rare bounty (not a Challenge full run) has a 3% chance (`mythic_exchange_chance`) of paying one of 83 exchange-only items instead of its usual item. Left out: the Item Ticket shop's and Dr. Osto's items (bounties pay their tokens), the tokens themselves, and combination results. `exchange_allow` can still add exchange items to the Mythic Rare pool outright.
 
 **Never rewards.**
 
@@ -268,6 +268,8 @@ python3 tools/bounty_data/build.py --newserv /path/to/newserv
 | `battle_rule_sets.json` | The eight Battle Mode rule sets, decoded from the quest scripts |
 | `challenge_mode.json` | Challenge stages, rank limits and prizes, from the stage scripts |
 | `quest_item_lists.json` | Items each BB quest can create |
+
+Episode 2's rare Rag Rappy is the Love Rappy all year (newserv's `rare_type()`); the Saint, Egg and Hallo Rappies replace it only during their events. So Love Rappy drops count as normal drops, and only those three are seasonal. (Before, the Love Rappy was counted as seasonal too, which left out its drops: God/Luck and Angel/Luck are Love Rappy drops, and eight other items drop a little more often than the old data said.)
 
 `tools/bounty_data/enemy_settings.json` maps enemies and boxes to lore settings, and `tools/bounty_data/area_classes.json` holds each area's enemy-class shares (from the BB spawn files; classes from community enemy databases, cross-checked against the Episode III card data).
 

@@ -24,7 +24,8 @@ Writes:
 
 Drop rate model (matches newserv's ItemCreator): an enemy first rolls its drop-anything chance (DAR), then its rare
 specs; a box rolls its rare specs directly. Rare enemy forms are scaled by their spawn chance (1/500, Kondrieu 1/10,
-Mericus/Merikle 1/5). Seasonal Rappies are recorded but not counted as normal drops.
+Mericus/Merikle 1/5). Seasonal Rappies (Saint, Egg and Hallo Rappies, which replace Episode 2's Love Rappy during
+their events) are recorded but not counted as normal drops.
 
 Rarity is by effort (maps.py): with how many of each enemy and box each floor has, from system/maps/bb-v4, an
 item's rate is its drops per enemy killed in the best place to farm it, a floor or an area's run with its boss.
@@ -49,7 +50,9 @@ RARE_ENEMY_SPAWN = {
     'POUILLY_SLIME': 1 / 500, 'MERISSA_AA': 1 / 500, 'PAZUZU_CRATER': 1 / 500, 'PAZUZU_DESERT': 1 / 500,
     'DORPHON_ECLAIR': 1 / 500, 'KONDRIEU': 1 / 10, 'MERICUS': 1 / 5, 'MERIKLE': 1 / 5,
 }
-SEASONAL_ENEMIES = {'LOVE_RAPPY', 'EGG_RAPPY', 'HALLO_RAPPY', 'SAINT_RAPPY'}
+# Episode 2's rare Rag Rappy is the Love Rappy all year (newserv's EnemyTypeDefinition::rare_type); these replace it
+# only during the Christmas, Easter and Halloween events.
+SEASONAL_ENEMIES = {'EGG_RAPPY', 'HALLO_RAPPY', 'SAINT_RAPPY'}
 FINAL_BOSSES = {'DARK_FALZ_2', 'DARK_FALZ_3', 'OLGA_FLOW_2'}   # always drop; not in the DAR tables
 # Challenge Mode S-rank prizes are S-rank weapons, chosen and named by the player (types 70-88 Ep1, A5-A9 Ep2)
 S_RANK_WEAPON_TYPES = set(range(0x70, 0x89)) | set(range(0xA5, 0xAA))

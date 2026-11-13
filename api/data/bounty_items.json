@@ -1119,7 +1119,7 @@
 "ep4_crater",
 "ep4_desert"
 ],
-"drop_sources": 50,
+"drop_sources": 51,
 "equip_level": [
 62,
 69,
@@ -1147,7 +1147,7 @@
 "The Restless Lion"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "HUmar",
@@ -2317,7 +2317,7 @@
 "ep4_crater",
 "ep4_desert"
 ],
-"drop_sources": 58,
+"drop_sources": 59,
 "equip_level": [
 64,
 73,
@@ -2344,7 +2344,7 @@
 "The Restless Lion"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "HUmar",
@@ -4180,7 +4180,7 @@
 "ep2_vr_temple",
 "ep4_crater"
 ],
-"drop_sources": 51,
+"drop_sources": 52,
 "equip_level": [
 13,
 15,
@@ -4208,7 +4208,7 @@
 "The Restless Lion"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "RAmar",
@@ -5129,7 +5129,7 @@
 "ep4_crater",
 "ep4_desert"
 ],
-"drop_sources": 47,
+"drop_sources": 48,
 "equip_level": [
 13,
 15,
@@ -5158,7 +5158,7 @@
 "The Restless Lion"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "HUmar",
@@ -5576,7 +5576,7 @@
 0.0,
 0.001301424,
 0.0,
-0.000657393,
+0.000892149,
 0.0001697
 ],
 "drop_settings": [
@@ -5590,7 +5590,7 @@
 "ep2_vr_temple",
 "ep4_crater"
 ],
-"drop_sources": 55,
+"drop_sources": 56,
 "equip_level": [
 13,
 15,
@@ -5618,7 +5618,7 @@
 "The Restless Lion"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "RAmar",
@@ -5662,7 +5662,7 @@
 "ep2_vr_temple",
 "ep4_desert"
 ],
-"drop_sources": 35,
+"drop_sources": 36,
 "equip_level": [
 13,
 15,
@@ -5690,7 +5690,7 @@
 "The Restless Lion"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "RAmar",
@@ -8451,17 +8451,17 @@
 ]
 },
 "001006": {
-"best_drop_rate": 0.000128669,
-"best_drop_source": "Ep2 Ultimate Redria BARBAROUS_WOLF",
-"best_place": "VR Spaceship Alpha",
-"best_source_rate": 0.000952148,
+"best_drop_rate": 0.000134146,
+"best_drop_source": "Ep2 Ultimate Viridia LOVE_RAPPY",
+"best_place": "VR Temple Beta",
+"best_source_rate": 0.001,
 "combinations": [],
 "common_drop": false,
 "drop_episodes": [
 "Ep2"
 ],
 "drop_rate_by_section": [
-0.0,
+0.000134146,
 0.0,
 0.0,
 0.0,
@@ -8476,7 +8476,7 @@
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 2,
+"drop_sources": 3,
 "equip_level": [
 64,
 73,
@@ -8500,7 +8500,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUmar",
@@ -9765,7 +9765,7 @@
 "ep2_vr_temple",
 "ep4_crater"
 ],
-"drop_sources": 18,
+"drop_sources": 19,
 "equip_level": [
 51,
 57,
@@ -9791,7 +9791,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUmar",
@@ -10050,7 +10050,7 @@
 ],
 "drop_rate_by_section": [
 0.000581921,
-0.0,
+0.000234756,
 0.000571931,
 0.000571931,
 0.000301641,
@@ -10066,7 +10066,7 @@
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 15,
+"drop_sources": 20,
 "equip_level": [
 104,
 84,
@@ -10092,7 +10092,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "FOmarl",
@@ -10245,7 +10245,7 @@
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 14,
+"drop_sources": 16,
 "equip_level": [
 11,
 13,
@@ -10271,7 +10271,7 @@
 "Soul of a Blacksmith"
 ],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUmar",
@@ -12629,7 +12629,7 @@
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 11,
+"drop_sources": 12,
 "equip_level": [
 10,
 11,
@@ -12654,7 +12654,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUmar",
@@ -13399,9 +13399,9 @@
 ]
 },
 "005500": {
-"best_drop_rate": 7.0485e-05,
-"best_drop_source": "Ep2 Ultimate Purplenum HILDEBLUE",
-"best_place": "VR Temple Alpha",
+"best_drop_rate": 0.000134146,
+"best_drop_source": "Ep2 Ultimate Bluefull LOVE_RAPPY",
+"best_place": "VR Temple Beta",
 "best_source_rate": 0.001,
 "combinations": [],
 "common_drop": false,
@@ -13412,9 +13412,9 @@
 0.0,
 0.0,
 0.0,
-0.0,
+0.000134146,
 7.0485e-05,
-0.0,
+0.000134146,
 7.0485e-05,
 6.6385e-05,
 0.0,
@@ -13424,7 +13424,7 @@
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 3,
+"drop_sources": 5,
 "equip_level": [
 79,
 63,
@@ -13447,7 +13447,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 9,
 "usable_by": [
 "FOmarl",
@@ -13819,15 +13819,16 @@
 3.6843e-05,
 4.2318e-05,
 0.0,
-0.0,
-0.0,
+0.000134146,
+0.000134146,
 0.0
 ],
 "drop_settings": [
 "ep2_gal_da_val",
-"ep2_seabed"
+"ep2_seabed",
+"ep2_vr_temple"
 ],
-"drop_sources": 4,
+"drop_sources": 6,
 "equip_level": [
 169,
 121,
@@ -13850,7 +13851,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "FOmarl",
@@ -14599,10 +14600,10 @@
 ]
 },
 "006900": {
-"best_drop_rate": 9.257e-05,
-"best_drop_source": "Ep2 Ultimate Pinkal DEL_LILY",
-"best_place": "quests",
-"best_source_rate": 0.00111084,
+"best_drop_rate": 0.000134146,
+"best_drop_source": "Ep2 Ultimate Skyly LOVE_RAPPY",
+"best_place": "VR Temple Beta",
+"best_source_rate": 0.001,
 "combinations": [],
 "common_drop": false,
 "drop_episodes": [
@@ -14611,7 +14612,7 @@
 "drop_rate_by_section": [
 0.0,
 0.0,
-0.0,
+0.000134146,
 0.0,
 0.0,
 9.257e-05,
@@ -14621,9 +14622,10 @@
 0.0
 ],
 "drop_settings": [
-"ep2_gal_da_val"
+"ep2_gal_da_val",
+"ep2_vr_temple"
 ],
-"drop_sources": 2,
+"drop_sources": 3,
 "equip_level": [
 144,
 172,
@@ -14647,7 +14649,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUnewearl"
@@ -55861,14 +55863,15 @@
 0.000356596,
 0.0,
 0.0,
-0.0
+0.000134146
 ],
 "drop_settings": [
 "ep2_gal_da_val",
 "ep2_seabed",
-"ep2_vr_spaceship"
+"ep2_vr_spaceship",
+"ep2_vr_temple"
 ],
-"drop_sources": 4,
+"drop_sources": 5,
 "equip_level": [
 122,
 122,
@@ -55895,7 +55898,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 11,
 "usable_by": [
 "HUcast",
@@ -59752,7 +59755,7 @@
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 20,
+"drop_sources": 21,
 "equip_level": [
 17,
 17,
@@ -59776,7 +59779,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUmar",
@@ -60310,13 +60313,13 @@
 0.0,
 0.000476372,
 0.000580659,
-0.0
+0.000234756
 ],
 "drop_settings": [
 "ep2_vr_spaceship",
 "ep2_vr_temple"
 ],
-"drop_sources": 6,
+"drop_sources": 7,
 "equip_level": [
 66,
 66,
@@ -60342,7 +60345,7 @@
 "obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 10,
 "usable_by": [
 "HUmar",
@@ -70262,27 +70265,31 @@
 ]
 },
 "01031C": {
-"best_drop_rate": 0,
-"best_drop_source": null,
-"best_place": null,
-"best_source_rate": 0,
+"best_drop_rate": 0.000234756,
+"best_drop_source": "Ep2 Hard Whitill LOVE_RAPPY",
+"best_place": "VR Temple Beta",
+"best_source_rate": 0.00175,
 "combinations": [],
 "common_drop": true,
-"drop_episodes": [],
-"drop_rate_by_section": [
-0.0,
-0.0,
-0.0,
-0.0,
-0.0,
-0.0,
-0.0,
-0.0,
-0.0,
-0.0
+"drop_episodes": [
+"Ep2"
 ],
-"drop_settings": [],
-"drop_sources": 0,
+"drop_rate_by_section": [
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756,
+0.000234756
+],
+"drop_settings": [
+"ep2_vr_temple"
+],
+"drop_sources": 12,
 "equip_level": [
 1,
 1,
@@ -70300,10 +70307,10 @@
 "exchanges": [],
 "kind": "Unit",
 "name": "Angel/Luck",
-"obtained": "common_drop",
+"obtained": "rare_drop",
 "quest_rewards": [],
 "rare": false,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 8,
 "usable_by": [
 "HUmar",
@@ -70321,27 +70328,31 @@
 ]
 },
 "01031D": {
-"best_drop_rate": 0,
-"best_drop_source": null,
-"best_place": null,
-"best_source_rate": 0,
+"best_drop_rate": 0.000234756,
+"best_drop_source": "Ep2 Ultimate Greennill LOVE_RAPPY",
+"best_place": "VR Temple Beta",
+"best_source_rate": 0.00175,
 "combinations": [],
 "common_drop": false,
-"drop_episodes": [],
+"drop_episodes": [
+"Ep2"
+],
 "drop_rate_by_section": [
 0.0,
+0.000234756,
 0.0,
 0.0,
+0.000134146,
 0.0,
-0.0,
-0.0,
-0.0,
+0.000234756,
 0.0,
 0.0,
 0.0
 ],
-"drop_settings": [],
-"drop_sources": 0,
+"drop_settings": [
+"ep2_vr_temple"
+],
+"drop_sources": 4,
 "equip_level": [
 1,
 1,
@@ -70362,10 +70373,10 @@
 ],
 "kind": "Unit",
 "name": "God/Luck",
-"obtained": "exchange_only",
+"obtained": "rare_drop",
 "quest_rewards": [],
 "rare": true,
-"seasonal_drop": true,
+"seasonal_drop": false,
 "stars": 11,
 "usable_by": [
 "HUmar",
