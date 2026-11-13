@@ -122,6 +122,16 @@ function bounty_default_config()
                                   'MAT_MIND' => true, 'MAT_EVADE' => true, 'MAT_LUCK' => true],
         // Play time is counted from when the bounty starts (PLAY_HOURS), not as a total.
         'play_hours' => 1,
+        // "Reach level N" is offered only when the EXP still needed fits in a day's or a week's play:
+        // hours x kills_per_hour x the EXP an average enemy gives on the hardest difficulty the hunter
+        // can play (api/data/bounty_levels.json, from newserv's battle params) x exp_multiplier (set it
+        // to newserv's BBGlobalEXPMultiplier). It asks for as many levels as fit, up to max_levels.
+        'level' => [
+            'hours' => ['daily' => 1, 'weekly' => 5],
+            'kills_per_hour' => 500,
+            'exp_multiplier' => 1,
+            'max_levels' => ['daily' => 2, 'weekly' => 5],
+        ],
         'rewards' => [
             // Point 17: Common = tools and consumables. [hex, min qty, max qty, weight, min level]
             'common_items' => [
@@ -805,6 +815,52 @@ function bounty_weekly_difficulty($level, $tier)
     return $d;
 }
 
+function bounty_level_data()
+{
+    static $d = null;
+    if ($d === null) {
+        $raw = @file_get_contents(__DIR__ . '/data/bounty_levels.json');
+        $d = $raw ? (json_decode($raw, true) ?: []) : [];
+    }
+    return $d;
+}
+
+/**
+ * The hardest difficulty a character can play (Blue Burst: Hard from level 20, Very Hard from 40,
+ * Ultimate from 80).
+ */
+function bounty_level_difficulty($level)
+{
+    $level = (int) $level;
+    return ($level >= 80) ? 'Ultimate' : (($level >= 40) ? 'Very Hard' : (($level >= 20) ? 'Hard' : 'Normal'));
+}
+
+/**
+ * How many levels a hunter can realistically gain in a day or a week (0 = not even one, so no level
+ * objective is offered): the EXP still needed for each level must fit in the cadence's hours of play
+ * (config 'level'), counted from the hunter's current EXP. At most max_levels.
+ */
+function bounty_realistic_levels(array $client, $cadence)
+{
+    $cfg = bounty_config()['level'];
+    $d = bounty_level_data();
+    $table = $d['exp_for_level'] ?? [];
+    $level = max(1, min(200, (int) ($client['Level'] ?? 1)));
+    if (!$table || $level >= 200) {
+        return 0;
+    }
+    $exp = isset($client['EXP']) ? (int) $client['EXP'] : (int) ($table[$level - 1] ?? 0);
+    $per_kill = (float) ($d['exp_per_kill'][bounty_level_difficulty($level)] ?? 0);
+    $budget = (float) ($cfg['hours'][$cadence] ?? 0) * (float) $cfg['kills_per_hour'] * $per_kill * (float) $cfg['exp_multiplier'];
+    $max = (int) ($cfg['max_levels'][$cadence] ?? 0);
+    $n = 0;
+    // table[L - 1] is the total EXP to reach level L, so the next level is table[$level]
+    while ($n < $max && $level + $n < 200 && (int) $table[$level + $n] - $exp <= $budget) {
+        $n++;
+    }
+    return $n;
+}
+
 /**
  * Updates a weekly objective's progress for this cron pass and reports whether it is done.
  *
@@ -928,6 +984,10 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
     $cadence = $row['cadence'];
     $level = (int) ($client['Level'] ?? 1);
     $exclude = array_merge(['BATTLE_WINS', 'CHALLENGE_STAGES'], array_keys(array_filter(bounty_config()['excluded_goal_types'])));
+    $day_levels = bounty_realistic_levels($client, 'daily');
+    if ($day_levels < 1) {
+        $exclude[] = 'LEVEL'; // not even one level fits in a day's play
+    }
     if (($row['status'] ?? '') === 'rerolling') {
         // A reroll replaces a team objective; don't hand back another one.
         $exclude = array_merge($exclude, bounty_config()['reroll_goal_types']);
@@ -935,6 +995,10 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
     $base = bounty_pick_objective($client, $curr_f, $active_types, ['exclude' => $exclude]);
     $obj = $base;
     $obj['location_override'] = null;
+    if ($obj['selected_goal'] === 'LEVEL') {
+        $obj['selected_target_id'] = min(200, $level + mt_rand(1, max(1, $day_levels)));
+        $obj['selected_target_friendly'] = 'Level ' . $obj['selected_target_id'];
+    }
     if ($obj['selected_goal'] === 'PLAYTIME') {
         // "Reach N total hours" becomes play time counted from now: "<seconds needed>:<play time now>"
         $hours = max(1, (int) bounty_config()['play_hours']);
@@ -979,7 +1043,8 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
                 $choices[] = 'RARE_HUNT';
             }
         }
-        if ($level <= 195) {
+        $week_levels = bounty_realistic_levels($client, 'weekly');
+        if ($week_levels >= 1) {
             $choices[] = 'LEVEL';
         }
         $choices = array_values(array_diff($choices, $active_types)) ?: ['AREA_SWEEP'];
@@ -1010,7 +1075,7 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
                 $obj['selected_target_id'] = mt_rand(1, 2) . "@$diff";
                 break;
             case 'LEVEL':
-                $obj['selected_target_id'] = min(200, $level + mt_rand(3, 5));
+                $obj['selected_target_id'] = min(200, $level + mt_rand(min(3, $week_levels), $week_levels));
                 break;
         }
         $obj['selected_target_friendly'] = ($goal === 'LEVEL')

@@ -625,6 +625,40 @@ check(!bounty_evaluate_weekly($db, wrow($db, $pid), client('Pell', 60, ['PlayTim
 check(bounty_evaluate_weekly($db, wrow($db, $pid), client('Pell', 60, ['PlayTimeSeconds' => 435600 + 3600]), null, no_kills(), []), 'an hour of play since the start: done');
 check(!bounty_evaluate_weekly($db, wrow($db, weekly_row($db, 'Pell', 'PLAY_HOURS', '3600:500000')), client('Pell', 60, ['PlayTimeSeconds' => 500000 + 600]), null, no_kills(), []), 'play time before the bounty started does not count');
 
+// "Reach level N" only when the EXP still needed fits in a day's or a week's play
+$lt = bounty_level_data()['exp_for_level'];
+check(count($lt) === 200 && $lt[0] === 0 && $lt[1] === 50 && $lt[199] === 83227800, 'EXP table from newserv: 200 levels, 83,227,800 EXP at level 200');
+$pk = bounty_level_data()['exp_per_kill'];
+check($pk['Normal'] < $pk['Hard'] && $pk['Hard'] < $pk['Very Hard'] && $pk['Very Hard'] < $pk['Ultimate'], 'average EXP per enemy rises with difficulty');
+$at = function ($lv, $extra = 0) use ($lt) {
+    return client('Lex', $lv, ['EXP' => $lt[$lv - 1] + $extra]);
+};
+check(bounty_realistic_levels($at(30), 'daily') === 2 && bounty_realistic_levels($at(30), 'weekly') === 5, 'a level-30 hunter can gain 2 levels in a day and 5 in a week');
+check(bounty_realistic_levels($at(150), 'daily') === 0, 'a level-150 hunter is not asked to level up in a day');
+check(bounty_realistic_levels($at(190), 'weekly') === 0 && bounty_realistic_levels($at(199), 'weekly') === 0, 'nor a level-190 or 199 hunter in a week');
+check(bounty_realistic_levels(client('Lex', 200, ['EXP' => $lt[199]]), 'weekly') === 0, 'nothing at level 200');
+check(bounty_realistic_levels($at(150, $lt[150] - $lt[149] - 1000), 'daily') === 1, 'a hunter 1,000 EXP short of the next level can reach it in a day');
+$budget = function ($lv, $cad) use ($pk) {
+    $c = bounty_config()['level'];
+    return $c['hours'][$cad] * $c['kills_per_hour'] * $pk[bounty_level_difficulty($lv)] * $c['exp_multiplier'];
+};
+foreach (['daily' => [60, 100, 112, 118, 130, 160], 'weekly' => [60, 120, 150, 166, 172, 190]] as $cad => $lvs) {
+    foreach ($lvs as $lv) {
+        $row = ['id' => 0, 'mission_id' => 0, 'status' => 'queued', 'tier' => 'uncommon', 'cadence' => $cad, 'pool' => 'standard', 'meta' => null];
+        $offered = false;
+        for ($i = 0; $i < 400; $i++) {
+            $o = bounty_pick_rework_objective($at($lv), $row, 0, []);
+            if ($o['selected_goal'] === 'LEVEL') {
+                $offered = true;
+                $need = $lt[(int) $o['selected_target_id'] - 1] - $lt[$lv - 1];
+                check($need <= $budget($lv, $cad) && (int) $o['selected_target_id'] > $lv, "$cad level target from $lv to {$o['selected_target_id']} fits the budget ($need EXP)");
+            }
+        }
+        $fits = $lt[$lv] - $lt[$lv - 1] <= $budget($lv, $cad);
+        check($offered === $fits, "$cad level objective at level $lv is " . ($fits ? 'offered' : 'not offered') . ($offered ? ' (offered)' : ' (not offered)'));
+    }
+}
+
 // The board names items by newserv's name where item_map.json's last name for a code is wrong
 $names = ['031200' => 'Weapons Bronze Badge', '031201' => 'Weapons Silver Badge', '031202' => 'Weapons Gold Badge', '01024B' => 'Assist Barrier',
           '008A00' => 'Sange', '010223' => 'Regene Gear Adv.', '031209' => 'Item Ticket', '031003' => 'Secret Ticket', '031004' => 'Photon Ticket',

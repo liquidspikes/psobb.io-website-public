@@ -13,6 +13,18 @@
         "MAT_LUCK": true
     },
     "play_hours": 1,
+    "level": {
+        "hours": {
+            "daily": 1,
+            "weekly": 5
+        },
+        "kills_per_hour": 500,
+        "exp_multiplier": 1,
+        "max_levels": {
+            "daily": 2,
+            "weekly": 5
+        }
+    },
     "reset": {
         "daily_hour": 0,
         "weekly_day": 1,

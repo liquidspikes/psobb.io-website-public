@@ -18,6 +18,8 @@ Writes:
   bounty_items.json        one entry per item: rarity data, how else it is obtained, equip level per class
   battle_rule_sets.json    the eight BB battle rule sets, decoded from their scripts
   challenge_mode.json      Challenge Mode stages, rank times and prizes, decoded from their scripts
+  bounty_levels.json       EXP needed for each level, and the EXP an average enemy gives per difficulty
+                           (from level-table-v4.json and battle-params.json), so level objectives stay realistic
 
 Drop rate model (matches newserv's ItemCreator): an enemy first rolls its drop-anything chance (DAR), then its rare
 specs; a box rolls its rare specs directly. Rare enemy forms are scaled by their spawn chance (1/500, Kondrieu 1/10,
@@ -185,6 +187,45 @@ def build_areas(here):
         'challenge_stages': challenge,
         'bosses': {k: v for k, v in ac.items() if k.startswith('boss_')},
     }
+
+# Bosses are left out of the average EXP per enemy: they are a few kills a run, not the steady pace of an area.
+LEVEL_BOSSES = {'DRAGON', 'DE_ROL_LE', 'VOL_OPT_2', 'DARK_FALZ_2', 'DARK_FALZ_3', 'BARBA_RAY', 'BARBA_RAY_JOINT', 'GOL_DRAGON',
+                'GAL_GRYPHON', 'OLGA_FLOW_2', 'SAINT_MILION', 'SHAMBERTIN', 'KONDRIEU'}
+LEVEL_DIFFS = ['Normal', 'Hard', 'Very Hard', 'Ultimate']
+
+
+def build_levels(T, here):
+    """EXP needed for each level (the same for every class) and the EXP an average enemy gives, per difficulty: the
+    mean over each field area's enemies (bosses and rare forms left out, Online tables), then the median area."""
+    lt = load_jsonc(T + 'level-table-v4.json')
+    exp_for_level = [int(row['EXP']) for row in lt['LevelDeltas'][0]]
+    bp = load_jsonc(T + 'battle-params.json')
+    es = load_jsonc(os.path.join(here, 'enemy_settings.json'))
+    skip = LEVEL_BOSSES | set(RARE_ENEMY_SPAWN) | SEASONAL_ENEMIES
+    per_area = {}
+    for ep, key in (('Ep1', 'Episode1-Online'), ('Ep2', 'Episode2-Online'), ('Ep4', 'Episode4-Online')):
+        for diff in LEVEL_DIFFS:
+            exp_of = {}
+            for r in bp[key][diff]:
+                for e in r['Stats'].get('Enemies', []):
+                    exp_of.setdefault(e, r['Stats']['EXP'])
+            for area, enemies in es[ep].items():
+                if area.startswith('_'):
+                    continue
+                vals = [exp_of[n] for n in enemies if n in exp_of and n not in skip]
+                if vals:
+                    per_area.setdefault(area, {})[diff] = round(sum(vals) / len(vals), 1)
+    per_kill = {}
+    for diff in LEVEL_DIFFS:
+        vals = sorted(v[diff] for v in per_area.values() if diff in v)
+        m = len(vals) // 2
+        per_kill[diff] = round(vals[m] if len(vals) % 2 else (vals[m - 1] + vals[m]) / 2, 1)
+    return {
+        '_comment': 'exp_for_level[L - 1] = total EXP to reach level L. exp_per_kill = EXP from an average enemy on each '
+                    'difficulty (median of the field areas). Used to offer level objectives only when they are realistic.',
+        'exp_for_level': exp_for_level, 'exp_per_kill': per_kill, 'exp_per_kill_by_area': per_area,
+    }
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -485,6 +526,7 @@ def main():
               open(os.path.join(a.out, 'challenge_mode.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump(quests, open(os.path.join(a.out, 'quest_item_lists.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump(build_areas(os.path.dirname(os.path.abspath(__file__))), open(os.path.join(a.out, 'bounty_areas.json'), 'w'), indent=1, ensure_ascii=False)
+    json.dump(build_levels(T, os.path.dirname(os.path.abspath(__file__))), open(os.path.join(a.out, 'bounty_levels.json'), 'w'), indent=1, ensure_ascii=False)
     c = collections.Counter(v['obtained'] for v in items.values())
     print('items:', len(items), dict(c))
 

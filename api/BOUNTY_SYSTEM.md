@@ -54,7 +54,7 @@ Rare, Ultra Rare and Mythic Rare items come from Blue Burst's own drop data, in 
 
 An item that drops 1/500 or better for the hunter's **own** Section ID is left to normal play for them, whatever its band.
 
-**The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill of its best enemy for the hunter's own Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 380,000 item chances).
+**The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill of its best enemy for the hunter's own Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 300,000 item chances).
 
 **Area.** Items must drop in the bounty's area:
 
@@ -130,13 +130,17 @@ Bounties started before this update keep their old reward and roll it with `roll
   - A day or a week is no fair measure of some old objectives, so the rework never offers them (`excluded_goal_types`; set one to `false` to offer it again):
     - **Hold N Meseta.** A bank withdrawal meets it at once, and spending undoes it.
     - **Use N materials.** Most materials drop too rarely to find in a day (HP and Power Materials average about 1 in 1,300 and 1 in 860 a kill, Luck about 1 in 7,900). They are capped per character, and how to spend them is a build choice.
+  - **Reach level N** (daily, up to 2 levels; weekly, up to 5) is offered only when the EXP still needed fits in a day's or a week's play, and asks for as many levels as fit. The EXP a hunter can earn is the hours of play (`level.hours`: 1 a day, 5 a week) × `level.kills_per_hour` (500) × the EXP an average enemy gives on the hardest difficulty the hunter can play × `level.exp_multiplier` (set it to newserv's `BBGlobalEXPMultiplier`). The EXP figures come from newserv's level table and battle params (`api/data/bounty_levels.json`; Ultimate: about 333 EXP an enemy). With the defaults, from the start of a level:
+    - dailies ask for a level up to about level 115 (a day's play is about 167,000 EXP on Ultimate);
+    - weeklies ask for one up to about level 169 (a week's play is about 833,000 EXP);
+    - a hunter close to the next level can still get one.
   - **Play time** is counted from when the bounty starts: `PLAY_HOURS` (`<seconds needed>:<play time at the start>`) asks for 1 hour of play (`play_hours`) instead of a total like "121 total hours". The board shows how much has been played.
 - **Weeklies** use new, longer objectives:
   - `AREA_SWEEP` (`E@Difficulty`): visit every area of Episode E.
   - `BOSS_HUNT` (`N@Difficulty`): defeat N bosses.
   - `ENEMY_HUNT` (`N@Difficulty`): defeat N enemies.
   - `RARE_HUNT` (`N@Difficulty`): defeat N rare enemies (Ultra and Mythic only).
-  - `LEVEL`: gain 3–5 levels.
+  - `LEVEL`: gain up to 5 levels (3–5 when they fit; see below).
 
   Each counts only in Normal-mode or Solo games at that difficulty or higher. Weeklies never require Ultimate, except Mythic Rare ones. Progress is saved in `player_missions.progress` and shown on the board, for example "4 / 10 areas".
 - **Battle Mode** bounties (`BATTLE_RULE_WINS`, target `quest:wins`, e.g. `503:2`) ask for 1–3 wins (Common, Uncommon, Rare) under one of the eight rule sets, named on the board with its rules:
@@ -227,6 +231,7 @@ python3 tools/bounty_data/build.py --newserv /path/to/newserv
 |---|---|
 | `bounty_items.json` | Every BB item: name, kind, stars, how it is obtained, rate per Section ID, best source, where it drops (lore setting and episode), level requirement per class, DEF/EVP ranges, exchanges, quest rewards, combinations |
 | `bounty_areas.json` | Each lore setting, floor and Challenge stage: its drop setting and its enemies' class shares |
+| `bounty_levels.json` | The EXP needed for each level, and the EXP an average enemy gives on each difficulty (for level objectives) |
 | `battle_rule_sets.json` | The eight Battle Mode rule sets, decoded from the quest scripts |
 | `challenge_mode.json` | Challenge stages, rank limits and prizes, from the stage scripts |
 | `quest_item_lists.json` | Items each BB quest can create |
