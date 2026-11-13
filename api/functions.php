@@ -529,13 +529,9 @@ function getClearObjective($type, $target, $title = '', $desc = '')
                 if (isset($reverse_generic_map[$hex_base])) {
                     $itemName = $reverse_generic_map[$hex_base];
                 } else {
-                    $map_path = __DIR__ . '/item_map.json';
-                    if (file_exists($map_path)) {
-                        $map = json_decode(file_get_contents($map_path), true);
-                        $reverse_map = array_flip($map);
-                        if (isset($reverse_map[$hex_base])) {
-                            $itemName = ucwords($reverse_map[$hex_base]);
-                        }
+                    $reverse_map = item_map_display_names();
+                    if (isset($reverse_map[$hex_base])) {
+                        $itemName = ucwords($reverse_map[$hex_base]);
                     }
                 }
             }
@@ -703,6 +699,51 @@ function getClearObjective($type, $target, $title = '', $desc = '')
 }
 
 /**
+ * Display names for item codes from item_map.json, as [code => lower-case name].
+ *
+ * item_map.json maps names to codes, and some codes have several names, a few of them wrong
+ * ("monomate" => 031200, the Weapons Bronze Badge; "gekko" => 008A00, Sange). A plain
+ * array_flip keeps the last name. This keeps the name that matches newserv's name for the
+ * code when there is one, and uses newserv's name where item_map.json has only a bare part
+ * of it ("barrier" for ASSIST BARRIER). Other names (such as "agito (1975)") are kept.
+ */
+function item_map_display_names()
+{
+    static $rev = null;
+    if ($rev !== null) {
+        return $rev;
+    }
+    $rev = [];
+    $map = json_decode((string) @file_get_contents(__DIR__ . '/item_map.json'), true) ?: [];
+    $v4 = json_decode((string) @file_get_contents(__DIR__ . '/names-v4.json'), true) ?: [];
+    $norm = function ($s) {
+        return preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/\s+x1$/i', '', (string) $s)));
+    };
+    $by_code = [];
+    foreach ($map as $name => $code) {
+        $by_code[$code][] = (string) $name;
+    }
+    foreach ($by_code as $code => $names) {
+        $pick = end($names);
+        $real = isset($v4[$code]) ? $norm($v4[$code]) : '';
+        if ($real !== '' && $norm($pick) !== $real) {
+            foreach ($names as $nm) {
+                if ($norm($nm) === $real) {
+                    $pick = $nm;
+                    break;
+                }
+            }
+            $p = $norm($pick);
+            if ($p !== '' && $p !== $real && strlen($real) > strlen($p) && strpos($real, $p) !== false) {
+                $pick = strtolower(preg_replace('/\s+/', ' ', trim($v4[$code])));
+            }
+        }
+        $rev[$code] = preg_replace('/\s+x1$/i', '', $pick);
+    }
+    return $rev;
+}
+
+/**
  * Obfuscates Unidentified weapon strings before rendering them to the Bounty Board UI.
  * Prevents players from knowing the exact special ability or grind modifiers prior to taking the weapon to the Tekker.
  *
@@ -842,14 +883,10 @@ function renderRewardString($rewardStr)
             if (isset($reverse_generic_map[$base])) {
                 $weaponName = $reverse_generic_map[$base];
             } else {
-                $map_path = __DIR__ . '/item_map.json';
-                if (file_exists($map_path)) {
-                    $map = json_decode(file_get_contents($map_path), true);
-                    $reverse_map = array_flip($map);
-                    if (isset($reverse_map[$base])) {
-                        // item_map.json lists stackable items as "telepipe x1"; drop that suffix
-                        $weaponName = preg_replace('/\s+x1$/i', '', ucwords($reverse_map[$base]));
-                    }
+                $reverse_map = item_map_display_names();
+                if (isset($reverse_map[$base])) {
+                    // item_map.json lists stackable items as "telepipe x1"; drop that suffix
+                    $weaponName = preg_replace('/\s+x1$/i', '', ucwords($reverse_map[$base]));
                 }
                 // A few item_map.json entries are bare numbers (e.g. 030E15 => "3"); use the
                 // newserv name list instead for those and for codes item_map.json lacks.

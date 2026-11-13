@@ -572,6 +572,15 @@ for ($i = 0; $i < 200; $i++) {
     }
 }
 
+// The board names items by newserv's name where item_map.json's last name for a code is wrong
+$names = ['031200' => 'Weapons Bronze Badge', '031201' => 'Weapons Silver Badge', '031202' => 'Weapons Gold Badge', '01024B' => 'Assist Barrier',
+          '008A00' => 'Sange', '010223' => 'Regene Gear Adv.', '031209' => 'Item Ticket', '031003' => 'Secret Ticket', '031004' => 'Photon Ticket',
+          '031002' => 'Photon Crystal', '030D00' => "Sorcerer's Right Arm", '030900' => 'Scape Doll', '001001' => 'Agito (1975)'];
+foreach ($names as $code => $want) {
+    $got = html_entity_decode(renderRewardString($code), ENT_QUOTES);
+    check(strcasecmp($got, $want) === 0, "the board names $code \"$want\" (got \"$got\")");
+}
+
 @unlink($tmp_db);
 @unlink(__DIR__ . '/../db/.bounty_9001'); // activation marker for the test account
 @unlink("$tmp_db-wal");
