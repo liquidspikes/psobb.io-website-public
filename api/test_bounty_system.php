@@ -380,10 +380,11 @@ for ($i = 0; $i < 600; $i++) {
             check(!bounty_is_challenge_reserved($d, $rc), "$tier reward $code is not reserved for Challenge full runs");
             $r = (float) $d['drop_rate_by_section'][bounty_section_index($sec)];
             if ($tier === 'rare') {
-                check($d['obtained'] === 'rare_drop' && $r >= 1 / 5000 && $r < 1 / 500, "Rare reward $code drops 1/500 to 1/5000 for $sec");
+                $avg = bounty_item_average_rate($d);
+                check($d['obtained'] === 'rare_drop' && $avg >= 1 / 1500 && $avg < 1 / 500 && $r < 1 / 500, "Rare reward $code drops 1/500 to 1/1500 server-wide and is not common for $sec");
                 check(in_array($cls, $d['usable_by'], true), "Rare reward $code is usable by $cls");
             } elseif ($tier === 'ultra') {
-                check($d['obtained'] === 'rare_drop' && $r < 1 / 5000, "Ultra reward $code is rarer than 1/5000 for $sec");
+                check($d['obtained'] === 'rare_drop' && bounty_item_average_rate($d) < 1 / 1500 && $r < 1 / 500, "Ultra reward $code is rarer than 1/1500 server-wide and not common for $sec");
             } else {
                 check($d['obtained'] === 'quest_reward_only', "Mythic reward $code is a quest reward that never drops ({$d['obtained']})");
             }

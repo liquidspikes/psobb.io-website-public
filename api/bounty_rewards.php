@@ -7,8 +7,9 @@
  *
  *  - Items come from the drop data of the bounty's area (its lore setting, or its Challenge stages),
  *    widening to the episode only when the area has too few items for the hunter.
- *  - Rare and Ultra Rare items are sorted by how often they drop for the hunter's own Section ID.
- *    Rare: 1/500 to 1/5000 a kill. Ultra Rare: rarer than 1/5000, or never for that Section ID.
+ *  - Rare and Ultra Rare items come from every Section ID's drop table, sorted by their server-wide
+ *    rate (the average over the ten Section IDs). Rare: 1/500 to 1/1500 a kill. Ultra Rare: rarer.
+ *    Items that drop 1/500 or better for the hunter's own Section ID are left to normal play.
  *    Mythic Rare: quest-reward items no enemy or box drops, plus any allowed exchange items.
  *    Combination results are never rewards.
  *  - The 10x rule: every item in a pool is at least 10 times as likely from one bounty of that tier
@@ -43,10 +44,14 @@ const BOUNTY_STRENGTH_BANDS = [[1, 20], [21, 40], [41, 60], [61, 80], [81, 100],
 function bounty_reward_defaults()
 {
     return [
-        // Item rarity bands, as the best chance per kill (or per box) for the hunter's Section ID.
-        // Anything commoner than rare_min_rate (1/500) is left to normal play.
-        'rare_min_rate' => 1 / 5000,
+        // Item rarity bands, by the item's server-wide rate: the average over the ten Section IDs of
+        // the best chance per kill (or per box), counting 0 where a Section ID never gets it. So a
+        // bounty can pay from any Section ID's drop table. Rare: rare_min_rate to rare_max_rate
+        // (1/1500 to 1/500); Ultra Rare: rarer than rare_min_rate.
+        'rare_min_rate' => 1 / 1500,
         'rare_max_rate' => 1 / 500,
+        // Left to normal play: items that drop 1/500 or better for the hunter's own Section ID.
+        'own_section_common_rate' => 1 / 500,
         // Reserved for Mythic Rare Challenge Mode full runs: drops rarer than this for every Section ID.
         'challenge_reserve_max_rate' => 1 / 5000,
         // The 10x rule: each pool item's chance from one bounty >= this x its best chance per kill.
@@ -354,6 +359,16 @@ function bounty_pick_exchange_token($tier, array $area)
 }
 
 /**
+ * An item's server-wide rate: the average over the ten Section IDs of its best chance per kill,
+ * with 0 where a Section ID never gets it.
+ */
+function bounty_item_average_rate(array $it)
+{
+    $r = $it['drop_rate_by_section'] ?? [];
+    return $r ? array_sum(array_map('floatval', $r)) / 10 : 0.0;
+}
+
+/**
  * Items reserved for Mythic Rare Challenge Mode full runs: drops rarer than 1/5000 a kill for
  * every Section ID.
  */
@@ -389,16 +404,21 @@ function bounty_pool_candidates($tier, array $ctx, array $relax = [])
             continue;
         }
         $kind = $it['kind'] ?? '';
+        // The hunter's own rate (for the 10x rule, and to leave their own common rares to play) and
+        // the server-wide rate (which tier the item belongs to)
         $rate = (float) ($it['drop_rate_by_section'][$sec] ?? 0);
+        $avg = bounty_item_average_rate($it);
         $reserved = bounty_is_challenge_reserved($it, $rc);
         switch ($tier) {
             case 'rare':
-                if ($reserved || ($it['obtained'] ?? '') !== 'rare_drop' || $rate < $rc['rare_min_rate'] || $rate >= $rc['rare_max_rate']) {
+                if ($reserved || ($it['obtained'] ?? '') !== 'rare_drop' || $avg < $rc['rare_min_rate'] || $avg >= $rc['rare_max_rate']
+                    || $rate >= $rc['own_section_common_rate']) {
                     continue 2;
                 }
                 break;
             case 'ultra':
-                if ($reserved || ($it['obtained'] ?? '') !== 'rare_drop' || $rate >= $rc['rare_min_rate']) {
+                if ($reserved || ($it['obtained'] ?? '') !== 'rare_drop' || $avg >= $rc['rare_min_rate']
+                    || $rate >= $rc['own_section_common_rate']) {
                     continue 2;
                 }
                 break;
