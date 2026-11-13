@@ -159,7 +159,7 @@ Bounties started before this update keep their old reward and roll it with `roll
 
 - **Bounty board (`missions.php`).** Each card shows the bounty's tier, its kind, the time left before it expires and, for weeklies, its progress. Team bounties get a reroll button.
   - A **Your Bounty Slots** panel shows, for each character, the active slots, how much of each cap has been earned, and the **Up next** list. Waiting bounties can be discarded from that list.
-  - The public feed shows all of your own active bounties and the 30 newest of everyone else's. A character can now hold up to 17 active bounties, so the feed is capped.
+  - The public feed shows all of your own active bounties. Of other hunters' bounties it shows only those you can help with: team bounties (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`), Battle Mode and Challenge Mode, the 30 newest.
 - **JSON endpoints.** `api/my_bounties.php` and `api/my_bounties_all.php` return the new fields: `tier_label`, `kind`, `expires_in`, `progress_text`, `stats_hidden` and `can_reroll`. They also include waiting and rerolling bounties and a `slots` summary. `api/bot_api.php` adds `tier_label`, `kind` and `progress_text` to each mission.
 - **Reward names.** `renderRewardString()` drops the `x1` that `item_map.json` puts on stackable items ("Telepipe x4", not "Telepipe X1 x4"). For the few codes whose `item_map.json` name is a bare number (030E15 showed as "3"), it uses newserv's `names-v4.json` instead.
 

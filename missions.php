@@ -103,8 +103,15 @@ $ab_query = "SELECT pm.id as pm_id, m.id as mission_id, pm.account_id as bounty_
              WHERE pm.status IN ('in_progress', 'rerolling') ";
 
 // With the Bounty System Rework a hunter can hold up to 17 active bounties per character, so the
-// feed shows all of your own and only the 30 newest of everyone else's.
+// feed shows all of your own and, of everyone else's, only the 30 newest that other players can
+// help with: team bounties (mentoring, diverse party), Battle Mode and Challenge Mode.
 $feed_others_limit = $bounty_rework ? 30 : -1;
+if ($bounty_rework) {
+    $ab_others = $ab_query . "AND (m.goal_type IN ('MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'BATTLE_WINS', 'CHALLENGE_STAGES', 'BATTLE_RULE_WINS', 'CHALLENGE_RUN')
+                                   OR m.pool IN ('battle', 'challenge')) ";
+} else {
+    $ab_others = $ab_query;
+}
 if ($account_id) {
     $own = $db->prepare($ab_query . "AND u.account_id = :accId ORDER BY pm.id DESC");
     $own->bindValue(':accId', $account_id, SQLITE3_INTEGER);
@@ -112,11 +119,11 @@ if ($account_id) {
     while ($row = $own_res->fetchArray(SQLITE3_ASSOC)) {
         $active_bounties[] = $row;
     }
-    $ab_stmt = $db->prepare($ab_query . "AND u.account_id != :accId ORDER BY pm.id DESC LIMIT $feed_others_limit");
+    $ab_stmt = $db->prepare($ab_others . "AND u.account_id != :accId ORDER BY pm.id DESC LIMIT $feed_others_limit");
     $ab_stmt->bindValue(':accId', $account_id, SQLITE3_INTEGER);
     $ab_res = $ab_stmt->execute();
 } else {
-    $ab_res = $db->query($ab_query . "ORDER BY pm.id DESC LIMIT $feed_others_limit");
+    $ab_res = $db->query($ab_others . "ORDER BY pm.id DESC LIMIT $feed_others_limit");
 }
 while ($row = $ab_res->fetchArray(SQLITE3_ASSOC)) {
     $active_bounties[] = $row;
@@ -850,6 +857,9 @@ if ($account_id) {
                 <div class="section-header delay-1">
                     <h2>⚔️ <?= __('Active Personal Bounties') ?></h2>
                 </div>
+                <?php if ($bounty_rework): ?>
+                    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.55); margin: -0.5rem 0 1rem;"><?= __('Your own bounties, plus other hunters\' bounties you can help with: team bounties, Battle Mode and Challenge Mode.') ?></p>
+                <?php endif; ?>
                 
                 <?php if (!empty($bounty_board)): ?>
                     <div class="pso-hud-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
