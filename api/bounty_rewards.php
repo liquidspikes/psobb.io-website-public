@@ -9,7 +9,8 @@
  *    widening to the episode only when the area has too few items for the hunter.
  *  - Rare and Ultra Rare items are sorted by how often they drop for the hunter's own Section ID.
  *    Rare: 1/500 to 1/5000 a kill. Ultra Rare: rarer than 1/5000, or never for that Section ID.
- *    Mythic Rare: items no enemy or box drops (combination and quest-reward items).
+ *    Mythic Rare: quest-reward items no enemy or box drops, plus any allowed exchange items.
+ *    Combination results are never rewards.
  *  - The 10x rule: every item in a pool is at least 10 times as likely from one bounty of that tier
  *    as from one kill of its best enemy (or one box) in normal play, for that Section ID.
  *  - Strength class: the item's level requirement for the hunter's class, at most one class above
@@ -50,8 +51,9 @@ function bounty_reward_defaults()
         'level_delta' => ['uncommon' => 10, 'rare' => 10, 'ultra' => 30, 'mythic' => 50],
         // A pool smaller than this widens (strength classes, then area to episode, then anywhere).
         'min_pool' => 6,
-        // Item categories Mythic Rare draws from (items no enemy or box drops).
-        'mythic_categories' => ['combination_only', 'quest_reward_only'],
+        // Item categories Mythic Rare draws from (items no enemy or box drops). Combination results
+        // (Merges, combination Mags and weapons) are never rewards.
+        'mythic_categories' => ['quest_reward_only'],
         // Exchange-only items allowed as rewards (hex codes). Empty until reviewed: see EXCHANGE_REVIEW.md.
         'exchange_allow' => [],
         // Never rewards: seasonal event tools from quests, joke items, and Photon Drops/Spheres (paid separately).

@@ -352,7 +352,7 @@ for ($i = 0; $i < 600; $i++) {
         $code = strtoupper(substr(explode(' ', $it['base'])[0], 0, 6));
         $d = $items[$code] ?? null;
         if (in_array($tier, ['rare', 'ultra', 'mythic'], true) && $d) {
-            check(!in_array($d['obtained'], ['challenge_prize', 'not_obtainable', 'seasonal_drop_only', 'exchange_only'], true), "$tier reward $code is allowed ({$d['obtained']})");
+            check(!in_array($d['obtained'], ['challenge_prize', 'not_obtainable', 'seasonal_drop_only', 'exchange_only', 'combination_only'], true), "$tier reward $code is allowed ({$d['obtained']})");
             check(!bounty_is_challenge_reserved($d, $rc), "$tier reward $code is not reserved for Challenge full runs");
             $r = (float) $d['drop_rate_by_section'][bounty_section_index($sec)];
             if ($tier === 'rare') {
@@ -361,7 +361,7 @@ for ($i = 0; $i < 600; $i++) {
             } elseif ($tier === 'ultra') {
                 check($d['obtained'] === 'rare_drop' && $r < 1 / 5000, "Ultra reward $code is rarer than 1/5000 for $sec");
             } else {
-                check(in_array($d['obtained'], ['combination_only', 'quest_reward_only'], true), "Mythic reward $code never drops ({$d['obtained']})");
+                check($d['obtained'] === 'quest_reward_only', "Mythic reward $code is a quest reward that never drops ({$d['obtained']})");
             }
             if (in_array($tier, ['rare', 'ultra'], true) && strpos((string) $spec['pool'], 'area') === 0 && $area['drop_settings']) {
                 check((bool) array_intersect($area['drop_settings'], $d['drop_settings']), "$tier reward $code drops in $setting");

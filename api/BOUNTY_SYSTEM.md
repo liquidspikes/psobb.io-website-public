@@ -28,7 +28,7 @@ The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.ph
 | Uncommon | Free, drop, Battle and Challenge bounties | 1–2 pieces of common equipment for the hunter's class, picked 10 levels ahead, with light stats |
 | Rare | Free, drop, Battle and Challenge bounties | One rare that drops 1/500 to 1/5000 a kill for the hunter's Section ID, usable by their class, from the bounty's area |
 | Ultra Rare | Drops in a party of 2 or more, and Challenge bounties | One rare that drops rarer than 1/5000 a kill for the hunter's Section ID (or never for it), for any class, from the bounty's area |
-| Mythic Rare | Drops when playing alone, and Challenge full runs | One item no enemy or box drops (combination and quest-reward items), for any class. A Challenge full run pays one of the rarest drops in the game instead. Always one Photon Sphere |
+| Mythic Rare | Drops when playing alone, and Challenge full runs | One quest-reward item no enemy or box drops (or an allowed exchange item), for any class. Combination results are never rewards. A Challenge full run pays one of the rarest drops in the game instead. Always one Photon Sphere |
 
 - Free bounties are Common 60%, Uncommon 30% and Rare 10%. Challenge bounties are Common 45%, Uncommon 30%, Rare 17%, Ultra Rare 6% and Mythic Rare 2%. The drop odds depend on difficulty; see `drops.tier_weights`.
 - Ultra and Mythic drops are weeklies. A Rare drop is a weekly half the time. The rest are dailies.
@@ -47,7 +47,7 @@ Rare, Ultra Rare and Mythic Rare items come from Blue Burst's own drop data, in 
 | Common rares | 1/500 or better | none: normal play is already the best source |
 | Rare | 1/500 to 1/5000 | Rare |
 | Very rare | rarer than 1/5000, or not for this Section ID | Ultra Rare |
-| Never dropped | combination and quest-reward items | Mythic Rare |
+| Never dropped | quest-reward items (combination results are never rewards) | Mythic Rare |
 | Rarest in the game | rarer than 1/5000 for every Section ID (35 items) | Mythic Rare Challenge full runs only |
 
 **The 10x rule.** Each item in a pool is at least 10 times as likely from one bounty of that tier as from one kill of its best enemy for that Section ID. The pool's chances are `p = 10 × rate + (1 − 10 × total rate) / items`, so every item keeps its 10x and the rest is shared evenly. If a pool's rates were too high to allow that, its commonest items would leave the pool; with the current data none do. `php tools/bounty_data/pool_report.php` checks every Section ID, class, level and area (about 380,000 item chances).
