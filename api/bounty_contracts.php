@@ -249,7 +249,8 @@ function bounty_evaluate_contract($db, array $m, array $client, $lobby, array $k
         // Boss kills in the run's game (a kill seen after the holder left the arena still has its room)
         $finish = time();
         if (isset($p['lobby'])) {
-            foreach ($kills['boss_events'] as $e) {
+            // Bosses killed in the run's game by anyone in it count (the player's own kills are among them)
+            foreach (array_merge($cctx['lobby_boss_events'][$p['lobby']] ?? [], $kills['boss_events']) as $e) {
                 if (!empty($m['activated_at']) && (int) $e['time'] < (int) $m['activated_at']) {
                     continue;
                 }

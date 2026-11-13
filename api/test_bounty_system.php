@@ -24,6 +24,7 @@ $GEMINI_API_KEY = 'test'; // never sent: the stub below answers
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/bounty_system.php';
+require_once __DIR__ . '/enemy_kills.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -280,6 +281,67 @@ $k = bounty_kill_deltas(['EnemyKillCount' => 7, 'RareEnemyKillCount' => 0], $k['
 check($k['enemy'] === 7, 'a reconnect (counter restarted) counts the new total');
 $k = bounty_kill_deltas(['Name' => 'x'], [], [['time' => time() - 10]]);
 check($k['boss_events'] === [] && !$k['has_counters'], 'first sight: earlier boss kills are not new');
+
+// Kills by anyone in the game count for everyone in it
+$id = weekly_row($db, 'Fennec', 'ENEMY_HUNT', '100@Hard');
+$k = no_kills();
+$k['enemy'] = 5; // the player's own
+$k['party'] = ['enemy' => 70, 'rare' => 1]; // the whole game, the player's own included
+check(!bounty_evaluate_weekly($db, wrow($db, $id), client('Fennec'), $hard1, $k, []) && bounty_progress_text('ENEMY_HUNT', '100@Hard', wrow($db, $id)['progress']) === '70 / 100 enemies',
+      'an enemy hunt counts every kill in the game (70), not only the player\'s own (5)');
+$id = weekly_row($db, 'Fennec', 'RARE_HUNT', '1@Hard');
+check(bounty_evaluate_weekly($db, wrow($db, $id), client('Fennec'), $hard1, $k, []), 'a teammate\'s rare kill finishes a rare hunt');
+$id = weekly_row($db, 'Fennec', 'BOSS_HUNT', '3@Hard');
+$t = time();
+$k = no_kills();
+$k['boss_events'] = [['time' => $t, 'lobby_id' => 7, 'episode' => 1, 'floor' => 11]];
+$k['party_boss_events'] = [['time' => $t, 'lobby_id' => 7, 'episode' => 1, 'floor' => 11], ['time' => $t + 4, 'lobby_id' => 7, 'episode' => 1, 'floor' => 11]];
+bounty_evaluate_weekly($db, wrow($db, $id), client('Fennec'), $hard1, $k, [7 => $hard1]);
+check(bounty_progress_text('BOSS_HUNT', '3@Hard', wrow($db, $id)['progress']) === '1 / 3 bosses', 'one boss fight counts once, however many players the tracker saw kill it');
+$k = no_kills();
+$k['party_boss_events'] = [['time' => $t + 20, 'lobby_id' => 7, 'episode' => 1, 'floor' => 11], ['time' => $t + 25, 'lobby_id' => 7, 'episode' => 1, 'floor' => 12]];
+bounty_evaluate_weekly($db, wrow($db, $id), client('Fennec', 60, ['LocationFloor' => 0]), $hard1, $k, [7 => $hard1]);
+check(bounty_progress_text('BOSS_HUNT', '3@Hard', wrow($db, $id)['progress']) === '2 / 3 bosses',
+      'a teammate\'s boss kill counts for a player who wasn\'t in the arena; a late report of the same fight does not');
+
+// newserv's KillCounts: each player's own kills by episode, difficulty, mode and enemy
+$kc = function ($n_booma, $n_falz, $n_blue = 0) {
+    return ['KillCounts' => array_values(array_filter([
+        ['Episode' => 'Episode 1', 'Difficulty' => 'Ultimate', 'Mode' => 'Normal', 'Enemy' => 'BOOMA', 'Name' => 'Bartle', 'Rare' => false, 'Boss' => false, 'Count' => $n_booma],
+        ['Episode' => 'Episode 1', 'Difficulty' => 'Ultimate', 'Mode' => 'Normal', 'Enemy' => 'DARK_FALZ_3', 'Name' => 'Dark Falz', 'Rare' => false, 'Boss' => true, 'Count' => $n_falz],
+        $n_blue ? ['Episode' => 'Episode 1', 'Difficulty' => 'Ultimate', 'Mode' => 'Normal', 'Enemy' => 'HILDEBLUE', 'Name' => 'Hildetorr', 'Rare' => true, 'Boss' => false, 'Count' => $n_blue] : null,
+    ]))];
+};
+$d0 = enemy_kill_deltas($kc(10, 0), []);
+check($d0['has'] && $d0['entries'] === [], 'kill counts: first sight records nothing');
+$d1 = enemy_kill_deltas($kc(25, 1, 1), ['kill_counts' => $d0['state']]);
+$by = [];
+foreach ($d1['entries'] as $e) $by[$e['enemy']] = $e;
+check(($by['BOOMA']['n'] ?? 0) === 15 && ($by['DARK_FALZ_3']['n'] ?? 0) === 1 && !empty($by['DARK_FALZ_3']['boss']) && !empty($by['HILDEBLUE']['rare'])
+      && $by['BOOMA']['episode'] === 1 && $by['BOOMA']['difficulty'] === 'Ultimate', 'kill counts: new kills per enemy, with episode, difficulty, boss and rare');
+$d2 = enemy_kill_deltas($kc(3, 0), ['kill_counts' => $d1['state']]);
+check($d2['reset'] && count($d2['entries']) === 1 && $d2['entries'][0]['n'] === 3, 'kill counts: a reconnect counts the new readings');
+$sum = [];
+enemy_kills_add_to_summary($sum, $d1['entries']);
+enemy_kills_add_to_summary($sum, [['episode' => 1, 'difficulty' => 'Ultimate', 'mode' => 'Normal', 'enemy' => 'BOOMA', 'name' => 'Bartle', 'rare' => false, 'boss' => false, 'n' => 4]]);
+check($sum['enemy'] === 21 && $sum['rare'] === 1 && $sum['boss'] === 1 && $sum['by_name']['BOOMA'] === 19 && $sum['rare_names'] === ['HILDEBLUE' => 1], 'a game\'s summary adds up its players\' kills');
+$sum2 = [];
+enemy_kills_add_to_summary($sum2, null, 12, 1, 'NAR_LILY');
+check($sum2['enemy'] === 12 && $sum2['rare_names'] === ['NAR_LILY' => 1] && !$sum2['typed'], 'without KillCounts, a game\'s summary uses the totals');
+enemy_kills_record($db, 9001, 'Kestrel', $d1['entries']);
+enemy_kills_record($db, 9001, 'Kestrel', [['episode' => 1, 'difficulty' => 'Normal', 'mode' => 'Normal', 'enemy' => 'DARK_FALZ_2', 'name' => 'Dark Falz', 'rare' => false, 'boss' => true, 'n' => 2],
+                                          ['episode' => 1, 'difficulty' => 'Normal', 'mode' => 'Challenge', 'enemy' => 'BOOMA', 'name' => 'Booma', 'rare' => false, 'boss' => false, 'n' => 7],
+                                          ['episode' => 1, 'difficulty' => 'Ultimate', 'mode' => 'Normal', 'enemy' => 'BOOMA', 'name' => 'Bartle', 'rare' => false, 'boss' => false, 'n' => 5]]);
+$kv = enemy_kills_for_character($db, 9001, 'Kestrel');
+$rows = [];
+foreach ($kv['episodes']['1'] as $row) $rows[$row['enemy']] = $row;
+check(count($kv['episodes']['1']) === 3 && $kv['episodes']['1'][0]['enemy'] === 'DARK_FALZ_3', 'kill counts: one row per enemy, bosses first');
+check($rows['DARK_FALZ_3']['counts']['Normal'] === 2 && $rows['DARK_FALZ_3']['counts']['Ultimate'] === 1 && $rows['DARK_FALZ_3']['name'] === 'Dark Falz',
+      'Dark Falz\'s final form on Normal and above is one row');
+check($rows['BOOMA']['counts']['Ultimate'] === 20 && $rows['BOOMA']['challenge'] === 7 && $rows['BOOMA']['total'] === 27 && $rows['BOOMA']['name'] === 'Booma' && $rows['BOOMA']['ultimate_name'] === 'Bartle',
+      'kill counts add up per difficulty, Challenge Mode apart, with the Ultimate name');
+check($kv['totals'] === ['kills' => 31, 'bosses' => 3, 'rares' => 1], 'kill count totals (' . json_encode($kv['totals']) . ')');
+check(enemy_kills_for_character($db, 9001, 'Nobody')['episodes'] === [], 'no kills for an unknown character');
 
 // ---------------------------------------------------------------------------
 // 6. Reroll: keeps tier and reward, new objective, once
@@ -995,6 +1057,12 @@ check($done, 'a timed run done in 80 minutes (limit 90) counts');
 $m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:timed:90@Ultimate');
 list($done, $p) = $walk($db, $m, $holder, $carried, range(1, 8), [time()], $run_lobby, time() - 95 * 60);
 check(!$done && !empty($p['late']), 'a timed run over 90 minutes does not');
+// A boss a teammate killed counts for the run even if the holder wasn't in the arena
+$m = contract_row($db, 9001, 'Hale', 'ultra', 'EPISODE_RUN', '4:diverse:0@Very Hard');
+list($done, $p) = $walk($db, $m, $holder, $mixed, range(1, 8), [], $run_lobby);
+$done = bounty_evaluate_contract($db, $m, $holder + ['LocationFloor' => 8], $run_lobby, no_kills(),
+    ['key' => '9001_Hale', 'members' => [77 => $mixed], 'lobby_rares' => [], 'lobby_boss_events' => [77 => [['floor' => 9, 'time' => time(), 'lobby_id' => 77, 'episode' => 4, 'by' => '9002_Kit']]]], $p);
+check($done && $p['bosses'] === [9], 'a teammate\'s boss kill in the run\'s game counts for the run');
 // A share needs half the run's bosses (Episode 1: 2 of 4)
 $m = contract_row($db, 9001, 'Hale', 'ultra', 'EPISODE_RUN', '1:diverse:0@Very Hard');
 $late_joiner = member(9004, 'Moss', 'HUmar', 119);

@@ -1647,6 +1647,7 @@ window.loadCharSlot = async function (slotIndex) {
             renderActiveBank();
             populateChatCharacterSelect();
             renderActiveCharacterSectionId(data.character);
+            if (window.loadKillCounts) window.loadKillCounts(data.character.name);
         } else {
             throw new Error(data.error || 'Failed to sync character metadata.');
         }
@@ -1733,6 +1734,62 @@ function renderCharacterProfile() {
 }
 
 // Render Backpack Inventory
+// Kill counts: the character's lifetime kills of each enemy and boss, by episode and difficulty
+window.killCountsEpisode = null;
+window.loadKillCounts = async function (characterName) {
+    const table = document.getElementById('kill-counts-table');
+    if (!table) return;
+    table.innerHTML = '';
+    try {
+        const res = await fetch(`/api/kill_counts.php?character=${encodeURIComponent(characterName || '')}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load kill counts.');
+        window.killCountsData = data;
+        renderKillCounts();
+    } catch (e) {
+        table.innerHTML = `<div style="color:#ff4444; font-size:0.8rem;">⚠️ ${e.message}</div>`;
+    }
+};
+
+function renderKillCounts() {
+    const data = window.killCountsData;
+    const tabs = document.getElementById('kill-counts-tabs');
+    const table = document.getElementById('kill-counts-table');
+    const summary = document.getElementById('kill-counts-summary');
+    if (!data || !tabs || !table) return;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+    const fmt = n => (n ? Number(n).toLocaleString() : '<span style="opacity:0.3;">0</span>');
+    const eps = Object.keys(data.episodes || {});
+    if (summary) {
+        summary.textContent = data.totals && data.totals.kills
+            ? [[data.totals.kills, 'kill', 'kills'], [data.totals.bosses, 'boss', 'bosses'], [data.totals.rares, 'rare enemy', 'rare enemies']]
+                .map(([n, one, many]) => `${Number(n).toLocaleString()} ${_t(Number(n) === 1 ? one : many)}`).join(' · ')
+            : '';
+    }
+    if (!eps.length) {
+        tabs.innerHTML = '';
+        table.innerHTML = `<p style="color:rgba(255,255,255,0.5); font-size:0.8rem;">${_t('No kills recorded for this character yet. Kills are counted while you play once the server reports them.')}</p>`;
+        return;
+    }
+    if (!eps.includes(window.killCountsEpisode)) window.killCountsEpisode = eps[0];
+    tabs.innerHTML = eps.map(ep => `<button class="dl-btn${ep === window.killCountsEpisode ? ' active' : ''}" style="font-size:0.75rem; padding:4px 10px;"
+        onclick="window.killCountsEpisode='${ep}'; renderKillCounts();">${_t('Episode')} ${ep}</button>`).join('');
+    const rows = data.episodes[window.killCountsEpisode] || [];
+    const diffs = ['Normal', 'Hard', 'Very Hard', 'Ultimate'];
+    const anyChallenge = rows.some(r => r.challenge > 0);
+    const head = [_t('Enemy'), ...diffs.map(d => _t(d)), ...(anyChallenge ? [_t('Challenge')] : []), _t('Total')];
+    const body = rows.map(r => {
+        const tag = r.boss ? ' <span title="Boss" style="color:#ffcc33;">♛</span>' : (r.rare ? ' <span title="Rare" style="color:#c77dff;">★</span>' : '');
+        const alt = r.ultimate_name ? ` <span style="opacity:0.5; font-size:0.85em;">(${esc(r.ultimate_name)})</span>` : '';
+        const cells = [...diffs.map(d => fmt(r.counts[d])), ...(anyChallenge ? [fmt(r.challenge)] : []), `<strong>${fmt(r.total)}</strong>`];
+        return `<tr><td style="text-align:left; padding:3px 8px;">${esc(r.name || r.enemy)}${alt}${tag}</td>${cells.map(c => `<td style="text-align:right; padding:3px 8px;">${c}</td>`).join('')}</tr>`;
+    }).join('');
+    table.innerHTML = `<table style="width:100%; border-collapse:collapse; font-size:0.8rem; font-family:'Share Tech Mono',monospace;">
+        <thead><tr>${head.map((h, i) => `<th style="text-align:${i ? 'right' : 'left'}; padding:4px 8px; color:#00ffff; border-bottom:1px solid rgba(0,255,255,0.25);">${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>${body}</tbody></table>
+        <p style="color:rgba(255,255,255,0.4); font-size:0.7rem; margin-top:6px;">${_t('Your own killing blows. A boss counts once per fight. Names in brackets are the Ultimate forms.')}</p>`;
+}
+
 function renderInventory() {
     const c = window.activeCharData;
     if (!c || !c.inventory) return;

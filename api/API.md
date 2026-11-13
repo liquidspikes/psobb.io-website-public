@@ -268,6 +268,7 @@ objective/reward text.
 | Endpoint | Method | Auth | Params | Purpose |
 |----------|--------|------|--------|---------|
 | `character_viewer.php` | GET | 🔑 | `slot` | Parse and return a character + bank from save files |
+| `kill_counts.php` | GET | 🔑 | `character` | A character's lifetime kills of each enemy and boss, by episode and difficulty (Challenge Mode apart) |
 | `account_data.php` | GET | 🔑 | — | Account-level dashboard data |
 | `download_character.php` | GET | 🔑 | — | Download character save data as a ZIP |
 | `switch_character.php` | POST | 🛡️ | `csrf_token`, JSON `slot` | Set the active character slot |
@@ -432,6 +433,7 @@ endpoints self-migrate (add missing tables/columns) at runtime via `get_db()`.
 | `email_confirmations` | Pending and verified email confirmation tokens |
 | `rewards_claimed` | Per-character level-milestone reward claims |
 | `special_deliveries` | Admin-issued direct player item deliveries (`recipient_id`, `item_string`, `status`) |
+| `enemy_kill_counts` | Each character's own kills per `episode`, `difficulty`, `mode` and `enemy` (newserv's type name), with `name`, `rare`, `boss` and `kills`; a boss counts once per fight |
 
 ---
 
@@ -442,7 +444,7 @@ SQLite.
 
 | Script | Role |
 |--------|------|
-| `cron_missions.php` | Generate & track per-player AI bounty missions |
+| `cron_missions.php` | Generate & track per-player AI bounty missions; record each character's kill counts |
 | `cron_community.php` | Drive community events + AI milestones |
 | `cron_boss_tracker.php` | Detect boss kills from `/y/clients` |
 | `cron_streak_alert.php` | DM players (via `BOT_TOKEN`) before a login streak expires |

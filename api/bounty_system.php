@@ -969,15 +969,28 @@ function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kil
             $done = count(array_intersect($floors, $p['visited'] ?? [])) >= count($floors);
             break;
         case 'BOSS_HUNT':
-            foreach ($kills['boss_events'] as $e) {
+            // A boss killed in the player's game counts for everyone in it, even players who weren't in the
+            // arena: the boss tracker's kills for anyone in this game, and the player's own anywhere. Each fight
+            // counts once (the players in an arena are each recorded, a few seconds apart).
+            $fights = $p['fights'] ?? [];
+            foreach (array_merge($kills['party_boss_events'] ?? [], $kills['boss_events']) as $e) {
                 if (!empty($m['activated_at']) && (int) $e['time'] < (int) $m['activated_at']) {
                     continue;
+                }
+                $fk = ($e['lobby_id'] ?? '-') . ':' . ($e['episode'] ?? '-') . ':' . (int) ($e['floor'] ?? 0);
+                if (isset($fights[$fk]) && abs((int) $e['time'] - (int) $fights[$fk]) < 120) {
+                    continue; // the same fight
                 }
                 $el = $lobby_map[$e['lobby_id'] ?? -1] ?? $lobby;
                 if ($el && bounty_difficulty_rank($el['difficulty']) >= $need) {
                     $p['count'] = (int) ($p['count'] ?? 0) + 1;
+                    $fights[$fk] = (int) $e['time'];
                     $changed = true;
                 }
+            }
+            if ($changed) {
+                arsort($fights);
+                $p['fights'] = array_slice($fights, 0, 20, true);
             }
             $done = (int) ($p['count'] ?? 0) >= $n;
             break;
@@ -1030,7 +1043,14 @@ function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kil
             break;
         case 'ENEMY_HUNT':
         case 'RARE_HUNT':
-            $add = ($m['goal_type'] === 'ENEMY_HUNT') ? $kills['enemy'] : $kills['rare'];
+            // Kills by anyone in the player's game count for everyone in it ('party': what the game killed this
+            // pass, the player's own kills included); without that summary, the player's own kills
+            $party = $kills['party'] ?? null;
+            if (is_array($party)) {
+                $add = (int) (($m['goal_type'] === 'ENEMY_HUNT') ? ($party['enemy'] ?? 0) : ($party['rare'] ?? 0));
+            } else {
+                $add = ($m['goal_type'] === 'ENEMY_HUNT') ? $kills['enemy'] : $kills['rare'];
+            }
             if ($add > 0 && $here_ok) {
                 $p['count'] = (int) ($p['count'] ?? 0) + $add;
                 $changed = true;

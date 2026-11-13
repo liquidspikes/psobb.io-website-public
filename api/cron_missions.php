@@ -10,6 +10,7 @@ require_once __DIR__ . '/reward_tables.php';
 require_once __DIR__ . '/bounty_lore.php';
 require_once __DIR__ . '/bounty_generator.php';
 require_once __DIR__ . '/bounty_system.php';
+require_once __DIR__ . '/enemy_kills.php';
 
 // Enforce CLI execution.
 if (php_sapi_name() !== 'cli') {
@@ -109,11 +110,14 @@ while (time() - $script_start < 55) {
     // Each player's level when they joined their current game. Carry objectives measure the level gap
     // with these, so carried players who level up on the way to the boss still count.
     $game_join_level = [];
-    // Contracts: who is in each game (a carry or a mixed party is checked at each boss, and everyone
-    // there gets a share), and the rare creatures killed in each game since the last pass (a kill by
-    // anyone in the game counts for every hunt contract there).
+    // Who is in each game (contracts check a carry or a mixed party at each boss, and pay everyone there
+    // a share), and what each game killed since the last pass: a kill by anyone in a game counts for every
+    // player's active kill bounties there (enemy, rare-enemy and boss hunts, contract hunts and runs).
+    // Each player's own kills also go to their character's lifetime kill counts (api/enemy_kills.php).
     $lobby_members = [];
-    $lobby_rare_kills = [];
+    $lobby_kills = [];        // lobby ID => what the game killed this pass (enemy_kills_add_to_summary())
+    $lobby_boss_events = [];  // lobby ID => boss kills the tracker recorded there since the last pass, anyone's
+    $own_kills = [];          // state key => this player's own new kills (enemy_kill_deltas())
     foreach ($clients as $gc) {
         if (!isset($gc['Account']['AccountID'], $gc['EXP'])) continue;
         $gk = $gc['Account']['AccountID'] . '_' . ($gc['Name'] ?? 'Unknown');
@@ -122,20 +126,36 @@ while (time() - $script_start < 55) {
         $game_join_level[$gk] = ($glob !== null && ($gps['game_lobby'] ?? null) === $glob && isset($gps['game_join_level']))
             ? (int) $gps['game_join_level'] : (int) ($gc['Level'] ?? 1);
         // (the main loop skips a loading screen's zero-EXP reading without saving state; so does this)
-        if ($glob === null || ((int) $gc['EXP'] === 0 && (int) ($gps['exp'] ?? 0) > 0)) continue;
+        if ((int) $gc['EXP'] === 0 && (int) ($gps['exp'] ?? 0) > 0) continue;
+        $own_kills[$gk] = enemy_kill_deltas($gc, $gps);
+        // Boss kills the tracker recorded for this player since the last pass, by the game they were in
+        if (isset($gps['bounty_boss_event_time'])) {
+            foreach ($boss_kill_events[$gk] ?? [] as $e) {
+                if ((int) ($e['time'] ?? 0) > (int) $gps['bounty_boss_event_time'] && isset($e['lobby_id'])) {
+                    $lobby_boss_events[$e['lobby_id']][] = $e + ['by' => $gk];
+                }
+            }
+        }
+        if ($glob === null) continue;
         $lobby_members[$glob][] = [
             'key' => $gk, 'acc' => (int) $gc['Account']['AccountID'], 'name' => $gc['Name'] ?? 'Unknown',
             'class' => (string) ($gc['CharClass'] ?? ''), 'join_level' => $game_join_level[$gk], 'client' => $gc,
         ];
-        if (isset($gc['RareEnemyKillCount'], $gps['bounty_rare_kills']) && !empty($gc['LastRareEnemyKilled'])) {
-            $cur = (int) $gc['RareEnemyKillCount'];
-            $was = (int) $gps['bounty_rare_kills'];
-            $d = ($cur >= $was) ? $cur - $was : $cur; // a lower reading: newserv's counter restarted
-            if ($d > 0) {
-                $lobby_rare_kills[$glob][$gc['LastRareEnemyKilled']] = ($lobby_rare_kills[$glob][$gc['LastRareEnemyKilled']] ?? 0) + $d;
-            }
+        $lobby_kills[$glob] = $lobby_kills[$glob] ?? [];
+        if ($own_kills[$gk]['has']) {
+            enemy_kills_add_to_summary($lobby_kills[$glob], $own_kills[$gk]['entries']);
+        } elseif (isset($gc['EnemyKillCount'], $gps['bounty_enemy_kills'])) {
+            // newserv with only the first kill patch: totals, and the last rare enemy's name
+            $cur_e = (int) $gc['EnemyKillCount'];
+            $was_e = (int) $gps['bounty_enemy_kills'];
+            $cur_r = (int) ($gc['RareEnemyKillCount'] ?? 0);
+            $was_r = (int) ($gps['bounty_rare_kills'] ?? 0);
+            // a lower reading: newserv's counter restarted
+            enemy_kills_add_to_summary($lobby_kills[$glob], null, ($cur_e >= $was_e) ? $cur_e - $was_e : $cur_e,
+                ($cur_r >= $was_r) ? $cur_r - $was_r : $cur_r, $gc['LastRareEnemyKilled'] ?? null);
         }
     }
+    $lobby_rare_kills = array_map(function ($sum) { return $sum['rare_names'] ?? []; }, $lobby_kills);
     $join_level_of = function (array $c) use ($game_join_level) {
         return $game_join_level[($c['Account']['AccountID'] ?? '') . '_' . ($c['Name'] ?? 'Unknown')] ?? (int) ($c['Level'] ?? 200);
     };
@@ -303,6 +323,13 @@ foreach ($clients as $client) {
     // counts from newserv's EnemyKillCount / RareEnemyKillCount when the server reports them)
     $lobby_info = ($lobby_id !== null) ? ($lobby_info_map[$lobby_id] ?? null) : null;
     $kills = bounty_kill_deltas($client, $prev_state, $boss_kill_events[$stateKey] ?? [], $lobby_info);
+    // What the whole game killed this pass: everyone in it gets the credit toward kill bounties
+    $kills['party'] = ($lobby_id !== null && isset($lobby_kills[$lobby_id])) ? $lobby_kills[$lobby_id] : null;
+    $kills['party_boss_events'] = ($lobby_id !== null) ? ($lobby_boss_events[$lobby_id] ?? []) : [];
+    // This character's own kills go to its lifetime kill counts
+    if (!empty($own_kills[$stateKey]['entries'])) {
+        enemy_kills_record($db, $accId, $charName, $own_kills[$stateKey]['entries']);
+    }
     $completed_this_pass = [];
 
     $stmt = $db->prepare("SELECT pm.id, pm.mission_id, u.discord_id, pm.character_name, m.title AS mission_title, m.description AS mission_desc, m.goal_type, m.goal_target, m.reward_item_string,
@@ -787,7 +814,7 @@ foreach ($clients as $client) {
             // Contracts (api/bounty_contracts.php): full episode runs and rare-creature hunts
             $contract_progress = null;
             $completed = bounty_evaluate_contract($db, $m, $client, $lobby_info, $kills,
-                ['key' => $stateKey, 'members' => $lobby_members, 'lobby_rares' => $lobby_rare_kills], $contract_progress);
+                ['key' => $stateKey, 'members' => $lobby_members, 'lobby_rares' => $lobby_rare_kills, 'lobby_boss_events' => $lobby_boss_events], $contract_progress);
             if ($completed) {
                 // everyone else in the game gets a share, a tier lower, built for them
                 $share_lobby = $contract_progress['lobby'] ?? $lobby_id;
@@ -924,6 +951,8 @@ foreach ($clients as $client) {
         'floor_entered_time' => $floor_entered_time,
         'game_lobby' => $client['LobbyID'] ?? null,
         'game_join_level' => $game_join_level[$stateKey] ?? (int) $curr_level,
+        // newserv's KillCounts at this pass (api/enemy_kills.php)
+        'kill_counts' => $own_kills[$stateKey]['state'] ?? ($prev_state['kill_counts'] ?? null),
     ] + $bounty_state;
 }
 

@@ -368,6 +368,26 @@ function get_db(bool $reset = false)
             }
         }
         $db->exec("CREATE INDEX IF NOT EXISTS idx_player_missions_scope ON player_missions(account_id, character_name, status)");
+
+        // --- Enemy kill counts (api/enemy_kills.php): each character's own kills, by episode, difficulty,
+        //   game mode and enemy, from newserv's KillCounts in /y/clients. A boss counts once per fight. ---
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS enemy_kill_counts (
+                account_id INTEGER NOT NULL,
+                character_name TEXT NOT NULL,
+                episode INTEGER NOT NULL,
+                difficulty TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                enemy TEXT NOT NULL,
+                name TEXT,
+                rare INTEGER DEFAULT 0,
+                boss INTEGER DEFAULT 0,
+                kills INTEGER NOT NULL DEFAULT 0,
+                first_kill_at INTEGER,
+                last_kill_at INTEGER,
+                PRIMARY KEY (account_id, character_name, episode, difficulty, mode, enemy)
+            )
+        ");
         
         // --- Auto-migration for Community Event Participants & Game Mods ---
         $db->exec("

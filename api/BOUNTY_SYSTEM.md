@@ -252,14 +252,26 @@ A quarter (`contracts.drop_share`) of dropped Ultra Rare and Mythic Rare bountie
 
 ## Kill and clear tracking: the newserv patches
 
-Two small patches for fuzziqersoftware/newserv add fields to `/y/clients`:
+Three small patches for fuzziqersoftware/newserv add fields to `/y/clients`:
 
 1. `0001-Report-enemy-and-rare-enemy-kill-counts-in-y-clients.patch`: `EnemyKillCount`, `RareEnemyKillCount` and `LastRareEnemyKilled`. It counts the killing blow for each player, in `on_enemy_exp_request_bb`, using newserv's own rare-enemy test. `ENEMY_HUNT`, `RARE_HUNT` and rare-enemy drops need it.
 2. `0002-Report-Challenge-Mode-stage-clears-in-y-clients.patch`: `ChallengeClearCount` and `LastChallengeClear` (`QuestNumber`, `StageNumber`, `Seconds`). It counts each stage clear when the stage's time is set (6x95), once per player. Challenge quests are numbered 881NN (Episode 1 stage NN) and 882NN (Episode 2).
+3. `0003-Report-kill-counts-per-enemy-episode-difficulty-and-.patch`: `KillCounts`, each player's killing blows on this connection by episode, difficulty, game mode and enemy, as a list of `{Episode, Difficulty, Mode, Enemy, Name, Rare, Boss, Count}` (`Enemy` is newserv's type name, such as `BOOMA` or `DARK_FALZ_3`; `Name` is the in-game name, the Ultimate one on Ultimate). A boss counts once per fight, when its main form falls (Dragon, De Rol Le, Vol Opt's second form, Dark Falz's final form, Barba Ray, Gol Dragon, Gal Gryphon, Olga Flow's second form, Saint-Milion, Shambertin, Kondrieu). Its phases, joints, body parts, mines, monitors and spinners aren't counted. Saint-Milion, Shambertin and Kondrieu are nine body entities each and Barba Ray two, so newserv remembers which players' kills of each fight were counted. The three counters of patch 0001 follow the same rule, so one Kondrieu fight can't count as several.
+
+### Kill counts and whole-game credit
+
+- **Each character's own kills** (killing blows) are kept for good in `enemy_kill_counts`, one row per episode, difficulty, game mode and enemy (`api/enemy_kills.php`). The cron reads `KillCounts` each pass and records the difference from the last reading; a lower reading means the player reconnected, so the new reading is all new kills. Kills from before a character was first seen aren't counted.
+- They show in the dashboard's character viewer, in a **Kill Counts** panel: per episode, one row per enemy with its kills on Normal, Hard, Very Hard and Ultimate (Normal and Solo games), Challenge Mode apart, and the total; bosses first. `api/kill_counts.php?character=NAME` returns the same.
+- **Bounties give credit to the whole game.** A kill by anyone in a game counts for every player's active kill bounties there:
+  - `ENEMY_HUNT` and `RARE_HUNT` count every kill and rare kill in the player's game that pass, their own included (`KillCounts`, or the patch 0001 totals without it);
+  - `BOSS_HUNT` counts a boss the tracker saw anyone in the player's game kill, even a player who stayed out of the arena; each fight counts once, however many players the tracker recorded;
+  - contract hunts count anyone's kill in the game, and a run counts a boss anyone in its game killed.
+- The daily boss objectives (`BOSS_ARENA`, timed bosses, carries, mixed parties) still need the player in the arena, and bounty drops still come from the player's own kills.
 
 Without the patches the site still works:
 
 - Weeklies don't offer the two kill objectives, contracts don't offer hunts, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
+- Without patch 0003 there are no kill counts per enemy; enemy and rare hunts still credit the whole game from the patch 0001 totals.
 - Challenge clears are read from changes to the stage record times (`ChallengeTimesEp1Online`, `ChallengeTimesEp2Online`). That misses replays slower than the record.
 
 ### Boss kills: arenas by episode
@@ -293,7 +305,7 @@ Bounties from before the rework have no cadence. They keep working as before: th
 ## Cron flow (`api/cron_missions.php`, each pass)
 
 1. Expire anything past its reset.
-2. Note who is in each game (with the levels they joined at) and the rare creatures killed in each game since the last pass, for contracts.
+2. Note who is in each game (with the levels they joined at), and what each game killed since the last pass (its players' new kills, and the boss kills the tracker recorded there), for whole-game credit and contracts.
 3. For each online player:
    1. Work out kills, Challenge clears and Battle wins since the last pass.
    2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()` and contracts through `bounty_evaluate_contract()` (a finished contract pays the rest of the game their shares). A daily with a `min_difficulty` skips the pass when the game is easier, and sees only boss kills made in a game of that difficulty.
