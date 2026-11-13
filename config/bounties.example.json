@@ -61,7 +61,23 @@
                 "active": 3,
                 "cap": 3
             }
+        },
+        "contract": {
+            "held_max": 3
         }
+    },
+    "contracts": {
+        "drop_share": 25,
+        "objectives": {
+            "ultra": { "RUN_DIVERSE": 1, "RARE_TARGET": 1 },
+            "mythic": { "RUN_CARRY": 1, "RUN_TIMED": 1, "RARE_TARGET": 1 }
+        },
+        "hunt_runs": { "ultra": 10, "mythic": 30 },
+        "hunt_max": 5,
+        "run_minutes": { "1": 150, "2": 150, "4": 90 },
+        "carry": { "players": 3, "levels": 10 },
+        "share_tier": { "ultra": "rare", "mythic": "ultra" },
+        "reward_scale": { "run": 2.0, "hunt": 1.5 }
     },
     "earn": {
         "login_daily_chance": 10,

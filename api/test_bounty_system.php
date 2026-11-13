@@ -8,7 +8,8 @@
  * with a stub, and points in-game mail at a closed port, so it needs no game server, Gemini key
  * or live data. Checks earning caps, the waiting queue, activation order, drops (slots, the
  * 10-held limit, tier rules for party/solo rooms), Battle/Challenge pools, weekly objectives and
- * their progress, expiry at the reset, the one free reroll, and the reward roll on claim.
+ * their progress, expiry at the reset, the one free reroll, the reward roll on claim, and contracts
+ * (drops, slots, objectives, runs, hunts, reward pools and party shares).
  */
 if (php_sapi_name() !== 'cli') {
     die("This script must be run from the command line.");
@@ -141,7 +142,7 @@ check(bounty_active_count($db, 9001, 'Briar', 'standard', 'daily') === 1, 'and i
 // ---------------------------------------------------------------------------
 // 3. Drops: rare-enemy kills in a party; 5 active, 10 held, then nothing
 // ---------------------------------------------------------------------------
-bounty_config(['drops' => ['rare_enemy_chance' => ['Ultimate' => 100], 'boss_chance' => ['Ultimate' => 100]]]);
+bounty_config(['drops' => ['rare_enemy_chance' => ['Ultimate' => 100], 'boss_chance' => ['Ultimate' => 100]], 'contracts' => ['drop_share' => 0]]);
 $party = ['is_game' => true, 'episode' => 1, 'difficulty' => 'Ultimate', 'mode' => 'Normal', 'players' => 3];
 $c = client('Cobalt', 150, ['LocationFloor' => 4, 'SectionID' => 'Redria']);
 $k = no_kills();
@@ -759,6 +760,280 @@ foreach (['ultra', 'mythic'] as $tier) {
     check(!array_diff(array_keys($got), ['BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT']) && isset($got['RARE_HUNT']), "$tier weeklies are boss, enemy and rare hunts (" . implode(', ', array_keys($got)) . ')');
 }
 
+// ---------------------------------------------------------------------------
+// 9. Contracts: a share of Ultra/Mythic drops, 3 held, never expire; runs, hunts, party shares
+// ---------------------------------------------------------------------------
+$db->exec("INSERT INTO users (username, email, account_id, language) VALUES ('t2', 't2@x', 9002, 'en'), ('t3', 't3@x', 9003, 'en'), ('t4', 't4@x', 9004, 'en')");
+bounty_config(['drops' => ['rare_enemy_chance' => ['Ultimate' => 100], 'boss_chance' => ['Ultimate' => 100], 'tier_weights' => ['Ultimate' => [0, 0, 0, 0, 100]]], 'contracts' => ['drop_share' => 100]]);
+$solo4 = ['is_game' => true, 'episode' => 4, 'difficulty' => 'Ultimate', 'mode' => 'Solo', 'players' => 1];
+$ct = client('Corvid', 150, ['LocationFloor' => 6, 'SectionID' => 'Pinkal', 'CharClass' => 'FOmarl', 'RareEnemyKillCount' => 0]);
+$got = [];
+ob_start();
+for ($i = 0; $i < 400 && count($got) < 6; $i++) {
+    $d = bounty_try_drop($db, 9001, 'Corvid', $ct, $solo4, 'boss', 'a boss', 9);
+    if ($d) $got[] = $d;
+}
+ob_end_clean();
+$contracts = rows($db, 'Corvid', "m.pool = 'contract'");
+check(count($contracts) === 3, 'contracts stop at 3 held (got ' . count($contracts) . ')');
+foreach ($contracts as $r) {
+    check(in_array($r['tier'], ['ultra', 'mythic'], true) && $r['cadence'] === 'contract', "contract #{$r['id']} is Ultra or Mythic Rare");
+    check($r['expires_at'] === null && $r['period_key'] === null, "contract #{$r['id']} never expires and belongs to no reset");
+}
+$after3 = array_slice($got, 3);
+check($after3 && !array_filter($after3, function ($d) { return $d['pool'] === 'contract'; }), 'with 3 contracts held, a contract roll stays a normal drop');
+foreach ($after3 as $d) {
+    if (in_array($d['tier'], ['ultra', 'mythic'], true)) check($d['cadence'] === 'weekly', 'such a drop is a normal weekly');
+}
+// The drop slots full: contracts still drop; contract slots full too: nothing
+$db->exec("UPDATE player_missions SET status = 'abandoned' WHERE id = " . (int) $contracts[0]['id']);
+$db->exec("UPDATE player_missions SET status = 'queued' WHERE id IN (SELECT pm.id FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE pm.character_name = 'Corvid' AND m.pool = 'drop')");
+for ($i = 0; bounty_count($db, 9001, 'Corvid', "m.pool = 'drop' AND pm.status = 'queued'") < 10 && $i < 50; $i++) {
+    ob_start(); bounty_earn($db, 9001, 'Corvid', $ct, 'drop', 'daily', 'common', 'boss'); ob_end_clean();
+}
+$n_drop = count(rows($db, 'Corvid', "m.pool = 'drop'"));
+ob_start();
+$d = null;
+for ($i = 0; $i < 400 && !$d; $i++) {
+    $d = bounty_try_drop($db, 9001, 'Corvid', $ct, $solo4, 'boss', 'a boss', 9);
+}
+$more = bounty_try_drop($db, 9001, 'Corvid', $ct, $solo4, 'boss', 'a boss', 9);
+ob_end_clean();
+check($d && $d['pool'] === 'contract' && count(rows($db, 'Corvid', "m.pool = 'drop'")) === $n_drop, 'with 10 drops held, a contract can still drop');
+check($more === null, 'with 10 drops and 3 contracts held, nothing drops');
+// The share of Ultra/Mythic drops that are contracts, by sampling (25%)
+bounty_config(['contracts' => ['drop_share' => $defaults['contracts']['drop_share']]]);
+$pools = ['drop' => 0, 'contract' => 0];
+ob_start();
+for ($i = 0; $i < 400; $i++) {
+    $db->exec("UPDATE player_missions SET status = 'abandoned' WHERE character_name = 'Corvid'");
+    $d = bounty_try_drop($db, 9001, 'Corvid', $ct, $solo4, 'boss', 'a boss', 9);
+    $pools[$d['pool']]++;
+}
+ob_end_clean();
+check($pools['contract'] >= 60 && $pools['contract'] <= 140, 'about a quarter of Mythic Rare drops are contracts (' . $pools['contract'] . ' of 400)');
+bounty_config(['drops' => $defaults['drops']]);
+$db->exec("UPDATE player_missions SET status = 'abandoned' WHERE character_name = 'Corvid'");
+
+// Activation: contracts start at once (own slots), objective tied to the episode they dropped in
+$ids = array_column(rows($db, 'Corvid', "m.pool = 'contract' AND pm.status = 'abandoned'"), 'id');
+$e4 = [];
+for ($i = 0; $i < 3; $i++) {
+    ob_start(); $e4[] = bounty_earn($db, 9001, 'Corvid', $ct, 'contract', 'contract', $i ? 'mythic' : 'ultra', 'boss', ['episode' => 4, 'area' => 'ep4_desert']); ob_end_clean();
+}
+for ($i = 0; $i < 4; $i++) {
+    tick($db, $ct, $solo4);
+}
+$act = rows($db, 'Corvid', "m.pool = 'contract' AND pm.status = 'in_progress'");
+check(count($act) === 3, '3 contracts active at once (no waiting)');
+foreach ($act as $r) {
+    check(in_array($r['goal_type'], ['EPISODE_RUN', 'RARE_TARGET'], true), "contract #{$r['id']} is a run or a hunt ({$r['goal_type']})");
+    $ep = ($r['goal_type'] === 'EPISODE_RUN') ? bounty_parse_run_target($r['goal_target'])['episode'] : bounty_parse_hunt_target($r['goal_target'])['episode'];
+    check($ep === 4, "contract #{$r['id']} is set in Episode 4, where it dropped");
+    $spec = json_decode($r['reward_spec'], true);
+    check(is_array($spec) && count($spec['items']) >= 1 && $r['expires_at'] === null, "contract #{$r['id']} has its reward and no expiry");
+    $code = strtoupper(substr($spec['items'][0]['base'], 0, 6));
+    $it = bounty_item_data()[$code] ?? [];
+    check(in_array('Ep4', $it['drop_episodes'] ?? [], true), "contract #{$r['id']}'s item drops in Episode 4 ({$it['name']})");
+}
+bounty_expire_sweep($db, time() + 86400 * 400);
+check(count(rows($db, 'Corvid', "m.pool = 'contract' AND pm.status = 'in_progress'")) === 3, 'contracts survive every reset');
+$sum = bounty_board_summary($db, 9001)['Corvid'] ?? null;
+check($sum && $sum['contract'][0] === 3, 'the slot panel counts 3 contracts held');
+check(bounty_kind_label('contract', 'contract') === 'Contract' && bounty_kind_label('share', 'share') === 'Contract share', 'kind labels');
+
+// Objectives by tier: Ultra = mixed-party run or Ultra hunt; Mythic = carry run, timed run or Mythic hunt
+$seen = ['ultra' => [], 'mythic' => []];
+$hunts = ['ultra' => [], 'mythic' => []];
+foreach ([1, 2, 4] as $ep) {
+    foreach (['ultra', 'mythic'] as $tier) {
+        for ($i = 0; $i < 60; $i++) {
+            $c = bounty_pick_contract_objective($ct, ['meta' => json_encode(['episode' => $ep])], $tier);
+            $key = $c['goal'] === 'EPISODE_RUN' ? 'run:' . bounty_parse_run_target($c['target'])['variant'] : 'hunt';
+            $seen[$tier][$key] = true;
+            if ($c['goal'] === 'RARE_TARGET') {
+                $h = bounty_parse_hunt_target($c['target']);
+                $hunts[$tier][$h['target']] = $h['count'];
+                check(isset(bounty_rare_enemy_data()[$h['target']]['episodes']['Ep' . $ep]), "{$h['target']} is met in Episode $ep");
+            }
+            check(($c['difficulty'] === 'Ultimate') === ($tier === 'mythic'), "a level 150 $tier contract is on " . ($tier === 'mythic' ? 'Ultimate' : 'Very Hard'));
+        }
+    }
+}
+ksort($seen['ultra']); ksort($seen['mythic']);
+check(array_keys($seen['ultra']) === ['hunt', 'run:diverse'], 'Ultra Rare contracts: mixed-party runs and hunts (' . implode(', ', array_keys($seen['ultra'])) . ')');
+check(array_keys($seen['mythic']) === ['hunt', 'run:carry', 'run:timed'], 'Mythic Rare contracts: carry runs, timed runs and hunts (' . implode(', ', array_keys($seen['mythic'])) . ')');
+check(($hunts['mythic']['KONDRIEU'] ?? 0) === 3 && ($hunts['mythic']['HILDEBLUE'] ?? 0) === 1 && ($hunts['ultra']['DEL_RAPPY'] ?? 0) === 3 && ($hunts['ultra']['NAR_LILY'] ?? 0) === 1,
+      'hunt counts by effort: 3 Kondrieus, 1 Hildeblue, 3 Del Rappies, 1 Nar Lily (' . json_encode($hunts) . ')');
+check(!array_intersect_key($hunts['ultra'], array_flip(['KONDRIEU', 'HILDEBLUE', 'PAZUZU', 'DORPHON_ECLAIR', 'AL_RAPPY'])), 'Ultra hunts never ask for a Mythic creature');
+$nopatch = $ct;
+unset($nopatch['RareEnemyKillCount']);
+$any_hunt = false;
+for ($i = 0; $i < 60; $i++) {
+    $any_hunt = $any_hunt || bounty_pick_contract_objective($nopatch, ['meta' => json_encode(['episode' => 4])], 'mythic')['goal'] === 'RARE_TARGET';
+}
+check(!$any_hunt, 'no hunts without the newserv kill patch');
+
+// Reward pools: a Mythic run pays from the episode's items rarer than 1/75,000 (Solferino among Ep4's);
+// a hunt from the creature's own rare drops
+$rc = bounty_reward_cfg();
+$ctx4 = ['section' => bounty_section_index('Pinkal'), 'class' => null, 'level' => 200, 'area' => bounty_contract_reward_area(4), 'max_area' => 1];
+$run4 = bounty_reward_pool('contract_run', $ctx4)['items'];
+$sol = array_search('SOLFERINO', array_map(function ($it) { return $it['name']; }, bounty_item_data()), true);
+check($sol && isset($run4[$sol]), 'Solferino (an Episode 4 drop no bounty could pay) is in the Episode 4 Mythic run pool');
+$bad = 0;
+foreach ($run4 as $code => $r) {
+    $it = bounty_item_data()[$code];
+    if (!in_array('Ep4', $it['drop_episodes'], true) || bounty_item_average_rate($it) >= $rc['challenge_reserve_max_rate']) $bad++;
+}
+check(count($run4) >= 10 && $bad === 0, 'the Episode 4 Mythic run pool: ' . count($run4) . ' Episode 4 items, all rarer than 1/75,000');
+$kitems = bounty_rare_enemy_data()['KONDRIEU']['episodes']['Ep4']['items'];
+$kpool = bounty_reward_pool('creature', $ctx4 + ['creature_items' => $kitems])['items'];
+check($kpool && !array_diff(array_keys($kpool), $kitems), 'a Kondrieu hunt pays only Kondrieu drops (' . count($kpool) . ')');
+foreach ($kpool as $code => $r) {
+    $it = bounty_item_data()[$code];
+    check(empty($it['common_drop']) && bounty_item_average_rate($it) < $rc['rare_max_rate'], "{$it['name']} is a rare Kondrieu drop");
+}
+
+// Runs: every area and boss in one game; carry and mixed-party checks at each boss; timed runs
+function contract_row($db, $acc, $char, $tier, $goal, $target)
+{
+    ob_start();
+    $id = bounty_earn($db, $acc, $char, ['Name' => $char], 'contract', 'contract', $tier, 'boss', ['episode' => 4]);
+    ob_end_clean();
+    $mid = (int) $db->querySingle("SELECT mission_id FROM player_missions WHERE id = $id");
+    $db->exec("UPDATE missions SET goal_type = '$goal', goal_target = '$target', title = 'Test contract' WHERE id = $mid");
+    $db->exec("UPDATE player_missions SET status = 'in_progress', activated_at = " . (time() - 100) . " WHERE id = $id");
+    return ['id' => $id, 'mission_id' => $mid, 'goal_type' => $goal, 'goal_target' => $target, 'tier' => $tier, 'progress' => '{}',
+            'activated_at' => time() - 100, 'mission_title' => 'Test contract', 'meta' => json_encode(['episode' => 4])];
+}
+function member($acc, $name, $class, $join, $lobby = 77)
+{
+    return ['key' => "{$acc}_$name", 'acc' => $acc, 'name' => $name, 'class' => $class, 'join_level' => $join,
+            'client' => client($name, $join, ['Account' => ['AccountID' => $acc], 'CharClass' => $class, 'LobbyID' => $lobby, 'SectionID' => 'Oran'])];
+}
+$run_lobby = ['is_game' => true, 'episode' => 4, 'difficulty' => 'Ultimate', 'mode' => 'Normal', 'players' => 4];
+$walk = function ($db, &$m, $holder, $members, $floors, $boss_times, $lobby_info, $start = null) {
+    $done = false;
+    $p = null;
+    foreach ($floors as $f) {
+        $holder['LocationFloor'] = $f;
+        $k = no_kills();
+        $done = bounty_evaluate_contract($db, $m, $holder, $lobby_info, $k, ['key' => '9001_' . $holder['Name'], 'members' => [77 => $members], 'lobby_rares' => []], $p);
+        $m['progress'] = json_encode($p);
+        if ($start !== null && !empty($p['started']) && $p['started'] > $start) {
+            $p['started'] = $start; // pretend the run began then
+            $m['progress'] = json_encode($p);
+        }
+    }
+    foreach ($boss_times as $t) {
+        $k = no_kills();
+        $k['boss_events'] = [['floor' => 9, 'time' => $t, 'entry_time' => $t - 60, 'lobby_id' => 77, 'episode' => 4]];
+        $done = bounty_evaluate_contract($db, $m, $holder, $lobby_info, $k, ['key' => '9001_' . $holder['Name'], 'members' => [77 => $members], 'lobby_rares' => []], $p);
+        $m['progress'] = json_encode($p);
+    }
+    return [$done, $p];
+};
+$holder = client('Hale', 120, ['LobbyID' => 77, 'CharClass' => 'HUcast']);
+$carried = [member(9001, 'Hale', 'HUcast', 120), member(9002, 'Kit', 'RAmar', 100), member(9003, 'Lux', 'FOnewm', 105), member(9004, 'Moss', 'HUmar', 110)];
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:carry:0@Ultimate');
+list($done, $p) = $walk($db, $m, $holder, $carried, range(1, 7), [time()], $run_lobby);
+check(!$done && count($p['floors']) === 7, 'a run is not done with an area left (7/8 areas)');
+list($done, $p) = $walk($db, $m, $holder, $carried, [8], [], $run_lobby);
+check($done, 'a carry run is done: every area, the boss, 3 hunters 10+ levels below at the boss');
+check(strpos(bounty_progress_text('EPISODE_RUN', $m['goal_target'], json_encode($p)), '8 / 8 areas, 1 / 1 boss') !== false, 'run progress text');
+$before = (int) $db->querySingle("SELECT COUNT(*) FROM player_missions WHERE status = 'ready_to_redeem'");
+ob_start();
+$paid = bounty_contract_pay_shares($db, $m, $holder, $p, $carried);
+ob_end_clean();
+check($paid === 3, 'the 3 other players each get a share (got ' . $paid . ')');
+$shares = [];
+$r = $db->query("SELECT pm.account_id, pm.character_name, pm.status, pm.expires_at, m.tier, m.pool, m.cadence, m.goal_type, m.reward_spec FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE m.pool = 'share'");
+while ($x = $r->fetchArray(SQLITE3_ASSOC)) $shares[] = $x;
+check(count($shares) === 3 && !in_array(9001, array_column($shares, 'account_id')), 'no share for the holder');
+foreach ($shares as $x) {
+    $spec = json_decode($x['reward_spec'], true);
+    check($x['status'] === 'ready_to_redeem' && $x['tier'] === 'ultra' && $x['goal_type'] === 'CONTRACT_SHARE' && $x['expires_at'] === null, "{$x['character_name']}'s share is an Ultra Rare reward, ready to claim");
+    check((int) $spec['level'] === ['Kit' => 100, 'Lux' => 105, 'Moss' => 110][$x['character_name']], "{$x['character_name']}'s share is built for their level");
+}
+// Not enough carried: a boss with only 2 far below fails the game
+$two = [member(9001, 'Hale', 'HUcast', 120), member(9002, 'Kit', 'RAmar', 100), member(9003, 'Lux', 'FOnewm', 112), member(9004, 'Moss', 'HUmar', 105)];
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:carry:0@Ultimate');
+list($done, $p) = $walk($db, $m, $holder, $two, range(1, 8), [time()], $run_lobby);
+check(!$done && !empty($p['missed']), 'a boss with only 2 players 10+ levels below fails the carry for that game');
+check(strpos(bounty_progress_text('EPISODE_RUN', $m['goal_target'], json_encode($p)), 'start a new game') !== false, 'progress says to start a new game');
+// A new game starts the run over
+$holder2 = $holder;
+$holder2['LobbyID'] = 78;
+$holder2['LocationFloor'] = 1;
+bounty_evaluate_contract($db, $m, $holder2, $run_lobby, no_kills(), ['key' => '9001_Hale', 'members' => [], 'lobby_rares' => []], $p);
+check(($p['lobby'] ?? null) === 78 && $p['floors'] === [1] && empty($p['missed']) && !$p['bosses'], 'joining a new game starts the run over');
+// An easier game doesn't count
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:carry:0@Ultimate');
+list($done, $p) = $walk($db, $m, $holder, $carried, range(1, 8), [time()], ['difficulty' => 'Very Hard'] + $run_lobby);
+check(!$done && empty($p['floors']), 'a Very Hard game does not count for an Ultimate run');
+// Another episode's boss events don't count
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:carry:0@Ultimate');
+list($done, $p) = $walk($db, $m, $holder, $carried, range(1, 8), [], $run_lobby);
+$k = no_kills();
+$k['boss_events'] = [['floor' => 9, 'time' => time(), 'lobby_id' => 77, 'episode' => 1]];
+$done = bounty_evaluate_contract($db, $m, $holder + ['LocationFloor' => 8], $run_lobby, $k, ['key' => '9001_Hale', 'members' => [77 => $carried], 'lobby_rares' => []], $p);
+check(!$done && !$p['bosses'], 'a floor-9 kill in an Episode 1 room is not the Episode 4 boss');
+// Mixed party
+$mixed = [member(9001, 'Hale', 'HUcast', 120), member(9002, 'Kit', 'RAmar', 118), member(9003, 'Lux', 'FOnewm', 121)];
+$no_force = [member(9001, 'Hale', 'HUcast', 120), member(9002, 'Kit', 'RAmar', 118), member(9004, 'Moss', 'HUmar', 119)];
+$m = contract_row($db, 9001, 'Hale', 'ultra', 'EPISODE_RUN', '4:diverse:0@Very Hard');
+list($done) = $walk($db, $m, $holder, $mixed, range(1, 8), [time()], $run_lobby);
+check($done, 'a mixed-party run is done with a Hunter, a Ranger and a Force at the boss');
+$m = contract_row($db, 9001, 'Hale', 'ultra', 'EPISODE_RUN', '4:diverse:0@Very Hard');
+list($done, $p) = $walk($db, $m, $holder, $no_force, range(1, 8), [time()], $run_lobby);
+check(!$done && !empty($p['missed']), 'no Force at the boss: the mixed-party run fails for that game');
+// Timed
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:timed:90@Ultimate');
+list($done) = $walk($db, $m, $holder, $carried, range(1, 8), [time()], $run_lobby, time() - 80 * 60);
+check($done, 'a timed run done in 80 minutes (limit 90) counts');
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'EPISODE_RUN', '4:timed:90@Ultimate');
+list($done, $p) = $walk($db, $m, $holder, $carried, range(1, 8), [time()], $run_lobby, time() - 95 * 60);
+check(!$done && !empty($p['late']), 'a timed run over 90 minutes does not');
+// A share needs half the run's bosses (Episode 1: 2 of 4)
+$m = contract_row($db, 9001, 'Hale', 'ultra', 'EPISODE_RUN', '1:diverse:0@Very Hard');
+$late_joiner = member(9004, 'Moss', 'HUmar', 119);
+$pp = ['seen' => ['9002_Kit' => [11, 12, 13, 14], '9003_Lux' => [13, 14], '9004_Moss' => [14]]];
+ob_start();
+$paid = bounty_contract_pay_shares($db, $m, $holder, $pp, [member(9001, 'Hale', 'HUcast', 120), member(9002, 'Kit', 'RAmar', 118), member(9003, 'Lux', 'FOnewm', 121), $late_joiner]);
+ob_end_clean();
+check($paid === 2, 'a share needs at least half the run\'s bosses (2 of 4): Kit and Lux, not Moss');
+check($db->querySingle("SELECT m.tier FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE m.pool = 'share' ORDER BY pm.id DESC LIMIT 1") === 'rare', 'an Ultra Rare contract\'s shares are Rare');
+
+// Hunts: a kill by anyone in the game counts; other games, other episodes and easier games don't
+$m = contract_row($db, 9001, 'Hale', 'mythic', 'RARE_TARGET', 'KONDRIEU:3:4@Ultimate');
+$hunt = function ($db, &$m, $lobby_info, $rares, $lobby_id = 77) {
+    $p = null;
+    $h = client('Hale', 120, ['LobbyID' => $lobby_id]);
+    $done = bounty_evaluate_contract($db, $m, $h, $lobby_info, no_kills(), ['key' => '9001_Hale', 'members' => [], 'lobby_rares' => $rares], $p);
+    $m['progress'] = json_encode($p);
+    return [$done, $p];
+};
+$hunt($db, $m, $run_lobby, [77 => ['KONDRIEU' => 1]]);
+$hunt($db, $m, $run_lobby, [77 => ['KONDRIEU_SPINNER' => 1, 'DEL_RAPPY_DESERT' => 2]]);
+$hunt($db, $m, $run_lobby, [78 => ['KONDRIEU' => 1]]);
+list($done, $p) = $hunt($db, $m, ['difficulty' => 'Very Hard'] + $run_lobby, [77 => ['KONDRIEU' => 1]]);
+check(!$done && (int) $p['count'] === 2, 'Kondrieu kills in your game count (its spinner too); other games, other creatures and easier games do not');
+check(bounty_progress_text('RARE_TARGET', $m['goal_target'], json_encode($p)) === '2 / 3 Kondrieus', 'hunt progress text');
+list($done) = $hunt($db, $m, $run_lobby, [77 => ['KONDRIEU' => 1]]);
+check($done, 'the third Kondrieu finishes the hunt');
+$m = contract_row($db, 9001, 'Hale', 'ultra', 'RARE_TARGET', 'DEL_RAPPY:3:4@Very Hard');
+$hunt($db, $m, $run_lobby, [77 => ['DEL_RAPPY_CRATER' => 2]]);
+list($done, $p) = $hunt($db, $m, ['episode' => 2] + $run_lobby, [77 => ['DEL_RAPPY_DESERT' => 1]]);
+check(!$done && (int) $p['count'] === 2, 'Del Rappies of the Crater count; a kill in another episode\'s game does not');
+
+// Wording
+check(bounty_contract_objective_text('RARE_TARGET', 'KONDRIEU:3:4@Ultimate') === 'Defeat 3 Kondrieus in Episode 4 on Ultimate (a kill by anyone in your game counts)', 'hunt wording');
+check(bounty_contract_objective_text('RARE_TARGET', 'AL_RAPPY:1:1@Ultimate') === 'Defeat an Al Rappy in Episode 1 on Ultimate (a kill by anyone in your game counts)', 'hunt wording (an)');
+check(strpos(bounty_contract_objective_text('EPISODE_RUN', '1:timed:150@Very Hard'), 'Full Episode 1 run in one game on Very Hard or higher: every area and all 4 bosses, within 2 h 30 min') === 0, 'timed run wording');
+check(strpos(strip_tags(getClearObjective('EPISODE_RUN', '2:diverse:0@Hard')), '[Contract] Full Episode 2 run') === 0, 'getClearObjective tags contracts');
+$db->exec("UPDATE player_missions SET status = 'abandoned' WHERE character_name IN ('Corvid', 'Hale')");
+
 // The board names items by newserv's name where item_map.json's last name for a code is wrong
 $names = ['031200' => 'Weapons Bronze Badge', '031201' => 'Weapons Silver Badge', '031202' => 'Weapons Gold Badge', '01024B' => 'Assist Barrier',
           '008A00' => 'Sange', '010223' => 'Regene Gear Adv.', '031209' => 'Item Ticket', '031003' => 'Secret Ticket', '031004' => 'Photon Ticket',
@@ -774,7 +1049,9 @@ check(!in_array(9, bounty_boss_arena_floors(1)) && !in_array(9, bounty_boss_aren
 check(!array_intersect(bounty_boss_arena_floors(1), bounty_episode_floors(1)) && !array_intersect(bounty_boss_arena_floors(2), bounty_episode_floors(2)) && !array_intersect(bounty_boss_arena_floors(4), bounty_episode_floors(4)), 'no field floor is also a boss arena in its episode');
 
 @unlink($tmp_db);
-@unlink(__DIR__ . '/../db/.bounty_9001'); // activation marker for the test account
+foreach ([9001, 9002, 9003, 9004] as $acc) {
+    @unlink(__DIR__ . '/../db/.bounty_' . $acc); // board refresh markers for the test accounts
+}
 @unlink("$tmp_db-wal");
 @unlink("$tmp_db-shm");
 echo "\n$passes passed, $fails failed ($n_prompts stories requested from the stub)\n";

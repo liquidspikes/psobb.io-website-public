@@ -109,6 +109,11 @@ while (time() - $script_start < 55) {
     // Each player's level when they joined their current game. Carry objectives measure the level gap
     // with these, so carried players who level up on the way to the boss still count.
     $game_join_level = [];
+    // Contracts: who is in each game (a carry or a mixed party is checked at each boss, and everyone
+    // there gets a share), and the rare creatures killed in each game since the last pass (a kill by
+    // anyone in the game counts for every hunt contract there).
+    $lobby_members = [];
+    $lobby_rare_kills = [];
     foreach ($clients as $gc) {
         if (!isset($gc['Account']['AccountID'], $gc['EXP'])) continue;
         $gk = $gc['Account']['AccountID'] . '_' . ($gc['Name'] ?? 'Unknown');
@@ -116,6 +121,20 @@ while (time() - $script_start < 55) {
         $gps = $player_states[$gk] ?? [];
         $game_join_level[$gk] = ($glob !== null && ($gps['game_lobby'] ?? null) === $glob && isset($gps['game_join_level']))
             ? (int) $gps['game_join_level'] : (int) ($gc['Level'] ?? 1);
+        // (the main loop skips a loading screen's zero-EXP reading without saving state; so does this)
+        if ($glob === null || ((int) $gc['EXP'] === 0 && (int) ($gps['exp'] ?? 0) > 0)) continue;
+        $lobby_members[$glob][] = [
+            'key' => $gk, 'acc' => (int) $gc['Account']['AccountID'], 'name' => $gc['Name'] ?? 'Unknown',
+            'class' => (string) ($gc['CharClass'] ?? ''), 'join_level' => $game_join_level[$gk], 'client' => $gc,
+        ];
+        if (isset($gc['RareEnemyKillCount'], $gps['bounty_rare_kills']) && !empty($gc['LastRareEnemyKilled'])) {
+            $cur = (int) $gc['RareEnemyKillCount'];
+            $was = (int) $gps['bounty_rare_kills'];
+            $d = ($cur >= $was) ? $cur - $was : $cur; // a lower reading: newserv's counter restarted
+            if ($d > 0) {
+                $lobby_rare_kills[$glob][$gc['LastRareEnemyKilled']] = ($lobby_rare_kills[$glob][$gc['LastRareEnemyKilled']] ?? 0) + $d;
+            }
+        }
     }
     $join_level_of = function (array $c) use ($game_join_level) {
         return $game_join_level[($c['Account']['AccountID'] ?? '') . '_' . ($c['Name'] ?? 'Unknown')] ?? (int) ($c['Level'] ?? 200);
@@ -763,6 +782,16 @@ foreach ($clients as $client) {
                         break;
                     }
                 }
+            }
+        } elseif ($m['goal_type'] === 'EPISODE_RUN' || $m['goal_type'] === 'RARE_TARGET') {
+            // Contracts (api/bounty_contracts.php): full episode runs and rare-creature hunts
+            $contract_progress = null;
+            $completed = bounty_evaluate_contract($db, $m, $client, $lobby_info, $kills,
+                ['key' => $stateKey, 'members' => $lobby_members, 'lobby_rares' => $lobby_rare_kills], $contract_progress);
+            if ($completed) {
+                // everyone else in the game gets a share, a tier lower, built for them
+                $share_lobby = $contract_progress['lobby'] ?? $lobby_id;
+                bounty_contract_pay_shares($db, $m, $client, $contract_progress, $lobby_members[$share_lobby] ?? []);
             }
         } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true)) {
             // Objectives of the Bounty System Rework with progress (kept in player_missions.progress)

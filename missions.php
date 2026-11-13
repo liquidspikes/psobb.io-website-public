@@ -35,6 +35,8 @@ function bounty_card_tags(array $b)
         . '<span style="font-size:0.75rem; color:rgba(255,255,255,0.65); margin-right:6px;">' . htmlspecialchars(__(bounty_kind_label($b['pool'], $b['cadence']))) . '</span>';
     if (!empty($b['expires_at']) && in_array($b['status'] ?? 'in_progress', ['queued', 'in_progress', 'rerolling'], true)) {
         $html .= '<span style="font-size:0.75rem; color:#ffaa00;">' . htmlspecialchars(__(bounty_expiry_text($b['expires_at']))) . '</span>';
+    } elseif (($b['pool'] ?? '') === 'contract' && in_array($b['status'] ?? 'in_progress', ['queued', 'in_progress'], true)) {
+        $html .= '<span style="font-size:0.75rem; color:#ffcc33;">' . htmlspecialchars(__('Never expires')) . '</span>';
     }
     return '<div class="bounty-tags" style="margin:4px 0 8px;">' . $html . '</div>';
 }
@@ -104,11 +106,12 @@ $ab_query = "SELECT pm.id as pm_id, m.id as mission_id, pm.account_id as bounty_
 
 // With the Bounty System Rework a hunter can hold up to 17 active bounties per character, so the
 // feed shows all of your own and, of everyone else's, only the 30 newest that other players can
-// help with: team bounties (mentoring, diverse party), Battle Mode and Challenge Mode.
+// help with: team bounties (mentoring, diverse party), Battle Mode, Challenge Mode and contracts (whose
+// helpers each get a share).
 $feed_others_limit = $bounty_rework ? 30 : -1;
 if ($bounty_rework) {
     $ab_others = $ab_query . "AND (m.goal_type IN ('MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'BATTLE_WINS', 'CHALLENGE_STAGES', 'BATTLE_RULE_WINS', 'CHALLENGE_RUN')
-                                   OR m.pool IN ('battle', 'challenge')) ";
+                                   OR m.pool IN ('battle', 'challenge', 'contract')) ";
 } else {
     $ab_others = $ab_query;
 }
@@ -495,10 +498,17 @@ if ($account_id) {
                             <?php 
                                 $is_team = ($r['goal_type'] === 'HARDCORE_MENTOR' || $r['goal_type'] === 'DIVERSE_PARTY_BOSS');
                                 $voucher_class = $is_team ? 'accent-purple' : 'accent-green';
+                                $voucher_tag = $is_team ? __('Team Mission Complete!') : __('Mission Complete!');
+                                if (($r['pool'] ?? '') === 'contract') {
+                                    $voucher_tag = __('Contract Complete!');
+                                } elseif (($r['pool'] ?? '') === 'share') {
+                                    $voucher_class = 'accent-purple';
+                                    $voucher_tag = __('Contract Share!');
+                                }
                             ?>
                             <div class="reward-voucher <?= $voucher_class ?>">
                                 <div class="voucher-left">
-                                    <span class="voucher-tag"><?= $is_team ? __('Team Mission Complete!') : __('Mission Complete!') ?></span>
+                                    <span class="voucher-tag"><?= $voucher_tag ?></span>
                                     <?= bounty_card_tags($r) ?>
                                     <h4 class="voucher-title"><?= htmlspecialchars($r['title']) ?></h4>
                                     <p class="voucher-desc"><?= htmlspecialchars($r['description']) ?></p>
@@ -858,7 +868,7 @@ if ($account_id) {
                     <h2>⚔️ <?= __('Active Personal Bounties') ?></h2>
                 </div>
                 <?php if ($bounty_rework): ?>
-                    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.55); margin: -0.5rem 0 1rem;"><?= __('Your own bounties, plus other hunters\' bounties you can help with: team bounties, Battle Mode and Challenge Mode.') ?></p>
+                    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.55); margin: -0.5rem 0 1rem;"><?= __('Your own bounties, plus other hunters\' bounties you can help with: team bounties, Battle Mode, Challenge Mode and contracts.') ?></p>
                 <?php endif; ?>
                 
                 <?php if (!empty($bounty_board)): ?>
@@ -874,6 +884,7 @@ if ($account_id) {
                                     [__('Drops'), __('%d/%d active', $s['drop'][0], $p['drop']['active']), __('%d/%d held', $s['drop'][1], $p['drop']['held_max'])],
                                     [__('Battle Mode'), __('%d/%d active', $s['battle'][0], $p['battle']['daily']['active']), __('earned %d/%d today', $s['battle'][1], $p['battle']['daily']['cap'])],
                                     [__('Challenge Mode'), __('%d/%d active', $s['challenge'][0], $p['challenge']['weekly']['active']), __('earned %d/%d this week', $s['challenge'][1], $p['challenge']['weekly']['cap'])],
+                                    [__('Contracts'), __('%d/%d held', $s['contract'][0], $p['contract']['held_max'] ?? 3), __('never expire')],
                                 ];
                             ?>
                             <div style="margin-bottom: 0.75rem;">
@@ -914,7 +925,8 @@ if ($account_id) {
                         <?php foreach ($active_bounties as $b): ?>
                             <?php 
                                 $is_mine = (isset($_SESSION['user']) && $b['bounty_account_id'] == $_SESSION['user']['account_id']); 
-                                $is_team = ($b['goal_type'] === 'HARDCORE_MENTOR' || $b['goal_type'] === 'DIVERSE_PARTY_BOSS');
+                                $is_contract = (($b['pool'] ?? '') === 'contract');
+                                $is_team = ($b['goal_type'] === 'HARDCORE_MENTOR' || $b['goal_type'] === 'DIVERSE_PARTY_BOSS' || $is_contract);
                                 
                                 $card_class = 'pso-hud-card';
                                 if ($is_team) {
@@ -932,7 +944,9 @@ if ($account_id) {
                                         <span style="font-weight:normal; font-size:0.8em; opacity:0.6;">(<?= htmlspecialchars($b['character_name'] ?? 'Account Wide') ?>)</span> 
                                         <?= $is_mine ? '(You)' : '' ?>
                                     </span>
-                                    <?php if ($is_team): ?>
+                                    <?php if ($is_contract): ?>
+                                        <span class="bounty-status" style="background: rgba(255, 204, 51, 0.12); color: #ffcc33; border: 1px solid rgba(255, 204, 51, 0.35);"><?= __('Contract') ?></span>
+                                    <?php elseif ($is_team): ?>
                                         <span class="bounty-status" style="background: rgba(199, 125, 255, 0.12); color: #e0aaff; border: 1px solid rgba(199, 125, 255, 0.3);"><?= __('Team Bounty') ?></span>
                                     <?php else: ?>
                                         <span class="bounty-status"><?= __('Personal Bounty') ?></span>
@@ -951,7 +965,7 @@ if ($account_id) {
                                         <span class="bounty-meta-label"><?= __('Directive') ?></span>
                                         <span class="bounty-meta-val" style="color: #ffffff;"><?= ($b['status'] ?? '') === 'rerolling' ? '—' : getClearObjective($b['goal_type'], $b['goal_target'], $b['title'], $b['description'], bounty_meta_min_difficulty($b['meta'] ?? null)) ?></span>
                                     </div>
-                                    <?php $prog = in_array($b['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
+                                    <?php $prog = in_array($b['goal_type'], BOUNTY_PROGRESS_GOALS, true) ? bounty_progress_text($b['goal_type'], $b['goal_target'], $b['progress'] ?? '') : ''; ?>
                                     <?php if ($prog !== ''): ?>
                                     <div class="bounty-meta-row">
                                         <span class="bounty-meta-label"><?= __('Progress') ?></span>
@@ -995,6 +1009,8 @@ if ($account_id) {
                         <?= __('Each character has 3 daily and 3 weekly bounty slots. Playing earns new bounties, up to 5 dailies a day and 10 weeklies a week; finishing one earns another. Bounties earned while your slots are full wait under Up next and start as soon as a slot frees.') ?>
                         <br><br>
                         <?= __('Bosses and rare enemies can drop extra bounties into 5 separate drop slots (10 held at most). Ultra Rare drops need a party of 2 or more; Mythic Rare drops only come when you play alone. Battle Mode earns up to 3 dailies and Challenge Mode up to 3 weeklies.') ?>
+                        <br><br>
+                        <?= __('A quarter of Ultra Rare and Mythic Rare drops come as contracts: a full run of the episode they dropped in (with a mixed party, carrying newer hunters, or against the clock) or a hunt for a rare creature such as Kondrieu. You can hold 3 contracts; they never expire, and abandoning one is free. When you finish one, everyone else in your game gets a reward one tier lower, picked for them.') ?>
                         <br><br>
                         <?= __('Tiers run Common, Uncommon, Rare, Ultra Rare and Mythic Rare, and the higher the tier, the harder the job: Common dailies are errands, Uncommon ones a boss or a timed floor, Rare ones a boss under time or with a team, and Uncommon and Rare ones count only on the difficulty they name. Unfinished bounties expire at the daily or weekly reset; finished ones wait in the Claim Center. Team bounties can be rerolled once for free. Reward stats stay hidden until you claim.') ?>
                         <br><br>

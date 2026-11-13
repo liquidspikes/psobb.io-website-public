@@ -20,11 +20,15 @@
  *   expired       queued/active/rerolling bounties at the daily or weekly reset.
  *   abandoned     as before.
  *
+ * Contracts (api/bounty_contracts.php) are drops too, in their own 3 slots, with cadence 'contract' and
+ * no expiry. Party shares of a finished contract are rows of pool and cadence 'share', ready to claim.
+ *
  * Rows from before the rework have no cadence; they are left alone (no expiry, no slot use).
  */
 require_once __DIR__ . '/bounty_generator.php';
 require_once __DIR__ . '/reward_tables.php';
 require_once __DIR__ . '/bounty_rewards.php';
+require_once __DIR__ . '/bounty_contracts.php';
 
 const BOUNTY_TIERS = ['common', 'uncommon', 'rare', 'ultra', 'mythic'];
 
@@ -53,6 +57,8 @@ function bounty_default_config()
             // Point 13: Battle Mode gives 3 dailies, Challenge Mode 3 weeklies, earned by playing them.
             'battle' => ['daily' => ['active' => 3, 'cap' => 3]],
             'challenge' => ['weekly' => ['active' => 3, 'cap' => 3]],
+            // Contracts: 3 held (all active, no queue); they never expire and abandoning one is free.
+            'contract' => ['held_max' => 3],
         ],
         'earn' => [
             // Chance per cron pass (about once a minute) while logged in, if under the cap.
@@ -85,6 +91,37 @@ function bounty_default_config()
             // the rest are dailies.
             'weekly_tiers' => ['ultra', 'mythic'],
             'rare_weekly_chance' => 50,
+        ],
+        // Contracts (api/bounty_contracts.php): big jobs that never expire, from Ultra Rare and Mythic Rare drops.
+        'contracts' => [
+            // Share (%) of dropped Ultra Rare and Mythic Rare bounties that come as contracts, while fewer
+            // than pools.contract.held_max are held (otherwise they stay normal weekly drops).
+            'drop_share' => 25,
+            // Objectives by tier, with weights. RUN_* are full runs of the episode the contract dropped in;
+            // RARE_TARGET hunts a rare creature there (needs the newserv kill patch).
+            'objectives' => [
+                'ultra' => ['RUN_DIVERSE' => 1, 'RARE_TARGET' => 1],
+                'mythic' => ['RUN_CARRY' => 1, 'RUN_TIMED' => 1, 'RARE_TARGET' => 1],
+            ],
+            // Hunt targets by tier (api/data/bounty_areas.json rare_enemies); only those met in the episode.
+            'hunt_targets' => [
+                'ultra' => ['LOVE_RAPPY', 'NAR_LILY', 'POUILLY_SLIME', 'MERISSA_AA', 'DEL_RAPPY'],
+                'mythic' => ['HILDEBLUE', 'AL_RAPPY', 'KONDRIEU', 'PAZUZU', 'DORPHON_ECLAIR'],
+            ],
+            // A hunt asks for about this many area runs' worth of the creature (at least 1, at most hunt_max).
+            'hunt_runs' => ['ultra' => 10, 'mythic' => 30],
+            'hunt_max' => 5,
+            // A full run: every field area (bounty_episode_floors()) and these boss arenas, in one game.
+            'run_bosses' => ['1' => [11, 12, 13, 14], '2' => [12, 13, 14, 15], '4' => [9]],
+            // Timed runs: minutes from entering the episode's first field area in that game.
+            'run_minutes' => ['1' => 150, '2' => 150, '4' => 90],
+            // Carry runs: at least this many players this many levels below the holder (by the levels each
+            // joined the game at), in the game at every boss.
+            'carry' => ['players' => 3, 'levels' => 10],
+            // Everyone else in the game when a contract is done gets a reward of this tier, built for them.
+            'share_tier' => ['ultra' => 'rare', 'mythic' => 'ultra'],
+            // Photon Drop and Meseta multipliers of the holder's reward.
+            'reward_scale' => ['run' => 2.0, 'hunt' => 1.5],
         ],
         // Challenge Mode bounties (weeklies earned by playing Challenge Mode).
         'challenge' => [
@@ -211,6 +248,8 @@ function bounty_kind_label($pool, $cadence)
 {
     $c = ($cadence === 'weekly') ? 'Weekly' : 'Daily';
     switch ($pool) {
+        case 'contract': return 'Contract';
+        case 'share': return 'Contract share';
         case 'drop': return "Drop · $c";
         case 'battle': return "Battle Mode · $c";
         case 'challenge': return "Challenge Mode · $c";
@@ -580,7 +619,9 @@ function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $s
 {
     // The reward is chosen when the bounty starts (bounty_fill()), once its area is known.
     $now = time();
-    list(, $expires) = bounty_period_bounds($cadence, $now);
+    // Contracts never expire and belong to no reset period
+    list(, $expires) = ($cadence === 'contract') ? [null, null] : bounty_period_bounds($cadence, $now);
+    $period = ($cadence === 'contract') ? null : bounty_period_key($cadence, $now);
 
     $ins = $db->prepare("INSERT INTO missions (title, description, goal_type, goal_target, reward_item_string, tier, cadence, pool, source, reward_spec, meta)
                          VALUES ('', '', 'PENDING', '', '', :tier, :cad, :pool, :src, NULL, :meta)");
@@ -598,8 +639,8 @@ function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $s
     $pm->bindValue(':acc', (int) $acc, SQLITE3_INTEGER);
     $pm->bindValue(':cname', (string) $char, SQLITE3_TEXT);
     $pm->bindValue(':mid', $mid, SQLITE3_INTEGER);
-    $pm->bindValue(':pk', bounty_period_key($cadence, $now), SQLITE3_TEXT);
-    $pm->bindValue(':exp', $expires, SQLITE3_INTEGER);
+    $pm->bindValue(':pk', $period, $period === null ? SQLITE3_NULL : SQLITE3_TEXT);
+    $pm->bindValue(':exp', $expires, $expires === null ? SQLITE3_NULL : SQLITE3_INTEGER);
     $pm->bindValue(':now', $now, SQLITE3_INTEGER);
     $pm->execute();
     $id = $db->lastInsertRowID();
@@ -655,8 +696,13 @@ function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $wha
     if (!$lobby || empty($lobby['is_game'])) {
         return null;
     }
-    if (bounty_count($db, $acc, $char, "m.pool = 'drop' AND pm.status IN ('queued', 'in_progress', 'rerolling')") >= (int) $cfg['pools']['drop']['held_max']) {
-        return null; // holding 10: nothing more drops
+    $held = function ($pool) use ($db, $acc, $char) {
+        return bounty_count($db, $acc, $char, "m.pool = :pool AND pm.status IN ('queued', 'in_progress', 'rerolling')", [':pool' => [$pool, SQLITE3_TEXT]]);
+    };
+    $drop_full = $held('drop') >= (int) $cfg['pools']['drop']['held_max']; // holding 10: no more normal drops
+    $contract_full = $held('contract') >= (int) ($cfg['pools']['contract']['held_max'] ?? 3);
+    if ($drop_full && $contract_full) {
+        return null;
     }
     $table = ($trigger === 'rare') ? $cfg['drops']['rare_enemy_chance'] : $cfg['drops']['boss_chance'];
     $chance = (float) ($table[$lobby['difficulty']] ?? 0);
@@ -667,11 +713,19 @@ function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $wha
     if ($tier === null) {
         return null;
     }
+    // A share of Ultra Rare and Mythic Rare drops are contracts (with a contract slot free)
+    $pool = 'drop';
+    if (in_array($tier, ['ultra', 'mythic'], true) && !$contract_full
+        && mt_rand(1, 10000) <= (int) round(100 * (float) ($cfg['contracts']['drop_share'] ?? 0))) {
+        $pool = 'contract';
+    } elseif ($drop_full) {
+        return null;
+    }
     $weekly = in_array($tier, $cfg['drops']['weekly_tiers'], true)
         || ($tier === 'rare' && mt_rand(1, 100) <= (int) $cfg['drops']['rare_weekly_chance']);
-    $cadence = $weekly ? 'weekly' : 'daily';
+    $cadence = ($pool === 'contract') ? 'contract' : ($weekly ? 'weekly' : 'daily');
     $where = bounty_area_for_floor((int) ($lobby['episode'] ?? 1), $floor ?? (int) ($client['LocationFloor'] ?? -1));
-    $id = bounty_earn($db, $acc, $char, $client, 'drop', $cadence, $tier, $trigger === 'rare' ? 'rare_enemy' : 'boss', [
+    $id = bounty_earn($db, $acc, $char, $client, $pool, $cadence, $tier, $trigger === 'rare' ? 'rare_enemy' : 'boss', [
         'difficulty' => $lobby['difficulty'],
         'mode' => $lobby['mode'],
         'party' => (int) $lobby['players'],
@@ -681,7 +735,7 @@ function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $wha
         'area' => $where['setting'] ?? null,
         'area_attributes' => $where['attributes'] ?? null,
     ]);
-    return $id ? ['id' => $id, 'tier' => $tier, 'cadence' => $cadence] : null;
+    return $id ? ['id' => $id, 'tier' => $tier, 'cadence' => $cadence, 'pool' => $pool] : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1077,6 +1131,18 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
             'challenge_reserve' => $ch['full'] && $tier === 'mythic',
             'scale' => max(0.5, min(2.0, $ch['minutes'] / max(1, (int) bounty_config()['challenge']['reward_minutes']))),
         ];
+    } elseif ($pool === 'contract') {
+        $c = bounty_pick_contract_objective($client, $row, $tier);
+        $obj['selected_goal'] = $c['goal'];
+        $obj['selected_target_id'] = $c['target'];
+        $obj['selected_target_friendly'] = $c['friendly'];
+        $obj['is_location_goal'] = false;
+        $obj['mission_episode'] = $c['episode'];
+        $obj['setting_id'] = $c['setting_id'];
+        $obj['location_override'] = $c['location_override'];
+        $obj['difficulty'] = $c['difficulty'];
+        $obj['reward_area'] = $c['reward_area'];
+        $obj['reward_opts'] = $c['reward_opts'];
     } elseif ($cadence === 'weekly') {
         $diff = bounty_weekly_difficulty($level, $tier);
         // Ultra Rare and Mythic Rare weeklies are hunts only: visiting every area or a few levels
@@ -1143,6 +1209,9 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
     }
     if ($cadence === 'weekly' && $pool !== 'challenge') {
         $obj['extra_lines'][] = 'It runs for the rest of the week, so it is a longer piece of work than a day job.';
+    }
+    if ($pool === 'contract') {
+        $obj['extra_lines'][] = 'It is a contract: one of the biggest jobs the guild posts, with no deadline.';
     }
     if ($pool === 'drop' && !empty($row['meta'])) {
         $meta = json_decode($row['meta'], true) ?: [];
@@ -1396,6 +1465,7 @@ function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
         ['drop', null, $cfg['drop']['active']],
         ['battle', 'daily', $cfg['battle']['daily']['active']],
         ['challenge', 'weekly', $cfg['challenge']['weekly']['active']],
+        ['contract', 'contract', $cfg['contract']['held_max'] ?? 3],
     ];
     foreach ($order as list($pool, $cadence, $limit)) {
         if (bounty_active_count($db, $acc, $char, $pool, $cadence) >= (int) $limit) {
@@ -1450,6 +1520,17 @@ function bounty_tick_for_client($db, array $client, array $ctx)
         if ($d) $drops[] = $d;
     }
     foreach ($drops as $d) {
+        if (($d['pool'] ?? 'drop') === 'contract') {
+            $label = bounty_tier_label($d['tier']);
+            if ($lang === 'jp') {
+                send_personal_mail($acc, "ハンターズギルド", "{$label}の契約がドロップしました！契約に期限はありません。\n{$srv}で確認してください。");
+            } elseif ($lang === 'ru') {
+                send_personal_mail($acc, "Гильдия Охотников", "Выпал контракт: {$label}! У контрактов нет срока.\nСмотрите на {$srv}.");
+            } else {
+                send_personal_mail($acc, "Hunters Guild", "A {$label} contract dropped! Contracts never expire.\nIt's on your bounty board at {$srv}.");
+            }
+            continue;
+        }
         $label = bounty_tier_label($d['tier']) . ' ' . (($d['cadence'] === 'weekly') ? 'weekly' : 'daily');
         if ($lang === 'jp') {
             send_personal_mail($acc, "ハンターズギルド", "{$label}バウンティがドロップしました！\n{$srv}で確認してください。");
@@ -1515,7 +1596,8 @@ function bounty_expiry_text($expires_at)
  * Slot and cap usage per character, for the board header.
  *
  * @return array [character_name => ['daily' => [active, queued, earned], 'weekly' => [...],
- *               'drop' => [active, held], 'battle' => [active, earned], 'challenge' => [active, earned]]]
+ *               'drop' => [active, held], 'battle' => [active, earned], 'challenge' => [active, earned],
+ *               'contract' => [held]]]
  */
 function bounty_board_summary($db, $acc)
 {
@@ -1535,6 +1617,7 @@ function bounty_board_summary($db, $acc)
             'drop' => [bounty_active_count($db, $acc, $c, 'drop'), bounty_active_count($db, $acc, $c, 'drop') + bounty_queued_count($db, $acc, $c, 'drop')],
             'battle' => [bounty_active_count($db, $acc, $c, 'battle', 'daily'), bounty_earned_count($db, $acc, $c, 'battle', 'daily')],
             'challenge' => [bounty_active_count($db, $acc, $c, 'challenge', 'weekly'), bounty_earned_count($db, $acc, $c, 'challenge', 'weekly')],
+            'contract' => [bounty_active_count($db, $acc, $c, 'contract') + bounty_queued_count($db, $acc, $c, 'contract')],
         ];
     }
     return $out;

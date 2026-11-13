@@ -63,8 +63,9 @@ try {
         // Bounty System Rework fields (null/empty on bounties from before the rework)
         $row['tier_label'] = $row['tier'] ? bounty_tier_label($row['tier']) : null;
         $row['kind'] = $row['cadence'] ? bounty_kind_label($row['pool'], $row['cadence']) : null;
-        $row['expires_in'] = (!empty($row['expires_at']) && $row['status'] !== 'ready_to_redeem') ? bounty_expiry_text($row['expires_at']) : null;
-        $row['progress_text'] = in_array($row['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true) ? bounty_progress_text($row['goal_type'], $row['goal_target'], $row['progress']) : null;
+        $row['expires_in'] = (!empty($row['expires_at']) && $row['status'] !== 'ready_to_redeem') ? bounty_expiry_text($row['expires_at'])
+            : ((($row['pool'] ?? '') === 'contract' && $row['status'] !== 'ready_to_redeem') ? 'Never expires' : null);
+        $row['progress_text'] = in_array($row['goal_type'], BOUNTY_PROGRESS_GOALS, true) ? bounty_progress_text($row['goal_type'], $row['goal_target'], $row['progress']) : null;
         $row['stats_hidden'] = $row['reward_spec'] ? bounty_reward_has_hidden_stats(json_decode($row['reward_spec'], true)) : false;
         $row['can_reroll'] = $row['status'] === 'in_progress' && $row['cadence'] && (int) $row['rerolled'] === 0 && in_array($row['goal_type'], bounty_config()['reroll_goal_types'], true);
         $min_diff = bounty_meta_min_difficulty($row['meta'] ?? null);

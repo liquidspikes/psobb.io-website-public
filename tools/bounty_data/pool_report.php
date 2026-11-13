@@ -1,7 +1,7 @@
 <?php
 /**
- * Checks the bounty reward pools for every Section ID, class, level and area, and reports their
- * sizes and the 10x rule: php tools/bounty_data/pool_report.php [--json out.json]
+ * Checks the bounty reward pools for every Section ID, class, level and area (and the contracts' run and
+ * hunt pools), and reports their sizes and the 10x rule: php tools/bounty_data/pool_report.php [--json out.json]
  */
 chdir(__DIR__ . '/../../api');
 require 'functions.php';
@@ -38,6 +38,34 @@ foreach (['rare', 'ultra', 'mythic', 'challenge_reserve'] as $tier) {
                     foreach ($ch as $code => $p) $stats[$tier]['items'][$code] = true;
                 }
             }
+        }
+    }
+}
+// Contracts: Mythic Rare run pools (each episode) and hunt pools (each creature, Ultra or Mythic), never past the episode
+$contract_pools = [];
+foreach ([1, 2, 4] as $ep) {
+    $contract_pools[] = ['contract_run', 'mythic', ['area' => bounty_contract_reward_area($ep), 'max_area' => 1]];
+}
+foreach (bounty_rare_enemy_data() as $tid => $e) {
+    foreach ($e['episodes'] as $epk => $x) {
+        $tier = in_array($tid, bounty_config()['contracts']['hunt_targets']['mythic'], true) ? 'mythic' : 'ultra';
+        $contract_pools[] = ['creature', $tier, ['area' => bounty_contract_reward_area((int) substr($epk, 2), $x['settings'][0] ?? null), 'max_area' => 1,
+                                                'creature_items' => $x['items'], 'creature_tier' => $tier]];
+    }
+}
+foreach ($contract_pools as list($tier, $for, $extra)) {
+    foreach (range(0, 9) as $sec) {
+        foreach ($levels as $lv) {
+            $pool = bounty_reward_pool($tier, $extra + ['section' => $sec, 'class' => null, 'level' => $lv]);
+            $ch = bounty_pool_chances($pool['items']);
+            foreach ($ch as $code => $p) {
+                $checked++;
+                if ($p + 1e-12 < $m * $pool['items'][$code]) $violations++;
+            }
+            $stats[$tier]['n'][] = count($ch);
+            $stats[$tier]['widened'][$pool['widened']] = ($stats[$tier]['widened'][$pool['widened']] ?? 0) + 1;
+            $stats[$tier]['dropped'] = ($stats[$tier]['dropped'] ?? 0) + (count($pool['items']) - count($ch));
+            foreach ($ch as $code => $p) $stats[$tier]['items'][$code] = true;
         }
     }
 }

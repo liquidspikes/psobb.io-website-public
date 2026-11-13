@@ -419,12 +419,146 @@ function bounty_battle_objective_text($target)
     return "Win $n Battle Mode " . ($n === 1 ? 'match' : 'matches') . " of {$s['name']}" . ($s['rules'] ? " ({$s['rules']})" : '');
 }
 
+// ---------------------------------------------------------------------------
+// Contracts of the rework (api/bounty_contracts.php)
+// ---------------------------------------------------------------------------
+
+/**
+ * A rare creature of the contract hunts, by target ID ("KONDRIEU"): label, newserv names, spawn chance,
+ * episodes (from api/data/bounty_areas.json), or null.
+ */
+function bounty_rare_enemy_info($id)
+{
+    static $data = null;
+    if ($data === null) {
+        $raw = @file_get_contents(__DIR__ . '/data/bounty_areas.json');
+        $data = $raw ? ((json_decode($raw, true) ?: [])['rare_enemies'] ?? []) : [];
+    }
+    return $data[$id] ?? null;
+}
+
+/**
+ * Splits a run contract's target "EP:VARIANT:MINUTES@Difficulty" ("1:timed:150@Very Hard").
+ * VARIANT is diverse, carry or timed; MINUTES only matters for timed.
+ */
+function bounty_parse_run_target($target)
+{
+    list($a, $diff) = array_pad(explode('@', (string) $target, 2), 2, 'Normal');
+    $p = explode(':', $a);
+    $ep = (int) ($p[0] ?? 1);
+    return [
+        'episode' => in_array($ep, [1, 2, 4], true) ? $ep : 1,
+        'variant' => in_array($p[1] ?? '', ['diverse', 'carry', 'timed'], true) ? $p[1] : 'timed',
+        'minutes' => max(0, (int) ($p[2] ?? 0)),
+        'difficulty' => $diff,
+    ];
+}
+
+/**
+ * Splits a hunt contract's target "TARGET:N:EP@Difficulty" ("KONDRIEU:1:4@Ultimate").
+ */
+function bounty_parse_hunt_target($target)
+{
+    list($a, $diff) = array_pad(explode('@', (string) $target, 2), 2, 'Normal');
+    $p = explode(':', $a);
+    $ep = (int) ($p[2] ?? 1);
+    return ['target' => (string) ($p[0] ?? ''), 'count' => max(1, (int) ($p[1] ?? 1)), 'episode' => in_array($ep, [1, 2, 4], true) ? $ep : 1, 'difficulty' => $diff];
+}
+
+function bounty_contract_boss_names($episode)
+{
+    if ($episode == 2) return ['Barba Ray', 'Gol Dragon', 'Gal Gryphon', 'Olga Flow'];
+    if ($episode == 4) return ['Saint-Milion, Shambertin or Kondrieu'];
+    return ['the Dragon', 'De Rol Le', 'Vol Opt', 'Dark Falz'];
+}
+
+function bounty_creature_label($id, $plural = false)
+{
+    $info = bounty_rare_enemy_info($id);
+    $label = $info['label'] ?? ucwords(strtolower(str_replace('_', ' ', (string) $id)));
+    if (!$plural) {
+        return $label;
+    }
+    if (substr($label, -1) === 'y') return substr($label, 0, -1) . 'ies';
+    if (substr($label, -1) === 's') return $label . 'es';
+    return $label . 's';
+}
+
+/**
+ * The carry rule's numbers: [players, levels below the holder].
+ */
+function bounty_contract_carry_rule()
+{
+    $c = function_exists('bounty_config') ? (bounty_config()['contracts']['carry'] ?? []) : [];
+    return [(int) ($c['players'] ?? 3), (int) ($c['levels'] ?? 10)];
+}
+
+/**
+ * Human-readable objective of a contract (getClearObjective() calls this).
+ */
+function bounty_contract_objective_text($type, $target)
+{
+    if ($type === 'RARE_TARGET') {
+        $t = bounty_parse_hunt_target($target);
+        $or = ($t['difficulty'] === 'Ultimate') ? 'on Ultimate' : "on {$t['difficulty']} or higher";
+        $label = bounty_creature_label($t['target']);
+        $what = ($t['count'] === 1) ? (preg_match('/^[AEIOU]/i', $label) ? "an $label" : "a $label") : $t['count'] . ' ' . bounty_creature_label($t['target'], true);
+        return "Defeat $what in Episode {$t['episode']} $or (a kill by anyone in your game counts)";
+    }
+    $t = bounty_parse_run_target($target);
+    $or = ($t['difficulty'] === 'Ultimate') ? 'on Ultimate' : "on {$t['difficulty']} or higher";
+    $nb = count(bounty_boss_arena_floors($t['episode']));
+    $base = "Full Episode {$t['episode']} run in one game $or: every area and " . ($nb === 1 ? 'the boss' : "all $nb bosses");
+    switch ($t['variant']) {
+        case 'diverse':
+            return "$base, with a Hunter, a Ranger and a Force in the game at every boss";
+        case 'carry':
+            list($n, $lv) = bounty_contract_carry_rule();
+            return "$base, carrying $n or more hunters $lv+ levels below you (by the levels you each joined the game at), all there at every boss";
+    }
+    return "$base, within " . bounty_duration_text($t['minutes'] * 60) . " of entering the first area";
+}
+
+/**
+ * Progress line of a contract on the board.
+ */
+function bounty_contract_progress_text($type, $target, array $p)
+{
+    if ($type === 'RARE_TARGET') {
+        $t = bounty_parse_hunt_target($target);
+        return (int) ($p['count'] ?? 0) . " / {$t['count']} " . bounty_creature_label($t['target'], $t['count'] !== 1);
+    }
+    $t = bounty_parse_run_target($target);
+    if (empty($p['lobby'])) {
+        return "Not started: join an Episode {$t['episode']} game";
+    }
+    $nf = count(bounty_episode_floors($t['episode']));
+    $nb = count(bounty_boss_arena_floors($t['episode']));
+    $s = 'This game: ' . count($p['floors'] ?? []) . " / $nf areas, " . count($p['bosses'] ?? []) . " / $nb " . ($nb === 1 ? 'boss' : 'bosses');
+    if (!empty($p['missed'])) {
+        return "$s; a boss fell without the party, so start a new game";
+    }
+    if (!empty($p['late'])) {
+        return "$s; over time, so start a new game";
+    }
+    if ($t['variant'] === 'timed' && !empty($p['started'])) {
+        $s .= ', ' . bounty_duration_text(time() - (int) $p['started']) . ' in';
+    }
+    return $s;
+}
+
+// Objectives whose progress the board shows (kept in player_missions.progress)
+const BOUNTY_PROGRESS_GOALS = ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS', 'EPISODE_RUN', 'RARE_TARGET'];
+
 /**
  * Progress line for the board, e.g. "4 / 10 areas".
  */
 function bounty_progress_text($type, $target, $progress_json)
 {
     $p = json_decode((string) $progress_json, true) ?: [];
+    if ($type === 'EPISODE_RUN' || $type === 'RARE_TARGET') {
+        return bounty_contract_progress_text($type, $target, $p);
+    }
     if ($type === 'CHALLENGE_RUN') {
         $c = bounty_parse_challenge_target($target);
         $best = $p['best'] ?? [];
@@ -763,6 +897,11 @@ function getClearObjective($type, $target, $title = '', $desc = '', $min_difficu
             return __('[Weekly] %s', htmlspecialchars(__(bounty_weekly_objective_text($type, $target))));
         case 'CHALLENGE_RUN':
             return __('[Challenge] %s', htmlspecialchars(__(bounty_challenge_objective_text($target))));
+        case 'EPISODE_RUN':
+        case 'RARE_TARGET':
+            return __('[Contract] %s', htmlspecialchars(__(bounty_contract_objective_text($type, $target))));
+        case 'CONTRACT_SHARE':
+            return __('Your share of a contract another hunter finished with you in the game');
         case 'BATTLE_RULE_WINS':
             return __('[Battle] %s', htmlspecialchars(__(bounty_battle_objective_text($target))));
         case 'PENDING':

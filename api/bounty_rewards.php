@@ -27,7 +27,9 @@
  *    only on Ultra Rare and Mythic Rare bounties, and no bounty pays more than one (a Sphere is worth
  *    99 Photon Drops at the exchange).
  *  - Challenge Mode prizes are never bounty rewards. The rarest drops in the game (rarer than 1/75,000
- *    a kill for every Section ID) are reserved for Mythic Rare Challenge Mode full runs.
+ *    a kill for every Section ID) are reserved for Mythic Rare full runs: Challenge Mode's, and Mythic
+ *    Rare run contracts, which pay from their episode's items rarer than 1/75,000 server-wide.
+ *  - Hunt contracts pay from the hunted creature's own drops (api/bounty_contracts.php).
  *  - Exchange-only items stay with their exchanges. Instead, Uncommon to Mythic Rare bounties pay the
  *    tokens those exchanges take: Item Tickets, Secret Tickets, Photon Tickets, Photon Crystals,
  *    Weapons Badges, and the enemy parts Dr. Osto trades for (from the bounty's area).
@@ -389,8 +391,11 @@ function bounty_is_challenge_reserved(array $it, array $rc)
 /**
  * The candidates for one tier, before widening: [code => rate for the hunter's Section ID].
  *
- * @param string $tier  'rare', 'ultra', 'mythic' or 'challenge_reserve'
- * @param array  $ctx   section (index), class (index or null), level, area (bounty_reward_area())
+ * @param string $tier  'rare', 'ultra', 'mythic', 'challenge_reserve', 'contract_run' (a Mythic Rare run
+ *                      contract: the area's items rarer than 1/75,000 server-wide, the reserve among them)
+ *                      or 'creature' (a hunt contract: the creature's drops, ctx creature_items)
+ * @param array  $ctx   section (index), class (index or null), level, area (bounty_reward_area()),
+ *                      creature_items (codes, for 'creature')
  * @param array  $relax 'area' (0 = area, 1 = episode, 2 = anywhere), 'strength' (0 = two classes, 1 = up to target, 2 = any)
  */
 function bounty_pool_candidates($tier, array $ctx, array $relax = [])
@@ -399,7 +404,8 @@ function bounty_pool_candidates($tier, array $ctx, array $relax = [])
     $sec = (int) $ctx['section'];
     $class = ($tier === 'rare') ? $ctx['class'] : null; // Ultra and Mythic may be for any class
     $level = max(1, min(200, (int) $ctx['level']));
-    $target = min(200, $level + (int) ($rc['level_delta'][$tier] ?? 0));
+    $delta_tier = ['contract_run' => 'mythic', 'creature' => $ctx['creature_tier'] ?? 'ultra'][$tier] ?? $tier;
+    $target = min(200, $level + (int) ($rc['level_delta'][$delta_tier] ?? 0));
     $tband = bounty_strength_band($target);
     $ra = (int) ($relax['area'] ?? 0);
     $rs = (int) ($relax['strength'] ?? 0);
@@ -440,6 +446,20 @@ function bounty_pool_candidates($tier, array $ctx, array $relax = [])
                     continue 2;
                 }
                 break;
+            case 'contract_run':
+                if (($it['obtained'] ?? '') !== 'rare_drop' || $avg <= 0 || $avg >= $rc['challenge_reserve_max_rate']
+                    || $rate >= $rc['own_section_common_rate']) {
+                    continue 2;
+                }
+                break;
+            case 'creature':
+                // the creature's own rare drops: not its tools and common gear, not what normal play
+                // already finds (1/5,000 or better server-wide or for the hunter's Section ID)
+                if (!in_array($code, $ctx['creature_items'] ?? [], true) || ($it['obtained'] ?? '') !== 'rare_drop' || !empty($it['common_drop'])
+                    || $avg >= $rc['rare_max_rate'] || $rate >= $rc['own_section_common_rate']) {
+                    continue 2;
+                }
+                break;
             default:
                 continue 2;
         }
@@ -474,7 +494,7 @@ function bounty_pool_candidates($tier, array $ctx, array $relax = [])
 
 /**
  * The pool for a tier, widening until it has at least min_pool items: first the strength
- * classes, then from the area to its episode, then anywhere.
+ * classes, then from the area to its episode, then anywhere (ctx max_area 1: never past the episode).
  *
  * @return array ['items' => [code => rate], 'widened' => string]
  */
@@ -495,6 +515,10 @@ function bounty_reward_pool($tier, array $ctx)
         // Mythic items aren't tied to an area, and the reserve is the reserve at any level:
         // only the upper strength limit applies.
         $steps = array_values(array_filter($steps, function ($st) { return $st[0]['strength'] >= 1; }));
+    }
+    if (isset($ctx['max_area'])) {
+        // contracts pay from their own episode only
+        $steps = array_values(array_filter($steps, function ($st) use ($ctx) { return $st[0]['area'] <= (int) $ctx['max_area']; }));
     }
     $best = ['items' => [], 'widened' => 'none'];
     foreach ($steps as list($relax, $label)) {
@@ -679,7 +703,9 @@ function bounty_photon_reward($tier, $level, $scale = 1.0)
  *
  * @param array $client the hunter (/y/clients entry): Level, CharClass, SectionID
  * @param array $area   bounty_reward_area()
- * @param array $opts   'challenge_reserve' => true for a Mythic Rare full run; 'scale' => Photon/Meseta multiplier
+ * @param array $opts   'challenge_reserve' => true for a Mythic Rare full run; 'scale' => Photon/Meseta multiplier;
+ *                      contracts: 'pool' (a pool tier for bounty_reward_pool(): 'contract_run', 'creature' or
+ *                      the tier), 'creature_items', 'max_area' (1 = the episode only)
  * @return array spec: version 2, tier, area, items [['base', 'cat', 'profile', 'attributes', 'def_range', 'evp_range']],
  *               photon (bounty_photon_reward()), meseta, pool (widening note)
  */
@@ -742,8 +768,14 @@ function bounty_build_reward_spec_v2($tier, array $client, array $area, array $o
         case 'rare':
         case 'ultra':
         case 'mythic':
-            $pool_tier = !empty($opts['challenge_reserve']) ? 'challenge_reserve' : $tier;
-            if ($pool_tier === 'mythic' && mt_rand(1, 10000) <= (int) round(100 * (float) bounty_reward_cfg()['mythic_exchange_chance'])) {
+            $pool_tier = $opts['pool'] ?? (!empty($opts['challenge_reserve']) ? 'challenge_reserve' : $tier);
+            foreach (['creature_items', 'max_area'] as $k) {
+                if (isset($opts[$k])) {
+                    $ctx[$k] = $opts[$k];
+                }
+            }
+            $ctx['creature_tier'] = $tier;
+            if ($pool_tier === 'mythic' && empty($opts['pool']) && mt_rand(1, 10000) <= (int) round(100 * (float) bounty_reward_cfg()['mythic_exchange_chance'])) {
                 // Rarely, an item otherwise only found at an exchange
                 $ex = bounty_mythic_exchange_items();
                 if ($ex) {
@@ -753,11 +785,16 @@ function bounty_build_reward_spec_v2($tier, array $client, array $area, array $o
                 }
             }
             $pool = bounty_reward_pool($pool_tier, $ctx);
+            if (!$pool['items'] && $pool_tier !== $tier) {
+                // a contract pool with nothing for this hunter: the tier's own pool, in the episode
+                $pool_tier = $tier;
+                $pool = bounty_reward_pool($tier, $ctx);
+            }
             $chances = bounty_pool_chances($pool['items']);
-            $pool_note = count($chances) . ' items (' . $pool['widened'] . ')';
+            $pool_note = count($chances) . ' items (' . $pool['widened'] . (($pool_tier !== $tier) ? ", $pool_tier" : '') . ')';
             $code = $chances ? bounty_pick_from_chances($chances) : null;
             if ($code !== null) {
-                $add_item($code, $pool_tier === 'challenge_reserve' ? 'challenge_reserve' : $tier);
+                $add_item($code, $pool_tier === 'challenge_reserve' ? 'challenge_reserve' : $tier); // contracts roll their tier's stats
             } else {
                 // Nothing in the data fits: rare equipment from the reward tables
                 $r = mt_rand(1, 100);

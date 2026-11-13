@@ -19,6 +19,8 @@ Writes:
   bounty_items.json        one entry per item: rarity data, how else it is obtained, equip level per class
   battle_rule_sets.json    the eight BB battle rule sets, decoded from their scripts
   challenge_mode.json      Challenge Mode stages, rank times and prizes, decoded from their scripts
+  bounty_areas.json        lore settings, floors and Challenge stages with their enemy classes; rare creatures (where
+                           they are met, how often, what they drop) for contract hunts
   bounty_levels.json       EXP needed for each level, and the EXP an average enemy gives per difficulty
                            (from level-table-v4.json and battle-params.json), so level objectives stay realistic
 
@@ -53,6 +55,22 @@ RARE_ENEMY_SPAWN = {
 # Episode 2's rare Rag Rappy is the Love Rappy all year (newserv's EnemyTypeDefinition::rare_type); these replace it
 # only during the Christmas, Easter and Halloween events.
 SEASONAL_ENEMIES = {'EGG_RAPPY', 'HALLO_RAPPY', 'SAINT_RAPPY'}
+# Contract hunt targets: each rare creature by the names newserv reports it under (LastRareEnemyKilled in /y/clients)
+# and the rare table's names for it. Kondrieu's spinner phase can take the killing blow too.
+RARE_TARGETS = {
+    'HILDEBLUE': ('Hildeblue', ['HILDEBLUE'], ['HILDEBLUE']),
+    'AL_RAPPY': ('Al Rappy', ['AL_RAPPY'], ['AL_RAPPY']),
+    'LOVE_RAPPY': ('Love Rappy', ['LOVE_RAPPY'], ['LOVE_RAPPY']),
+    'NAR_LILY': ('Nar Lily', ['NAR_LILY'], ['NAR_LILY']),
+    'POUILLY_SLIME': ('Pouilly Slime', ['POUILLY_SLIME'], ['POUILLY_SLIME']),
+    'MERICUS': ('Mericus', ['MERICUS'], ['MERICUS']),
+    'MERIKLE': ('Merikle', ['MERIKLE'], ['MERIKLE']),
+    'MERISSA_AA': ('Merissa AA', ['MERISSA_AA'], ['MERISSA_AA']),
+    'DEL_RAPPY': ('Del Rappy', ['DEL_RAPPY_CRATER', 'DEL_RAPPY_DESERT'], ['DEL_RAPPY_CRATER', 'DEL_RAPPY_DESERT']),
+    'PAZUZU': ('Pazuzu', ['PAZUZU_CRATER', 'PAZUZU_DESERT'], ['PAZUZU_CRATER', 'PAZUZU_DESERT']),
+    'DORPHON_ECLAIR': ('Dorphon Eclair', ['DORPHON_ECLAIR'], ['DORPHON_ECLAIR']),
+    'KONDRIEU': ('Kondrieu', ['KONDRIEU', 'KONDRIEU_SPINNER'], ['KONDRIEU']),
+}
 FINAL_BOSSES = {'DARK_FALZ_2', 'DARK_FALZ_3', 'OLGA_FLOW_2'}   # always drop; not in the DAR tables
 # Challenge Mode S-rank prizes are S-rank weapons, chosen and named by the player (types 70-88 Ep1, A5-A9 Ep2)
 S_RANK_WEAPON_TYPES = set(range(0x70, 0x89)) | set(range(0xA5, 0xAA))
@@ -424,6 +442,35 @@ def main():
     challenge['Ep2']['prizes'] = sorted((set(challenge['Ep2']['prizes']) | {'010266', '010118', '010119', '01011A'}) & set(names))
     challenge_prizes = set(challenge['Ep1']['prizes']) | set(challenge['Ep2']['prizes'])
 
+    # --- Rare creatures, for contract hunts: where each is met (its base enemy's floors, or the boss run), how many
+    # an area run meets on average, and what it drops (any Section ID or difficulty; seasonal sources left out)
+    rare_enemies = {}
+    for tid, (label, report_names, table_names) in RARE_TARGETS.items():
+        eps = {}
+        for ep in ('Ep1', 'Ep2', 'Ep4'):
+            per_run = {}
+            floors_met = []
+            for pl in places:
+                if pl['episode'] != ep:
+                    continue
+                n = sum(maps.count_for(pl, w) for w in table_names)
+                if n <= 0:
+                    continue
+                if pl['name'].endswith(' run'):
+                    spawn = max(RARE_ENEMY_SPAWN.get(w, 1.0) for w in table_names)
+                    # rare forms: base spawns x spawn chance; Kondrieu's 1 in 10 is per boss run
+                    per_run[pl['setting']] = round(n * spawn, 5)
+                else:
+                    floors_met.append(pl['name'])
+            codes = sorted({c for c, lst in sources.items() for x in lst
+                            if x['ep'] == ep and x['where'] in table_names and not x['seasonal']})
+            if not per_run or not codes:
+                continue   # not met here, or (Al Rappy / Love Rappy) not this episode's form of the Rappy
+            eps[ep] = {'settings': sorted(per_run), 'floors': floors_met, 'per_run': per_run, 'items': codes}
+        if eps:
+            rare_enemies[tid] = {'label': label, 'names': report_names,
+                                 'spawn': max(RARE_ENEMY_SPAWN.get(w, 1.0) for w in table_names), 'episodes': eps}
+
     # --- Per item
     items = {}
     for code, name in names.items():
@@ -565,7 +612,9 @@ def main():
     json.dump({'episodes': challenge, 'prize_names': {c: names.get(c) for c in sorted(challenge_prizes)}},
               open(os.path.join(a.out, 'challenge_mode.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump(quests, open(os.path.join(a.out, 'quest_item_lists.json'), 'w'), indent=1, ensure_ascii=False)
-    json.dump(build_areas(os.path.dirname(os.path.abspath(__file__))), open(os.path.join(a.out, 'bounty_areas.json'), 'w'), indent=1, ensure_ascii=False)
+    areas_out = build_areas(os.path.dirname(os.path.abspath(__file__)))
+    areas_out['rare_enemies'] = rare_enemies
+    json.dump(areas_out, open(os.path.join(a.out, 'bounty_areas.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump(build_levels(T, os.path.dirname(os.path.abspath(__file__))), open(os.path.join(a.out, 'bounty_levels.json'), 'w'), indent=1, ensure_ascii=False)
     c = collections.Counter(v['obtained'] for v in items.values())
     print('items:', len(items), dict(c))

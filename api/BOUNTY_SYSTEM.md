@@ -1,8 +1,8 @@
 # Bounty System Rework
 
-This implements the [Bounty System Rework](https://feedback.psobb.io/posts/12/bounty-system-rework) feedback post: bounty tiers, daily and weekly bounties, slots and earning caps, bounties that drop from bosses and rare enemies, Battle and Challenge Mode pools, expiry at the reset, a free reroll for team bounties, and rewards by tier whose stats stay hidden until the claim.
+This implements the [Bounty System Rework](https://feedback.psobb.io/posts/12/bounty-system-rework) feedback post: bounty tiers, daily and weekly bounties, slots and earning caps, bounties that drop from bosses and rare enemies, Battle and Challenge Mode pools, expiry at the reset, a free reroll for team bounties, and rewards by tier whose stats stay hidden until the claim. On top of the post: **contracts**, big Ultra Rare and Mythic Rare jobs that never expire (full episode runs and rare-creature hunts).
 
-The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.php`. The numbers are in `bounty_default_config()` and `bounty_reward_defaults()` and can be overridden in `config/bounties.json` (rewards under `reward_engine`); `config/bounties.example.json` shows the format. Setting `"enabled": false` brings back the original flow: up to 3 bounties, with a 10% chance of a new one each minute.
+The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` and the rewards in `api/bounty_rewards.php`. The numbers are in `bounty_default_config()` and `bounty_reward_defaults()` and can be overridden in `config/bounties.json` (rewards under `reward_engine`); `config/bounties.example.json` shows the format. Setting `"enabled": false` brings back the original flow: up to 3 bounties, with a 10% chance of a new one each minute.
 
 ## At a glance
 
@@ -13,12 +13,13 @@ The flow is in `api/bounty_system.php` and the rewards in `api/bounty_rewards.ph
 | Drop | 5, their own | Boss kills (5–18% chance by difficulty) and rare-enemy kills (10–30%) | At most 10 held (active + waiting); after that nothing drops |
 | Battle Mode | 3 dailies | Playing Battle Mode (25% chance a minute) | 3 per day |
 | Challenge Mode | 3 weeklies, any tier | Playing Challenge Mode (25% chance a minute) | 3 per week |
+| Contract | 3, their own (no waiting) | A quarter of Ultra Rare and Mythic Rare drops | 3 held; with 3 held, such a drop stays a normal weekly drop. Never expire |
 
 - Slots and caps are per character by default. Set `"limit_scope": "account"` to share them across an account's characters.
 - A bounty earned while its slots are full waits under **Up next** on the bounty board. When a slot of its kind frees up, the oldest waiting bounty starts. The objective and the story are written at that point, so they are set against the hunter's level and stats on the day it starts.
 - The caps count every bounty earned in the period, whatever happened to it afterwards. Abandoning bounties therefore cannot be used to earn more.
 - Resets come at `reset.daily_hour` (default midnight). The weekly reset comes on `reset.weekly_day` (1 = Monday). Both use the server's time zone, or `reset.timezone`.
-- At the reset, bounties that are waiting, active or being rerolled **expire**. Finished bounties that haven't been claimed never expire; they stay in the Guild Claim Center.
+- At the reset, bounties that are waiting, active or being rerolled **expire**. Finished bounties that haven't been claimed never expire; they stay in the Guild Claim Center. Contracts never expire.
 
 ## Tiers
 
@@ -62,7 +63,7 @@ An item's **server-wide rate** is the average of its rate over the ten Section I
 | Rare | 1/5,000 to 1/20,000 | Rare |
 | Very rare | rarer than 1/20,000 | Ultra Rare |
 | Never dropped | quest-reward items | Mythic Rare |
-| Rarest in the game | rarer than 1/75,000 for every Section ID | Mythic Rare Challenge full runs only |
+| Rarest in the game | rarer than 1/75,000 for every Section ID | Mythic Rare full runs only: Challenge Mode's and run contracts' |
 
 An item that drops 1/5,000 or better for the hunter's **own** Section ID is left to normal play for them, whatever its band.
 
@@ -192,11 +193,60 @@ Bounties started before this update keep their old reward and roll it with `roll
 - **Reroll:** a bounty that needs a particular party (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`) can be rerolled once for free from the board (`api/reroll_bounty.php`). It keeps its tier, reward and slot. It gets a new objective and story the next time the character is online. The new objective is never another team objective, and it cannot be rerolled again.
 - Gemini still writes every story through the lore-grounded prompt (`api/bounty_lore.php`). The prompt now also gives the tier and kind ("Rare (weekly)"), and for drops what the hunter defeated. Weekly hunts aren't tied to one area.
 
+## Contracts
+
+A quarter (`contracts.drop_share`) of dropped Ultra Rare and Mythic Rare bounties come as **contracts**: the biggest jobs the guild posts. They are tied to the episode they dropped in, and they never expire.
+
+- A character holds up to 3 (`pools.contract.held_max`), in their own slots: a contract starts as soon as it drops. With 3 held, a contract roll stays a normal Ultra or Mythic weekly drop (and with 10 normal drops held, a contract can still drop). Abandoning one is free.
+- Like other drops, Ultra Rare ones come in a party of 2 or more and Mythic Rare ones when playing alone. The objective is chosen when the contract starts, on the difficulty weeklies use for the hunter's level (Ultimate for Mythic Rare from level 80).
+
+**Objectives** (`contracts.objectives`):
+
+| Tier | Objective | Example |
+|---|---|---|
+| Ultra Rare | A full run with a mixed party: a Hunter, a Ranger and a Force in the game at every boss | Full Episode 2 run in one game on Very Hard or higher: every area and all 4 bosses, with a Hunter, a Ranger and a Force in the game at every boss |
+| Ultra Rare | Hunt a rare creature | Defeat 3 Del Rappies in Episode 4 on Very Hard or higher |
+| Mythic Rare | A hardcore carry: 3+ players 10+ levels below the holder (by the levels each joined the game at), all in the game at every boss | Full Episode 4 run in one game on Ultimate: every area and the boss, carrying 3 or more hunters 10+ levels below you |
+| Mythic Rare | Against the clock: Episode 1 and 2 in 2 h 30 min, Episode 4 in 1 h 30 min (`run_minutes`), from entering the first area | Full Episode 1 run in one game on Ultimate: every area and all 4 bosses, within 2 h 30 min of entering the first area |
+| Mythic Rare | Hunt a rarer creature | Defeat 3 Kondrieus in Episode 4 on Ultimate |
+
+- **A full run** (`EPISODE_RUN`, target `EP:VARIANT:MINUTES@Difficulty`) is every field area of the episode and every one of its bosses, in one game: Episode 1's ten areas and four bosses, Episode 2's eleven and four, Episode 4's eight and its boss. Areas count when the holder is seen in them; bosses when the boss tracker records a kill in that game (it keeps the game's ID even if the holder left the arena first). Joining another game starts the run over.
+  - The party requirement is checked at each boss kill, against everyone in the game at that moment. A boss that falls without it means that game can't count any more; the board says to start a new game.
+  - A timed run that goes over its time can't count in that game either.
+- **A hunt** (`RARE_TARGET`, target `TARGET:N:EP@Difficulty`) asks for a rare creature met in that episode. A kill by anyone in the holder's game counts, because only the player who lands the blow is credited with a rare kill. It needs newserv patch 0001; without it, contracts are runs only.
+  - Ultra Rare targets: Love Rappy, Nar Lily, Pouilly Slime, Merissa AA, Del Rappy. Mythic Rare: Hildeblue, Al Rappy, Kondrieu, Pazuzu, Dorphon Eclair (`hunt_targets`). Only those met in the contract's episode are offered.
+  - The count is set by effort: about 10 area runs' worth for Ultra Rare and 30 for Mythic Rare (`hunt_runs`), at least 1, at most 5. With newserv's default rare rates and the map counts, one area run meets on average:
+
+    | Creature | Episode | One in about … runs | Count asked |
+    |---|---|---|---|
+    | Del Rappy | 4 | 4 (Crater) | 3 |
+    | Nar Lily | 1 / 2 | 11 (Caves) / 8 (VR Temple) | 1 |
+    | Pouilly Slime | 1 | 10 (Caves) | 1 |
+    | Merissa AA | 4 | 8 (Desert) | 1 |
+    | Love Rappy | 2 | 18 (VR Temple) | 1 |
+    | Kondrieu | 4 | 10 (Desert, with its boss) | 3 |
+    | Pazuzu | 4 | 25 (Crater) | 1 |
+    | Al Rappy | 1 | 30 (Forest) | 1 |
+    | Dorphon Eclair | 4 | 52 (Crater) | 1 |
+    | Hildeblue | 1 / 2 | 104 (Forest) / 62 (VR Temple) | 1 |
+
+**Rewards.** The holder gets the contract's own reward, chosen when it starts, with its tier's stat rolls, and Photon Drops and Meseta ×2 for a run, ×1.5 for a hunt (`reward_scale`):
+
+- An Ultra Rare run pays from the episode's Ultra Rare items.
+- A Mythic Rare run pays from the episode's items rarer than 1/75,000 a kill server-wide: 30 in Episode 1, 29 in Episode 2 and 20 in Episode 4. Challenge Mode's reserve is among them, so the reserve's Episode 4 items, which no Challenge run can pay (Solferino, for one), can now be won.
+- A hunt pays from the creature's own rare drops (none of its tools or common gear, nothing normal play already finds at 1/5,000): for example Heaven Striker, Lame d'Argent or Daylight Scar from Kondrieu.
+- None of them widen past the episode. A hunter for whom a contract's pool has nothing gets the tier's own pool in that episode.
+
+**Shares.** Everyone else in the game when a contract is done gets a reward one tier lower (`share_tier`: Ultra Rare → Rare, Mythic Rare → Ultra Rare), built for their own level, class and Section ID from the episode's items. For a run, a player needs to have been in the game for at least half its bosses (Episode 1 and 2: 2 of 4; Episode 4: the boss). Shares wait in the Guild Claim Center (`missions.pool = 'share'`, `goal_type = 'CONTRACT_SHARE'`), and the player gets an in-game mail.
+
+**Data.** `tools/bounty_data/build.py` writes the rare creatures to `api/data/bounty_areas.json` (`rare_enemies`): the names newserv reports them under, where they are met, how many an area run meets, and what they drop in each episode.
+
 ## On the site
 
-- **Bounty board (`missions.php`).** Each card shows the bounty's tier, its kind, the time left before it expires and, for weeklies, its progress. Team bounties get a reroll button.
+- **Bounty board (`missions.php`).** Each card shows the bounty's tier, its kind, the time left before it expires (contracts: "Never expires") and, for weeklies and contracts, its progress, for example "This game: 7 / 10 areas, 2 / 4 bosses" or "2 / 3 Kondrieus". Team bounties get a reroll button; contracts get the LFG button.
   - A **Your Bounty Slots** panel shows, for each character, the active slots, how much of each cap has been earned, and the **Up next** list. Waiting bounties can be discarded from that list.
-  - The public feed shows all of your own active bounties. Of other hunters' bounties it shows only those you can help with: team bounties (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`), Battle Mode and Challenge Mode, the 30 newest.
+  - The public feed shows all of your own active bounties. Of other hunters' bounties it shows only those you can help with: team bounties (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`), Battle Mode, Challenge Mode and contracts, the 30 newest.
+  - The slot panel has a Contracts cell (held of 3, never expire). The Claim Center marks a finished contract and a share.
 - **JSON endpoints.** `api/my_bounties.php` and `api/my_bounties_all.php` return the new fields: `tier_label`, `kind`, `expires_in`, `progress_text`, `stats_hidden` and `can_reroll`. They also include waiting and rerolling bounties and a `slots` summary. `api/bot_api.php` adds `tier_label`, `kind` and `progress_text` to each mission.
 - **Reward names.** `renderRewardString()` drops the `x1` that `item_map.json` puts on stackable items ("Telepipe x4", not "Telepipe X1 x4"). For the few codes whose `item_map.json` name is a bare number (030E15 showed as "3"), it uses newserv's `names-v4.json` instead.
 
@@ -209,7 +259,7 @@ Two small patches for fuzziqersoftware/newserv add fields to `/y/clients`:
 
 Without the patches the site still works:
 
-- Weeklies don't offer the two kill objectives, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
+- Weeklies don't offer the two kill objectives, contracts don't offer hunts, and only boss kills (from `cron_boss_tracker.php`) can drop bounties.
 - Challenge clears are read from changes to the stage record times (`ChallengeTimesEp1Online`, `ChallengeTimesEp2Online`). That misses replays slower than the record.
 
 ### Boss kills: arenas by episode
@@ -230,7 +280,7 @@ newserv always lists all 14 online stages in those two lists (9 and 5). A cleare
 | `in_progress` | Active |
 | `rerolling` | Its reroll was requested. It keeps its slot and gets a new objective next pass |
 | `ready_to_redeem` → `redeeming` → `completed` | As before. Stats roll at `redeeming` |
-| `expired` | Not finished by its reset |
+| `expired` | Not finished by its reset (contracts never expire) |
 | `abandoned` | As before. Waiting bounties can be discarded too |
 
 New columns, added by `api/db.php` on first load:
@@ -243,14 +293,15 @@ Bounties from before the rework have no cadence. They keep working as before: th
 ## Cron flow (`api/cron_missions.php`, each pass)
 
 1. Expire anything past its reset.
-2. For each online player:
+2. Note who is in each game (with the levels they joined at) and the rare creatures killed in each game since the last pass, for contracts.
+3. For each online player:
    1. Work out kills, Challenge clears and Battle wins since the last pass.
-   2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()`. A daily with a `min_difficulty` skips the pass when the game is easier, and sees only boss kills made in a game of that difficulty.
+   2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()` and contracts through `bounty_evaluate_contract()` (a finished contract pays the rest of the game their shares). A daily with a `min_difficulty` skips the pass when the game is easier, and sees only boss kills made in a game of that difficulty.
    3. Then `bounty_tick_for_client()`:
       - roll drops for new boss and rare-enemy kills;
       - earn bounties for completions, being logged in and Battle/Challenge play (each under its cap);
       - start at most one waiting or rerolling bounty: its objective, story (one Gemini call) and reward.
-3. Kill counters are saved in the cron's player state file. Kills from before a character was first seen don't count.
+4. Kill counters are saved in the cron's player state file. Kills from before a character was first seen don't count.
 
 ## Data
 
@@ -263,7 +314,7 @@ python3 tools/bounty_data/build.py --newserv /path/to/newserv
 | File | What it holds |
 |---|---|
 | `bounty_items.json` | Every BB item: name, kind, stars, how it is obtained, rate per Section ID, best source, where it drops (lore setting and episode), level requirement per class, DEF/EVP ranges, exchanges, quest rewards, combinations |
-| `bounty_areas.json` | Each lore setting, floor and Challenge stage: its drop setting and its enemies' class shares |
+| `bounty_areas.json` | Each lore setting, floor and Challenge stage: its drop setting and its enemies' class shares. The rare creatures for contract hunts (`rare_enemies`) |
 | `bounty_levels.json` | The EXP needed for each level, and the EXP an average enemy gives on each difficulty (for level objectives) |
 | `battle_rule_sets.json` | The eight Battle Mode rule sets, decoded from the quest scripts |
 | `challenge_mode.json` | Challenge stages, rank limits and prizes, from the stage scripts |
@@ -276,7 +327,7 @@ Episode 2's rare Rag Rappy is the Love Rappy all year (newserv's `rare_type()`);
 ## Testing
 
 ```
-php api/test_bounty_system.php        # caps, queue, drops, tier rules, pools, objectives, expiry, reroll, rewards
+php api/test_bounty_system.php        # caps, queue, drops, tier rules, pools, objectives, expiry, reroll, rewards, contracts
 php api/test_bounty_lore.php          # the lore-grounded prompt
 php tools/bounty_data/pool_report.php # every reward pool: sizes and the 10x rule
 ```
@@ -287,6 +338,7 @@ php tools/bounty_data/pool_report.php # every reward pool: sizes and the 10x rul
 
 - A cap counts bounties *earned* per reset. Bounties earned past the 3 + 3 slots wait under Up next instead of being lost.
 - Drops have their own 5 slots and a 10-held limit, so they never block the free dailies and weeklies.
+- Contracts (not in the post) have 3 slots of their own and no queue: a never-expiring job would hold a waiting slot for good. Only the holder gets the contract's promised reward; the rest of the game gets a share a tier lower, built for them.
 - "Mythic only solo" covers both Solo mode and being alone in a Multi-mode room. The second gets the ×1.5 odds.
 - The 10x rule compares one bounty of a tier with one kill in the best place to farm the item, for the hunter's own Section ID. Rares commoner than 1/5,000 a kill, server-wide or for the hunter's own Section ID, are left to normal play, where they already come often.
 - Mythic Rare items don't drop, so they aren't tied to an area.
