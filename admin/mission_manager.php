@@ -283,9 +283,14 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         const bossOptions = [
             {val: 'ANY_DRAGON', text: <?= json_encode(__('Any Dragon Boss (Dragon, Gol Dragon)'), JSON_UNESCAPED_UNICODE) ?>},
             {val: '11', text: <?= json_encode(__('Dragon (Ep1 Forest — Floor 11)'), JSON_UNESCAPED_UNICODE) ?>},
-            {val: '12', text: <?= json_encode(__('De Rol Le (Ep1 Caves — Floor 12) / Gal Gryphon (Ep2 CCA — Floor 12)'), JSON_UNESCAPED_UNICODE) ?>},
-            {val: '13', text: <?= json_encode(__('Vol Opt (Ep1 Mines — Floor 13) / Olga Flow (Ep2 Seabed — Floor 13)'), JSON_UNESCAPED_UNICODE) ?>},
-            {val: '14', text: <?= json_encode(__('Dark Falz (Ep1 Ruins — Floor 14) / Barba Ray (Ep2 Temple — Floor 14)'), JSON_UNESCAPED_UNICODE) ?>},
+            // Ep1 and Ep2 share floors 12-14, so these targets carry the episode ("12@2"),
+            // read by parse_boss_target() in api/functions.php.
+            {val: '12@1', text: <?= json_encode(__('De Rol Le (Ep1 Caves — Floor 12)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '12@2', text: <?= json_encode(__('Gal Gryphon (Ep2 CCA — Floor 12)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '13@1', text: <?= json_encode(__('Vol Opt (Ep1 Mines — Floor 13)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '13@2', text: <?= json_encode(__('Olga Flow (Ep2 Seabed — Floor 13)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '14@1', text: <?= json_encode(__('Dark Falz (Ep1 Ruins — Floor 14)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: '14@2', text: <?= json_encode(__('Barba Ray (Ep2 Temple — Floor 14)'), JSON_UNESCAPED_UNICODE) ?>},
             {val: '15', text: <?= json_encode(__('Gol Dragon (Ep2 Spaceship — Floor 15)'), JSON_UNESCAPED_UNICODE) ?>},
             {val: '9', text: <?= json_encode(__('Saint-Milion (Ep4 Desert — Floor 9)'), JSON_UNESCAPED_UNICODE) ?>}
         ];

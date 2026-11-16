@@ -200,4 +200,15 @@ $existing_slots = $existing_slots ?? [0];
                         </div>
                         <div class="backpack-grid-box" id="viewer-backpack-grid"></div>
                     </div>
+
+                    <!-- ===== KILL COUNTS (api/kill_counts.php) ===== -->
+                    <div class="inventory-section" id="kill-counts-section">
+                        <div class="item-grid-title">
+                            <span>⚔️ <?= __('Kill Counts') ?></span>
+                            <span style="font-size:0.8rem; color:#aaa; font-family:'Share Tech Mono',monospace;"
+                                id="kill-counts-summary"></span>
+                        </div>
+                        <div id="kill-counts-tabs" style="display:flex; gap:6px; flex-wrap:wrap; margin:0.5rem 0;"></div>
+                        <div id="kill-counts-table" style="overflow-x:auto;"></div>
+                    </div>
                 </div>

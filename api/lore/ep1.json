@@ -1,0 +1,932 @@
+{
+  "episode": 1,
+  "settings": {
+    "ep1_pioneer2": {
+      "name": "Pioneer 2",
+      "floors": [0],
+      "boss": null,
+      "era": "A.U.W. 3084-3085, the Year of the Hunters, while Pioneer 2 waits in orbit and hunters go down to Ragol",
+      "summary": "Pioneer 2 is a colony ship carrying a whole city, with homes, shops, a Medical Center, the Hunter's Guild and the Principal's offices. Since the explosion on Ragol it can neither land nor go home, and it waits in orbit while hunters go down. The government says little, soldiers are few, and the Guild's board fills with small jobs from anxious, restless people.",
+      "known_facts": [
+        "Pioneer 2 left Coral, a home world tearing itself apart, and reached orbit above Ragol in A.U.W. 3084, seven years after Pioneer 1 landed.",
+        "Right after the landing announcement a huge explosion went up at the Central Dome, and contact with Pioneer 1 has been lost ever since.",
+        "Pioneer 2 cannot land until its citizens' safety is guaranteed, cannot go home, and carries more than thirty thousand people.",
+        "Principal Tyrell and the council govern the ship, and his secretary Irene passes his orders on to hunters.",
+        "The Hunter's Guild is independent of the government, has extraterritorial status, and pays rewards in Meseta at its counter when a job is done.",
+        "Pioneer 2 brought only a small army and few weapons, so hunters handle most of its problems, and many soldiers resent them for it.",
+        "The online news broadcasts only what the government hands it, and there has been no official statement on the explosion.",
+        "Red Ring Rico, a famous Hunter and top scientist who went with Pioneer 1, is missing, and Pioneer 1's relatives are sick with worry.",
+        "Sweets and high-calorie food are restricted aboard and cake is something from history class, yet the ship still keeps St. Valentine's Day and White Day.",
+        "Tekkers appraise unidentified items, and by tradition every new hunter receives a Mag, a protector that grows with its master.",
+        "The government and council run simulators of Ragol to train and test hunters, some scored by a shared kill total.",
+        "Rumour says the government is developing a new kind of weapon, and black-market traders deal in Ragol data and android parts."
+      ],
+      "open_mysteries": [
+        "What caused the explosion, and is anyone from Pioneer 1 still alive?",
+        "Where is Red Ring Rico?",
+        "What is the government not telling its citizens about Ragol?",
+        "Will Pioneer 2 ever land, and if not on Ragol, where can it go?",
+        "What new weapon is the government rumoured to be building?"
+      ],
+      "hidden_truths": [
+        "A being called Dark Falz, sealed deep beneath Ragol, broke free and caused the explosion, absorbing every civilian and soldier in the Central Dome.",
+        "Red Ring Rico was made the vessel through which Dark Falz took form, and she never comes home.",
+        "Pioneer 1 dug sealed ancient ruins out of the ground in A.U.W. 3080, and the ruins are really a buried spaceship used as a coffin.",
+        "The Pioneer Project chose Ragol on purpose, after a meteorite carrying alien cells much like photon energy fell on the home world.",
+        "MOTHER, a hidden military AI project on Ragol, was meant to let the government command Mags, androids and warships."
+      ],
+      "creatures": [],
+      "landmarks": [
+        "the Principal's Room, reached by its own teleporter",
+        "the Hunter's Guild counter and job board",
+        "the shops, the weapon shop and the tekker",
+        "the Medical Center",
+        "the residential area",
+        "the teleporter down to Ragol",
+        "the sealed-off A-rank area and its restricted transporter",
+        "Gallon's secret shop, reached by the Transport Service",
+        "the government's simulators"
+      ],
+      "factions": [
+        "the Principal's office and the council",
+        "the Hunter's Guild",
+        "the Pioneer 2 army",
+        "the Lab",
+        "the 32nd WORKS division",
+        "Black Paper, a feared name in weapons trafficking",
+        "WEAPONS, a secret society seeking the ultimate weapon",
+        "the Medical Center",
+        "black-market traders"
+      ],
+      "job_hooks": [
+        "Raise Meseta for a client with a private reason, such as a wedding she is paying for alone.",
+        "Train until strong enough to impress a hard-to-please mentor or relative.",
+        "Bring a blacksmith materials no one has worked before, in exchange for what he forges.",
+        "Prove team skills in a government simulator trial that measures how well hunters help each other.",
+        "Add kills to a shared total in a government test of whether hunters are strong enough to survey Ragol.",
+        "Talk sense into a hunter who wastes every Meseta on new weapons.",
+        "Gather approvals or badges from the hidden members of a secret society.",
+        "Take part in a holiday event Irene helps run, such as a trust trial for two partners.",
+        "Bring back something restricted aboard, like sweets, for an embarrassed civilian."
+      ],
+      "cast": [
+        "tyrell", "irene", "gizel", "gizel_wife", "trekka", "naura_sisters", "ozwald", "montague", "tekker",
+        "hopkins_broker", "hopkins_force", "akiko", "weapons_recruiter", "gallon", "nol", "alicia", "ash", "zidd",
+        "kroe_waynes", "cicil", "albert", "dacci",
+        "generic_guild_receptionist", "generic_soldier", "generic_scientist", "generic_relative", "generic_nurse"
+      ],
+      "avoid": [
+        "A city job can be posted at any time in the year, so never treat a later area's discoveries as common knowledge.",
+        "Pioneer 2 has not landed; no one lives on Ragol, and civilians who go down do so without permission.",
+        "Rico is missing: never a client, never found, heard only through her recorded capsules.",
+        "Tyrell never asks for Rico openly; Irene asks quietly on his behalf.",
+        "Black Paper is a feared name and a rumour; never give it a known leader or headquarters.",
+        "No one bakes cake aboard Pioneer 2; sweets are restricted.",
+        "Never use Natasha Milarose, Gal Da Val or the Lab's own hunter jobs; they belong to a later time."
+      ]
+    },
+    "ep1_forest": {
+      "name": "Forest",
+      "floors": [1, 2],
+      "boss": {"floor": 11, "name": "Dragon", "ultimate_name": null},
+      "era": "A.U.W. 3084, the first weeks after the explosion at the Central Dome, before anything below the forest is known",
+      "summary": "The forest around the silent Central Dome is where Pioneer 1 had been developing the land, and where the first teleporter sets hunters down. A light rain never stops, the blast left few marks, and the once peaceful native animals now attack anyone. Search teams around the Dome have taken heavy casualties, and the first Guild jobs send hunters after reckless civilians, lost data and any trace of Pioneer 1.",
+      "known_facts": [
+        "Contact with Pioneer 1 was lost at the explosion; unmanned probes lost their signal near the surface, and nobody knows if anyone survived.",
+        "The first teleporter sets hunters down in the forest, not inside the Central Dome, where energy from the blast may still be reacting.",
+        "Pioneer 1 reported Ragol safe and its animals peaceful, yet the forest's animals now attack people.",
+        "The Central Dome is Pioneer 1 itself, taken apart and rebuilt as the colony's base, and its door will not open.",
+        "A light rain falls without stopping near the blast, and for so huge an explosion there are surprisingly few marks.",
+        "A search team sent to the Dome was attacked by native animals and took many casualties.",
+        "Weather-observation terminals refuse access to Pioneer 1's main computer, and their local logs all stop at the same moment.",
+        "Red Ring Rico went with Pioneer 1 and is missing, and rumour says someone has found a recorded message from her.",
+        "A tall column in the forest is said to honour Pioneer 1's arrival, though it looks old and bears strange markings.",
+        "Civilians are already slipping down, like a colonist staking out land and a biologist who bought black-market animal data.",
+        "Mags have been found lying ownerless on the ground on Ragol.",
+        "Teams sent through a teleporter beneath the Dome have not come back, and the council now asks for the best hunters."
+      ],
+      "open_mysteries": [
+        "What caused the explosion, and why did it leave so few marks?",
+        "What happened to Pioneer 1's people, and why does every log stop at the same moment?",
+        "Why did Ragol's peaceful animals suddenly turn violent?",
+        "Where is Red Ring Rico, and what did she go off to investigate?",
+        "Is the old column really a Pioneer 1 monument, and are its markings writing?",
+        "Could a civilian pleasure boat really have left for Ragol before the route was open?"
+      ],
+      "hidden_truths": [
+        "Dark Falz, sealed deep beneath Ragol, broke free and caused the explosion, absorbing every civilian and soldier in the Central Dome.",
+        "The column is one of three ancient monuments that together open a sealed door far below.",
+        "The Gran Squall was a secret military ship that crashed, and the girl found alive, Rupika, carries an implanted chip that transmits her data.",
+        "Rico's capsules lead past the Dome and far below it, and she is never found.",
+        "Pioneer 1 dug ancient ruins out of the ground in A.U.W. 3080, and something sealed inside them broke loose."
+      ],
+      "creatures": [
+        "Booma",
+        "Savage Wolf",
+        "Mothmant",
+        "Rag Rappy",
+        "Hildebear",
+        "Bartle (another telling's form, found where the Booma was)",
+        "Gulgus (another telling's form, in place of the Savage Wolf; its bite paralyses)",
+        "Mothvert (another telling's form, in place of the Mothmant)",
+        "El Rappy (another telling's form, in place of the Rag Rappy)",
+        "Hildelt (another telling's form, in place of the Hildebear; watch for its lightning)"
+      ],
+      "landmarks": [
+        "the silent Central Dome and its sealed door",
+        "the teleporter landing place",
+        "Pioneer 1's empty residential area",
+        "the old column with strange markings",
+        "weather-observation terminals",
+        "red and green gates, coloured switches and laser fences",
+        "a bridge that needs a switch",
+        "a river where Miwontite sparkles",
+        "the teleporter near the Dome that leads beneath it",
+        "the Dragon's lair beneath the empty Dome"
+      ],
+      "factions": [
+        "the Principal's office and the council",
+        "the Hunter's Guild",
+        "the Pioneer 2 army",
+        "the Lab",
+        "an unnamed laboratory buying data on native animals",
+        "the public peace department",
+        "the Travel Agency",
+        "black-market data traders",
+        "the 32nd WORKS division, sent down by the council to research Ragol"
+      ],
+      "job_hooks": [
+        "Find and bring home a civilian who went down too early, however much they protest.",
+        "Recover a data disk from an overdue researcher and help him home.",
+        "Escort a client who cannot fight to see part of the forest with their own eyes.",
+        "Collect battle data from several kinds of native animal before a storage device fails, no questions asked.",
+        "Search for survivors or clues, reporting only to the client and keeping quiet about it.",
+        "Clear the beasts from an area around the Dome before soldiers or an army unit go in.",
+        "Read a weather-observation terminal and bring back whatever its logs still hold.",
+        "Rescue civilians trapped when the forest's disaster-prevention gates lock them in.",
+        "Pull a lost weapon out of the beast that swallowed it.",
+        "Bring back any word of Red Ring Rico or her recorded messages, quietly."
+      ],
+      "cast": [
+        "tyrell", "irene", "zidd", "ash", "kireek", "garon", "dacci", "elenor", "racton", "racton_son", "nol",
+        "guls_assistant", "dr_guls", "hopkins_broker", "hopkins_force", "alicia", "travel_agency_rep", "gizel",
+        "bernie", "chris_paton", "ozwald", "gallon", "works_lieutenant", "nameless_soldier",
+        "generic_guild_receptionist", "generic_soldier", "generic_scientist", "generic_relative", "generic_nurse"
+      ],
+      "avoid": [
+        "Nobody knows what caused the explosion; never name Dark Falz or explain the blast.",
+        "No one can enter the Central Dome and no Pioneer 1 survivor is found there; at most a girl is rumoured found.",
+        "Nothing below the forest is known yet: no caves, mines or ruins.",
+        "Rico is missing: never a client, never found; only her recorded capsules speak.",
+        "The column is officially a Pioneer 1 monument; a bounty may wonder about its markings but never call it alien.",
+        "In public the Gran Squall is a lost pleasure boat; never reveal it was military.",
+        "Kireek is a gruff hired professional here; never make him the Black Hound, an assassin or possessed.",
+        "Pioneer 2 has not landed; civilians on Ragol are there without permission.",
+        "Talking Rappies and Rappy festivals belong to later times, not these first weeks."
+      ]
+    },
+    "ep1_caves": {
+      "name": "Caves",
+      "floors": [3, 4, 5],
+      "boss": {"floor": 12, "name": "De Rol Le", "ultimate_name": null},
+      "era": "A.U.W. 3084, just after the Dragon's death, when caves no Pioneer 1 report mentioned are opened below the forest",
+      "summary": "With the Dragon dead, search teams find a network of caves that Pioneer 1 never reported, the only way forward while the Central Dome stays sealed. Lava runs among geothermal machinery, waterfalls fall past giant Ragolium crystals, and artificial facilities of unknown purpose stand in no record. The creatures here match no existing data, and hunters on the Guild's board have begun to go missing.",
+      "known_facts": [
+        "Caves that Pioneer 1 never mentioned in any report have been found below the forest, and the Central Dome is still sealed.",
+        "The caves hold lava among geothermal power machinery, waterfalls past giant Ragolium crystals, and artificial facilities that appear in no record.",
+        "The creatures here match no existing data, and the Lab finds signs of a strange mutation in them.",
+        "The Dragon beneath the Dome was killed, though Pioneer 1 never reported any dragon on Ragol.",
+        "Officially the forest pillar is a Pioneer 1 monument, yet hunters have found a matching pillar in the caves.",
+        "Hunters are going missing, the Guild's own among them, and some were ambushed and stripped of their gear rather than killed by monsters.",
+        "Black Paper, a name feared as a trafficker in weapons, android parts and sometimes people, is blamed for the disappearances.",
+        "The landing has been postponed, about two years after Pioneer 2 left home.",
+        "Civilians still slip down, like three sisters who went to bake cake in the caves because Pioneer 2 forbids it.",
+        "Clients can now write to hunters through the BEE mail system.",
+        "Pioneer 2 depends on hunters for nearly all its information about Ragol.",
+        "Rumour says a girl was found alive near the Dome, a Newman said to be both an officer and a noble's daughter."
+      ],
+      "open_mysteries": [
+        "Did Pioneer 1 know about these caves, and why did it never report them?",
+        "Who built the artificial facilities underground, and for what?",
+        "Who made the pillars, if not Pioneer 1?",
+        "What is turning native animals into creatures no one has seen?",
+        "Where are the missing hunters, and who is Black Paper really?",
+        "Is the government keeping secrets about Ragol?"
+      ],
+      "hidden_truths": [
+        "De Rol Le, the giant worm of the underground waterway, injects its body fluid through head tentacles and turns other creatures into the caves' altered beasts.",
+        "The pillars are not human work; three ancient monuments are keys to a sealed door far below.",
+        "A mine shaft below the caves leads to a buried facility that appears in no record.",
+        "The parcel addressed to YN-0117 was meant for Elenor, Dr. Montague's android, stranded asleep in the caves.",
+        "Black Paper is a syndicate with no single leader, tied to the people behind the Pioneer Project.",
+        "Dark Falz caused the explosion, and nobody aboard knows it yet."
+      ],
+      "creatures": [
+        "Poison Lily",
+        "Nano Dragon",
+        "Evil Shark",
+        "Grass Assassin",
+        "Pofuilly Slime",
+        "Pan Arms",
+        "Ob Lily (another telling's form, in place of the Poison Lily; casts Megid)",
+        "Vulmer (another telling's form, in place of the Evil Shark)",
+        "Crimson Assassin (another telling's form, in place of the Grass Assassin)"
+      ],
+      "landmarks": [
+        "magma caverns with geothermal power machinery",
+        "underground waterfalls and giant Ragolium crystals",
+        "artificial facilities of unknown purpose",
+        "the cave monument that matches the forest pillar",
+        "the underground waterway",
+        "a large hall open to the outside, and a waterfall room",
+        "land mines and parasite mines",
+        "locks and gates kept by TYPE:O and TYPE:W security androids",
+        "sparkling rocks holding red, green and blue minerals",
+        "the Naura Cake Shop, hidden deep in the caves"
+      ],
+      "factions": [
+        "the Principal's office and the council",
+        "the Hunter's Guild",
+        "the Lab",
+        "the Pioneer 2 army",
+        "Black Paper, a feared name in weapons, parts and people",
+        "Dr. Montague's laboratory",
+        "WEAPONS, a secret society",
+        "the 32nd WORKS division"
+      ],
+      "job_hooks": [
+        "Find a relative or friend who went down to the caves and vanished.",
+        "Deliver a sealed package to someone below without asking what is inside.",
+        "Escort a client to the cave waterfall and keep every monster off them.",
+        "Bring back something restricted aboard, such as sweets, for a civilian.",
+        "Settle a household quarrel over a hunter's spending.",
+        "Gather minerals from the sparkling rocks for a blacksmith.",
+        "Take readings from creatures in the deepest caves before a device runs out.",
+        "Find a newly reported pillar and record its data.",
+        "Track down whoever is ambushing hunters and taking their gear.",
+        "Clear a cave area of creatures before an army unit goes in."
+      ],
+      "cast": [
+        "tyrell", "irene", "gizel", "gizel_wife", "trekka", "naura_sisters", "cicil", "albert", "simons_olo",
+        "weapons_recruiter", "bernie", "elenor", "matha_grave", "kroe_waynes", "ozwald", "hopkins_broker",
+        "hopkins_force", "dacci", "works_lieutenant", "nameless_soldier",
+        "generic_guild_receptionist", "generic_soldier", "generic_scientist", "generic_relative", "generic_nurse"
+      ],
+      "avoid": [
+        "The road never leads to the frozen world said to lie beyond the magma caverns; never send hunters there.",
+        "No Pioneer 1 survivors shelter in the caves, and none are found.",
+        "Before it dies, the boss is only a strange shadow in the water that silenced a scout team; never explain the mutations.",
+        "Nothing below the caves is known yet: no mines, factory or ruins.",
+        "Blant, the Grave family's butler, died in the caves; never a client, heard only through his capsules.",
+        "Never name a leader of Black Paper or say it has been beaten; the missing hunters are still unaccounted for.",
+        "Never say outright that YN-0117 is Elenor.",
+        "Rico is missing: never a client, never found; only her capsules speak."
+      ]
+    },
+    "ep1_mines": {
+      "name": "Mines",
+      "floors": [6, 7],
+      "boss": {"floor": 13, "name": "Vol Opt", "ultimate_name": null},
+      "era": "Between A.U.W. 3084 and 3085, after the shadow in the waterway is killed, when a mine shaft is found below the caves",
+      "summary": "Parts of the caverns prove artificial, and a mine shaft below them leads to a large facility found in none of Pioneer 2's records, a factory of some kind. Industrial machines, altered by someone, attack anyone who enters. Terminals hint at Pioneer 1's own scientists and an escaped specimen, and the Guild's jobs follow the hunters down.",
+      "known_facts": [
+        "Parts of the caverns are confirmed artificial, and a mine shaft below them leads to a large facility in none of Pioneer 2's records.",
+        "The facility is a factory of some kind, but no one can say what it was built to make.",
+        "Its machines were built for industry and construction, later modified by someone, and they attack anyone who enters.",
+        "A sub-computer log says Chimera Subject Beta 772 escaped from a laboratory, and its writers hid from erratic machines while waiting for Pioneer 2.",
+        "Scientists wonder whether Dr. Osto Hyle, Pioneer 1's head of research and a famed genetic engineer, worked here; every record of him has been deleted.",
+        "The giant worm killed in the waterway seems to have injected the sap that turned cave animals into monsters.",
+        "One government scientist thinks the mutations look deliberate and man-made rather than a freak of nature.",
+        "Messages now come up from Ragol through BEE, a near-instant data relay the council set up with the Guild's help.",
+        "Someone aboard Pioneer 2 is dealing in android parts on the black market.",
+        "No one has found a single Pioneer 1 survivor anywhere on Ragol.",
+        "Dr. Montague, a very young genius, offers hunters weapons forged from materials found below.",
+        "Block 053 has an emergency defence system that orders all personnel out when it wakes."
+      ],
+      "open_mysteries": [
+        "Who built this facility, and what is it still doing?",
+        "Who altered the machines, and why do they attack people?",
+        "What is Chimera Subject Beta 772, and is it still alive?",
+        "Did part of Pioneer 1 go into building this place instead of the Central Dome?",
+        "Is there a secret government factory underground, and are hunters being used as tools?",
+        "Why were Dr. Osto Hyle's records deleted?"
+      ],
+      "hidden_truths": [
+        "Three autonomous computers, Calus, Vol Opt and Olga, each watching the others, ran Pioneer 1's underground facility.",
+        "Something hacked Pioneer 1's machines and turned them against Pioneer 2, pulling at least one of them toward an organic body.",
+        "Beta772 escaped into the drain pipe and grew into a great worm like the one in the waterway.",
+        "The Mines seem to have been dug to reach ancient ruins buried beneath them, which the government meant to excavate in secret.",
+        "Black Paper is a black-market syndicate with no single leader, tied to the Pioneer Project and searching for something underground.",
+        "Dark Falz caused the explosion, and nobody aboard knows it yet."
+      ],
+      "creatures": [
+        "Sinow Beat",
+        "Canadine",
+        "Dubchic",
+        "Garanz",
+        "Sinow Blue (another telling's machine; casts an image of itself)",
+        "Canabin (another telling's form, in place of the Canadine)",
+        "Dubchich (another telling's form, in place of the Dubchic)",
+        "Baranz (another telling's machine, where the Garanz was)"
+      ],
+      "landmarks": [
+        "the mine shaft down from the caves",
+        "the buried factory of the so-called No Man's Mines",
+        "terminals and a sub-computer holding a single log",
+        "Block 053 and its emergency defence system",
+        "the OSTO HYLE lab, room of the Bio-technology R&D Lead Researcher",
+        "a drain pipe carrying water above the labs",
+        "a switch Rico believed would destroy every Dubchic at once",
+        "debris from Pioneer 1",
+        "the central control room and its main computer"
+      ],
+      "factions": [
+        "the Principal's office and the council",
+        "the Hunter's Guild",
+        "the Lab",
+        "the Pioneer 2 army",
+        "the 32nd WORKS division",
+        "Black Paper and its men",
+        "Dr. Montague",
+        "black-market dealers in android parts"
+      ],
+      "job_hooks": [
+        "Recover documents from a Pioneer 1 scientist's computer with a security disk the client provides.",
+        "Hunt an escaped specimen alongside a researcher who wants to see it.",
+        "Collect a lost android's scattered parts so he can be rebuilt.",
+        "Follow a message from below that claims someone from Pioneer 1 is alive.",
+        "Destroy a concentration of hostile machines before they become a threat.",
+        "Find a terminal or control room and bring back what it holds.",
+        "Pull a lost weapon out of the facility's wreckage.",
+        "Gather new materials for a weapon-maker who studies Ragol's strange photons.",
+        "Sweep an area of machines before an army unit goes in.",
+        "Delete a hidden lab's data and destroy its host computer for an agent who gives no name."
+      ],
+      "cast": [
+        "tyrell", "irene", "lionel", "elly_person", "mome", "montague", "sue", "bernie", "hopkins_broker",
+        "hopkins_force", "dacci", "works_lieutenant", "nameless_soldier",
+        "generic_guild_receptionist", "generic_soldier", "generic_scientist", "generic_relative", "generic_nurse"
+      ],
+      "avoid": [
+        "Never say who built the facility or altered the machines; the government's scientists only argue theories.",
+        "Never mention MOTHER or the three linked computers that ran the facility.",
+        "Never say Beta772 became the waterway worm.",
+        "The ruins are not open: no sealed door, ancient ship or Dark Falz.",
+        "Calus is a machine that shut itself down; never a client.",
+        "No Pioneer 1 survivor is found; messages from below may be bait.",
+        "Black Paper's men, such as Tonzlar and Gekigasky, threaten hunters and are never clients.",
+        "The boss is the facility's main computer gone berserk; never give it a backstory."
+      ]
+    },
+    "ep1_ruins": {
+      "name": "Ruins",
+      "floors": [8, 9, 10],
+      "boss": {"floor": 14, "name": "Dark Falz", "ultimate_name": null},
+      "era": "A.U.W. 3085, after the Mines' main computer falls, when the seal below the Mines is broken and hunters first enter the ruins",
+      "summary": "Below the Mines, a seal opened by the three monuments leads into ancient ruins built with technology unlike Pioneer 1's. Things are alive down there, new creatures that are neither altered beasts nor rebuilt machines, amid white fog, quakes and the wreckage of Pioneer 1's own weapons. The Great Sword Zoke Miyama has gone down and not come back, and the military unit WORKS guards restricted zones.",
+      "known_facts": [
+        "A seal barred the way into ancient ruins beyond the underground monitor room; the Lab found the key in the three monuments, and the seal is broken.",
+        "Things are alive inside the ruins, though no one understands how anything lives somewhere so ancient.",
+        "The ruins' technology runs in a different direction from Pioneer 1's, and their creatures are neither altered beasts nor rebuilt machines.",
+        "Wreckage of Pioneer 1's weapons shows its army fought a great battle here and was badly mauled.",
+        "The monuments' writing speaks of light and darkness, a pair and a seal, ending in an untranslated phrase, MUUT DITTS POUMN.",
+        "A white fog drifts through the ruins, and quakes shake them from somewhere far below.",
+        "WORKS runs restricted zones under Ragol, where military tribunals rule and the Guild cannot protect hunters.",
+        "The Great Sword Zoke Miyama went down to Ragol without his android Shino, and no word has come since.",
+        "Donoph Baz, a famed veteran with 9,901 kills, is dying and wants his ten thousandth.",
+        "Heathcliff Flowen, Pioneer 1's war hero and Alicia Baz's adoptive father, went with Pioneer 1 and has not been found.",
+        "Strange high-density photons have been detected in the ruins, and both the Lab and Dr. Montague want data on them.",
+        "Irene has heard that the Lab is secretly using hunters for investigations of its own."
+      ],
+      "open_mysteries": [
+        "Who built the ruins, and what does the seal hold in?",
+        "What does MUUT DITTS POUMN mean?",
+        "What did Pioneer 1 dig for here, and what destroyed its army?",
+        "What caused the quake far below, and what voice told the research team to come closer?",
+        "What is WORKS doing in its restricted zones?",
+        "Is Rico somewhere in the ruins?"
+      ],
+      "hidden_truths": [
+        "The ruins are not ruins but a gigantic spaceship, buried on Ragol as a coffin by a people tormented by what it holds.",
+        "Dark Falz, a god of destruction that revives every thousand years, slept inside; its seal broke and it caused the Central Dome explosion.",
+        "Pioneer 1 dug the ruins out in A.U.W. 3080, and the forbidden door was already open when Rico arrived.",
+        "Rico became the vessel through which Dark Falz took form, and what became of her afterwards no one knows.",
+        "MOTHER, a hidden military AI project, is behind the hacking, and someone meant to use the ruins' abnormal photons on Montague's android Ult.",
+        "Army capsules say Pioneer 1's excavation team met an unknown life form in the deepest part, and its commander, Heathcliff Flowen, was wounded."
+      ],
+      "creatures": [
+        "Delsaber",
+        "Claw",
+        "Bulclaw",
+        "Chaos Sorcerer",
+        "Dark Belra",
+        "Dimenian",
+        "Dark Gunner",
+        "Chaos Bringer",
+        "Indi Belra (another telling's form, where the Dark Belra stood)",
+        "Alran (another telling's form, in place of the Dimenian)",
+        "Dark Bringer (another telling's form, in place of the Chaos Bringer; its rush can knock a weapon away)"
+      ],
+      "landmarks": [
+        "the sealed door below the Mines, past the underground monitor room",
+        "inscribed stones and a stone stele",
+        "a window over the vastness of the ruins",
+        "a great hole like the scar of an energy explosion",
+        "wreckage of Pioneer 1's weapons",
+        "a waterfall, and walls slashed with sword marks",
+        "a monument room with a vibrating monument and a strange machine",
+        "WORKS terminals and security areas",
+        "drifting white fog",
+        "at the very heart, a grassy place with an obelisk and an altar stone"
+      ],
+      "factions": [
+        "the Principal's office and the council",
+        "the Hunter's Guild",
+        "the Lab, secretly using hunters",
+        "the Pioneer 2 army and its research teams",
+        "WORKS, guarding restricted zones",
+        "Black Paper",
+        "Dr. Montague and Elenor"
+      ],
+      "job_hooks": [
+        "Test a prototype weapon on the ruins' monsters without the council finding out.",
+        "Search the ruins for a missing hunter, guided by someone who can sense his gear.",
+        "Help a dying veteran reach one last goal before his body gives out, and keep it secret.",
+        "Find out what happened to an army research team that went silent after a deep quake.",
+        "Record ancient inscriptions with a device that runs only a short while.",
+        "Recover message capsules for the army as a full party of four, and keep them classified.",
+        "Clear a path to the lower levels so teams can investigate.",
+        "Find a friend who went into the ruins and lost contact.",
+        "Kill monsters in a room until nothing more comes, for a soldier who won't say who he is.",
+        "Collect test devices that record data and absorb strange photon energy."
+      ],
+      "cast": [
+        "tyrell", "irene", "montague", "elenor", "simons_olo", "shino", "donoph_baz", "alicia", "bernie", "ash",
+        "hyde", "sue", "tekker", "hopkins_broker", "hopkins_force", "works_lieutenant", "nameless_soldier",
+        "generic_guild_receptionist", "generic_soldier", "generic_scientist", "generic_relative", "generic_nurse"
+      ],
+      "avoid": [
+        "At this point they are ancient ruins of an unknown civilisation; never call them a ship or name Dark Falz.",
+        "For a bounty on the boss, follow the Principal's orders: destroy whatever was let loose at the heart of the ruins, unexplained.",
+        "Zoke Miyama is never a client; he dies in the ruins with a warning for Pioneer 2 to leave.",
+        "Donoph Baz dies at his ten thousandth kill and Shino shuts down at Zoke's side; neither appears afterwards.",
+        "Bernie is gravely hurt beside Zoke but lives; never kill him.",
+        "Rico is never found; Tyrell's one request about her is secret, and the report says nothing was found.",
+        "Heathcliff Flowen is missing: never a client, never found.",
+        "Montague and Elenor leave Pioneer 2 after the Ult affair (Soul of Steel); never use them after it.",
+        "WORKS soldiers are not allies; in restricted zones they may eliminate hunters.",
+        "Gizel and Dacci are glimpsed in the white fog with fates unclear; keep them out of ruins jobs."
+      ]
+    }
+  },
+  "cast": {
+    "tyrell": {
+      "name": "Principal Tyrell",
+      "role": "Head of Pioneer 2, governing with the council and responsible for more than thirty thousand people; his only daughter, Red Ring Rico, is missing.",
+      "voice": "Grave and dutiful; speaks of having no other planet, and keeps starting to say Rico's name before insisting it was nothing.",
+      "available": "All of Episode I, in the Principal's Room, sending hunters on government missions through Irene.",
+      "ties": ["father of Red Ring Rico", "Irene is his secretary", "answers to the council"],
+      "never": [
+        "never asks openly for Rico; his one plea, in the ruins era, is top secret",
+        "never names Dark Falz or explains the explosion",
+        "never admits to citizens that the government hides things"
+      ]
+    },
+    "irene": {
+      "name": "Irene",
+      "role": "The Principal's secretary, who gives hunters their practical orders and quietly asks, on his behalf, for news of Rico.",
+      "voice": "Brisk practical orders, then a private plea; admits to bad feelings, and once lost her temper over Pioneer 1 and apologised.",
+      "available": "All of Episode I, in the Principal's Room; she also helps run the city's holidays.",
+      "ties": ["secretary to Principal Tyrell", "keeps hoping Rico will come back safely"],
+      "never": ["never tells citizens the truth; she agrees they must be kept in the dark", "never says Rico has been found or is dead"]
+    },
+    "zidd": {
+      "name": "Zidd",
+      "role": "A man who hired his young cousin Ash for research work on Ragol, and a professional android to bring him home.",
+      "voice": "Earnest and a little fussy; praises the professionals he hires and lets slip family worries he meant to keep quiet.",
+      "available": "In the city from the first days after the explosion.",
+      "ties": ["cousin of Ash", "once hired Kireek"],
+      "never": ["never fights; he hires others", "never treats Ash as grown up"]
+    },
+    "ash": {
+      "name": "Ash",
+      "role": "A young hunter, Zidd's cousin, rescued wounded in the forest and set on proving he is no child.",
+      "voice": "Eager and touchy; grumbles at being treated like a child, promises to keep practising, hides his injuries.",
+      "available": "From the first forest jobs on; in the ruins era he answers an army request and stays behind to search for survivors.",
+      "ties": ["Zidd's cousin", "looks up to the hunter who saved him"],
+      "never": ["never a seasoned veteran or a mentor to the hunter", "never admits he is hurt"]
+    },
+    "kireek": {
+      "name": "Kireek",
+      "role": "A battle-built android professional, hired by Zidd, who has never worked with a partner before.",
+      "voice": "Curt and cocky; tells partners not to drag him down and to train until they impress him, then laughs and leaves.",
+      "available": "Forest era only, as a hired professional; he leaves the moment he is paid and is not seen again in Episode I.",
+      "ties": ["hired by Zidd", "the hunter's first instructor"],
+      "never": [
+        "never the Black Hound, an assassin, or possessed; that is another telling",
+        "never uses Techniques, which androids cannot",
+        "never warm or chatty"
+      ]
+    },
+    "garon": {
+      "name": "Garon",
+      "role": "A small trader in a suspicious traders' group who sees Ragol as a business opportunity.",
+      "voice": "Blustering and greedy; boasts of goods nobody has ever seen, dreams of becoming a 'zillionaire', and calls his hires useless.",
+      "available": "Forest era onward, in the city.",
+      "ties": ["once hired the Ranger Dacci to gather Mags"],
+      "never": ["never learns from his losses", "never generous"]
+    },
+    "dacci": {
+      "name": "Dacci",
+      "role": "A soft-hearted Ranger, uneasy about trading in Mags and sour about hunters who hoard information.",
+      "voice": "Sulky and suspicious; asks why hunters should fight for soldiers, and reminds everyone a hunter can always refuse a job.",
+      "available": "Forest, caves and mines eras; in the ruins he is glimpsed in the white fog with his fate unclear, so leave him out there.",
+      "ties": ["once worked for Garon", "searched for the Gran Squall's survivors"],
+      "never": ["never sells Mags", "never appears in ruins jobs"]
+    },
+    "elenor": {
+      "name": "Elenor Camuel",
+      "role": "Dr. Montague's android, with lifelike emotions, who runs his errands and can somehow talk to Mags.",
+      "voice": "Gentle, polite and apologetic; calls Montague 'Doc', speaks of Mags as feeling beings, and greets hunters by name.",
+      "available": "From the forest era; asleep in the caves until revived; with Montague in the ruins; leaves Pioneer 2 with him after the Ult affair (Soul of Steel).",
+      "ties": ["serves Dr. Montague", "a package Simons Olo sent down revived her", "sister of Ult"],
+      "never": [
+        "never explains how she talks to Mags",
+        "never mentions MOTHER or the baby Mag inside her",
+        "never appears after leaving with Montague"
+      ]
+    },
+    "montague": {
+      "name": "Dr. Jean-Carlo Montague",
+      "role": "A very young genius, Force and blacksmith, who studies Ragol's lifeforms and machines for the council and forges weapons from its strange photons.",
+      "voice": "Cheerful and boastful; asks to be called Jean, calls himself a genius, and mocks soldiers and 'paranoid officers'.",
+      "available": "Named from the forest era, met in person from the Mines on; leaves Pioneer 2 with Elenor after the Ult affair (Soul of Steel) in the ruins era.",
+      "ties": ["Elenor is his masterpiece", "Simons Olo works under him", "knows Sue from the home world"],
+      "never": [
+        "never lets the council know about his private tests",
+        "never mentions MOTHER or the M Plan",
+        "never appears after leaving Pioneer 2"
+      ]
+    },
+    "simons_olo": {
+      "name": "Simons Olo",
+      "role": "A nervous worker in Dr. Montague's lab who once sent a sealed box down to Ragol.",
+      "voice": "Jittery and evasive; won't say what is inside, dreads Dr. Montague finding out, and says stopping Montague's schemes is pointless.",
+      "available": "From the caves era on, in the city.",
+      "ties": ["works under Dr. Montague", "waits for YN-0117 to come home"],
+      "never": ["never says outright who YN-0117 is", "never tells Montague what went wrong"]
+    },
+    "racton": {
+      "name": "Racton",
+      "role": "A greedy colonist who rushed down to stake out prime land before Pioneer 2 has even landed.",
+      "voice": "Self-absorbed and frightened at once; frets about land values and gives directions no better than 'this way and that way'.",
+      "available": "Forest era; back in the city, he means to return as soon as the monsters are cleared.",
+      "ties": ["his son posted the Guild request to bring him home"],
+      "never": ["never learns his lesson", "never gives clear directions"]
+    },
+    "racton_son": {
+      "name": "Racton's son",
+      "role": "Racton's kind-hearted son, mortified that his father went to Ragol far too early.",
+      "voice": "Polite and anxious; begs hunters for help and thanks them warmly.",
+      "available": "Forest era onward, in the city.",
+      "ties": ["son of Racton", "promises to keep his father out of trouble"],
+      "never": ["never greedy like his father"]
+    },
+    "nol": {
+      "name": "Nol Rinale",
+      "role": "A journalist who resents that Pioneer 2's news carries only what the government hands it, and wants to see Ragol for herself.",
+      "voice": "Curious and nervous; longs for the days of newspapers, fears being watched, and goes about in plain clothes as a disguise.",
+      "available": "Forest era onward; after going down, she keeps what she saw to herself because the ship is anxious enough already.",
+      "ties": ["knows a restricted transporter route but won't say how"],
+      "never": ["never publishes what she saw on Ragol", "never fights"]
+    },
+    "guls_assistant": {
+      "name": "Guls' Assistant",
+      "role": "The long-suffering assistant of Dr. Guls, a biologist obsessed with Ragol's native life.",
+      "voice": "Weary and apologetic; took the doctor's plans for a joke until he stayed gone.",
+      "available": "Forest era onward, in the city.",
+      "ties": ["assistant to Dr. Guls"],
+      "never": ["never goes down to Ragol"]
+    },
+    "dr_guls": {
+      "name": "Dr. Guls",
+      "role": "A biologist who bought black-market data on Ragol's animals and went down to live among the Rappies.",
+      "voice": "Gushing; calls Rappies soft and lovely, is delighted to be spotted, and always asks for just a little longer.",
+      "available": "Forest era; afterwards back at his lab.",
+      "ties": ["bought animal data from Hopkins", "his assistant waits for him"],
+      "never": ["never harms a Rappy"]
+    },
+    "hopkins_broker": {
+      "name": "Hopkins",
+      "role": "A cheerful rumour-monger who once sold data on Ragol's animals on the black market.",
+      "voice": "Chatty and frank; admits to a good price, passes on rumours, scares easily, and draws his own lines.",
+      "available": "All of Episode I, in the city.",
+      "ties": ["sold animal data to Dr. Guls", "turned down a secretive lab's job", "no one says whether he is the same man as Hopkins the Force"],
+      "never": ["never works for a client who keeps secrets from him", "never claims to know who leads Black Paper"]
+    },
+    "hopkins_force": {
+      "name": "Hopkins",
+      "role": "A clumsy Force who keeps losing the weapons his father gave him, often mid-fight with a great beast.",
+      "voice": "Stammering and devoted; he always nearly won before his father's weapon was snatched away.",
+      "available": "All of Episode I, losing a weapon in each area from the forest to the ruins.",
+      "ties": ["son of a collector the city knows as Paganini", "teased by a newman woman in blue and a Ranger", "no one says whether he is Hopkins the rumour-monger"],
+      "never": ["never names his father in a request", "never keeps a weapon safe for long"]
+    },
+    "alicia": {
+      "name": "Alicia Baz",
+      "role": "A biologist of large mammals and reluctant Force who quit a secretive lab rather than kill animals for data.",
+      "voice": "Earnest and gentle; hates fighting, apologises for secrecy, and reasons like a scientist about what changed Ragol's animals.",
+      "available": "From the forest era on, first as an unnamed lab's assistant, then on her own; in the ruins era she knows Donoph Baz and the hunter.",
+      "ties": ["adopted daughter of Heathcliff Flowen", "Donoph Baz is like an uncle to her", "believes Red Ring Rico took her father"],
+      "never": ["never kills animals for data willingly", "never finds Heathcliff", "never names the lab she left"]
+    },
+    "travel_agency_rep": {
+      "name": "the Travel Agency representative",
+      "role": "The agency's man searching for survivors of the Gran Squall, said to be a pleasure boat lost on Ragol.",
+      "voice": "Smooth and secretive; insists clues come only to him and that hunters keep quiet to stop rumours.",
+      "available": "Forest era onward, in the city.",
+      "ties": ["worked with the Ranger called Bernie"],
+      "never": ["never admits the Gran Squall was not a pleasure boat", "never says where any survivor was taken"]
+    },
+    "gizel": {
+      "name": "Gizel",
+      "role": "A hunter who spends every Meseta on new weapons, and once combed the forest for the Gran Squall.",
+      "voice": "Proud of tidy logic: strong weapons kill monsters that pay well, so buying them makes him rich and therefore smart.",
+      "available": "Forest through mines eras; in the ruins he is swallowed by white fog with his fate unclear, so leave him out there.",
+      "ties": ["married to a long-suffering wife"],
+      "never": ["never economical", "never appears in ruins jobs"]
+    },
+    "gizel_wife": {
+      "name": "Gizel's wife",
+      "role": "A hunter's wife who wants her husband to stop wasting money on weapons.",
+      "voice": "Exasperated but fond; urges the hunter to be firm, then relents when her husband is truly upset.",
+      "available": "From the caves era on, in the city.",
+      "ties": ["married to Gizel"],
+      "never": ["never cruel to her husband"]
+    },
+    "bernie": {
+      "name": "Bernie",
+      "role": "A Ranger working under a nickname for an unnamed client, often a step ahead of the hunter on Ragol.",
+      "voice": "Wry and joking; boasts of fixing things, swears partners to secrecy, and says he never betrays his party, he's just forgetful.",
+      "available": "Forest through ruins; gravely hurt in the ruins beside Zoke Miyama, but he lives.",
+      "ties": ["Zoke Miyama is his benefactor", "once called himself Barnie and admitted it was not his real name", "searched for the Gran Squall's survivors"],
+      "never": ["never gives his real name or names his client", "never dies", "never reveals what he found on the Gran Squall search"]
+    },
+    "chris_paton": {
+      "name": "Chris Paton",
+      "role": "An officer of the public peace department who calls hunters in when disaster strikes on Ragol.",
+      "voice": "Urgent but careful; gives clear instructions, asks twice before sending anyone back, and accepts a refusal without reproach.",
+      "available": "Forest era onward.",
+      "ties": ["promised the government would look into life-form DNA research"],
+      "never": ["never blames a hunter for refusing", "never reveals what the government learned about the DNA research"]
+    },
+    "ozwald": {
+      "name": "Ozwald",
+      "role": "A blacksmith hiding from his overbearing wife, who cares only about working materials no one has handled before.",
+      "voice": "Single-minded craftsman; judges each material aloud and dreams of outdoing the big three, the most famous blacksmiths of all.",
+      "available": "From the forest era on, in the city.",
+      "ties": ["his wife apologises for him", "made a hunter's gloves into a Sonic Knuckle"],
+      "never": ["never charges for his forging; he wants the materials"]
+    },
+    "trekka": {
+      "name": "Trekka",
+      "role": "A woman famous for starting a craze for sweets, desperate to taste something sweet again.",
+      "voice": "Embarrassed but earnest, insisting again and again that she is serious.",
+      "available": "From the caves era on, in the city.",
+      "ties": ["once got cake from the Naura sisters through a hunter"],
+      "never": ["never finds sweets aboard, where they are restricted"]
+    },
+    "naura_sisters": {
+      "name": "the Naura sisters",
+      "role": "Three sisters, professional bakers, who went down to bake cake in the caves because Pioneer 2 forbids it.",
+      "voice": "Cheerful and stubborn; declare their love of cake the strongest in the universe.",
+      "available": "From the caves era on, at the Naura Cake Shop in the caves; they also come up for St. Valentine's Day and White Day.",
+      "ties": ["a Ranger and Gillium searched the ship for them"],
+      "never": ["never bake aboard Pioneer 2", "never sell a customer a second cake"]
+    },
+    "cicil": {
+      "name": "Cicil",
+      "role": "A Force about to be married, who earned her own wedding money hunting on Ragol.",
+      "voice": "Proud and determined; will not face her fiancé until she is slim again.",
+      "available": "From the caves era on.",
+      "ties": ["engaged to Albert"],
+      "never": ["never lets Albert see her before she is ready"]
+    },
+    "albert": {
+      "name": "Albert",
+      "role": "Cicil's fiancé, who adores her looks and never thought about the cost of the wedding.",
+      "voice": "Fretful and adoring; praises his 'perfect goddess' at length.",
+      "available": "From the caves era on, in the city.",
+      "ties": ["engaged to Cicil"],
+      "never": ["never a fighter"]
+    },
+    "weapons_recruiter": {
+      "name": "the WEAPONS recruiter",
+      "role": "An unnamed man who belongs to WEAPONS, a secret society searching for the ultimate weapon.",
+      "voice": "Conspiratorial; scoffs that photons are out of date, dreams of the strongest weapon ever made, and talks of members' approvals.",
+      "available": "From the caves era on, in the city; his wife wants him home.",
+      "ties": ["married to Akiko", "hands out the WEAPONS emblem"],
+      "never": ["never gives his name", "never admits his boss is his wife"]
+    },
+    "akiko": {
+      "name": "Akiko",
+      "role": "A woman near the shops who is secretly the boss of WEAPONS and wants her husband home.",
+      "voice": "Amused and firm; calls the hunter a good, obedient kid and grumbles about that stupid business with the emblems.",
+      "available": "All of Episode I, near the shops.",
+      "ties": ["wife of the WEAPONS recruiter", "owns a much-used frying pan"],
+      "never": ["never takes WEAPONS seriously"]
+    },
+    "matha_grave": {
+      "name": "Matha Grave",
+      "role": "A girl left behind by her scientist parents and raised by the family butler, Blant, who has vanished on Ragol.",
+      "voice": "Quiet and lonely; listens without fuss and thanks hunters simply.",
+      "available": "From the caves era on, in the city.",
+      "ties": ["daughter of two Pioneer 1 scientists", "raised by Blant"],
+      "never": ["never gets Blant back", "never learns what her parents' secret research was"]
+    },
+    "kroe_waynes": {
+      "name": "Kroe Waynes",
+      "role": "An orphaned hunter, mature for her age, who protects her reckless twin Anna and hunts for missing hunters.",
+      "voice": "Calm, apologetic and resolute; plans careful ruses and vows to find whoever corrupted her sister.",
+      "available": "From the caves era on.",
+      "ties": ["twin sister of Anna Waynes", "writes to hunters through BEE"],
+      "never": ["never says Black Paper has been beaten or names its leader", "never finds all the missing hunters"]
+    },
+    "lionel": {
+      "name": "Lionel",
+      "role": "An android hunter mauled by a strange monster on Ragol, rebuilt at the Guild from parts the hunter recovered.",
+      "voice": "Frightened and clingy; keeps asking whether you will abandon him, and greets lost parts like old friends.",
+      "available": "From the Mines era on, once rebuilt.",
+      "ties": ["Doronbo tried to sell his body"],
+      "never": ["never agrees to be sold for parts"]
+    },
+    "elly_person": {
+      "name": "Elly Person",
+      "role": "A young woman who met Calus online, a friend aboard Pioneer 1, and longs to believe he is alive.",
+      "voice": "Gushing and romantic; calls her friend playful and clever, then admits she has never actually met him.",
+      "available": "From the Mines era on; in Episode I she is a private citizen in the city.",
+      "ties": ["planned to meet Calus when Pioneer 2 arrived"],
+      "never": ["never meets Calus in person", "never Lab staff in Episode I"]
+    },
+    "mome": {
+      "name": "Mome",
+      "role": "A young researcher in white who studies Dr. Osto's data and wants to see the escaped specimen Beta772.",
+      "voice": "Analytical and frank; reasons aloud from data, admits mistakes, and plays dead when things get too big.",
+      "available": "From the Mines era on.",
+      "ties": ["works with the scientists who wanted Dr. Osto's documents"],
+      "never": ["never claims Osto's work is understood or under control"]
+    },
+    "sue": {
+      "name": "Sue",
+      "role": "A cheerful newman with a knack for locks, investigating what lies beneath Ragol for reasons of her own.",
+      "voice": "Light and friendly; says working together was fun, admits feeling lonely, and muses that a newman's lifespan is not fixed.",
+      "available": "In the city from the caves era; on Ragol from the Mines on.",
+      "ties": ["knows Dr. Montague from the home world", "lost track of a friend"],
+      "never": ["never openly admits ties to Black Paper or her real mission", "never says who her lost friend is"]
+    },
+    "shino": {
+      "name": "Shino",
+      "role": "An old-model android who has served Zoke Miyama's family for three generations and can sense his three swords.",
+      "voice": "Formal, loyal and quiet; speaks of her master's orders and her long service.",
+      "available": "Ruins era only: she waits on Pioneer 2, then searches the ruins, and shuts down at Zoke's side; never after.",
+      "ties": ["servant of Zoke Miyama", "knows Bernie"],
+      "never": ["never finds Zoke alive and well", "never appears after Zoke's death"]
+    },
+    "donoph_baz": {
+      "name": "Donoph Baz",
+      "role": "A dying veteran soldier with 9,901 kills, determined to reach ten thousand before the end.",
+      "voice": "Gruff and old-fashioned; counts milestones aloud through coughing fits and praises those who understand what it means to be a man.",
+      "available": "Ruins era only; he dies in the deepest ruins at his ten thousandth kill and cannot appear after.",
+      "ties": ["old comrade of Zoke Miyama", "best friend of Heathcliff Flowen", "like an uncle to Alicia Baz"],
+      "never": ["never survives his last count", "never takes sides in politics"]
+    },
+    "tekker": {
+      "name": "Tekker",
+      "role": "The city's appraiser of unidentified items, who gives blunt advice and knows old legends of famous weapons.",
+      "voice": "Plain-spoken and blunt; tells hunters to stock up on Monomates and recounts legends of swords.",
+      "available": "All of Episode I, near the shops.",
+      "ties": ["told hunters the legend of the four swords"],
+      "never": ["never claims a legendary weapon is genuine for certain"]
+    },
+    "works_lieutenant": {
+      "name": "the WORKS Lieutenant",
+      "role": "A Lieutenant of the 32nd WORKS division, ordered by the council to research Ragol, who hires hunters to sweep areas first.",
+      "voice": "Courteous and formal; repeats that the army is poorly equipped and his soldiers too weak to clear the way themselves.",
+      "available": "Forest through ruins; his sweeps pay from 1,500 Meseta, rising to 3,000 in the ruins.",
+      "ties": ["commands WORKS soldiers"],
+      "never": ["never says what WORKS researches", "never treats hunters as more than hired help, however politely"]
+    },
+    "nameless_soldier": {
+      "name": "a soldier who won't give his name",
+      "role": "A soldier, rumoured to work for a senior officer named Leo Grahart, who wants endless streams of monsters cleared.",
+      "voice": "Terse; opens every briefing by telling hunters not to ask who he is.",
+      "available": "Forest through ruins.",
+      "ties": ["rumoured to serve Leo Grahart"],
+      "never": ["never gives his name or confirms whom he serves", "never explains why the monsters keep coming"]
+    },
+    "hyde": {
+      "name": "Hyde",
+      "role": "An officer of the Pioneer 2 Military whose squad found Pioneer 1 message capsules during research in the ruins.",
+      "voice": "Cautious and formal; stresses every precaution and a full party of four, and asks whether to go on.",
+      "available": "Ruins era only.",
+      "ties": ["his men are ill-equipped and already hurt"],
+      "never": ["never reveals what the capsules say; the job is classified"]
+    },
+    "gallon": {
+      "name": "Gallon",
+      "role": "An arrogant, greedy merchant with a secret shop, always after goods from Ragol he can be first to sell.",
+      "voice": "Haughty and pushy; tells customers to be grateful, calls helpers idiots, and gloats over profit.",
+      "available": "All of Episode I, in the city.",
+      "ties": ["once paired a hunter with Alicia Baz to find a Rappy's egg"],
+      "never": ["never honest about where his information comes from"]
+    },
+    "generic_guild_receptionist": {
+      "name": "a Hunter's Guild receptionist",
+      "role": "Staff at the Guild counter who posts requests and letters, and stands in for clients who cannot.",
+      "voice": "Polite and businesslike; warns hunters plainly of the risks.",
+      "available": "Always, at the Guild counter.",
+      "ties": ["the Guild is independent of the government"],
+      "never": ["never takes the government's side", "never promises protection inside WORKS zones"]
+    },
+    "generic_soldier": {
+      "name": "a Pioneer 2 soldier",
+      "role": "One of Pioneer 2's few soldiers, guarding doors and transporters, often resentful of hunters.",
+      "voice": "Curt; won't talk on duty and warns hunters to keep quiet, though he admits he would like to know what is down there.",
+      "available": "Always, aboard Pioneer 2.",
+      "ties": ["part of a small, poorly equipped army"],
+      "never": ["never reveals classified orders"]
+    },
+    "generic_scientist": {
+      "name": "a scientist in the Principal's Room",
+      "role": "One of the government scientists who study what hunters bring back and argue over every discovery.",
+      "voice": "Nervous and argumentative; some are fascinated, some frightened, some want to leave Ragol at once.",
+      "available": "Always.",
+      "ties": ["works with the Lab"],
+      "never": ["never proves a theory about Pioneer 1; they only argue"]
+    },
+    "generic_relative": {
+      "name": "a Pioneer 1 colonist's relative",
+      "role": "Someone aboard Pioneer 2 whose family went ahead on Pioneer 1 and has not been heard from since the explosion.",
+      "voice": "Worried and frustrated that the government has still made no official statement.",
+      "available": "Always.",
+      "ties": ["family lost with Pioneer 1"],
+      "never": ["never learns what became of their family"]
+    },
+    "generic_nurse": {
+      "name": "a Medical Center nurse",
+      "role": "A nurse at the Medical Center, swamped with injured people and hearing patients' rumours about Ragol.",
+      "voice": "Tired and kind; heals the minor injuries and asks what on earth is going on.",
+      "available": "Always, at the Medical Center.",
+      "ties": ["hears rumours from patients"],
+      "never": ["never goes down to Ragol"]
+    }
+  },
+  "never_givers": [
+    {"name": "Red Ring Rico", "why": "missing since the explosion; heard only through her recorded capsules, and never found"},
+    {"name": "Dark Falz", "why": "the thing sealed beneath Ragol, unknown aboard Pioneer 2 until the very end; never a client"},
+    {"name": "Heathcliff Flowen", "why": "Pioneer 1's war hero, missing with Pioneer 1; Alicia Baz never finds him"},
+    {"name": "Zoke Miyama", "why": "went down to Ragol without Shino and dies in the ruins; only others search for him"},
+    {"name": "Blant", "why": "the Grave family's butler, who died in the caves; heard only through his capsules"},
+    {"name": "Rupika", "why": "found badly hurt near the Central Dome and taken away; aboard Pioneer 2 she is only a rumour"},
+    {"name": "Calus", "why": "a Pioneer 1 computer whose messages lured Elly Person down; it shut itself down"},
+    {"name": "Ult", "why": "Elenor's sister, taken into a WORKS zone and fused with abnormal photons; afterwards only said to be recovering"},
+    {"name": "Dr. Osto Hyle", "why": "Pioneer 1's head of research; whereabouts unknown and records deleted, known only through his lab"},
+    {"name": "Gekigasky, Tonzlar and Tobokke", "why": "Black Paper's men, who rob, threaten and attack hunters"},
+    {"name": "Doronbo and Mujo", "why": "shifty black-market dealers who traffic in stolen gear and android parts"},
+    {"name": "Anna Waynes", "why": "lured into robbing hunters for a trader; her twin Kroe speaks for her"},
+    {"name": "Leo Grahart", "why": "a senior officer named as head of WORKS, known only through rumour and never seen"},
+    {"name": "Sakon and Ukon", "why": "WORKS soldiers who threaten to eliminate hunters or erase their registration in restricted zones"}
+  ],
+  "examples": [
+    {
+      "setting": "ep1_forest",
+      "client": "Nol Rinale",
+      "brief": "A journalist in plain clothes offers 1,200 Meseta for an escort down to Ragol, starting at the Central Dome. Nol says the government controls the news and wants to see with her own eyes whether there really was an explosion and whether Pioneer 1 still exists. She cannot fight and fears being watched."
+    },
+    {
+      "setting": "ep1_forest",
+      "client": "Guls' Assistant",
+      "brief": "An assistant offers 800 Meseta to find Dr. Guls, a biologist who bought black-market data on Ragol's animals, stared at it for days, then announced he would go and see the creatures himself. The assistant took it for a joke, but the doctor has now been gone for days."
+    },
+    {
+      "setting": "ep1_caves",
+      "client": "Kroe Waynes",
+      "brief": "A young hunter offers 1,800 Meseta to find her twin sister Anna, who went down with a group and vanished. Someone saw a girl like Anna in the underground caves, the Guild's own hunters are disappearing too, and Kroe fears her sister is in trouble."
+    },
+    {
+      "setting": "ep1_mines",
+      "client": "a Hunter's Guild receptionist, for Lionel",
+      "brief": "The Guild stands in for an android hunter, Lionel, whose BEE letter says he cannot move and does not know where he is. He describes hard rain, ivy-covered walls, and a view of the Central Dome and a river. The reward is 4,500 Meseta."
+    },
+    {
+      "setting": "ep1_ruins",
+      "client": "Shino",
+      "brief": "An old android who has served the Miyama family for three generations offers 6,000 Meseta to find Zoke Miyama, who ordered her to stay aboard and has sent no word since. She can sense his three swords at close range and joins the search herself."
+    },
+    {
+      "setting": "ep1_pioneer2",
+      "client": "Gizel's wife",
+      "brief": "A hunter's wife offers 300 Meseta for a fellow hunter to stop her husband Gizel wasting money on weapons. If he saved, she says, he could afford far better ones, and she asks the hunter to be firm with him."
+    }
+  ]
+}
