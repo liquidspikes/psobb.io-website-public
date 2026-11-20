@@ -221,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tier = 11;
         } else {
             http_response_code(400);
-            echo json_encode(['error' => 'Invalid weapon choice.']);
+            echo json_encode(['error' => 'Invalid or outdated weapon choice — please refresh the page (Ctrl+F5) and try again.']);
             exit;
         }
 

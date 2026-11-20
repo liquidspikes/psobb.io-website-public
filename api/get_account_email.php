@@ -31,29 +31,25 @@ try {
     $stmt->bindValue(':u', $username, SQLITE3_TEXT);
     $res = $stmt->execute();
     $row = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
 
     $rawEmail = $row ? trim($row['email'] ?? '') : '';
     $isLegacy = empty($rawEmail) || (bool)preg_match('/_legacy@/i', $rawEmail);
     $displayEmail = $isLegacy ? '' : $rawEmail;
     $legacyEmail = $isLegacy ? ($rawEmail ?: ($username . '_legacy@' . get_server_address())) : '';
 
-    // Check for pending email confirmation
-    $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER NOT NULL,
-        username TEXT NOT NULL,
-        new_email TEXT NOT NULL,
-        token TEXT UNIQUE NOT NULL,
-        confirmed_at INTEGER DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        expires_at INTEGER NOT NULL
-    )");
-
     $pendStmt = $db->prepare("SELECT new_email, expires_at FROM email_confirmations WHERE account_id = :aid AND confirmed_at IS NULL AND expires_at > :now ORDER BY id DESC LIMIT 1");
     $pendStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
     $pendStmt->bindValue(':now', time(), SQLITE3_INTEGER);
     $pendRes = $pendStmt->execute();
     $pendRow = $pendRes ? $pendRes->fetchArray(SQLITE3_ASSOC) : null;
+    if ($pendRes) {
+        $pendRes->finalize();
+    }
+    $pendStmt->close();
     $pendingEmail = $pendRow ? trim($pendRow['new_email'] ?? '') : '';
 
     echo json_encode([

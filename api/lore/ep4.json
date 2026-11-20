@@ -1,0 +1,473 @@
+{
+  "episode": 4,
+  "settings": {
+    "ep4_pioneer2": {
+      "name": "Pioneer 2",
+      "floors": [0],
+      "boss": null,
+      "era": "A.U.W. 3086, the first days after the meteor fell, as hunters are first sent down to the Crater",
+      "summary": "Pioneer 2 still orbits Ragol, its people waiting to settle, when a meteor the Lab said would miss is knocked onto the planet by a beam from the surface. The news says there is nothing to worry about, but the ship shook, soldiers are busy, the Principal's research team is missing and the Guild's board is filling with Crater work.",
+      "known_facts": [
+        "In A.U.W. 3086 Pioneer 2 still orbits Ragol, and its people expected the work of settling the planet to go ahead at last.",
+        "Ship watchers tracked an ordinary meteor that the Lab calculated would miss both Ragol and the ship, so no announcement was made.",
+        "A single beam of light shot up from Ragol's surface and knocked the meteor onto the planet; no one can say what fired it.",
+        "The shockwave was felt aboard, but neither Pioneer 2 nor the Central Dome was harmed.",
+        "The meteor left a huge crater with a strange light shining inside, and ferocious creatures are swarming out around it.",
+        "The official news says the meteor is nothing to worry about, while town gossip claims it grazed Pioneer 2 and caused the shaking.",
+        "Some residents took the shaking for the end of the world.",
+        "The Principal's own research team went down to the Crater and never checked in, and skilled hunters are being sent to find it.",
+        "Uniformed soldiers have been frantically busy since the impact, some say since a little before it.",
+        "A guard admits the troops cannot deploy for reasons he calls internal, and a soldier says the army lacks the manpower to survive as it is.",
+        "The Hunter's Guild board is filling with Crater jobs from clients who give no names and want no questions asked.",
+        "Civilians still cannot go down to Ragol."
+      ],
+      "open_mysteries": [
+        "What fired the beam of light from Ragol's surface?",
+        "Why did the meteor hit Ragol when every calculation said it would miss?",
+        "Why were the soldiers busy even before the impact, and why can the troops not deploy?",
+        "What happened to the Principal's missing research team?",
+        "Is the meteor really nothing to worry about?"
+      ],
+      "hidden_truths": [
+        "Leo Grahart, former captain of the military's WORKS division, brought the meteor down on purpose; the beam's exact source was never confirmed.",
+        "The meteor carries the D-factor, a Photon-like energy drawn from Dark Falz's own cells, and it lies behind the new creatures.",
+        "WORKS was already running secret operations at the impact site, hidden even from the Principal and the Lab.",
+        "A girl who spends her time at the Medical Center, Rupika, is a Neo-Newman carrying the D-factor, secretly under the Principal's protection, and WORKS will kidnap her.",
+        "A conspiracy hides behind the Pioneer Project itself: the military's MOTHER Project, which Leo means to revive.",
+        "Black Paper, the government's own covert arm, is secretly at work on Ragol against WORKS, recovering Pioneer 1's research data."
+      ],
+      "creatures": [],
+      "landmarks": [
+        "the Hunter's Guild and its job board",
+        "the Principal's office",
+        "the teleporter to Ragol",
+        "the Medical Center",
+        "the Lab",
+        "the city and its residents' quarters",
+        "the museum of lifelike robot versions of Ragol's monsters"
+      ],
+      "factions": [
+        "the Hunter's Guild",
+        "the Principal's office",
+        "the Lab",
+        "Pioneer 2's army"
+      ],
+      "job_hooks": [
+        "Train up to the level the Principal's office wants before it sends more skilled hunters to the Crater.",
+        "Build a stake of Meseta for an informant who sells what he hears only at a steep price.",
+        "Gather Photon Drops or other materials for a collector who trades them for news.",
+        "Prove yourself to a client picking an elite team for a quiet job below.",
+        "Put in long hours on standby while the Guild and the Principal call up great numbers of hunters.",
+        "Help a short-handed army with work it lacks the manpower to do.",
+        "Earn the trust of a Guild client who gives no name and wants no questions asked."
+      ],
+      "cast": [
+        "tyrell",
+        "irene",
+        "ash",
+        "bernie",
+        "generic_guild_clerk",
+        "generic_anonymous_client",
+        "generic_soldier",
+        "generic_lab_researcher",
+        "generic_resident"
+      ],
+      "avoid": [
+        "Never say who or what fired the beam; at this moment no one knows.",
+        "Never name WORKS, Leo Grahart or Black Paper as behind the meteor or the Crater; no one aboard knows yet.",
+        "Never link the meteor to the D-factor, MOTHER, the Heaven Striker, the HS Project or Dark Falz.",
+        "Never mention a missing girl or Rupika; she has not vanished yet, and her secret is the heart of the episode.",
+        "Pioneer 2 and the Central Dome were not damaged; the meteor grazing the ship is only a rumour.",
+        "Pioneer 2 is still in orbit and settlement has not begun; civilian clients never go down to Ragol themselves.",
+        "Never have the Principal's missing research team turn up; there was no trace of it.",
+        "Call him the Principal or Principal Tyrell, not the Governor."
+      ]
+    },
+    "ep4_crater": {
+      "name": "Crater",
+      "floors": [1, 2, 3, 4, 5],
+      "boss": null,
+      "era": "A.U.W. 3086, the first days after the impact, when the Principal's research team has gone missing in the Crater",
+      "summary": "A huge crater, glowing with a strange light from inside, where a meteor struck Ragol after a mysterious beam knocked it off course. The devastated wasteland around it swarms with ferocious new creatures, and four routes lead in toward the central Crater and its interior. The Principal's research team went down and never checked in, and hunters are now being sent after it.",
+      "known_facts": [
+        "A meteor fell on Ragol after a single beam of light from the surface knocked it off an orbit the Lab had said would miss.",
+        "Where it struck lies a huge crater with a strange light shining from inside.",
+        "The devastated wasteland around the impact swarms with ferocious new creatures, and great numbers of hunters are being sent down to subdue them.",
+        "Four routes, from the east, west, south and north, lead toward the central Crater and the impact site.",
+        "The Principal's own research team went down to the Crater and never checked in.",
+        "The Principal's office is sending skilled hunters after the team, with the teleporter set to its coordinates, and Irene warns the risk is enormous.",
+        "Crater creatures attack in packs; veterans advise watching the radar and never getting surrounded.",
+        "Guns barely hurt Yowies and Satellite Lizards from the front, so hunters aim for backs and sides; Techniques and blades work from any angle.",
+        "Guild clients who give no names post Crater outbreak jobs and tell hunters not to ask questions or go nosing around.",
+        "Uniformed soldiers have been frantically busy since the impact, some say since a little before it."
+      ],
+      "open_mysteries": [
+        "What fired the beam that knocked the meteor off course?",
+        "Why did the meteor hit Ragol when every calculation said it would miss?",
+        "What happened to the Principal's research team?",
+        "What is the strange light inside the Crater?",
+        "Where did so many new creatures come from so suddenly?",
+        "Why were the soldiers busy even before the impact?"
+      ],
+      "hidden_truths": [
+        "Leo Grahart, former captain of the military's WORKS division, brought the meteor down on purpose; the beam's exact source was never confirmed.",
+        "The meteor carries the D-factor, a Photon-like energy drawn from Dark Falz's own cells, and it lies behind the new creatures.",
+        "WORKS is already operating in the Crater in secret and will blockade the western, eastern and southern routes in turn.",
+        "Fissures in the Crater's floor open onto layered strata and a vast Subterranean Desert below.",
+        "Leo Grahart will take a newman girl, Rupika, down beneath the Crater to use her D-factor power for his project.",
+        "The Lab already holds research data on the Crater's interior, and someone will tamper with its files before hunters recover them."
+      ],
+      "creatures": [
+        "Yowie",
+        "Satellite Lizard"
+      ],
+      "landmarks": [
+        "the huge impact crater and the strange light inside it",
+        "the devastated wasteland around the impact",
+        "the eastern, western, southern and northern routes into the central Crater",
+        "the Crater's interior",
+        "the impact site at the Crater's centre",
+        "laser fences that close off passages along the routes",
+        "data terminals on the routes",
+        "teleport zones that look like battlefields"
+      ],
+      "factions": [
+        "the Hunter's Guild",
+        "the Principal's office",
+        "the Lab",
+        "Pioneer 2's army"
+      ],
+      "job_hooks": [
+        "Search for a survey or research team that went down to the Crater and stopped checking in.",
+        "Recover research data from a terminal on one of the routes; rescue researchers if you can, but data comes first.",
+        "Secure a route into the central Crater so a survey team can follow.",
+        "Wipe out a creature outbreak for a client who gives no name and wants no questions.",
+        "Sweep an area clear in a single pass, as soldiers advise, before more creatures pack in.",
+        "Work alongside other hunters hired for the same job along a route.",
+        "Slip in and out of the impact area quickly for a client who wants nobody to notice.",
+        "Bring Photon Drops to a collector who pays in information rather than Meseta.",
+        "Open a way past laser fences blocking a passage."
+      ],
+      "cast": [
+        "tyrell",
+        "irene",
+        "ash",
+        "bernie",
+        "kireek",
+        "sue",
+        "generic_guild_clerk",
+        "generic_anonymous_client",
+        "generic_soldier",
+        "generic_lab_researcher"
+      ],
+      "avoid": [
+        "Never have the Principal's research team turn up; there was no trace of it.",
+        "Never say what fired the beam, what the strange light is or where the new creatures came from.",
+        "Soldiers at the Crater give no reasons; never have them explain the military's business or name WORKS's plans.",
+        "Never reveal Sue's, Kireek's or Bernie's real allegiances or business.",
+        "Never mention Rupika, Leo Grahart, MOTHER or the D-factor.",
+        "Never send hunters beneath the Crater's floor; Crater bounties stay on the four routes and in the Crater's interior.",
+        "Name only the creatures listed here; otherwise just say creatures."
+      ]
+    },
+    "ep4_desert": {
+      "name": "Subterranean Desert",
+      "floors": [6, 7, 8],
+      "boss": {"floor": 9, "name": "Saint-Milion", "ultimate_name": null},
+      "era": "A.U.W. 3086, when hunters are first teleported into the upper layer of the Subterranean Desert beneath the Crater",
+      "summary": "Beneath the Crater's strata lies the Subterranean Desert, a labyrinth of caverns and open spaces running ever deeper, so strange that some wonder whether it is natural or made. Hunters are now teleported into its upper layer while savage creatures fill the hospital, the military pursues unexplained plans, and rumour says several groups are racing to find a missing girl. Hunters who reach the deepest desert tell of three giant segmented serpents: Saint-Milion, Shambertin and Kondrieu.",
+      "known_facts": [
+        "Fissures in the Crater's floor open onto layered strata, and beneath them lies the Subterranean Desert.",
+        "The desert is a labyrinth of caverns and open spaces running deeper and deeper, and the teleporter can now reach its upper layer.",
+        "The Principal's office warns that the desert is a maze, its creatures are savage, and the hospital is already full.",
+        "New creatures teem at every level, among them shadowy, long-clawed things shaped almost like people.",
+        "The military has some unexplained plan to thin out the desert's creatures.",
+        "The military has blockaded the Crater's western, eastern and southern routes and orders hunters out of its territory.",
+        "WORKS, once a powerful homeworld special operations force, is active below, and its soldiers argue among themselves about their captain.",
+        "WORKS and the Hunter's Guild dislike each other, and a secret counter-force against WORKS is rumoured to be very active.",
+        "The Principal's office complains that the military hides its activities and keeps blocking its search teams.",
+        "Town talk says a strange girl who used to spend time at the Medical Center is missing, and hunters from three powerful organisations are racing to find her.",
+        "The Lab turned out to hold research data on the Crater's interior, though nobody knows what it was studying.",
+        "Hunters who reach the deepest desert tell of giant segmented serpents in three colours, rarely met: Saint-Milion, Shambertin and Kondrieu."
+      ],
+      "open_mysteries": [
+        "Is the Subterranean Desert natural, or was it made?",
+        "Is the meteor behind the savage new creatures?",
+        "What are the giant serpents of the deepest desert?",
+        "Where is the missing girl, and why are so many groups racing to find her?",
+        "What is WORKS doing below, and what is the military's plan for the creatures?",
+        "Who is the secret counter-force working against WORKS?"
+      ],
+      "hidden_truths": [
+        "The meteor carries the D-factor, a Photon-like energy drawn from Dark Falz's own cells, and it lies behind the creatures.",
+        "The desert's shadowy, long-clawed humanoids are of Dark Falz's own family.",
+        "A thought-entity sleeping in the meteor waits at the desert's bottom and goes berserk; people later speak of a huge creature born of the D-factor.",
+        "Rupika is a Neo-Newman with the D-factor in her DNA; Leo Grahart of WORKS kidnapped her to revive the MOTHER Project and power his father's Heaven Striker.",
+        "Leo Grahart brought the meteor down on purpose to harness its D-factor energy, which only Rupika can control.",
+        "The counter-force against WORKS is Black Paper, the government's own covert arm; Sue, and most likely Kireek, work for it."
+      ],
+      "creatures": [
+        "shadowy, long-clawed creatures shaped almost like people (unnamed)",
+        "Saint-Milion",
+        "Shambertin",
+        "Kondrieu"
+      ],
+      "landmarks": [
+        "the layered strata beneath the Crater's floor",
+        "the upper layer of the Subterranean Desert",
+        "a maze of caverns and open spaces running ever deeper",
+        "voice-activated doors",
+        "military checkpoints underground",
+        "meteor fragments in the depths, which no one has yet brought back",
+        "the deepest desert, said to be a living hell"
+      ],
+      "factions": [
+        "the Hunter's Guild",
+        "the Principal's office",
+        "the Lab",
+        "the military and its WORKS division",
+        "a rumoured secret counter-force against WORKS"
+      ],
+      "job_hooks": [
+        "Bring back a large meteor fragment from the desert for the Lab to analyse.",
+        "Thin out the savage creatures so fewer hunters end up in the overfilled hospital.",
+        "Chart a way through the maze of the desert's upper layer.",
+        "Take on an anonymous client's level-by-level outbreak clearance through the desert, billed as a test of limits.",
+        "Help an ally pinned down by creatures in the caverns.",
+        "Back up other hunters sent deep on the same errand.",
+        "Hunt the giant segmented serpent that hunters say lurks in the deepest desert."
+      ],
+      "cast": [
+        "tyrell",
+        "irene",
+        "ash",
+        "bernie",
+        "kireek",
+        "sue",
+        "montague",
+        "elenor",
+        "generic_guild_clerk",
+        "generic_anonymous_client",
+        "generic_soldier",
+        "generic_lab_researcher"
+      ],
+      "avoid": [
+        "Never have a bounty find, rescue, meet or name Rupika; the missing girl is found only in the main story.",
+        "Never say what waits at the bottom of the desert, name Dark Falz, or explain the voice in the depths.",
+        "Never explain what the giant serpents are or tie them to the missing girl or the voice; no telling says.",
+        "Never use the side tellings where Saint-Milion swallows Rupika's soul or Kireek fights it beside Shino.",
+        "Never name Black Paper as the counter-force against WORKS, or reveal Sue's or Kireek's allegiance.",
+        "No WORKS base exists in the desert yet; never mention one.",
+        "Never mention the D-factor, Neo-Newmans, MOTHER or the Heaven Striker.",
+        "Montague and Elenor never say why they came, and they are not seen aboard Pioneer 2.",
+        "Name only the creatures listed here; otherwise just say creatures."
+      ]
+    }
+  },
+  "cast": {
+    "tyrell": {
+      "name": "Principal Tyrell",
+      "role": "Head of Pioneer 2, who confirms the hunters' orders through his secretary Irene and hears their reports.",
+      "voice": "Formal and dutiful, quick to thank hunters; anger shows when the military keeps him in the dark, and he apologises when feeling slips out.",
+      "available": "Aboard Pioneer 2 throughout the episode, speaking from his office; he learns of each development late.",
+      "ties": [
+        "Irene is his secretary and gives his briefings",
+        "Father of Red Ring Rico, lost with Pioneer 1",
+        "Kept in the dark by the military and the Lab"
+      ],
+      "never": [
+        "Never reveals that Rupika is under his protection",
+        "Never speaks openly of his daughter",
+        "Never knows the military's or the Lab's plans in advance"
+      ]
+    },
+    "irene": {
+      "name": "Irene",
+      "role": "Principal Tyrell's secretary, who briefs hunters on their missions and sets the teleporter.",
+      "voice": "Clear, businesslike briefings that recap events, give the task and warn plainly of the risk; admits it when much of it baffles her.",
+      "available": "Aboard Pioneer 2 throughout the episode, briefing from the Principal's office.",
+      "ties": [
+        "Speaks for Principal Tyrell",
+        "Passes the hunters' reports on to the Lab"
+      ],
+      "never": [
+        "Never explains the beam, the light or the creatures; she does not know",
+        "Never reveals more than the Principal's office knows"
+      ]
+    },
+    "ash": {
+      "name": "Ash",
+      "role": "Zidd's cousin, a young swordsman among the many hunters the Principal has hired, eager to stand out.",
+      "voice": "Eager and impulsive, trusts his hunches, warmly grateful to those who helped him and stubborn about never running from a fight.",
+      "available": "Aboard Pioneer 2, in the Crater from the Lab data mission onward, and later in the desert strata.",
+      "ties": [
+        "Owes his life to the hunter Zidd once hired to rescue him",
+        "Kireek helped rescue him and took him home, and Ash suspects the android is up to something",
+        "Knows the Ranger Bernie"
+      ],
+      "never": [
+        "Never claims to have found or rescued Rupika",
+        "Never knows what Kireek is really doing"
+      ]
+    },
+    "bernie": {
+      "name": "Bernie",
+      "role": "A Ranger working under an alias for an unnamed client, who knows the hunter from the Gran Squall search.",
+      "voice": "Laughing, joking and evasive; boasts of his knack with laser fences and jokes that he is forgetful but keeps his promises.",
+      "available": "Aboard Pioneer 2, in the Crater from the Lab data mission onward, and in the desert strata.",
+      "ties": [
+        "Searched for the wrecked Gran Squall with the hunter",
+        "Calls the late hunter Zoke his benefactor",
+        "Knows Ash"
+      ],
+      "never": [
+        "Never gives his real name or names his client",
+        "Never explains why he searched for the girl on the Gran Squall, or mentions Rupika",
+        "Never reveals that he watches over anyone for the Principal"
+      ]
+    },
+    "kireek": {
+      "name": "Kireek",
+      "role": "A battle-built HUcast who taught the hunter their first lessons on the surface, now seen below on business of his own.",
+      "voice": "A tutor's clipped battle advice, such as watch the radar and do not get surrounded, with open scorn for those he despises.",
+      "available": "In the Crater and the desert strata; Ash says he has not been seen around for a while.",
+      "ties": [
+        "The hunter's old tutor",
+        "Helped rescue Ash and took him home"
+      ],
+      "never": [
+        "Never mentions Black Paper, Sue or the name Black Hound",
+        "Never admits to, or is accused of, killing Leo Grahart's father",
+        "Never offers or takes assassination work"
+      ]
+    },
+    "sue": {
+      "name": "Sue",
+      "role": "A newman agent and old acquaintance of the hunter, openly on Ragol to explore the Crater.",
+      "voice": "Sharp-tongued and impatient, quick to snap, warm underneath; calls her work a personal investigation and thinks of the future of all newmankind.",
+      "available": "On the Crater's routes and in the desert strata.",
+      "ties": [
+        "Knows Dr. Montague from their home world",
+        "Met the hunter at the Control Tower on Gal Da Val"
+      ],
+      "never": [
+        "Never reveals that she belongs to Black Paper, or her secret orders",
+        "Never speaks of Rupika or of Pioneer 1's tests on living subjects"
+      ]
+    },
+    "montague": {
+      "name": "Dr. Jean-Carlo Montague",
+      "role": "A young genius of photon engineering and weapons, long out of sight with his android Elenor, now below the Crater to see what scheme WORKS is hatching.",
+      "voice": "A courteous gentleman who introduces himself formally, remembers old acquaintances and explains science readily, growing grave when danger is near.",
+      "available": "Only below the Crater, in the strata and the desert, once hunters follow WORKS down; not seen aboard Pioneer 2.",
+      "ties": [
+        "Elenor Camuel is his android and his masterpiece",
+        "Knows Sue from their home world",
+        "Suspects WORKS of scheming again"
+      ],
+      "never": [
+        "Never explains the D-factor, MOTHER or why anyone wants the missing girl",
+        "Never says why he and Elenor came",
+        "Never appears in person aboard Pioneer 2"
+      ]
+    },
+    "elenor": {
+      "name": "Elenor Camuel",
+      "role": "Dr. Montague's android, built with lifelike emotions, who travels the strata at his side.",
+      "voice": "Polite, warm and easily flustered; asks after the hunter's Mag, then begs them to forget what she let slip.",
+      "available": "Only below the Crater, in the strata and the desert, with Montague.",
+      "ties": [
+        "Montague's android and his masterpiece",
+        "Can talk to Mags"
+      ],
+      "never": [
+        "Never says why she and the doctor came",
+        "Never describes the room she fears being sent back to",
+        "Never explains MOTHER or Emotional AI"
+      ]
+    },
+    "generic_guild_clerk": {
+      "name": "A Hunter's Guild clerk",
+      "role": "Hunter's Guild staff who post jobs on the board and pay out rewards.",
+      "voice": "Plain and professional; reads out the job, the risk and the pay.",
+      "available": "Aboard Pioneer 2 at the Guild throughout the episode.",
+      "ties": [
+        "Works for the Hunter's Guild, which runs independently of the Principal"
+      ],
+      "never": [
+        "Never reveals who an anonymous client is",
+        "Never claims inside knowledge of the military's or the Lab's plans"
+      ]
+    },
+    "generic_anonymous_client": {
+      "name": "An anonymous Guild client",
+      "role": "A client who posts jobs through the Guild and will say nothing about themselves.",
+      "voice": "Curt; gives the task and the pay, and tells hunters not to ask questions or go nosing around.",
+      "available": "Through the Guild board throughout the episode.",
+      "ties": [],
+      "never": [
+        "Never gives a name, a face or a motive",
+        "Never turns out to be a named character"
+      ]
+    },
+    "generic_soldier": {
+      "name": "A Pioneer 2 soldier",
+      "role": "A rank-and-file soldier of Pioneer 2's army, overworked since the impact.",
+      "voice": "Blunt and tired; admits the army is short of manpower but will not say why the troops cannot deploy.",
+      "available": "Aboard Pioneer 2 and at military posts on Ragol, where soldiers may order hunters out of their zones.",
+      "ties": [
+        "Serves the military, which keeps its own counsel even from the Principal"
+      ],
+      "never": [
+        "Never explains what the military is doing or why it was busy before the impact",
+        "Never reveals WORKS's plans"
+      ]
+    },
+    "generic_lab_researcher": {
+      "name": "A Lab researcher",
+      "role": "A scientist of Pioneer 2's Lab studying the meteor and the new creatures.",
+      "voice": "Puzzled and precise; insists that by any calculation the meteor should have missed, and wonders why so many creatures appeared so suddenly.",
+      "available": "Aboard Pioneer 2 throughout the episode; Lab teams also go down to the Crater.",
+      "ties": [
+        "Works for the Lab, which has its own teams and its own secrets"
+      ],
+      "never": [
+        "Never knows what fired the beam or what the meteor holds",
+        "Never reveals the Lab's own secret research"
+      ]
+    },
+    "generic_resident": {
+      "name": "A Pioneer 2 resident",
+      "role": "An ordinary citizen of Pioneer 2, who cannot go down to Ragol.",
+      "voice": "Chatty and anxious; passes on gossip that often runs ahead of the official story.",
+      "available": "Aboard Pioneer 2 throughout the episode.",
+      "ties": [],
+      "never": [
+        "Never goes down to Ragol",
+        "Never has firsthand knowledge of the Crater"
+      ]
+    }
+  },
+  "never_givers": [
+    {"name": "Rupika", "why": "At these moments a girl under the Principal's secret watch who is soon kidnapped and missing; she and her nature are the episode's central secret."},
+    {"name": "Leo Grahart", "why": "Former WORKS captain and the episode's villain, behind the meteor's fall and the girl's kidnapping; his part is hidden at these moments."},
+    {"name": "Karen Grahart", "why": "Leo's daughter, a WORKS officer who orders hunters out of military territory; she gives hunters no work at these moments."},
+    {"name": "Gilliam", "why": "Karen's aide in WORKS, behind the captain's plans at these moments; never hires hunters."},
+    {"name": "Red Ring Rico", "why": "The Principal's daughter, lost with Pioneer 1; remembered only through her old message capsules."},
+    {"name": "Dark Falz", "why": "The ancient enemy; a monster, and no one aboard links it to the meteor at these moments."},
+    {"name": "the voice in the depths", "why": "Whatever sleeps in the meteor and speaks in old poetry at the bottom of the desert; a hidden enemy."},
+    {"name": "Saint-Milion, Shambertin and Kondrieu", "why": "Giant serpents of the deepest desert; monsters."},
+    {"name": "Dr. Osto Hyle", "why": "Pioneer 1's long-gone head of research, named only by an informant; never present."},
+    {"name": "Dr. Graves", "why": "A Pioneer 1 engineer named only by an informant; never present."},
+    {"name": "Zoke", "why": "Bernie's benefactor, who died on Ragol before this episode."},
+    {"name": "Dol Grisen", "why": "A name Leo lets slip only after his fall, which Pioneer 2 would come to know later; unknown in 3086."}
+  ],
+  "examples": [
+    {"setting": "ep4_crater", "client": "an unnamed operation commander", "brief": "In the first days after the impact, a commander who never gave a name hired a team of elite hunters for a secret operation at the impact site, now overrun with gigantic monsters. Neither the Principal nor the Lab was to know, so the team had to get in and out unnoticed. The reward was 10,000 Meseta, and silence."},
+    {"setting": "ep4_crater", "client": "Irene", "brief": "The Principal's own research team went down to the Crater and never checked in. Irene went over the meteor's fall, set the teleporter to the team's last coordinates and sent the hunter to find them, warning plainly that the risk was enormous."},
+    {"setting": "ep4_crater", "client": "Irene", "brief": "A Lab team was ambushed in the Crater and lost its research data. Irene hired hunters to recover it along the western route, working with the other hunters on the job; rescuing researchers was welcome, but the data came first."},
+    {"setting": "ep4_crater", "client": "a collector", "brief": "On one of the Crater's routes, a collector asked the hunter for four Photon Drops, offering in return to share what he had heard about the trouble below."},
+    {"setting": "ep4_desert", "client": "an anonymous Guild client", "brief": "Clients who would say nothing about themselves posted Guild jobs to wipe out creature outbreaks level by level through the Subterranean Desert, calling it a test of limits. They told hunters not to ask questions or go nosing around."},
+    {"setting": "ep4_desert", "client": "Irene", "brief": "The Principal's office wanted a large meteor fragment brought back for the Lab to analyse, hoping to learn what lay behind the creatures. Irene warned that no one had yet returned with one, and that the deepest desert was said to be a living hell."}
+  ]
+}
