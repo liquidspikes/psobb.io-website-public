@@ -6,7 +6,7 @@
 $roster = [
     1 => [
         'title' => "Operation: Digital Blasphemy",
-        'description' => "Corrupted cybernetic mainframes are spawning simulations across Ragol! Cooperate server-wide to defeat Vol Opt in Ep1 (+1 pt), Gol Dragon in Ep2 (+2 pts), or Shambertin in Ep4 (+3 pts). Earn difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)! Earn 3 random rare drops tailored to your character level!",
+        'description' => "Corrupted Pioneer 1 control units and VR combat simulations are escalating across three fronts. Principal Tyrell's office and the Lab request Hunter strikes against Vol Opt in the Mines (+1 pt), Gol Dragon in the VR Spaceship (+2 pts), or Shambertin beneath the Subterranean Desert (+3 pts), with difficulty bonuses (+1 Hard, +2 VHard, +3 Ult), for 3 level-fit rare drops!",
         'goal_type' => "BOSS_ARENA",
         'goal_target' => "DIGITAL_BLASPHEMY",
         'target_amount' => 75000,
@@ -15,7 +15,7 @@ $roster = [
     ],
     2 => [
         'title' => "Operation: Ancient Cataclysm",
-        'description' => "An ancient seal has broken, triggering a massive assault from the wildlife! Defeat any Episode 1 boss: Dragon (+1 pt), De Rol Le (+2 pts), Vol Opt (+3 pts), or Dark Falz (+4 pts). Earn difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
+        'description' => "Aggressive native creatures and erratic machines beneath the Central Dome are blocking Pioneer 2 survey teams across Episode I. Take any contract down in the Forest, Caves, Mines, or Ruins: Dragon (+1 pt), De Rol Le (+2 pts), Vol Opt (+3 pts), or Dark Falz (+4 pts), plus difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
         'goal_type' => "BOSS_ARENA",
         'goal_target' => "EP1_BOSS_RUSH",
         'target_amount' => 90000,
@@ -24,7 +24,7 @@ $roster = [
     ],
     3 => [
         'title' => "Operation: Seabed Infestation",
-        'description' => "The Sub-Seabed laboratories are overflowing with mutated threats! Defeat any Episode 2 boss: Barba Ray (+1 pt), Gol Dragon (+2 pts), Gal Gryphon (+3 pts), or Olga Flow (+4 pts). Earn difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
+        'description' => "Natasha Milarose and the Pioneer 2 Laboratory need veteran Hunters to clear mutated bio-specimens and malfunctioning VR trainers across Episode II. Hunt Barba Ray in the VR Temple (+1 pt), Gol Dragon in the VR Spaceship (+2 pts), Gal Gryphon on Gal Da Val (+3 pts), or Olga Flow in the Seabed depths (+4 pts), plus difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
         'goal_type' => "BOSS_ARENA",
         'goal_target' => "EP2_BOSS_RUSH",
         'target_amount' => 75000,
@@ -33,7 +33,7 @@ $roster = [
     ],
     4 => [
         'title' => "Operation: Draconic Dominion",
-        'description' => "Ancient and simulated dragons have established a scorching grip across all episodes! Defeat Dragon in Ep1 (+1 pt), Gol Dragon in Ep2 (+2 pts), or Shambertin in Ep4 (+3 pts). Earn difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
+        'description' => "Dragon-class threats and giant subterranean serpents are nesting across Pioneer 1 ruins and VR arenas alike. Guild command calls on Hunters to fell the Dragon under the Central Dome (+1 pt), Gol Dragon inside the Lab's VR Spaceship (+2 pts), or Shambertin in the Subterranean Desert (+3 pts), plus difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
         'goal_type' => "BOSS_ARENA",
         'goal_target' => "DRACONIC_DOMINION",
         'target_amount' => 80000,
@@ -42,7 +42,7 @@ $roster = [
     ],
     5 => [
         'title' => "Operation: The Ultimate Gauntlet",
-        'description' => "The Hunters Guild has issued an absolute extermination order. Defeat ANY boss in the entire game! Points are scaled by boss tier (Dragon/Barba Ray +1, De Rol Le/Gol Dragon +2, Vol Opt/Gal Gryphon +3, Dark Falz/Olga Flow/Shambertin +4) plus difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
+        'description' => "The Hunter's Guild has issued an all-sectors extermination order spanning Ragol's surface and the Lab's VR fields. Defeat ANY major boss across Episodes I, II, or IV (Dragon/Barba Ray +1, De Rol Le/Gol Dragon +2, Vol Opt/Gal Gryphon +3, Dark Falz/Olga Flow/Shambertin +4) plus difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
         'goal_type' => "BOSS_ARENA",
         'goal_target' => "ALL_BOSSES",
         'target_amount' => 150000,
@@ -51,7 +51,7 @@ $roster = [
     ],
     6 => [
         'title' => "Operation: Cataclysmic Core",
-        'description' => "The core dimensional anomalies threaten to destabilize Ragol! Cooperate to defeat the final boss of each episode: Dark Falz in Ep1 (+3 pts), Olga Flow in Ep2 (+4 pts), or Shambertin in Ep4 (+4 pts). Earn difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
+        'description' => "Hostile photon activity has peaked inside the deepest containment zones across Pioneer 1's ruins, the Seabed research floor, and the desert caverns beneath the Crater. Coordinate strikes against Dark Falz in Ep1 (+3 pts), Olga Flow in Ep2 (+4 pts), or Shambertin in Ep4 (+4 pts), plus difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)!",
         'goal_type' => "BOSS_ARENA",
         'goal_target' => "CATACLYSMIC_CORE",
         'target_amount' => 50000,
