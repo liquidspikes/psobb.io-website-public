@@ -758,19 +758,43 @@ function send_email($to, $subject, $message)
             'textContent' => $message
         ];
 
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'accept: application/json',
-            'api-key: ' . $BREVO_API_KEY,
-            'content-type: application/json'
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $payloadJson = json_encode($data);
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadJson);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'accept: application/json',
+                'api-key: ' . $BREVO_API_KEY,
+                'content-type: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+            $response = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        } else {
+            $safeApiKey = str_replace(["\r", "\n"], '', (string)$BREVO_API_KEY);
+            $ctx = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "accept: application/json\r\napi-key: " . $safeApiKey . "\r\ncontent-type: application/json\r\n",
+                    'content' => $payloadJson,
+                    'timeout' => 10,
+                    'ignore_errors' => true,
+                ],
+            ]);
+            $http_response_header = [];
+            $response = @file_get_contents($url, false, $ctx);
+            $httpCode = 0;
+            if (!empty($http_response_header[0]) && preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0], $hm)) {
+                $httpCode = (int) $hm[1];
+            }
+            if ($response === false) {
+                $response = 'stream request failed';
+            }
+        }
 
         $success = ($httpCode >= 200 && $httpCode < 300);
         $logEntry .= " | Via: Brevo API | Success: " . ($success ? 'Yes' : 'No') . " | Resp: $response\n";
