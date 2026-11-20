@@ -159,6 +159,9 @@ if (empty($token)) {
             }
         }
     } catch (Exception $e) {
+        if (function_exists('log_player_exception')) {
+            log_player_exception($e, ['stage' => 'confirm_email'], 'handled_exception', 500);
+        }
         $status = 'error';
         $errorMessage = $e->getMessage();
     }

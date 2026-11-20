@@ -4,6 +4,10 @@
  * 
  * Included across admin pages to provide unified navigation and fast language toggling.
  */
+if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
+    http_response_code(403);
+    exit('Forbidden');
+}
 $adminCurrentPage = $admin_active_tab ?? ($current_page ?? 'dashboard');
 $currentUri = $_SERVER['REQUEST_URI'] ?? '/admin/dashboard.php';
 $activeLang = $PSO_LANG ?? 'en';
@@ -94,6 +98,25 @@ $activeLang = $PSO_LANG ?? 'en';
     color: #000 !important;
     box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
 }
+@media (max-width: 640px) {
+    .admin-subnav-bar {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    .admin-subnav-links {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+    }
+    .admin-subnav-links a {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 7px 10px;
+    }
+}
 </style>
 
 <div class="admin-subnav-bar">
@@ -109,6 +132,9 @@ $activeLang = $PSO_LANG ?? 'en';
         </a>
         <a href="telemetry.php" class="<?= $adminCurrentPage === 'telemetry' ? 'active' : '' ?>">
             <i class="fas fa-chart-line" style="color:#00ffcc;"></i> <?= __('Telemetry') ?>
+        </a>
+        <a href="exceptions.php" class="<?= $adminCurrentPage === 'exceptions' ? 'active' : '' ?>">
+            <i class="fas fa-exclamation-triangle" style="color:#ff6b6b;"></i> <?= __('Exceptions') ?>
         </a>
         <a href="mission_manager.php" class="<?= $adminCurrentPage === 'mission_manager' ? 'active' : '' ?>">
             <i class="fas fa-crosshairs" style="color:#00C851;"></i> <?= __('Mission Manager') ?>

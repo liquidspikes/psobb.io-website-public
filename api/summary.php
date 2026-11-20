@@ -2,11 +2,10 @@
 require_once 'config.php';
 header('Content-Type: application/json');
 
+$rates = get_server_rates();
+
 $url = $NEWSERV_API_URL . "/y/summary";
 $data_json = @file_get_contents($url);
-
-$config_url = $NEWSERV_API_URL . "/y/config";
-$config_data_json = @file_get_contents($config_url);
 
 if ($data_json === FALSE) {
     echo json_encode([
@@ -14,19 +13,22 @@ if ($data_json === FALSE) {
             "ServerName" => "Offline",
             "Uptime" => "Offline",
             "ClientCount" => "Offline",
-            "GameCount" => "Offline"
+            "GameCount" => "Offline",
+            "BBGlobalEXPMultiplier" => $rates['raw_exp'],
+            "ServerGlobalDropRateMultiplier" => $rates['raw_drop'],
+            "EXP" => (string)$rates['raw_exp'],
+            "Drop" => (string)$rates['raw_drop']
         ],
         "Clients" => [],
         "Games" => []
     ]);
 } else {
     $data = json_decode($data_json, true);
-    if ($config_data_json !== FALSE) {
-        $config = json_decode($config_data_json, true);
-        if (isset($data["Server"])) {
-            $data["Server"]["BBGlobalEXPMultiplier"] = $config["BBGlobalEXPMultiplier"] ?? 1;
-            $data["Server"]["ServerGlobalDropRateMultiplier"] = $config["ServerGlobalDropRateMultiplier"] ?? 1.0;
-        }
+    if (isset($data["Server"])) {
+        $data["Server"]["BBGlobalEXPMultiplier"] = $rates['raw_exp'];
+        $data["Server"]["ServerGlobalDropRateMultiplier"] = $rates['raw_drop'];
+        $data["Server"]["EXP"] = (string)$rates['raw_exp'];
+        $data["Server"]["Drop"] = (string)$rates['raw_drop'];
     }
 
     // Extract Mode and Strip Newserv mode prefix from Game Names (E=Normal, B=Battle, C=Challenge)

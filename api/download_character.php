@@ -73,11 +73,9 @@ if (!$psocharFile) {
 $charName = "Slot" . ($slot + 1);
 $charData = @file_get_contents($psocharFile);
 if ($charData !== false && strlen($charData) >= 1284) {
-    // Display block starts at offset 852, name at +116 within it (UTF-16LE, 32 bytes)
-    $nameBytes = substr($charData, 852 + 116, 32);
-    $parsed = mb_convert_encoding($nameBytes, 'UTF-8', 'UTF-16LE');
-    $parsed = trim(str_replace("\x00", "", $parsed));
-    if (!empty($parsed)) {
+    // Decode UTF16_ALWAYS_MARKED name at offset 0x3C8 (strips \tE/\tJ/\tB/\tT/\tK, preserves \tC color codes)
+    $parsed = decode_psochar_name($charData);
+    if ($parsed !== '') {
         $charName = $parsed;
     }
 }

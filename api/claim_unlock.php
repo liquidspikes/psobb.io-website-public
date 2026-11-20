@@ -2,6 +2,7 @@
 require_once 'config.php';
 require_once 'db.php';
 require_once 'reward_tables.php';
+require_once 'functions.php';
 
 if (ob_get_length()) ob_clean();
 start_secure_session();
@@ -110,12 +111,33 @@ if ($level < $milestone) {
 try {
     $db = get_db();
     
-    // Self-healing/Migration: update any legacy claims for this character name under a different slot index (e.g. from old migration default 0) to the current index
-    $healStmt = $db->prepare("UPDATE rewards_claimed SET character_index = :cidx WHERE account_id = :aid AND character_name = :cname COLLATE NOCASE AND character_index != :cidx");
-    $healStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
-    $healStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-    $healStmt->bindValue(':cname', $name, SQLITE3_TEXT);
-    $healStmt->execute();
+    // Self-healing/Migration: only migrate legacy slot-0 claims when this slot has no existing claims
+    // and the current character level is at least as high as the legacy slot-0 milestones.
+    if ((int)$charIndex > 0) {
+        $healStmt = $db->prepare("
+            UPDATE rewards_claimed
+            SET character_index = :cidx
+            WHERE account_id = :aid
+              AND character_name = :cname COLLATE NOCASE
+              AND character_index = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM rewards_claimed existing
+                  WHERE existing.account_id = :aid AND existing.character_index = :cidx
+              )
+              AND :lvl >= (
+                  SELECT COALESCE(MAX(level_milestone), 0)
+                  FROM rewards_claimed legacy
+                  WHERE legacy.account_id = :aid
+                    AND legacy.character_index = 0
+                    AND legacy.character_name = :cname COLLATE NOCASE
+              )
+        ");
+        $healStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+        $healStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+        $healStmt->bindValue(':cname', $name, SQLITE3_TEXT);
+        $healStmt->bindValue(':lvl', (int)$level, SQLITE3_INTEGER);
+        $healStmt->execute();
+    }
     
     // Check all claims for this slot to see if the character was recreated/remade or renamed
     $checkStmt = $db->prepare("SELECT character_name, level_milestone FROM rewards_claimed WHERE account_id = :aid AND character_index = :cidx");
@@ -128,8 +150,8 @@ try {
     $claimedRows = [];
     while ($row = $checkRes->fetchArray(SQLITE3_ASSOC)) {
         $claimedRows[] = $row;
-        // If current level is less than any claimed milestone, it's a recreation/reset
-        if ((int)$row['level_milestone'] > (int)$level) {
+        // Only treat as a slot recreation reset when the slot now holds a genuinely new Lv1-4 character
+        if ((int)$row['level_milestone'] > (int)$level && (int)$level < 5) {
             $needsReset = true;
         }
     }
@@ -156,7 +178,7 @@ try {
         $updStmt->execute();
     }
     
-    // 2. Check if already claimed
+    // 2. Check if already claimed and acquire atomic UNIQUE reservation before dropping
     $stmt = $db->prepare("SELECT id FROM rewards_claimed WHERE account_id = :aid AND character_name = :cname AND character_index = :cidx AND level_milestone = :lvl");
     $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
     $stmt->bindValue(':cname', $name, SQLITE3_TEXT);
@@ -166,6 +188,21 @@ try {
     if ($res->fetchArray()) {
         http_response_code(400);
         echo json_encode(["error" => "Reward previously claimed for this level milestone on this character."]);
+        exit;
+    }
+
+    try {
+        $lockStmt = $db->prepare("INSERT INTO rewards_claimed (account_id, character_name, character_index, level_milestone, category, item_string) VALUES (:aid, :cname, :cidx, :lvl, :cat, 'PENDING')");
+        $lockStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+        $lockStmt->bindValue(':cname', $name, SQLITE3_TEXT);
+        $lockStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+        $lockStmt->bindValue(':lvl', $milestone, SQLITE3_INTEGER);
+        $lockStmt->bindValue(':cat', $category, SQLITE3_TEXT);
+        $lockStmt->execute();
+        $claimId = (int)$db->lastInsertRowID();
+    } catch (Exception $e) {
+        http_response_code(409);
+        echo json_encode(["error" => "Reward claim already in progress or previously claimed for this level milestone."]);
         exit;
     }
 
@@ -213,23 +250,23 @@ try {
                     $itemString = get_common_reward_item($milestone, $charClass, $category, $options);
                 }
             }
-            // Resolve a friendly display name from item_hex.txt if the result is pure hex
+            // Resolve a friendly display name from canonical BB V4 names-v4.json if the result is pure hex
             $firstToken = explode(' ', trim($itemString))[0];
             if (ctype_xdigit($firstToken) && strlen($firstToken) >= 6) {
-                $hexPath = __DIR__ . '/../item_hex.txt';
-                if (file_exists($hexPath)) {
-                    $shortHex = strtoupper(substr($firstToken, 0, 6));
-                    foreach (file($hexPath) as $line) {
-                        if (stripos($line, $shortHex) === false) continue;
-                        $parts = preg_split('/\s{2,}/', trim($line));
-                        if (count($parts) >= 2) {
-                            $displayName = trim(end($parts));
-                            break;
-                        }
-                    }
+                $shortHex = strtoupper(substr($firstToken, 0, 6));
+                $decodedDisk = (strpos($shortHex, '0302') === 0) ? decode_pso_tech_disk_hex($firstToken) : null;
+                if ($decodedDisk !== null) {
+                    $displayName = $decodedDisk;
                 } else {
-                    // Fallback: label by category
-                    $displayName = $category . ' item';
+                    $bbMaps = get_bb_item_name_maps();
+                    if (isset($bbMaps['hex_to_name'][$shortHex])) {
+                        $displayName = $bbMaps['hex_to_name'][$shortHex];
+                        if (substr($shortHex, 0, 2) === '00' && strlen($firstToken) >= 10 && (hexdec(substr($firstToken, 8, 2)) & 0x80)) {
+                            $displayName = '???? ' . $displayName;
+                        }
+                    } else {
+                        $displayName = $category . ' item';
+                    }
                 }
             } else {
                 // String-based items (e.g. "Photon Drop x2", "1000 Meseta")
@@ -422,14 +459,19 @@ try {
         }
 
         // 4. Send shell-exec to newserv
-        // We use the robust parser to support multiple items (e.g. 'Photon Drop x2'), disks, and strings.
-        if (!function_exists('parse_and_drop_items')) {
-            require_once 'functions.php';
-        }
-        
-        $dropResult = parse_and_drop_items($accountId, $itemString);
+        $dropResult = parse_and_drop_items($accountId, $itemString, $name);
         
         if (!$dropResult['success']) {
+            if (empty($droppedItems)) {
+                $delStmt = $db->prepare("DELETE FROM rewards_claimed WHERE id = :id");
+                $delStmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
+                $delStmt->execute();
+            } else {
+                $partialStmt = $db->prepare("UPDATE rewards_claimed SET item_string = :item WHERE id = :id");
+                $partialStmt->bindValue(':item', implode(", ", $droppedItems), SQLITE3_TEXT);
+                $partialStmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
+                $partialStmt->execute();
+            }
             http_response_code(400);
             echo json_encode(["error" => $dropResult['error']]);
             exit;
@@ -445,15 +487,16 @@ try {
     $finalItemString = implode(", ", $droppedItems);       // hex for DB
     $finalDisplayString = implode(" + ", $displayNames);   // readable for UI
 
-    // 5. Store claim record in website DB
-    $stmt = $db->prepare("INSERT INTO rewards_claimed (account_id, character_name, character_index, level_milestone, category, item_string) VALUES (:aid, :cname, :cidx, :lvl, :cat, :item)");
-    $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-    $stmt->bindValue(':cname', $name, SQLITE3_TEXT);
-    $stmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
-    $stmt->bindValue(':lvl', $milestone, SQLITE3_INTEGER);
-    $stmt->bindValue(':cat', $category, SQLITE3_TEXT);
+    // 5. Finalize claim record with delivered item hex and flush character state on newserv
+    $stmt = $db->prepare("UPDATE rewards_claimed SET item_string = :item WHERE id = :id");
     $stmt->bindValue(':item', $finalItemString, SQLITE3_TEXT);
+    $stmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
     $stmt->execute();
+
+    $saveIdent = !empty($onlineCharacter['Account']['BBLicenses'][0]['UserName'])
+        ? $onlineCharacter['Account']['BBLicenses'][0]['UserName']
+        : $accountId;
+    @newserv_shell_exec("on " . $saveIdent . " cc {$NEWSERV_COMMAND_PREFIX}save");
 
     echo json_encode([
         "success" => true,

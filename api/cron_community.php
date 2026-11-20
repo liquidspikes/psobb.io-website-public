@@ -183,8 +183,10 @@ foreach ($clients as $client) {
     $curr_playtime = $client['PlayTimeSeconds'] ?? 0;
     $prev_playtime = $prev_state['playtime'] ?? $curr_playtime;
     
-    $curr_chal = count($client['ChallengeTimes'] ?? []);
-    $prev_chal = $prev_state['chal'] ?? $curr_chal;
+    $curr_char_name = $client['Name'] ?? '';
+    $same_char = !isset($prev_state['char_name']) || $prev_state['char_name'] === $curr_char_name;
+    $curr_chal = count_cleared_challenge_stages($client);
+    $prev_chal = $same_char ? ($prev_state['chal_cleared'] ?? $curr_chal) : $curr_chal;
     
     $curr_mats = ($client['NumHPMaterialsUsed'] ?? 0) + ($client['NumTPMaterialsUsed'] ?? 0) + ($client['NumPowerMaterialsUsed'] ?? 0) + ($client['NumDefMaterialsUsed'] ?? 0) + ($client['NumMindMaterialsUsed'] ?? 0) + ($client['NumEvadeMaterialsUsed'] ?? 0) + ($client['NumLuckMaterialsUsed'] ?? 0);
     $prev_mats = $prev_state['mats'] ?? $curr_mats;
@@ -613,6 +615,8 @@ foreach ($clients as $client) {
         'meseta' => $curr_meseta,
         'playtime' => $curr_playtime,
         'chal' => $curr_chal,
+        'chal_cleared' => $curr_chal,
+        'char_name' => $curr_char_name,
         'mats' => $curr_mats,
         'last_boss_arena' => $last_boss_arena,
         'last_boss_arena_time' => $last_boss_arena_time,

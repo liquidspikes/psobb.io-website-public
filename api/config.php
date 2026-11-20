@@ -19,6 +19,8 @@
  * ----------------------------------------------------------------------------
  */
 
+require_once __DIR__ . '/exception_logger.php';
+
 /**
  * Parses a .env file and loads its contents into $_ENV, $_SERVER, and getenv().
  *
@@ -312,6 +314,156 @@ if (!function_exists('get_newserv_players_dir')) {
 
 // Global player directory path
 $NEWSERV_PLAYERS_DIR = get_newserv_players_dir();
+
+if (!function_exists('format_rate_multiplier')) {
+    /**
+     * Format a rate multiplier into a clean display string (e.g. 2 -> '2x', 1.5 -> '1.5x').
+     */
+    function format_rate_multiplier($val, string $fallback = '1x'): string {
+        if ($val === null || $val === '') {
+            return $fallback;
+        }
+        if (is_numeric($val)) {
+            $f = (float)$val;
+            return ((floor($f) == $f) ? (string)(int)$f : (string)$f) . 'x';
+        }
+        $s = trim((string)$val);
+        return is_numeric(rtrim($s, 'xX')) ? rtrim($s, 'xX') . 'x' : ($s ?: $fallback);
+    }
+}
+
+if (!function_exists('get_server_rates')) {
+    /**
+     * Dynamically retrieve live server rates directly from NewServ.
+     * 
+     * Sourcing strategy:
+     *  1. In-process static cache & fast per-user temp cache (TTL: 5 seconds) for high throughput.
+     *  2. Live NewServ HTTP endpoint ($NEWSERV_API_URL . "/y/config") with 0.8s timeout.
+     *  3. Local file parse of /opt/newserv/system/config.json if the HTTP API is unavailable.
+     *  4. Static .env / site.json defaults as ultimate fallback if NewServ is offline.
+     */
+    function get_server_rates(bool $force_refresh = false): array {
+        static $staticCache = null;
+        if ($staticCache !== null && !$force_refresh) {
+            return $staticCache;
+        }
+
+        $cacheUid = function_exists('posix_geteuid') ? posix_geteuid() : 'shared';
+        $cacheFile = sys_get_temp_dir() . '/psobb_rates_' . $cacheUid . '.json';
+        $cacheTtl = 5; // seconds
+
+        if (!$force_refresh && file_exists($cacheFile)) {
+            $mtime = @filemtime($cacheFile);
+            if ($mtime && (time() - $mtime < $cacheTtl)) {
+                $cached = json_decode(@file_get_contents($cacheFile), true);
+                if (is_array($cached) && !empty($cached['exp'])) {
+                    $staticCache = $cached;
+                    return $cached;
+                }
+            }
+        }
+
+        global $NEWSERV_API_URL, $SITE_CONFIG;
+
+        $expMult = null;
+        $dropMult = null;
+        $mesetaMult = null;
+
+        // 1. Primary source: Query live NewServ REST API (/y/config)
+        $apiUrl = (!empty($NEWSERV_API_URL) ? $NEWSERV_API_URL : 'http://127.0.0.1:8443') . '/y/config';
+        $ctx = stream_context_create([
+            'http' => [
+                'timeout' => 0.8,
+                'ignore_errors' => true,
+            ]
+        ]);
+        $apiJson = @file_get_contents($apiUrl, false, $ctx);
+        if ($apiJson !== false) {
+            $cfg = json_decode($apiJson, true);
+            if (is_array($cfg)) {
+                if (isset($cfg['BBGlobalEXPMultiplier'])) {
+                    $expMult = $cfg['BBGlobalEXPMultiplier'];
+                }
+                if (isset($cfg['ServerGlobalDropRateMultiplier'])) {
+                    $dropMult = $cfg['ServerGlobalDropRateMultiplier'];
+                }
+            }
+        }
+
+        // 2. Secondary fallback: Read NewServ config.json directly if API is unavailable
+        if ($expMult === null || $dropMult === null) {
+            $candidates = [
+                '/opt/newserv/system/config.json',
+            ];
+            $playersDir = function_exists('get_newserv_players_dir') ? get_newserv_players_dir() : '';
+            if (!empty($playersDir)) {
+                $candidates[] = dirname(rtrim($playersDir, '/\\')) . '/config.json';
+            }
+            foreach ($candidates as $cfgPath) {
+                if (file_exists($cfgPath) && is_readable($cfgPath)) {
+                    $raw = @file_get_contents($cfgPath);
+                    if ($raw) {
+                        if ($expMult === null && preg_match('/"BBGlobalEXPMultiplier"\s*:\s*([0-9.]+)/', $raw, $m)) {
+                            $expMult = $m[1];
+                        }
+                        if ($dropMult === null && preg_match('/"ServerGlobalDropRateMultiplier"\s*:\s*([0-9.]+)/', $raw, $m)) {
+                            $dropMult = $m[1];
+                        }
+                        if ($expMult !== null && $dropMult !== null) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Fallbacks if neither NewServ API nor config.json provided rates
+        $fallbackExp    = $_ENV['EXP_RATE'] ?? $SITE_CONFIG['exp_rate'] ?? '1x';
+        $fallbackDrop   = $_ENV['DROP_RATE'] ?? $SITE_CONFIG['drop_rate'] ?? '1x';
+        $fallbackMeseta = $_ENV['MESETA_RATE'] ?? $SITE_CONFIG['meseta_rate'] ?? '1x';
+
+        $rates = [
+            'exp'        => format_rate_multiplier($expMult, $fallbackExp),
+            'drop'       => format_rate_multiplier($dropMult, $fallbackDrop),
+            'meseta'     => format_rate_multiplier($mesetaMult, $fallbackMeseta),
+            'raw_exp'    => $expMult !== null ? (float)$expMult : 1.0,
+            'raw_drop'   => $dropMult !== null ? (float)$dropMult : 1.0,
+            'updated_at' => time(),
+        ];
+
+        @file_put_contents($cacheFile, json_encode($rates));
+        $staticCache = $rates;
+        return $rates;
+    }
+}
+
+if (!function_exists('get_exp_rate')) {
+    function get_exp_rate(): string {
+        $rates = get_server_rates();
+        return $rates['exp'] ?? '1x';
+    }
+}
+
+if (!function_exists('get_drop_rate')) {
+    function get_drop_rate(): string {
+        $rates = get_server_rates();
+        return $rates['drop'] ?? '1x';
+    }
+}
+
+if (!function_exists('get_meseta_rate')) {
+    function get_meseta_rate(): string {
+        $rates = get_server_rates();
+        return $rates['meseta'] ?? '1x';
+    }
+}
+
+// Dynamically bind global rate variables from live NewServ
+$SERVER_RATES = get_server_rates();
+$EXP_RATE     = $SERVER_RATES['exp'];
+$DROP_RATE    = $SERVER_RATES['drop'];
+$MESETA_RATE  = $SERVER_RATES['meseta'];
+
 
 if (!function_exists('is_feature_enabled')) {
     /**
@@ -727,6 +879,43 @@ if (!function_exists('resolve_player_file')) {
             }
         }
         return $fullPath;
+    }
+}
+
+if (!function_exists('decode_psochar_name')) {
+    /**
+     * Decodes a PSOBB character name from raw .psochar binary data (offset 0x3C8 / 968, 32 bytes),
+     * matching NewServ's pstring<TextEncoding::UTF16_ALWAYS_MARKED, 0x10>::decode():
+     *   - Scans 2 bytes at a time up to the first UTF-16LE NUL code unit (\x00\x00).
+     *   - Converts UTF-16LE -> UTF-8.
+     *   - Strips any 2-byte "\t<lang>" prefix (E/J/B/T/K/etc.) while preserving "\tC" color codes.
+     */
+    function decode_psochar_name(string $charData, bool $trim = true): string {
+        if (strlen($charData) < 0x3C8 + 0x20) {
+            return '';
+        }
+        $raw = substr($charData, 0x3C8, 0x20);
+        $byteLen = 0x20;
+        for ($z = 0; $z < 0x20; $z += 2) {
+            if ($raw[$z] === "\x00" && $raw[$z + 1] === "\x00") {
+                $byteLen = $z;
+                break;
+            }
+        }
+        if ($byteLen === 0) {
+            return '';
+        }
+        $slice = substr($raw, 0, $byteLen);
+        $utf8 = function_exists('mb_convert_encoding')
+            ? mb_convert_encoding($slice, 'UTF-8', 'UTF-16LE')
+            : @iconv('UTF-16LE', 'UTF-8//IGNORE', $slice);
+        if (!is_string($utf8) || $utf8 === '') {
+            return '';
+        }
+        if (strlen($utf8) >= 2 && $utf8[0] === "\t" && $utf8[1] !== 'C' && ord($utf8[1]) < 0x80) {
+            $utf8 = substr($utf8, 2);
+        }
+        return $trim ? trim($utf8, " \r\n\0\x0B") : $utf8;
     }
 }
 
