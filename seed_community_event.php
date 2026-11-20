@@ -9,7 +9,7 @@ require_once __DIR__ . '/api/db.php';
 $db = get_db();
 
 $title = "Operation: Digital Blasphemy";
-$description = "Corrupted cybernetic mainframes are spawning simulations across Ragol! Defeat Vol Opt in Ep1 (+1 pt), Gol Dragon in Ep2 (+2 pts), or Shambertin in Ep4 (+3 pts). Earn difficulty bonuses (+1 Hard, +2 VHard, +3 Ult)! Cooperate to earn 3 random rare drops tailored to your character level!";
+$description = "Corrupted Pioneer 1 control units and VR combat simulations are escalating across three fronts. Principal Tyrell's office and the Lab request Hunter strikes against Vol Opt in the Mines (+1 pt), Gol Dragon in the VR Spaceship (+2 pts), or Shambertin beneath the Subterranean Desert (+3 pts), with difficulty bonuses (+1 Hard, +2 VHard, +3 Ult), for 3 level-fit rare drops!";
 $goal_type = "BOSS_ARENA";
 $goal_target = "DIGITAL_BLASPHEMY"; // Custom multi-boss target tracked dynamically
 $target_amount = 75000; // Scaled to span the entire month!

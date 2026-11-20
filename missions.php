@@ -210,28 +210,29 @@ if ($account_id) {
                             <h3 class="bounty-title" style="margin-bottom: 0.5rem;"><?= htmlspecialchars(__($ce['title'])) ?></h3>
                             
                             <?php 
-                                if ($ce['goal_target'] === 'DIGITAL_BLASPHEMY') {
-                                    $display_desc = __('Corrupted cybernetic mainframes are spawning simulations across Ragol! Cooperate server-wide to defeat the simulated threats and earn prestigious rare drops fitted for your character class and level.');
-                                    $display_desc = str_replace(
-                                        [__('simulations'), __('Pioneer 2'), __('Vol Opt'), __('Gol Dragon'), __('Shambertin')], 
-                                        ['<strong>' . __('simulations') . '</strong>', '<strong>' . __('Pioneer 2') . '</strong>', '<strong>Vol Opt</strong>', '<strong>Gol Dragon</strong>', '<strong>Shambertin</strong>'], 
-                                        $display_desc
-                                    );
+                                $raw_ce_desc = trim((string)($ce['description'] ?? ''));
+                                if ($raw_ce_desc !== '') {
+                                    $bolded_desc = htmlspecialchars(__($raw_ce_desc));
+                                } elseif ($ce['goal_target'] === 'DIGITAL_BLASPHEMY') {
+                                    $bolded_desc = htmlspecialchars(__("Corrupted Pioneer 1 control units and VR combat simulations are escalating across three fronts. Principal Tyrell's office and the Lab request Hunter strikes against Vol Opt in the Mines (+1 pt), Gol Dragon in the VR Spaceship (+2 pts), or Shambertin beneath the Subterranean Desert (+3 pts), with difficulty bonuses (+1 Hard, +2 VHard, +3 Ult), for 3 level-fit rare drops!"));
                                 } else {
-                                    $bolded_desc = htmlspecialchars(__($ce['description']));
-                                    $keywords = [
-                                        'Vol Opt' => '<strong>Vol Opt</strong>',
-                                        'Gol Dragon' => '<strong>Gol Dragon</strong>',
-                                        'Shambertin' => '<strong>Shambertin</strong>',
-                                        '3 random rare drops' => '<strong style="color: #ffaa00;">3 random rare drops</strong>',
-                                        'difficulty bonuses' => '<strong>difficulty bonuses</strong>',
-                                        'cooperate server-wide' => '<strong style="color: #ffaa00;">cooperate server-wide</strong>'
-                                    ];
-                                    foreach ($keywords as $word => $replacement) {
-                                        $bolded_desc = str_ireplace($word, $replacement, $bolded_desc);
-                                    }
-                                    $display_desc = $bolded_desc;
+                                    $bolded_desc = '';
                                 }
+                                $bolded_desc = (string) preg_replace_callback(
+                                    '/\b(Gol Dragon|Dark Falz|Olga Flow|Gal Gryphon|De Rol Le|Barba Ray|Vol Opt|Shambertin|Dragon|Pioneer 2)\b/i',
+                                    static fn($m) => '<strong>' . $m[1] . '</strong>',
+                                    $bolded_desc
+                                );
+                                $highlight_phrases = [
+                                    '3 level-fit rare drops' => '<strong style="color: #ffaa00;">3 level-fit rare drops</strong>',
+                                    '3 random rare drops' => '<strong style="color: #ffaa00;">3 random rare drops</strong>',
+                                    'difficulty bonuses' => '<strong>difficulty bonuses</strong>',
+                                    'cooperate server-wide' => '<strong style="color: #ffaa00;">cooperate server-wide</strong>',
+                                ];
+                                foreach ($highlight_phrases as $word => $replacement) {
+                                    $bolded_desc = str_ireplace($word, $replacement, $bolded_desc);
+                                }
+                                $display_desc = $bolded_desc;
                             ?>
                             <p class="bounty-desc" style="margin-bottom: 1rem; line-height: 1.5; color: rgba(224, 240, 255, 0.85);"><?= $display_desc ?></p>
                             
