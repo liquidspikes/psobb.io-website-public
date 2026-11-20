@@ -70,7 +70,7 @@ if (isset($_SESSION['user']['username'])) {
                 <div class="form-group" id="captcha-group" style="display:none;">
                     <label for="captcha"><?= __('Security Check') ?></label>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <img id="captcha-img" src="api/captcha.php" alt="CAPTCHA"
+                        <img id="captcha-img" alt="CAPTCHA"
                             style="cursor:pointer; border:1px solid #444; height:40px;" title="<?= htmlspecialchars(__('Click to reload')) ?>"
                             onclick="this.src='api/captcha.php?'+Math.random()">
                         <input type="text" id="captcha" name="captcha" placeholder="<?= __('Enter code') ?>"
