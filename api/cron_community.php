@@ -6,6 +6,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/bounty_lore.php';
 
 $db = get_db();
 
@@ -75,33 +76,29 @@ if (empty($active_community_events)) {
 }
 
 /**
- * Helper function to trigger Gemini AI for milestones and broadcast to NewServ.
+ * Helper function to trigger lore-grounded Gemini AI for milestones and broadcast to NewServ.
  */
 function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
     global $GEMINI_API_KEY, $NEWSERV_API_URL, $db, $GEMINI_MODEL;
-    
-    $prompt = "You are 'Mission Control', the official AI game master for PSOBB. Keep your response extremely brief (under 50 words, maximum 2 sentences). ";
-    $prompt .= "The server is currently running a Global Community Event titled '{$ce['title']}' where players work together to {$ce['goal_type']}. ";
-    
+
     if ($milestone_type === 'start') {
-        $prompt .= "The event has just started! Announce it to the server and rally the players to participate.";
         $db_flag = 'announced_start';
     } elseif ($milestone_type === '100') {
-        $srvAddr = get_server_address();
-        $prompt .= "The server just completed 100% of the goal! Announce their victory and tell them they can claim their reward at {$srvAddr}.";
         $db_flag = 'completed_at'; // Special case, standard completion handles it
     } else {
-        $prompt .= "The server just reached the {$pct_str} milestone for this goal! Give a quick, encouraging status update to keep players motivated.";
         $db_flag = "announced_{$milestone_type}";
     }
-    
-    $prompt .= "\nCRITICAL LANGUAGE DIRECTIVE: Since this is a global server broadcast to an international playerbase, you MUST provide your announcement bilingually. First write the English sentence, followed by the Japanese translation.";
 
-    echo "[CRON_COMMUNITY] Triggering Gemini AI for Milestone: {$milestone_type}%\n";
+    $srvAddr = get_server_address();
+    $bc = bounty_build_community_broadcast_prompt($ce, $milestone_type, $pct_str, $srvAddr);
+    $speaker = $bc['speaker'];
+    $prompt = $bc['prompt'];
+
+    echo "[CRON_COMMUNITY] Triggering Gemini AI for Milestone: {$pct_str} (Speaker: {$speaker})\n";
 
     $payload = [
         "contents" => [["parts" => [["text" => $prompt]]]],
-        "generationConfig" => ["temperature" => 0.8, "maxOutputTokens" => 60]
+        "generationConfig" => ["temperature" => 0.85, "maxOutputTokens" => 220]
     ];
     
     $g_options = [
@@ -120,18 +117,27 @@ function trigger_ai_milestone($ce, $milestone_type, $pct_str) {
         $data = json_decode($api_response, true);
         if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
             $msg = trim($data['candidates'][0]['content']['parts'][0]['text']);
-            // Strip markdown
             $msg = str_replace(['**', '*'], '', $msg);
-            $message = "[Mission Control] " . $msg;
+            $msg = trim($msg, " \t\n\r\0\x0B\"'");
+            $msg = preg_replace('/\s*\R+\s*/u', ' / ', $msg);
+            $msg = preg_replace('/^\[(?:' . preg_quote($speaker, '/') . '|Mission Control)\]\s*/iu', '', $msg);
+            $msg = mb_strimwidth(trim($msg), 0, 400, '...', 'UTF-8');
+            if ($msg !== '') {
+                $message = "[{$speaker}] " . $msg;
+            }
         }
     }
     
     // Fallback if AI fails to respond
     if (empty($message)) {
-        $srvAddr = get_server_address();
-        if ($milestone_type === 'start') $message = "[Mission Control] Global Event Started! / [指令室] グローバルイベント開始！";
-        elseif ($milestone_type === '100') $message = "[Mission Control] Global Event Completed! Claim your reward at {$srvAddr}. / [指令室] グローバルイベント達成！報酬は{$srvAddr}で。";
-        else $message = "[Mission Control] Global Event reached {$pct_str}! Keep it up! / [指令室] 目標{$pct_str}達成！この調子で頑張れ！";
+        $title = $ce['title'] ?? 'Global Operation';
+        if ($milestone_type === 'start') {
+            $message = "[{$speaker}] {$title} is underway! All hunters, report for duty. / 「{$title}」作戦開始！全ハンター出撃せよ！";
+        } elseif ($milestone_type === '100') {
+            $message = "[{$speaker}] {$title} complete! Claim your reward at {$srvAddr}. / 「{$title}」達成！報酬は{$srvAddr}で受け取れます。";
+        } else {
+            $message = "[{$speaker}] {$title} reached {$pct_str}! Keep pushing forward! / 「{$title}」目標{$pct_str}達成！この調子で続けよう！";
+        }
     }
 
     // Broadcast
@@ -489,30 +495,31 @@ foreach ($clients as $client) {
                     $ce_contribution = 1;
                 }
             } else {
-                $target_floor = (int)$target_floor;
-                
+                $parsed_bt = parse_boss_target($original_target);
+                $target_floor = $parsed_bt['floor'];
+                $episode = $parsed_bt['episode'];
+
                 // Legacy fallback: map unambiguous synthetic IDs (16-19) to real newserv floors.
                 // These IDs don't exist in newserv so they're safe to blindly convert.
                 // Floor 15 is NOT mapped here because it could be a real Gol Dragon (Ep2 0x0F).
                 // After running repair_floor_ids.php, none of these should ever appear.
-                $episode = null;
-                if ($target_floor === 16) {
+                if ($episode === null && $target_floor === 16) {
                     $mapped_floor = 15; // Gol Dragon (old synthetic 16 → real 15)
                     $episode = 2;
-                } elseif ($target_floor === 17) {
+                } elseif ($episode === null && $target_floor === 17) {
                     $mapped_floor = 14; // Barba Ray (old synthetic 17 → real 14)
                     $episode = 2;
-                } elseif ($target_floor === 18) {
+                } elseif ($episode === null && $target_floor === 18) {
                     $mapped_floor = 13; // Olga Flow (old synthetic 18 → real 13)
                     $episode = 2;
-                } elseif ($target_floor === 19) {
+                } elseif ($episode === null && $target_floor === 19) {
                     $mapped_floor = 9;  // Saint-Milion (old synthetic 19 → real 9)
                     $episode = 4;
                 } else {
                     $mapped_floor = $target_floor;
                 }
 
-                // For real IDs (and floor 15 = Gol Dragon), determine episode from context
+                // For real IDs (and floor 15 = Gol Dragon), determine episode from explicit @ep or context
                 if ($episode === null) {
                     $episode = get_boss_episode_by_context($ce['title'], $ce['description'] ?? '', $mapped_floor);
                 }
