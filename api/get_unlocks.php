@@ -73,12 +73,33 @@ $charIndex = $onlineCharacter['BBCharacterIndex'] ?? 0;
 try {
     $db = get_db();
     
-    // Self-healing/Migration: update any legacy claims for this character name under a different slot index (e.g. from old migration default 0) to the current index
-    $healStmt = $db->prepare("UPDATE rewards_claimed SET character_index = :cidx WHERE account_id = :aid AND character_name = :cname COLLATE NOCASE AND character_index != :cidx");
-    $healStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
-    $healStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
-    $healStmt->bindValue(':cname', $name, SQLITE3_TEXT);
-    $healStmt->execute();
+    // Self-healing/Migration: only migrate legacy slot-0 claims when this slot has no existing claims
+    // and the current character level is at least as high as the legacy slot-0 milestones.
+    if ((int)$charIndex > 0) {
+        $healStmt = $db->prepare("
+            UPDATE rewards_claimed
+            SET character_index = :cidx
+            WHERE account_id = :aid
+              AND character_name = :cname COLLATE NOCASE
+              AND character_index = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM rewards_claimed existing
+                  WHERE existing.account_id = :aid AND existing.character_index = :cidx
+              )
+              AND :lvl >= (
+                  SELECT COALESCE(MAX(level_milestone), 0)
+                  FROM rewards_claimed legacy
+                  WHERE legacy.account_id = :aid
+                    AND legacy.character_index = 0
+                    AND legacy.character_name = :cname COLLATE NOCASE
+              )
+        ");
+        $healStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
+        $healStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
+        $healStmt->bindValue(':cname', $name, SQLITE3_TEXT);
+        $healStmt->bindValue(':lvl', (int)$level, SQLITE3_INTEGER);
+        $healStmt->execute();
+    }
     
     // Check all claims for this slot to see if the character was recreated/remade or renamed
     $checkStmt = $db->prepare("SELECT character_name, level_milestone, category FROM rewards_claimed WHERE account_id = :aid AND character_index = :cidx");
@@ -91,8 +112,8 @@ try {
     $claimedRows = [];
     while ($row = $checkRes->fetchArray(SQLITE3_ASSOC)) {
         $claimedRows[] = $row;
-        // If current level is less than any claimed milestone, it's a recreation/reset
-        if ((int)$row['level_milestone'] > (int)$level) {
+        // Only treat as a slot recreation reset when the slot now holds a genuinely new Lv1-4 character
+        if ((int)$row['level_milestone'] > (int)$level && (int)$level < 5) {
             $needsReset = true;
         }
     }

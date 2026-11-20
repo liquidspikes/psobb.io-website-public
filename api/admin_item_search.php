@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin: Item Search
- * Searches item_hex.txt by name and returns matching items with their hex codes.
+ * Searches canonical PSOBB V4 names-v4.json by name and returns matching items with their hex codes.
  * Used by the special deliveries admin page to look up item IDs.
  */
 require_once 'config.php';
@@ -20,29 +20,39 @@ if (strlen($q) < 2) {
     exit;
 }
 
-$path = __DIR__ . '/../item_hex.txt';
+$path = __DIR__ . '/names-v4.json';
 if (!file_exists($path)) {
     http_response_code(500);
-    echo json_encode(['error' => 'item_hex.txt not found']);
+    echo json_encode(['error' => 'names-v4.json not found']);
+    exit;
+}
+
+$namesMap = json_decode((string)file_get_contents($path), true);
+if (!is_array($namesMap)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Failed to parse names-v4.json']);
     exit;
 }
 
 $results = [];
 $limit   = 20;
 
-$lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-foreach ($lines as $line) {
-    // Format: "  XXXXXX => [data...]   NAME"
-    if (!preg_match('/^\s*([0-9A-Fa-f]{6})\s*=>.*\s{2,}(\S.*?)$/', $line, $m)) continue;
+foreach ($namesMap as $rawCode => $rawName) {
+    $code = strtoupper(trim((string)$rawCode));
+    $name = trim((string)$rawName);
 
-    $code = strtoupper($m[1]);
-    $name = trim($m[2]);
-
-    // Skip internal/unnamed entries
-    if (str_starts_with($name, '!ID:') || $name === '') continue;
+    // Skip unnamed, placeholder, or tech-disk template entries
+    if (
+        $name === '' ||
+        $name === '????' ||
+        $name === '<TECH-DISK>' ||
+        str_starts_with($name, '!ID:')
+    ) {
+        continue;
+    }
 
     if (str_contains(strtolower($name), $q)) {
-        // Determine item category from first byte of code
+        // Determine item category from first two bytes of code
         $byte0 = hexdec(substr($code, 0, 2));
         $byte1 = hexdec(substr($code, 2, 2));
 
@@ -56,8 +66,10 @@ foreach ($lines as $line) {
             $cat = 'Unit';
         } elseif ($byte0 === 0x02) {
             $cat = 'Mag';
-        } elseif ($byte0 === 0x03) {
+        } elseif ($byte0 === 0x03 && $byte1 === 0x02) {
             $cat = 'Disk';
+        } elseif ($byte0 === 0x03) {
+            $cat = 'Tool';
         } elseif ($byte0 === 0x04) {
             $cat = 'Meseta';
         } else {
@@ -65,20 +77,20 @@ foreach ($lines as $line) {
         }
 
         $results[] = ['code' => $code, 'name' => $name, 'cat' => $cat];
-
-        if (count($results) >= $limit) break;
     }
 }
 
-// Exact matches first
+// Sort exact matches first, then starts-with, then ascending hex code, and slice to limit
 usort($results, function ($a, $b) use ($q) {
-    $aExact = strtolower($a['name']) === $q ? 0 : 1;
-    $bExact = strtolower($b['name']) === $q ? 0 : 1;
+    $aLower = strtolower($a['name']);
+    $bLower = strtolower($b['name']);
+    $aExact = $aLower === $q ? 0 : 1;
+    $bExact = $bLower === $q ? 0 : 1;
     if ($aExact !== $bExact) return $aExact - $bExact;
-    // Then starts-with
-    $aStart = str_starts_with(strtolower($a['name']), $q) ? 0 : 1;
-    $bStart = str_starts_with(strtolower($b['name']), $q) ? 0 : 1;
-    return $aStart - $bStart;
+    $aStart = str_starts_with($aLower, $q) ? 0 : 1;
+    $bStart = str_starts_with($bLower, $q) ? 0 : 1;
+    if ($aStart !== $bStart) return $aStart - $bStart;
+    return strcmp($a['code'], $b['code']);
 });
 
-echo json_encode(array_values($results));
+echo json_encode(array_slice(array_values($results), 0, $limit));

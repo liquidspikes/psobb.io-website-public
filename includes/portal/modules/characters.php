@@ -177,11 +177,15 @@ $existing_slots = $existing_slots ?? [0];
                                 <div class="mat-reset-box" style="margin-top:0.5rem;">
                                     <p><?= __('Wipe all consumed materials on this slot and recalculate display stats safely. Requires you to be offline or in a lobby block.') ?>
                                     </p>
+                                    <div style="margin: 0.55rem 0 0.75rem 0; padding: 8px 10px; border-radius: 6px; background: rgba(0, 255, 255, 0.06); border: 1px solid rgba(0, 255, 255, 0.22); font-size: 0.8rem; color: #cbd5e1; line-height: 1.45;">
+                                        <i class="fas fa-info-circle" style="color:#00ffff; margin-right:5px;"></i>
+                                        <strong><?= __('Tip:') ?></strong> <?= __('Unequip your Mag and stat-boosting Units in-game before feeding new Materials, or PSOBB will grey out Materials once your geared stats reach your class cap.') ?>
+                                    </div>
                                     <button onclick="triggerMaterialReset()" class="dl-btn mat-reset-btn"
                                         style="width:100%; font-family:'Share Tech Mono',monospace; font-weight:bold;"><i
                                             class="fas fa-trash-restore"></i> <?= __('WIPE ALL MATERIALS') ?></button>
                                     <div id="reset-mat-message"
-                                        style="margin-top:10px; font-weight:bold; display:none; font-size:0.85rem;">
+                                        style="margin-top:10px; font-weight:bold; display:none; font-size:0.85rem; line-height:1.45;">
                                     </div>
                                 </div>
                             </details>

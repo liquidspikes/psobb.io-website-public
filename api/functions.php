@@ -30,14 +30,23 @@ function send_personal_mail($client_acc_id, $from_name, $text)
         if ($row && isset($row['receive_system_mail']) && (int) $row['receive_system_mail'] === 0) {
             return; // Player has opted out of system mails.
         }
-        if ($row && strtolower(trim($row['language'])) === 'jp') {
-            $marker = "\tJ";
+        if ($row && isset($row['language'])) {
+            $lang = strtolower(trim((string)$row['language']));
+            if ($lang === 'jp' || $lang === 'ja') {
+                $marker = "\tJ";
+            } elseif ($lang === 'zh' || $lang === 'zh-cn' || $lang === 'cn') {
+                $marker = "\tB";
+            } elseif ($lang === 'zh-tw' || $lang === 'zh-hk' || $lang === 'tw') {
+                $marker = "\tT";
+            } elseif ($lang === 'ko' || $lang === 'kr') {
+                $marker = "\tK";
+            }
         }
     } catch (Exception $e) {
         // Fallback to English on DB error
     }
 
-    // NewServ uses \tE / \tJ as the language marker for the from_name field (UTF16_ALWAYS_MARKED)
+    // NewServ uses \tE/\tJ/\tB/\tT/\tK as the language marker for from_name (UTF16_ALWAYS_MARKED)
     $from_name = $marker . trim($from_name);
     $text = trim($text);
 
@@ -120,6 +129,144 @@ function get_boss_episode_by_context($title, $desc, $default_floor)
     }
 
     return 1;
+}
+
+if (!function_exists('get_bb_item_name_maps')) {
+    /**
+     * Loads the canonical PSO BB V4 item table from names-v4.json and builds
+     * cached uppercase hex->name and lowercase name->hex lookup maps.
+     * Excludes placeholder entries ('????', '<TECH-DISK>') so broken items
+     * can never be generated or resolved from legacy V1/V2 tables.
+     */
+    function get_bb_item_name_maps(): array
+    {
+        static $maps = null;
+        if ($maps !== null) {
+            return $maps;
+        }
+
+        $hexToName = [];
+        $nameToHex = [];
+        $namesPath = __DIR__ . '/names-v4.json';
+        if (file_exists($namesPath)) {
+            $raw = json_decode((string)file_get_contents($namesPath), true);
+            if (is_array($raw)) {
+                foreach ($raw as $hex => $name) {
+                    $hexUpper = strtoupper(trim((string)$hex));
+                    $cleanName = trim((string)$name);
+                    if (
+                        strlen($hexUpper) !== 6 ||
+                        !ctype_xdigit($hexUpper) ||
+                        $cleanName === '' ||
+                        $cleanName === '????' ||
+                        $cleanName === '<TECH-DISK>' ||
+                        stripos($cleanName, '!ID:') === 0
+                    ) {
+                        continue;
+                    }
+                    $hexToName[$hexUpper] = $cleanName;
+
+                    $normName = strtolower($cleanName);
+                    // Prefer non-Mag Tool IDs when Mag and Cell Tool share a name (e.g. Cell of MAG 0503..0507).
+                    if (
+                        !isset($nameToHex[$normName]) ||
+                        (str_starts_with($nameToHex[$normName], '02') && str_starts_with($hexUpper, '03'))
+                    ) {
+                        $nameToHex[$normName] = $hexUpper;
+                    }
+                }
+            }
+        }
+
+        // Known safe aliases used across reward/streak generators
+        $aliases = [
+            'heart of opa-opa' => '030C03',
+            'yahoo! mag'       => '024A00',
+            'amities memo'     => '031805',
+            'yahoo!s engine'   => '031808',
+        ];
+        foreach ($aliases as $alias => $aliasHex) {
+            if (isset($hexToName[$aliasHex])) {
+                $nameToHex[$alias] = $aliasHex;
+            }
+        }
+
+        $maps = [
+            'hex_to_name' => $hexToName,
+            'name_to_hex' => $nameToHex,
+        ];
+        return $maps;
+    }
+}
+
+if (!function_exists('decode_pso_tech_disk_hex')) {
+    /**
+     * Decodes a PSOBB Tech Disk hex payload (0302....) into 'Disk:<Name> Lv.<N>'.
+     * Handles both native BB layout (byte 2 = level-1, byte 4 = tech 0..18) and
+     * legacy swapped payloads (byte 2 = tech 0..18, byte 4 = level-1) gracefully.
+     */
+    function decode_pso_tech_disk_hex(string $hex): ?string
+    {
+        $hex = strtoupper(trim($hex));
+        if (strpos($hex, '0302') !== 0 || strlen($hex) < 10 || !ctype_xdigit(substr($hex, 0, 10))) {
+            return null;
+        }
+        static $techNames = [
+            0x00 => 'Foie',
+            0x01 => 'Gifoie',
+            0x02 => 'Rafoie',
+            0x03 => 'Barta',
+            0x04 => 'Gibarta',
+            0x05 => 'Rabarta',
+            0x06 => 'Zonde',
+            0x07 => 'Gizonde',
+            0x08 => 'Razonde',
+            0x09 => 'Grants',
+            0x0A => 'Deband',
+            0x0B => 'Jellen',
+            0x0C => 'Zalure',
+            0x0D => 'Shifta',
+            0x0E => 'Ryuker',
+            0x0F => 'Resta',
+            0x10 => 'Anti',
+            0x11 => 'Reverser',
+            0x12 => 'Megid',
+        ];
+
+        $byte2 = hexdec(substr($hex, 4, 2));
+        $byte4 = hexdec(substr($hex, 8, 2));
+        if ($byte4 <= 18 && $byte2 <= 29 && isset($techNames[$byte4])) {
+            return 'Disk:' . $techNames[$byte4] . ' Lv.' . ($byte2 + 1);
+        }
+        // Fallback for unmigrated legacy swapped rows (e.g. 030209001D...)
+        if ($byte4 > 18 && $byte4 <= 29 && $byte2 <= 18 && isset($techNames[$byte2])) {
+            return 'Disk:' . $techNames[$byte2] . ' Lv.' . ($byte4 + 1);
+        }
+        return null;
+    }
+}
+
+if (!function_exists('count_cleared_challenge_stages')) {
+    /**
+     * Count cleared online Challenge Mode stages (Ep1 1C1-1C9 + Ep2 2C1-2C5 = 14 max)
+     * from a newserv /y/clients entry. newserv always emits 9 + 5 fixed array slots
+     * where 0xFFFF (65535) denotes an uncleared stage and 1..65534 is a valid clear time.
+     */
+    function count_cleared_challenge_stages(array $client): int
+    {
+        $times = array_merge(
+            $client['ChallengeTimesEp1Online'] ?? [],
+            $client['ChallengeTimesEp2Online'] ?? []
+        );
+        $cleared = 0;
+        foreach ($times as $t) {
+            $val = (int)$t;
+            if ($val > 0 && $val < 65535) {
+                $cleared++;
+            }
+        }
+        return $cleared;
+    }
 }
 
 function getClearObjective($type, $target, $title = '', $desc = '')
@@ -222,12 +369,25 @@ function getClearObjective($type, $target, $title = '', $desc = '')
                 if (isset($reverse_generic_map[$hex_base])) {
                     $itemName = $reverse_generic_map[$hex_base];
                 } else {
-                    $map_path = __DIR__ . '/item_map.json';
-                    if (file_exists($map_path)) {
-                        $map = json_decode(file_get_contents($map_path), true);
-                        $reverse_map = array_flip($map);
-                        if (isset($reverse_map[$hex_base])) {
-                            $itemName = ucwords($reverse_map[$hex_base]);
+                    $hexUpper = strtoupper($hex_base);
+                    $bbMaps = get_bb_item_name_maps();
+                    if (isset($bbMaps['hex_to_name'][$hexUpper])) {
+                        $itemName = $bbMaps['hex_to_name'][$hexUpper];
+                    } else {
+                        $map_path = __DIR__ . '/item_map.json';
+                        if (file_exists($map_path)) {
+                            $map = json_decode(file_get_contents($map_path), true);
+                            if (is_array($map)) {
+                                foreach ($map as $nameKey => $hexVal) {
+                                    if (is_numeric((string)$nameKey) || trim((string)$nameKey) === '' || strpos((string)$nameKey, '?') !== false) {
+                                        continue;
+                                    }
+                                    if (strcasecmp((string)$hexVal, $hexUpper) === 0) {
+                                        $itemName = ucwords((string)$nameKey);
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -470,10 +630,10 @@ function renderRewardString($rewardStr)
         $parts = explode(' ', $segment);
         $firstPart = $parts[0];
 
-        // If the segment starts with a 32-character Hex payload, parse it
+        // If the segment starts with a 32-character or 6-character Hex payload, parse it
         if (ctype_xdigit($firstPart) && (strlen($firstPart) >= 32 || strlen($firstPart) === 6)) {
-            $base = substr($firstPart, 0, 6);
-            $untekked_flag = (strlen($firstPart) >= 32) ? hexdec(substr($firstPart, 8, 2)) : 0;
+            $base = strtoupper(substr($firstPart, 0, 6));
+            $untekked_flag = (substr($base, 0, 2) === '00' && strlen($firstPart) >= 10) ? hexdec(substr($firstPart, 8, 2)) : 0;
 
             $weaponName = $base;
 
@@ -585,16 +745,31 @@ function renderRewardString($rewardStr)
                 'Celestial Shield' => '010214'
             ];
             $reverse_generic_map = array_flip($generic_item_hex_map);
+            $decodedDisk = (strpos($base, '0302') === 0) ? decode_pso_tech_disk_hex($firstPart) : null;
 
-            if (isset($reverse_generic_map[$base])) {
+            if ($decodedDisk !== null) {
+                $weaponName = $decodedDisk;
+            } elseif (isset($reverse_generic_map[$base])) {
                 $weaponName = $reverse_generic_map[$base];
             } else {
-                $map_path = __DIR__ . '/item_map.json';
-                if (file_exists($map_path)) {
-                    $map = json_decode(file_get_contents($map_path), true);
-                    $reverse_map = array_flip($map);
-                    if (isset($reverse_map[$base])) {
-                        $weaponName = ucwords($reverse_map[$base]);
+                $bbMaps = get_bb_item_name_maps();
+                if (isset($bbMaps['hex_to_name'][$base])) {
+                    $weaponName = $bbMaps['hex_to_name'][$base];
+                } else {
+                    $map_path = __DIR__ . '/item_map.json';
+                    if (file_exists($map_path)) {
+                        $map = json_decode(file_get_contents($map_path), true);
+                        if (is_array($map)) {
+                            foreach ($map as $nameKey => $hexVal) {
+                                if (is_numeric((string)$nameKey) || trim((string)$nameKey) === '' || strpos((string)$nameKey, '?') !== false) {
+                                    continue;
+                                }
+                                if (strcasecmp((string)$hexVal, $base) === 0) {
+                                    $weaponName = ucwords((string)$nameKey);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -668,19 +843,30 @@ if (!function_exists('buildHexPayload')) {
             $is_weapon = ($data[0] === "\x00");
             $is_armor_shield = ($data[0] === "\x01" && ($data[1] === "\x01" || $data[1] === "\x02"));
             $is_unit = ($data[0] === "\x01" && $data[1] === "\x03");
+            $is_mag = ($data[0] === "\x02");
+            $base_id = strtoupper(substr($hex, 0, 6));
+            $is_unsealable = in_array($base_id, ['003300', '00AB00', '01034D', '01034F'], true);
 
             if ($is_weapon) {
+                $max_idx = $is_unsealable ? 10 : 12;
                 if (!empty($parts) && strpos($parts[0], '/') !== false) {
+                    for ($z = 6; $z < $max_idx; $z++) {
+                        $data[$z] = "\x00";
+                    }
                     $stats = explode('/', $parts[0]);
                     $idx = 6;
                     // Native=1, A.Beast=2, Machine=3, Dark=4, Hit=5
                     for ($i = 0; $i < 5; $i++) {
-                        if (isset($stats[$i]) && (int)$stats[$i] > 0 && $idx < 12) {
+                        if (isset($stats[$i]) && (int)$stats[$i] > 0 && $idx < $max_idx) {
                             $data[$idx] = chr($i + 1);
                             $data[$idx + 1] = chr((int)$stats[$i]);
                             $idx += 2;
                         }
                     }
+                }
+                if ($is_unsealable) {
+                    $data[10] = "\x80";
+                    $data[11] = "\x00";
                 }
             } else if ($is_armor_shield) {
                 foreach ($parts as $token) {
@@ -710,6 +896,17 @@ if (!function_exists('buildHexPayload')) {
                         }
                     }
                 }
+                if ($is_unsealable) {
+                    $data[10] = "\x80";
+                    $data[11] = "\x00";
+                }
+            } else if ($is_mag && strlen($firstPart) === 6) {
+                // Default Lv.5 Mag stats matching ItemMagStats (5 DEF, 40% Synchro, Red color=14)
+                $data[2] = chr(5);
+                $data[4] = chr(0xF4); // 500 & 0xFF
+                $data[5] = chr(0x01); // 500 >> 8
+                $data[12] = chr(40);  // Synchro
+                $data[15] = chr(14);  // Default color index
             }
             
             return strtoupper(bin2hex($data));
@@ -787,11 +984,12 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             $baseItemName = strtoupper(bin2hex($data));
         }
 
-        // Parse Disks specifically because of their level mechanic
+        // Parse Disks specifically because of their level mechanic.
+        // In PSOBB ItemData: byte 2 = level - 1 (0..29), byte 4 = technique ID (0x00..0x12).
         if (stripos($baseItemName, 'disk:') === 0) {
-            if (preg_match('/Disk:([A-Za-z]+)\s+Lv\.(\d+)/i', $baseItemName, $dmatch)) {
+            if (preg_match('/^Disk:([A-Za-z]+)(?:\s+Lv\.(\d+))?$/i', $baseItemName, $dmatch)) {
                 $techName = strtolower($dmatch[1]);
-                $techLevel = intval($dmatch[2]) - 1; // 0-indexed in memory
+                $techLevel = isset($dmatch[2]) ? max(0, min(29, intval($dmatch[2]) - 1)) : 0; // 0-indexed in memory
 
                 $techMap = [
                     'foie' => 0x00,
@@ -815,36 +1013,30 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
                     'megid' => 0x12
                 ];
 
-                if (isset($techMap[$techName])) {
+                if (isset($techMap[$techName]) && (isset($dmatch[2]) || $techName === 'ryuker' || $techName === 'reverser')) {
+                    if ($techName === 'ryuker' || $techName === 'reverser') {
+                        $techLevel = 0;
+                    }
                     $data = str_repeat("\x00", 16);
                     $data[0] = chr(0x03);
                     $data[1] = chr(0x02);
-                    $data[2] = chr($techMap[$techName]);
-                    $data[4] = chr($techLevel);
+                    $data[2] = chr($techLevel);
+                    $data[4] = chr($techMap[$techName]);
                     $baseItemName = strtoupper(bin2hex($data));
                 }
             }
         }
 
-        // Literal string lookup using the master item_hex.txt
+        // Canonical BB V4 exact name lookup (avoids legacy V1/V2 shifted codes from item_hex.txt)
+        $bbMaps = get_bb_item_name_maps();
         $firstWord = explode(' ', $baseItemName)[0];
         if (!ctype_xdigit($firstWord) || strlen($firstWord) < 6) {
-            $path = __DIR__ . '/../item_hex.txt';
-            if (file_exists($path)) {
-                $searchName = strtolower(trim($baseItemName));
-                $lines = file($path);
-                foreach ($lines as $line) {
-                    $parts = preg_split('/\s{2,}/', trim($line));
-                    $itemName = strtolower(trim(end($parts)));
-                    // Remove trailing x1 if it exists in item_hex.txt
-                    $itemName = preg_replace('/\s+x1$/', '', $itemName);
-
-                    if ($itemName === $searchName || strpos($itemName, $searchName) === 0) {
-                        if (preg_match('/^\s*([0-9A-Fa-f]{6})\s*=>/', $line, $matches)) {
-                            $baseItemName = $matches[1];
-                            break;
-                        }
-                    }
+            if (stripos($baseItemName, 'ES ') !== 0) {
+                $searchName = strtolower(preg_replace('/\s+x1$/i', '', trim($baseItemName)));
+                if (isset($bbMaps['name_to_hex'][$searchName])) {
+                    $baseItemName = $bbMaps['name_to_hex'][$searchName];
+                } else {
+                    return ["success" => false, "error" => "Unknown or unsupported PSOBB item name: " . $baseItemName];
                 }
             }
         }
@@ -852,6 +1044,27 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
         // Execute the drop multiple times if necessary
         for ($i = 0; $i < $multiplier; $i++) {
             $finalPayload = buildHexPayload($baseItemName);
+            if (stripos($finalPayload, 'ES ') !== 0) {
+                if (!ctype_xdigit($finalPayload) || strlen($finalPayload) !== 32) {
+                    return ["success" => false, "error" => "Blocked malformed item payload: " . $finalPayload];
+                }
+                $b0 = hexdec(substr($finalPayload, 0, 2));
+                $b1 = hexdec(substr($finalPayload, 2, 2));
+                $base6 = strtoupper(substr($finalPayload, 0, 6));
+                if ($b0 === 0x04) {
+                    // Valid Meseta payload
+                } elseif ($b0 === 0x03 && $b1 === 0x02) {
+                    $diskLvl = hexdec(substr($finalPayload, 4, 2));
+                    $diskTech = hexdec(substr($finalPayload, 8, 2));
+                    if ($diskLvl > 29 || $diskTech > 18) {
+                        return ["success" => false, "error" => "Blocked invalid Tech Disk payload: " . $finalPayload];
+                    }
+                } elseif ($b0 === 0x00 && (($b1 >= 0x70 && $b1 <= 0x88) || ($b1 >= 0xA5 && $b1 <= 0xA9))) {
+                    // Valid S-Rank weapon payload
+                } elseif (!isset($bbMaps['hex_to_name'][$base6])) {
+                    return ["success" => false, "error" => "Blocked invalid PSOBB item code: " . $base6];
+                }
+            }
             $cmd = "on " . $targetIdent . " cc {$NEWSERV_COMMAND_PREFIX}item " . $finalPayload;
 
             $execRes = newserv_shell_exec($cmd);

@@ -4,10 +4,9 @@
  * 
  * Safely resets all consumed materials (HP, TP, Power, Mind, Evade, Def, Luck) 
  * back to 0. 
- * - If the player is actively online: uses NewServ's in-game command ($edit material reset every) 
- *   to gracefully swap and recompute stats in-game. Prevents resets while inside active game rooms.
- * - If the player is offline: performs secure direct binary editing on their .psochar file, 
- *   recalculates display stats, and writes it back cleanly to prevent file corruption.
+ * - When the character is online in a Lobby Block: uses NewServ's in-game command ($edit material reset every)
+ *   to safely reset and recompute stats in-game, then triggers $save. Prevents resets in active game rooms
+ *   or offline (since newserv caches .psochar state in memory and flushes every 60s).
  */
 require_once 'config.php';
 require_once 'db.php';
@@ -36,9 +35,9 @@ if (empty($username)) {
 }
 $username = strtolower(trim($username));
 
-// Get character slot (0 to 3)
+// Get character slot (0 to 126 for MoreSaveSlots support)
 $input = json_decode(file_get_contents('php://input'), true);
-$slot = isset($input['slot']) ? max(0, min(3, (int)$input['slot'])) : 0;
+$slot = isset($input['slot']) ? max(0, min(126, (int)$input['slot'])) : 0;
 
 if (empty($username)) {
     http_response_code(400);
@@ -51,6 +50,8 @@ $clientsUrl = $NEWSERV_API_URL . '/y/clients';
 $clientsResponse = @file_get_contents($clientsUrl);
 $isOnline = false;
 $onlineCharName = '';
+$onlineSlot = null;
+$targetIdent = $username;
 
 if ($clientsResponse !== FALSE) {
     $clientsData = json_decode($clientsResponse, true);
@@ -59,6 +60,12 @@ if ($clientsResponse !== FALSE) {
             if (isset($c['Account']['AccountID']) && (int)$c['Account']['AccountID'] === $accountId) {
                 $isOnline = true;
                 $onlineCharName = $c['Name'] ?? '';
+                if (isset($c['BBCharacterIndex']) && is_numeric($c['BBCharacterIndex'])) {
+                    $onlineSlot = (int)$c['BBCharacterIndex'];
+                }
+                if (!empty($c['Account']['BBLicenses'][0]['UserName'])) {
+                    $targetIdent = $c['Account']['BBLicenses'][0]['UserName'];
+                }
                 break;
             }
         }
@@ -83,17 +90,18 @@ if ($charData === false || strlen($charData) < 0x399C) {
     exit;
 }
 
-// Unpack character name from UTF-16LE starts at offset 852 + 116 = 968 (size 32)
-$nameBytes = substr($charData, 852 + 116, 32);
-$slotCharName = mb_convert_encoding($nameBytes, 'UTF-8', 'UTF-16LE');
-$slotCharName = trim(str_replace("\x00", "", $slotCharName));
+// Decode UTF16_ALWAYS_MARKED name at offset 852 + 116 = 968 (strips \tE/\tJ/\tB/\tT/\tK, preserves \tC color codes)
+$slotCharName = decode_psochar_name($charData, false);
 
 // -------------------------------------------------------------------------
 // Case A: Character is Online
 // -------------------------------------------------------------------------
 if ($isOnline) {
-    // 1. Double check if the online character matches the selected slot's character name
-    if (strcasecmp($onlineCharName, $slotCharName) !== 0) {
+    // 1. Verify the online character matches the selected slot (prefer exact BBCharacterIndex from NewServ)
+    $slotMatches = ($onlineSlot !== null)
+        ? ($onlineSlot === $slot)
+        : (strcasecmp($onlineCharName, $slotCharName) === 0 || strcasecmp(trim($onlineCharName), trim($slotCharName)) === 0);
+    if (!$slotMatches) {
         http_response_code(400);
         echo json_encode([
             "success" => false, 
@@ -131,101 +139,52 @@ if ($isOnline) {
         exit;
     }
     
-    // 2. Perform safe reset in the lobby block using NewServ commands
-    $accountIdHex = dechex($accountId);
-    $resetCmd = 'on ' . $accountIdHex . ' cc $edit material reset every';
-    $saveCmd = 'on ' . $accountIdHex . ' cc $save';
-    
+    // 2. Perform safe reset in the lobby block using NewServ commands (use BB username to avoid numeric ID ambiguity)
+    $cmdPrefix = !empty($NEWSERV_COMMAND_PREFIX) ? $NEWSERV_COMMAND_PREFIX : '$';
+    $resetCmd = 'on ' . $targetIdent . ' cc ' . $cmdPrefix . 'edit material reset every';
+    $saveCmd = 'on ' . $targetIdent . ' cc ' . $cmdPrefix . 'save';
+
     $res1 = run_shell_command($resetCmd);
     $res2 = run_shell_command($saveCmd);
-    
-    if ($res1 === false || $res2 === false) {
+
+    $checkShellOk = static function ($rawRes): bool {
+        if ($rawRes === false || $rawRes === '') {
+            return false;
+        }
+        $data = json_decode($rawRes, true);
+        if (!is_array($data) || !empty($data['Error'])) {
+            return false;
+        }
+        if (isset($data['result'])) {
+            $rLower = strtolower((string)$data['result']);
+            if (strpos($rLower, 'error') !== false || strpos($rLower, 'not found') !== false || strpos($rLower, 'failed') !== false) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    if (!$checkShellOk($res1) || !$checkShellOk($res2)) {
         http_response_code(502);
         echo json_encode(["success" => false, "error" => "Failed to trigger live material reset on the game server."]);
         exit;
     }
-    
+
     echo json_encode([
         "success" => true,
-        "message" => "Stat materials successfully reset to 0 in-game!"
+        "message" => __("Stat materials successfully reset to 0 in-game! Tip: Unequip your Mag and Units before feeding new Materials so equipped bonuses don't hit your class stat cap early.")
     ]);
     exit;
 }
 
 // -------------------------------------------------------------------------
-// Case B: Character is Offline (Direct Binary Modification)
+// Case B: Character is Offline
 // -------------------------------------------------------------------------
-try {
-    // $charData is already loaded and validated at the top
-    
-    // 1. Extract consumed materials count to recalculate stats correctly
-    // HP / TP materials (Starting at inventory offset 8)
-    $hpMats = ord($charData[8 + 1]) >> 1;
-    $tpMats = ord($charData[8 + 2]) >> 1;
-    
-    // Power, Mind, Evade, Def, Luck mats are stored in inventory slot items 8, 9, 10, 11, 12 extension byte 2
-    $powerMats = ord($charData[8 + 4 + 8 * 28 + 3]);
-    $mindMats  = ord($charData[8 + 4 + 9 * 28 + 3]);
-    $evadeMats = ord($charData[8 + 4 + 10 * 28 + 3]);
-    $defMats   = ord($charData[8 + 4 + 11 * 28 + 3]);
-    $luckMats  = ord($charData[8 + 4 + 12 * 28 + 3]);
-    
-    // 2. Unpack display stats block (starts at offset 852)
-    $dispBlock = substr($charData, 852, 400);
-    $atp = unpack('v', substr($dispBlock, 0, 2))[1];
-    $mst = unpack('v', substr($dispBlock, 2, 2))[1];
-    $evp = unpack('v', substr($dispBlock, 4, 2))[1];
-    $dfp = unpack('v', substr($dispBlock, 8, 2))[1];
-    $lck = unpack('v', substr($dispBlock, 12, 2))[1];
-    
-    // 3. Subtract mats * 2 from each stat (recalculates stats)
-    $newAtp = max(0, $atp - ($powerMats * 2));
-    $newMst = max(0, $mst - ($mindMats * 2));
-    $newEvp = max(0, $evp - ($evadeMats * 2));
-    $newDfp = max(0, $dfp - ($defMats * 2));
-    $newLck = max(0, $lck - ($luckMats * 2));
-    
-    // 4. Overwrite display stats inside $charData
-    $charData[852 + 0] = chr($newAtp & 0xFF);
-    $charData[852 + 1] = chr(($newAtp >> 8) & 0xFF);
-    
-    $charData[852 + 2] = chr($newMst & 0xFF);
-    $charData[852 + 3] = chr(($newMst >> 8) & 0xFF);
-    
-    $charData[852 + 4] = chr($newEvp & 0xFF);
-    $charData[852 + 5] = chr(($newEvp >> 8) & 0xFF);
-    
-    $charData[852 + 8] = chr($newDfp & 0xFF);
-    $charData[852 + 9] = chr(($newDfp >> 8) & 0xFF);
-    
-    $charData[852 + 12] = chr($newLck & 0xFF);
-    $charData[852 + 13] = chr(($newLck >> 8) & 0xFF);
-    
-    // 5. Overwrite materials counts to 0
-    $charData[8 + 1] = chr(0); // HP materials
-    $charData[8 + 2] = chr(0); // TP materials
-    
-    $charData[8 + 4 + 8 * 28 + 3]  = chr(0); // Power
-    $charData[8 + 4 + 9 * 28 + 3]  = chr(0); // Mind
-    $charData[8 + 4 + 10 * 28 + 3] = chr(0); // Evade
-    $charData[8 + 4 + 11 * 28 + 3] = chr(0); // Def
-    $charData[8 + 4 + 12 * 28 + 3] = chr(0); // Luck
-    
-    // 6. Save back to disk securely
-    $saved = @file_put_contents($psocharPath, $charData);
-    
-    if ($saved === false) {
-        http_response_code(500);
-        echo json_encode(["success" => false, "error" => "Failed to write modified binary data back to Slot " . ($slot + 1) . "."]);
-        exit;
-    }
-    
-    echo json_encode([
-        "success" => true,
-        "message" => "Stat materials successfully reset and stats re-calibrated offline!"
-    ]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "error" => "An error occurred while recalibrating stats: " . $e->getMessage()]);
-}
+// newserv caches player saves in memory and system/players/*.psochar is root:www-data 0640,
+// so direct offline binary writes fail under www-data or are overwritten by in-memory flushes.
+http_response_code(400);
+echo json_encode([
+    "success" => false,
+    "error" => "Please log into a Lobby Block in-game on '{$slotCharName}' (Slot " . ($slot + 1) . ") to reset materials safely."
+]);
 ?>

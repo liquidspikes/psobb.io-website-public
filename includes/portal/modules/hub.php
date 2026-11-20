@@ -108,14 +108,14 @@
                                     <span
                                         style="font-size:0.75rem; color:#aaa; display:block;"><?= __('EXP MULTIPLIER') ?></span>
                                     <span id="rate-exp"
-                                        style="font-size:1.5rem; font-family:'Share Tech Mono',monospace; color:#ffaa00; font-weight:bold;">1.0x</span>
+                                        style="font-size:1.5rem; font-family:'Share Tech Mono',monospace; color:#ffaa00; font-weight:bold;"><?= htmlspecialchars($EXP_RATE) ?></span>
                                 </div>
                                 <div
                                     style="background:rgba(0,0,0,0.4); padding:10px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
                                     <span
                                         style="font-size:0.75rem; color:#aaa; display:block;"><?= __('DROP MULTIPLIER') ?></span>
                                     <span id="rate-drop"
-                                        style="font-size:1.5rem; font-family:'Share Tech Mono',monospace; color:#00ffc8; font-weight:bold;">1.0x</span>
+                                        style="font-size:1.5rem; font-family:'Share Tech Mono',monospace; color:#00ffc8; font-weight:bold;"><?= htmlspecialchars($DROP_RATE) ?></span>
                                 </div>
                                 <div
                                     style="background:rgba(0,0,0,0.4); padding:10px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">

@@ -2,11 +2,10 @@
 require_once 'config.php';
 header('Content-Type: application/json');
 
+$rates = get_server_rates();
+
 $url = $NEWSERV_API_URL . "/y/server";
 $data_json = @file_get_contents($url);
-
-$config_url = $NEWSERV_API_URL . "/y/config";
-$config_data_json = @file_get_contents($config_url);
 
 if ($data_json === FALSE) {
     echo json_encode([
@@ -14,16 +13,17 @@ if ($data_json === FALSE) {
         'Uptime' => 'Offline',
         'ClientCount' => 'Offline',
         'GameCount' => 'Offline',
-        'EXP' => '1',
-        'Drop' => '1'
+        'BBGlobalEXPMultiplier' => $rates['raw_exp'],
+        'ServerGlobalDropRateMultiplier' => $rates['raw_drop'],
+        'EXP' => (string)$rates['raw_exp'],
+        'Drop' => (string)$rates['raw_drop']
     ]);
 } else {
     $data = json_decode($data_json, true);
-    if ($config_data_json !== FALSE) {
-        $config = json_decode($config_data_json, true);
-        $data["BBGlobalEXPMultiplier"] = $config["BBGlobalEXPMultiplier"] ?? 1;
-        $data["ServerGlobalDropRateMultiplier"] = $config["ServerGlobalDropRateMultiplier"] ?? 1.0;
-    }
+    $data["BBGlobalEXPMultiplier"] = $rates['raw_exp'];
+    $data["ServerGlobalDropRateMultiplier"] = $rates['raw_drop'];
+    $data["EXP"] = (string)$rates['raw_exp'];
+    $data["Drop"] = (string)$rates['raw_drop'];
     echo json_encode($data);
 }
 ?>

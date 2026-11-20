@@ -97,11 +97,11 @@ include 'includes/header.php';
                 <h3><?= __('Quick Stats') ?></h3>
                 <div class="status-row">
                     <span><?= __('EXP Rate:') ?></span>
-                    <span id="rate-exp-stats">1x</span>
+                    <span id="rate-exp-stats"><?= htmlspecialchars($EXP_RATE) ?></span>
                 </div>
                 <div class="status-row">
                     <span><?= __('Drop Rate:') ?></span>
-                    <span id="rate-drop-stats">1x</span>
+                    <span id="rate-drop-stats"><?= htmlspecialchars($DROP_RATE) ?></span>
                 </div>
                 <div class="widget-divider"></div>
                 <ul class="sidebar-links">

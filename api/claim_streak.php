@@ -187,8 +187,8 @@ $alternativeRares = [
     '030C00' => 'Cell of MAG 502',
     '031805' => "Amitie's Memo",
     '031808' => "Yahoo!'s engine",
-    '030C06' => 'Heart of Opa-Opa',
-    '030C07' => 'Heart of Pian'
+    '030C03' => 'Heart of Opa Opa',
+    '030C04' => 'Heart of Pian'
 ];
 
 // Map the milestone index to the gradual, tiered reward scale

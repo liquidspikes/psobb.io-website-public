@@ -79,7 +79,7 @@ try {
             stat_machine INTEGER NOT NULL,
             stat_dark INTEGER NOT NULL,
             stat_hit INTEGER NOT NULL,
-            hint_attribute TEXT NOT NULL,
+            hint_attribute TEXT NOT NULL DEFAULT '',
             is_active INTEGER NOT NULL DEFAULT 1,
             base_native INTEGER DEFAULT 0,
             base_abeast INTEGER DEFAULT 0,
@@ -96,6 +96,9 @@ try {
             drop_id TEXT NOT NULL,
             attempts_used INTEGER NOT NULL,
             max_attempts INTEGER NOT NULL,
+            lifetime_attempts INTEGER DEFAULT 0,
+            attempts_remaining INTEGER,
+            last_guess_at TEXT,
             PRIMARY KEY (user_id, drop_id)
         );
         CREATE TABLE IF NOT EXISTS tekker_telemetry (
@@ -126,6 +129,21 @@ try {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS tekker_claim_log (
+            claim_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL,
+            discord_id TEXT,
+            token_ids TEXT NOT NULL,
+            token_count INTEGER NOT NULL,
+            weapon_hex TEXT NOT NULL,
+            weapon_name TEXT NOT NULL,
+            stat_native INTEGER DEFAULT 0,
+            stat_abeast INTEGER DEFAULT 0,
+            stat_machine INTEGER DEFAULT 0,
+            stat_dark INTEGER DEFAULT 0,
+            stat_hit INTEGER DEFAULT 0,
+            claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     ");
 
     // Dynamic column migration in case tekker_active_drops already existed with earlier schema
@@ -152,6 +170,28 @@ try {
             @$db->exec("ALTER TABLE tekker_active_drops ADD COLUMN {$colName} {$colDef}");
         }
     }
+
+    // Dynamic column migration for tekker_player_state (/guess 7-field state)
+    $psCols = [];
+    $psRes = $db->query("PRAGMA table_info(tekker_player_state)");
+    if ($psRes) {
+        while ($psRow = $psRes->fetchArray(SQLITE3_ASSOC)) {
+            $psCols[] = $psRow['name'];
+        }
+    }
+    $psExtraCols = [
+        'lifetime_attempts' => 'INTEGER DEFAULT 0',
+        'attempts_remaining' => 'INTEGER',
+        'last_guess_at' => 'TEXT',
+    ];
+    foreach ($psExtraCols as $colName => $colDef) {
+        if (!in_array($colName, $psCols, true)) {
+            @$db->exec("ALTER TABLE tekker_player_state ADD COLUMN {$colName} {$colDef}");
+        }
+    }
+
+    // Auto-heal any phantom active drops created with NULL/empty drop_id
+    $db->exec("UPDATE tekker_active_drops SET is_active = 0 WHERE is_active = 1 AND (drop_id IS NULL OR trim(drop_id) = '')");
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => 'Schema migration error: ' . $e->getMessage()]);
     exit;
@@ -165,43 +205,130 @@ try {
             break;
 
         case 'getActiveDrop': {
-            $r = $db->querySingle("SELECT * FROM tekker_active_drops WHERE is_active = 1 LIMIT 1", true);
+            $r = $db->querySingle("SELECT * FROM tekker_active_drops WHERE is_active = 1 AND drop_id IS NOT NULL AND trim(drop_id) != '' ORDER BY rowid DESC LIMIT 1", true);
             $result = $r ? $r : null;
             break;
         }
         case 'createDrop': {
             $db->exec("UPDATE tekker_active_drops SET is_active = 0 WHERE is_active = 1");
-            $now = date('Y-m-d H:i:s');
-            $spawn = $in['spawn_time'] ?? $now;
-            $despawn = $in['despawn_time'] ?? date('Y-m-d H:i:s', strtotime($spawn) + 7200);
+            $nowTs = time();
+            $now = date('Y-m-d H:i:s', $nowTs);
+
+            $suppliedId = trim((string)($in['drop_id'] ?? ''));
+            $suppliedHint = trim((string)($in['hint_attribute'] ?? ''));
+
+            if ($suppliedId === '' || $suppliedHint === '') {
+                $categories = ['Native', 'A.Beast', 'Machine', 'Dark', 'Hit'];
+                $i1 = random_int(0, 4);
+                do {
+                    $i2 = random_int(0, 4);
+                } while ($i2 === $i1);
+                $locked1 = $categories[$i1];
+                $locked2 = $categories[$i2];
+                $hintAttr = (random_int(0, 1) === 0) ? $locked1 : $locked2;
+
+                $variances = [-10, -5, 0, 5, 10];
+                $baseMap = [];
+                $activeMap = [];
+                foreach ($categories as $cat) {
+                    if ($cat === $locked1 || $cat === $locked2) {
+                        $baseMap[$cat] = 0;
+                        $activeMap[$cat] = 0;
+                    } else {
+                        $b = random_int(3, 16) * 5;
+                        $v = $variances[random_int(0, 4)];
+                        $baseMap[$cat] = $b;
+                        $activeMap[$cat] = max(0, min(90, $b + $v));
+                    }
+                }
+
+                $dropId = 'd-' . (string)round(microtime(true) * 1000);
+                $spawn = $now;
+                $despawn = date('Y-m-d H:i:s', $nowTs + 7200);
+                $sn = $activeMap['Native'];
+                $sa = $activeMap['A.Beast'];
+                $sm = $activeMap['Machine'];
+                $sd = $activeMap['Dark'];
+                $sh = $activeMap['Hit'];
+                $bn = $baseMap['Native'];
+                $ba = $baseMap['A.Beast'];
+                $bm = $baseMap['Machine'];
+                $bd = $baseMap['Dark'];
+                $bh = $baseMap['Hit'];
+                $gss = 0;
+                $szd = 0;
+            } else {
+                $dropId = $suppliedId;
+                $hintAttr = $suppliedHint;
+                $spawn = $in['spawn_time'] ?? $now;
+                $despawn = $in['despawn_time'] ?? date('Y-m-d H:i:s', strtotime($spawn) + 7200);
+                $sn = (int)($in['stat_native'] ?? 0);
+                $sa = (int)($in['stat_abeast'] ?? 0);
+                $sm = (int)($in['stat_machine'] ?? 0);
+                $sd = (int)($in['stat_dark'] ?? 0);
+                $sh = (int)($in['stat_hit'] ?? 0);
+                $bn = (int)($in['base_native'] ?? $sn);
+                $ba = (int)($in['base_abeast'] ?? $sa);
+                $bm = (int)($in['base_machine'] ?? $sm);
+                $bd = (int)($in['base_dark'] ?? $sd);
+                $bh = (int)($in['base_hit'] ?? $sh);
+                $gss = (int)($in['guesses_since_shift'] ?? 0);
+                $szd = (int)($in['second_zero_discovered'] ?? 0);
+            }
+
             $stmt = $db->prepare("INSERT INTO tekker_active_drops
                 (drop_id, stat_native, stat_abeast, stat_machine, stat_dark, stat_hit, hint_attribute, is_active,
                  base_native, base_abeast, base_machine, base_dark, base_hit, spawn_time, despawn_time, guesses_since_shift, second_zero_discovered)
                 VALUES (:id,:n,:a,:m,:d,:h,:hint,1, :bn,:ba,:bm,:bd,:bh, :st,:dt, :gss, :szd)");
-            $stmt->bindValue(':id', $in['drop_id'], SQLITE3_TEXT);
-            $stmt->bindValue(':n', (int)$in['stat_native'], SQLITE3_INTEGER);
-            $stmt->bindValue(':a', (int)$in['stat_abeast'], SQLITE3_INTEGER);
-            $stmt->bindValue(':m', (int)$in['stat_machine'], SQLITE3_INTEGER);
-            $stmt->bindValue(':d', (int)$in['stat_dark'], SQLITE3_INTEGER);
-            $stmt->bindValue(':h', (int)$in['stat_hit'], SQLITE3_INTEGER);
-            $stmt->bindValue(':hint', $in['hint_attribute'], SQLITE3_TEXT);
-            $stmt->bindValue(':bn', (int)($in['base_native'] ?? $in['stat_native']), SQLITE3_INTEGER);
-            $stmt->bindValue(':ba', (int)($in['base_abeast'] ?? $in['stat_abeast']), SQLITE3_INTEGER);
-            $stmt->bindValue(':bm', (int)($in['base_machine'] ?? $in['stat_machine']), SQLITE3_INTEGER);
-            $stmt->bindValue(':bd', (int)($in['base_dark'] ?? $in['stat_dark']), SQLITE3_INTEGER);
-            $stmt->bindValue(':bh', (int)($in['base_hit'] ?? $in['stat_hit']), SQLITE3_INTEGER);
+            $stmt->bindValue(':id', $dropId, SQLITE3_TEXT);
+            $stmt->bindValue(':n', $sn, SQLITE3_INTEGER);
+            $stmt->bindValue(':a', $sa, SQLITE3_INTEGER);
+            $stmt->bindValue(':m', $sm, SQLITE3_INTEGER);
+            $stmt->bindValue(':d', $sd, SQLITE3_INTEGER);
+            $stmt->bindValue(':h', $sh, SQLITE3_INTEGER);
+            $stmt->bindValue(':hint', $hintAttr, SQLITE3_TEXT);
+            $stmt->bindValue(':bn', $bn, SQLITE3_INTEGER);
+            $stmt->bindValue(':ba', $ba, SQLITE3_INTEGER);
+            $stmt->bindValue(':bm', $bm, SQLITE3_INTEGER);
+            $stmt->bindValue(':bd', $bd, SQLITE3_INTEGER);
+            $stmt->bindValue(':bh', $bh, SQLITE3_INTEGER);
             $stmt->bindValue(':st', $spawn, SQLITE3_TEXT);
             $stmt->bindValue(':dt', $despawn, SQLITE3_TEXT);
-            $stmt->bindValue(':gss', (int)($in['guesses_since_shift'] ?? 0), SQLITE3_INTEGER);
-            $stmt->bindValue(':szd', (int)($in['second_zero_discovered'] ?? 0), SQLITE3_INTEGER);
+            $stmt->bindValue(':gss', $gss, SQLITE3_INTEGER);
+            $stmt->bindValue(':szd', $szd, SQLITE3_INTEGER);
             $stmt->execute();
-            $result = ['ok' => true];
+
+            $result = [
+                'ok' => true,
+                'drop_id' => $dropId,
+                'is_active' => 1,
+                'stat_native' => $sn,
+                'stat_abeast' => $sa,
+                'stat_machine' => $sm,
+                'stat_dark' => $sd,
+                'stat_hit' => $sh,
+                'hint_attribute' => $hintAttr,
+                'base_native' => $bn,
+                'base_abeast' => $ba,
+                'base_machine' => $bm,
+                'base_dark' => $bd,
+                'base_hit' => $bh,
+                'spawn_time' => $spawn,
+                'despawn_time' => $despawn,
+                'guesses_since_shift' => $gss,
+                'second_zero_discovered' => $szd,
+            ];
             break;
         }
         case 'deactivateDrop': {
-            $stmt = $db->prepare("UPDATE tekker_active_drops SET is_active = 0 WHERE drop_id = :id");
-            $stmt->bindValue(':id', $in['dropId'], SQLITE3_TEXT);
-            $stmt->execute();
+            $dropId = trim((string)($in['dropId'] ?? ''));
+            if ($dropId === '') {
+                $db->exec("UPDATE tekker_active_drops SET is_active = 0 WHERE is_active = 1 AND (drop_id IS NULL OR trim(drop_id) = '')");
+            } else {
+                $stmt = $db->prepare("UPDATE tekker_active_drops SET is_active = 0 WHERE drop_id = :id");
+                $stmt->bindValue(':id', $dropId, SQLITE3_TEXT);
+                $stmt->execute();
+            }
             $result = ['ok' => true];
             break;
         }
@@ -321,13 +448,53 @@ try {
             break;
         }
         case 'getClaimLog': {
+            // Consolidated claim history: who claimed, which tokens, and for what item.
+            // Newest first. Optional limit (default 100, capped 500).
+            // Falls back to legacy is_claimed = 1 tekker_tokens rows (>60s old so active locks stay hidden).
             $limit = isset($in['limit']) ? max(1, min(500, (int)$in['limit'])) : 100;
-            $stmt = $db->prepare("SELECT * FROM tekker_tokens WHERE is_claimed = 1 ORDER BY claimed_at DESC LIMIT :l");
-            $stmt->bindValue(':l', $limit, SQLITE3_INTEGER);
-            $res = $stmt->execute();
             $rows = [];
-            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-                $rows[] = $row;
+            $res = $db->query("SELECT * FROM tekker_claim_log ORDER BY datetime(claimed_at) DESC, claim_id DESC LIMIT " . (int)$limit);
+            if ($res) {
+                while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                    if (isset($row['discord_id'])) {
+                        $row['discord_id'] = preg_replace('/[\r\n\t ]/', '', trim((string)$row['discord_id']));
+                    }
+                    $rows[] = $row;
+                }
+            }
+            $remaining = $limit - count($rows);
+            if ($remaining > 0) {
+                $leg = $db->prepare("
+                    SELECT token_id, owner_id, stat_native, stat_abeast, stat_machine, stat_dark, stat_hit, claimed_by, claimed_at
+                    FROM tekker_tokens
+                    WHERE is_claimed = 1
+                      AND (claimed_at IS NULL OR datetime(claimed_at) < datetime('now', '-60 seconds'))
+                    ORDER BY datetime(claimed_at) DESC, rowid DESC
+                    LIMIT :rem
+                ");
+                $leg->bindValue(':rem', $remaining, SQLITE3_INTEGER);
+                $legRes = $leg->execute();
+                if ($legRes) {
+                    while ($lr = $legRes->fetchArray(SQLITE3_ASSOC)) {
+                        $tid = preg_replace('/[\r\n\t ]/', '', trim((string)($lr['token_id'] ?? '')));
+                        $oid = preg_replace('/[\r\n\t ]/', '', trim((string)($lr['owner_id'] ?? '')));
+                        $rows[] = [
+                            'claim_id'     => null,
+                            'account_id'   => (int)($lr['claimed_by'] ?? 0),
+                            'discord_id'   => $oid !== '' ? $oid : null,
+                            'token_ids'    => json_encode([$tid]),
+                            'token_count'  => 1,
+                            'weapon_hex'   => '',
+                            'weapon_name'  => 'Legacy Claim (pre-log)',
+                            'stat_native'  => (int)($lr['stat_native'] ?? 0),
+                            'stat_abeast'  => (int)($lr['stat_abeast'] ?? 0),
+                            'stat_machine' => (int)($lr['stat_machine'] ?? 0),
+                            'stat_dark'    => (int)($lr['stat_dark'] ?? 0),
+                            'stat_hit'     => (int)($lr['stat_hit'] ?? 0),
+                            'claimed_at'   => $lr['claimed_at'] ?? '',
+                        ];
+                    }
+                }
             }
             $result = $rows;
             break;
@@ -341,13 +508,34 @@ try {
             break;
         }
         case 'upsertPlayerState': {
-            $stmt = $db->prepare("INSERT INTO tekker_player_state (user_id, drop_id, attempts_used, max_attempts)
-                VALUES (:u,:d,:au,:ma)
-                ON CONFLICT(user_id, drop_id) DO UPDATE SET attempts_used = excluded.attempts_used");
-            $stmt->bindValue(':u', $in['userId'], SQLITE3_TEXT);
-            $stmt->bindValue(':d', $in['dropId'], SQLITE3_TEXT);
-            $stmt->bindValue(':au', (int)$in['attemptsUsed'], SQLITE3_INTEGER);
-            $stmt->bindValue(':ma', (int)$in['maxAttempts'], SQLITE3_INTEGER);
+            $hasLa = array_key_exists('lifetimeAttempts', $in) && $in['lifetimeAttempts'] !== null;
+            $hasAr = array_key_exists('attemptsRemaining', $in) && $in['attemptsRemaining'] !== null;
+            $hasLga = array_key_exists('lastGuessAt', $in) && $in['lastGuessAt'] !== null;
+            $au = (int)($in['attemptsUsed'] ?? 0);
+            $ma = (int)($in['maxAttempts'] ?? 5);
+            $la = $hasLa ? (int)$in['lifetimeAttempts'] : $au;
+            $ar = $hasAr ? (int)$in['attemptsRemaining'] : max(0, $ma - $au);
+            $lga = $hasLga ? (string)$in['lastGuessAt'] : null;
+
+            $stmt = $db->prepare("INSERT INTO tekker_player_state
+                (user_id, drop_id, attempts_used, max_attempts, lifetime_attempts, attempts_remaining, last_guess_at)
+                VALUES (:u, :d, :au, :ma, :la_ins, :ar_ins, :lga_ins)
+                ON CONFLICT(user_id, drop_id) DO UPDATE SET
+                    attempts_used = excluded.attempts_used,
+                    max_attempts = excluded.max_attempts,
+                    lifetime_attempts = COALESCE(:la_upd, tekker_player_state.lifetime_attempts),
+                    attempts_remaining = COALESCE(:ar_upd, tekker_player_state.attempts_remaining),
+                    last_guess_at = COALESCE(:lga_upd, tekker_player_state.last_guess_at)");
+            $stmt->bindValue(':u', (string)($in['userId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':d', (string)($in['dropId'] ?? ''), SQLITE3_TEXT);
+            $stmt->bindValue(':au', $au, SQLITE3_INTEGER);
+            $stmt->bindValue(':ma', $ma, SQLITE3_INTEGER);
+            $stmt->bindValue(':la_ins', $la, SQLITE3_INTEGER);
+            $stmt->bindValue(':ar_ins', $ar, SQLITE3_INTEGER);
+            $stmt->bindValue(':lga_ins', $lga, $lga !== null ? SQLITE3_TEXT : SQLITE3_NULL);
+            $stmt->bindValue(':la_upd', $hasLa ? (int)$in['lifetimeAttempts'] : null, $hasLa ? SQLITE3_INTEGER : SQLITE3_NULL);
+            $stmt->bindValue(':ar_upd', $hasAr ? (int)$in['attemptsRemaining'] : null, $hasAr ? SQLITE3_INTEGER : SQLITE3_NULL);
+            $stmt->bindValue(':lga_upd', $hasLga ? (string)$in['lastGuessAt'] : null, $hasLga ? SQLITE3_TEXT : SQLITE3_NULL);
             $stmt->execute();
             $result = ['ok' => true];
             break;

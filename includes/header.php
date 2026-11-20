@@ -126,15 +126,18 @@ start_secure_session();
                     </div>
                 </li>
 
-                <li class="dropdown" id="nav-admin-dropdown" style="<?php echo !empty($_SESSION['user']['is_admin']) ? '' : 'display: none;'; ?>">
+                <?php if (!empty($_SESSION['user']['is_admin'])): ?>
+                <li class="dropdown" id="nav-admin-dropdown">
                     <a href="javascript:void(0)"
-                        class="dropbtn <?php echo in_array($current_page, ['dashboard', 'telemetry', 'mission_manager', 'bot_tokens', 'special_deliveries', 'site_settings', 'theme_manager']) ? 'active' : ''; ?>"
+                        class="dropbtn <?php echo in_array($current_page, ['dashboard', 'telemetry', 'exceptions', 'mission_manager', 'bot_tokens', 'special_deliveries', 'site_settings', 'theme_manager']) ? 'active' : ''; ?>"
                         style="color: #ff5555;"><?= __('Admin') ?> <i class="fas fa-caret-down"></i></a>
                     <div class="dropdown-content">
                         <a href="/admin/dashboard.php"
                             class="<?php echo ($current_page == 'dashboard') ? 'active' : ''; ?>"><?= __('Dashboard') ?></a>
                         <a href="/admin/telemetry.php"
                             class="<?php echo ($current_page == 'telemetry') ? 'active' : ''; ?>"><?= __('Telemetry') ?></a>
+                        <a href="/admin/exceptions.php"
+                            class="<?php echo ($current_page == 'exceptions') ? 'active' : ''; ?>"><i class="fas fa-exclamation-triangle" style="color:#ff6b6b;margin-right:.35rem;"></i><?= __('Exceptions') ?></a>
                         <a href="/admin/mission_manager.php"
                             class="<?php echo ($current_page == 'mission_manager') ? 'active' : ''; ?>"><?= __('Mission Manager') ?></a>
                         <a href="/admin/special_deliveries.php"
@@ -147,6 +150,7 @@ start_secure_session();
                             class="<?php echo ($current_page == 'theme_manager') ? 'active' : ''; ?>"><i class="fas fa-palette" style="color:var(--pso-blue);margin-right:.35rem;"></i><?= __('Theme Manager') ?></a>
                     </div>
                 </li>
+                <?php endif; ?>
 
                 <?php if (is_feature_enabled('registration')): ?>
                 <li><a href="/register.php"

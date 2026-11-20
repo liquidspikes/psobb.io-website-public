@@ -877,20 +877,20 @@ input:checked + .slider:before {
                 <div class="settings-card">
                     <h3><i class="fas fa-chart-bar"></i> 4. <?= __('Game Rates & Multipliers') ?></h3>
                     <p style="font-size:0.85rem; color:#aaa; margin-top:0; margin-bottom:1rem;">
-                        <?= __('Configure rate labels displayed on the homepage status widget. (Note: In-game rates are governed by your NewServ configuration).') ?>
+                        <?= __('Rates are dynamically synchronized with NewServ\'s live configuration. Values configured below serve as fallback defaults if NewServ is unreachable.') ?>
                     </p>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                         <div class="field-group">
-                            <label><?= __('EXP Rate') ?></label>
+                            <label><?= __('EXP Rate') ?> <span style="font-size:0.75rem; color:#00ff88; font-weight:normal;">(Live: <?= htmlspecialchars($EXP_RATE) ?>)</span></label>
                             <input type="text" class="field-input" name="exp_rate" value="<?= htmlspecialchars($cfg['exp_rate']) ?>" placeholder="1x">
                         </div>
                         <div class="field-group">
-                            <label><?= __('Drop Rate') ?></label>
+                            <label><?= __('Drop Rate') ?> <span style="font-size:0.75rem; color:#00ff88; font-weight:normal;">(Live: <?= htmlspecialchars($DROP_RATE) ?>)</span></label>
                             <input type="text" class="field-input" name="drop_rate" value="<?= htmlspecialchars($cfg['drop_rate']) ?>" placeholder="1x">
                         </div>
                         <div class="field-group">
-                            <label><?= __('Meseta Rate') ?></label>
+                            <label><?= __('Meseta Rate') ?> <span style="font-size:0.75rem; color:#00ff88; font-weight:normal;">(Live: <?= htmlspecialchars($MESETA_RATE) ?>)</span></label>
                             <input type="text" class="field-input" name="meseta_rate" value="<?= htmlspecialchars($cfg['meseta_rate']) ?>" placeholder="1x">
                         </div>
                     </div>

@@ -337,8 +337,16 @@ foreach ($clients as $client) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'CHALLENGE_STAGES') {
-            $c_times = array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []);
-            if (count($c_times) >= (int)$m['goal_target']) {
+            $cleared_c_stages = count_cleared_challenge_stages($client);
+            $c_target = (int)$m['goal_target'];
+            if ($c_target > 14) {
+                $c_target = min(14, $cleared_c_stages + 1);
+                $fix_cm = $db->prepare("UPDATE missions SET goal_target = :gt WHERE id = :mid");
+                $fix_cm->bindValue(':gt', (string)$c_target, SQLITE3_TEXT);
+                $fix_cm->bindValue(':mid', (int)$m['mission_id'], SQLITE3_INTEGER);
+                $fix_cm->execute();
+            }
+            if ($cleared_c_stages >= $c_target) {
                 $completed = true;
             }
         } elseif (strpos($m['goal_type'], 'MAT') === 0) {
@@ -769,7 +777,9 @@ foreach ($clients as $client) {
         elseif ($level >= 40) $difficulty = 'Very Hard';
         elseif ($level >= 20) $difficulty = 'Hard';
         
-        $available_goals = ['PLAYTIME', 'ITEM', 'BATTLE_WINS', 'CHALLENGE_STAGES', 'EXPLORATION', 'PATROL', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA'];
+        $cleared_c_stages = count_cleared_challenge_stages($client);
+        $available_goals = ['PLAYTIME', 'ITEM', 'BATTLE_WINS', 'EXPLORATION', 'PATROL', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA'];
+        if ($cleared_c_stages < 14) $available_goals[] = 'CHALLENGE_STAGES';
         if ($meseta <= 940000) $available_goals[] = 'MESETA';
         if ($level < 200) $available_goals[] = 'LEVEL';
 
@@ -845,9 +855,8 @@ foreach ($clients as $client) {
                 $selected_target_friendly = $selected_target_id . " total Battle Mode wins";
                 break;
             case 'CHALLENGE_STAGES':
-                $c_times = array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []);
-                $selected_target_id = count($c_times) + 1;
-                $selected_target_friendly = $selected_target_id . " total Challenge Stages cleared";
+                $selected_target_id = min(14, $cleared_c_stages + 1);
+                $selected_target_friendly = $selected_target_id . " total Challenge Mode " . ($selected_target_id === 1 ? "stage" : "stages") . " cleared";
                 break;
             case 'EXPLORATION':
             case 'PATROL':
@@ -1151,9 +1160,9 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
                             $rareChance = 100;
                             $rare_count = 0; // Bypass the 1-rare limit
                         }
-                        // Challenge Mode gets a flat 75% rare chance
+                        // Challenge Mode gets a 100% rare reward guarantee
                         if ($selected_goal === 'CHALLENGE_STAGES') {
-                            $rareChance = 75;
+                            $rareChance = 100;
                         }
                         
                         $rawCharClass = isset($class_map[$class_id]) ? explode(' ', $class_map[$class_id])[0] : 'HUmar';
@@ -1179,8 +1188,12 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
                         $is_challenge = ($selected_goal === 'CHALLENGE_STAGES');
                         if ($category === 'Weapon') {
                             $stats = [0, 0, 0, 0]; // [Native, A.Beast, Machine, Dark]
-                            // Challenge Mode weapons get guaranteed hit%, so they can only get at most 2 other stats (since max total stats is 3).
-                            $numStatsToAssign = $is_challenge ? rand(1, 2) : rand(1, 3);
+                            $base_weapon_id = strtoupper(substr(trim($base_reward), 0, 6));
+                            $is_unsealable_weapon = in_array($base_weapon_id, ['003300', '00AB00'], true);
+                            // Unsealable weapons store their kill counter in attribute slot 3 (bytes 10..11), so max total attributes is 2 (vs 3 for normal weapons).
+                            // Challenge Mode weapons get guaranteed hit%, reducing available non-hit attribute slots by 1.
+                            $maxNonHitStats = ($is_unsealable_weapon ? 2 : 3) - ($is_challenge ? 1 : 0);
+                            $numStatsToAssign = rand(1, $maxNonHitStats);
                             $availableIndices = [0, 1, 2, 3];
                             shuffle($availableIndices);
                             for ($i = 0; $i < $numStatsToAssign; $i++) {
@@ -1188,8 +1201,8 @@ CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes stri
                                 $amount = $is_challenge ? rand(3, 10) * 5 : rand(1, 10) * 5;
                                 $stats[$index] = $amount;
                             }
-                            // Challenge Mode weapons get guaranteed hit% capped at 20%
-                            $hit = $is_challenge ? rand(1, 4) * 5 : 0;
+                            // Challenge Mode weapons get guaranteed 25%-50% Hit
+                            $hit = $is_challenge ? rand(5, 10) * 5 : 0;
                             $single_item_string .= " " . implode("/", $stats) . ($hit > 0 ? "/$hit" : "");
                         } else if ($category === 'Armor' || $category === 'Shield') {
                             $defBonus = $is_challenge ? rand(2, 5) * 5 : rand(0, 5) * 5;

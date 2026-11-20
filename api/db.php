@@ -9,6 +9,45 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
+require_once __DIR__ . '/exception_logger.php';
+
+if (!function_exists('decode_psochar_name')) {
+    /**
+     * Decodes a PSOBB character name from raw .psochar binary data (offset 0x3C8 / 968, 32 bytes),
+     * matching NewServ's pstring<TextEncoding::UTF16_ALWAYS_MARKED, 0x10>::decode():
+     *   - Scans 2 bytes at a time up to the first UTF-16LE NUL code unit (\x00\x00).
+     *   - Converts UTF-16LE -> UTF-8.
+     *   - Strips any 2-byte "\t<lang>" prefix (E/J/B/T/K/etc.) while preserving "\tC" color codes.
+     */
+    function decode_psochar_name(string $charData, bool $trim = true): string {
+        if (strlen($charData) < 0x3C8 + 0x20) {
+            return '';
+        }
+        $raw = substr($charData, 0x3C8, 0x20);
+        $byteLen = 0x20;
+        for ($z = 0; $z < 0x20; $z += 2) {
+            if ($raw[$z] === "\x00" && $raw[$z + 1] === "\x00") {
+                $byteLen = $z;
+                break;
+            }
+        }
+        if ($byteLen === 0) {
+            return '';
+        }
+        $slice = substr($raw, 0, $byteLen);
+        $utf8 = function_exists('mb_convert_encoding')
+            ? mb_convert_encoding($slice, 'UTF-8', 'UTF-16LE')
+            : @iconv('UTF-16LE', 'UTF-8//IGNORE', $slice);
+        if (!is_string($utf8) || $utf8 === '') {
+            return '';
+        }
+        if (strlen($utf8) >= 2 && $utf8[0] === "\t" && $utf8[1] !== 'C' && ord($utf8[1]) < 0x80) {
+            $utf8 = substr($utf8, 2);
+        }
+        return $trim ? trim($utf8, " \r\n\0\x0B") : $utf8;
+    }
+}
+
 /**
  * Retrieves a singleton-like SQLite3 database connection.
  * Automatically runs required schema migrations (e.g., adding missing columns or tables) 
@@ -532,6 +571,144 @@ function get_db(bool $reset = false)
             );
             CREATE INDEX IF NOT EXISTS idx_daily_rewards_account_date ON daily_rewards(account_id, claim_date);
         ");
+
+        // --- Idempotent Self-Heal Migration for Invalid/Swapped Item Hex Payloads ---
+        $itemHexMigrated = $db->querySingle("SELECT value FROM tekker_settings WHERE key = 'migration_fix_invalid_item_hex_v1'");
+        if (!$itemHexMigrated) {
+            $hasTable = function (string $tbl) use ($db): bool {
+                $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = :tbl LIMIT 1");
+                $stmt->bindValue(':tbl', $tbl, SQLITE3_TEXT);
+                $res = $stmt->execute();
+                return $res && $res->fetchArray(SQLITE3_NUM) !== false;
+            };
+            $db->exec("BEGIN IMMEDIATE TRANSACTION;");
+            try {
+                if ($hasTable('missions')) {
+                    $db->exec("
+                        UPDATE missions
+                        SET reward_item_string = REPLACE(
+                            REPLACE(reward_item_string, '030209001D0000000000000000000000', '03021D00090000000000000000000000'),
+                            '030212001D0000000000000000000000', '03021D00120000000000000000000000'
+                        )
+                        WHERE reward_item_string LIKE '%030209001D0000000000000000000000%'
+                           OR reward_item_string LIKE '%030212001D0000000000000000000000%';
+                    ");
+                }
+                if ($hasTable('rewards_claimed')) {
+                    $db->exec("
+                        UPDATE rewards_claimed
+                        SET item_string = REPLACE(
+                            REPLACE(item_string, '030209001D0000000000000000000000', '03021D00090000000000000000000000'),
+                            '030212001D0000000000000000000000', '03021D00120000000000000000000000'
+                        )
+                        WHERE item_string LIKE '%030209001D0000000000000000000000%'
+                           OR item_string LIKE '%030212001D0000000000000000000000%';
+                    ");
+                }
+                if ($hasTable('special_deliveries')) {
+                    $db->exec("
+                        UPDATE special_deliveries
+                        SET item_string = REPLACE(item_string, '030B070000', '030B060000')
+                        WHERE status = 'pending' AND item_string LIKE '%030B070000%';
+                    ");
+                }
+                $db->exec("INSERT OR REPLACE INTO tekker_settings (key, value) VALUES ('migration_fix_invalid_item_hex_v1', '1');");
+                $db->exec("COMMIT;");
+            } catch (Exception $migEx) {
+                @$db->exec("ROLLBACK;");
+            }
+        }
+
+        // --- Idempotent Self-Heal Migration for Stuck Challenge Mode Bounties (goal_target > 14) ---
+        $cmMigrated = $db->querySingle("SELECT value FROM tekker_settings WHERE key = 'migration_fix_challenge_stages_v1'");
+        if (!$cmMigrated) {
+            $playersDir = function_exists('get_newserv_players_dir') ? get_newserv_players_dir() : '/opt/newserv/system/players/';
+            $playersDir = rtrim($playersDir, '/\\') . '/';
+            $filesByUser = [];
+            if (@is_dir($playersDir)) {
+                $entries = @scandir($playersDir);
+                if (is_array($entries)) {
+                    foreach ($entries as $fname) {
+                        if (preg_match('/^player_(.+)_(\d+)\.psochar$/i', $fname, $fm)) {
+                            $filesByUser[strtolower($fm[1])][] = $playersDir . $fname;
+                        }
+                    }
+                }
+            }
+
+            $countPsocharCleared = function (string $username, string $charName) use ($filesByUser): int {
+                $paths = $filesByUser[strtolower($username)] ?? [];
+                foreach ($paths as $pPath) {
+                    $buf = @file_get_contents($pPath);
+                    if ($buf === false || strlen($buf) < (0x2CC0 + 0x3C)) {
+                        continue;
+                    }
+                    $rawName = decode_psochar_name($buf, false);
+                    if ($rawName === '' || $rawName !== $charName) {
+                        continue;
+                    }
+                    $vals = unpack('V14', substr($buf, 0x2CC4, 56));
+                    if (!is_array($vals)) {
+                        return 0;
+                    }
+                    $cleared = 0;
+                    foreach ($vals as $v) {
+                        $v = (int)$v & 0xFFFFFFFF;
+                        $mask = ($v >> 16) & 0xFFFF;
+                        $ones = substr_count(decbin($mask), '1');
+                        $dec = ($ones < 4 || $ones > 12) ? 0xFFFF : (($mask ^ $v) & 0xFFFF);
+                        if ($dec > 0 && $dec < 0xFFFF) {
+                            $cleared++;
+                        }
+                    }
+                    return $cleared;
+                }
+                return 0;
+            };
+
+            $db->exec("BEGIN IMMEDIATE TRANSACTION;");
+            try {
+                $cmStmt = $db->query("
+                    SELECT DISTINCT m.id, m.description, pm.character_name, u.username
+                    FROM missions m
+                    JOIN player_missions pm ON pm.mission_id = m.id
+                    LEFT JOIN users u ON u.account_id = pm.account_id
+                    WHERE m.goal_type = 'CHALLENGE_STAGES'
+                      AND pm.status = 'in_progress'
+                      AND CAST(m.goal_target AS INTEGER) > 14
+                ");
+                $rowsToFix = [];
+                if ($cmStmt) {
+                    while ($r = $cmStmt->fetchArray(SQLITE3_ASSOC)) {
+                        $rowsToFix[] = $r;
+                    }
+                    $cmStmt->finalize();
+                }
+
+                $updCm = $db->prepare("UPDATE missions SET goal_target = :gt, description = :desc WHERE id = :id");
+                foreach ($rowsToFix as $r) {
+                    $cleared = $countPsocharCleared((string)($r['username'] ?? ''), (string)($r['character_name'] ?? ''));
+                    $newTarget = min(14, $cleared + 1);
+                    $desc = preg_replace(['/\b1[56]\b/', '/\b(?:fifteen|sixteen)\b/i'], (string)$newTarget, (string)$r['description']);
+                    if ($newTarget === 1 && $desc !== null) {
+                        $desc = preg_replace('/\b1(\s+(?:[a-z-]+\s+){0,2}?)stages\b/i', '1$1stage', $desc);
+                    }
+                    if ($desc === null) {
+                        $desc = (string)$r['description'];
+                    }
+                    $updCm->bindValue(':gt', (string)$newTarget, SQLITE3_TEXT);
+                    $updCm->bindValue(':desc', $desc, SQLITE3_TEXT);
+                    $updCm->bindValue(':id', (int)$r['id'], SQLITE3_INTEGER);
+                    $updCm->execute();
+                    $updCm->reset();
+                }
+
+                $db->exec("INSERT OR REPLACE INTO tekker_settings (key, value) VALUES ('migration_fix_challenge_stages_v1', '1');");
+                $db->exec("COMMIT;");
+            } catch (Exception $cmMigEx) {
+                @$db->exec("ROLLBACK;");
+            }
+        }
 
         // Enable FK enforcement only after all schema migrations are done
         $db->exec("PRAGMA foreign_keys = ON;");

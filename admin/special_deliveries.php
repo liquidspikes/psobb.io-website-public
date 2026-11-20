@@ -687,7 +687,7 @@ const MAT_TYPES = [
     { id: 'mat-hp',    name: 'HP Material',    hex: '030B03' },
     { id: 'mat-tp',    name: 'TP Material',    hex: '030B04' },
     { id: 'mat-def',   name: 'Def Material',   hex: '030B05' },
-    { id: 'mat-luck',  name: 'Luck Material',  hex: '030B07' },
+    { id: 'mat-luck',  name: 'Luck Material',  hex: '030B06' },
 ];
 
 // Encode qty at byte 5 of the item binary so one $item command drops the whole stack.

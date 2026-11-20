@@ -12,6 +12,79 @@ function _t(str) {
     return (typeof window.__ === 'function') ? window.__(str) : str;
 }
 
+(function initPlayerErrorLogger() {
+    const seenKeys = new Set();
+    let sentCount = 0;
+
+    function isIgnoredSource(src) {
+        if (!src) return false;
+        return /^(?:chrome|moz|safari|edge)-extension:\/\//i.test(src) || src.indexOf('/api/log_client_error.php') !== -1;
+    }
+
+    function sendReport(kind, message, meta) {
+        if (sentCount >= 5) return;
+        const msgStr = String(message || '').trim().slice(0, 400);
+        if (!msgStr || msgStr.indexOf('ResizeObserver loop') !== -1) return;
+        const src = String((meta && meta.source) || '').slice(0, 240);
+        const stack = String((meta && meta.stack) || '').slice(0, 400);
+        if (isIgnoredSource(src) || isIgnoredSource(stack)) return;
+        if ((msgStr === 'Script error.' || msgStr === 'Script error') && !src && !stack) return;
+
+        const key = `${kind}|${msgStr}|${src}|${(meta && meta.line) || 0}`;
+        if (seenKeys.has(key)) return;
+        seenKeys.add(key);
+        sentCount++;
+
+        const payload = JSON.stringify({
+            kind,
+            message: msgStr,
+            page: (window.location.pathname || '') + (window.location.search || ''),
+            source: src,
+            line: (meta && meta.line) || 0,
+            col: (meta && meta.col) || 0,
+            stack
+        });
+
+        try {
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/api/log_client_error.php', new Blob([payload], { type: 'application/json' }));
+                return;
+            }
+        } catch (_) { }
+
+        fetch('/api/log_client_error.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true
+        }).catch(() => { });
+    }
+
+    window.reportPlayerError = function (message, extra) {
+        sendReport('client_js_error', message, extra || {});
+    };
+
+    window.addEventListener('error', (event) => {
+        if (!event || !event.message) return;
+        sendReport('client_js_error', event.message, {
+            source: event.filename || '',
+            line: event.lineno || 0,
+            col: event.colno || 0,
+            stack: event.error && event.error.stack ? event.error.stack : ''
+        });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        const reason = event ? event.reason : null;
+        const msg = reason instanceof Error ? reason.message : (typeof reason === 'string' ? reason : 'Unhandled promise rejection');
+        sendReport('client_promise_rejection', msg, {
+            source: window.location.pathname || '',
+            stack: reason && reason.stack ? reason.stack : ''
+        });
+    });
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     // Detect PWA Standalone Mode
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -53,26 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global login UI updates
     const userStr = sessionStorage.getItem('psobb_user');
     if (userStr) {
-        const teamLink = document.getElementById('nav-team-link');
-        if (teamLink) teamLink.style.display = ''; // Reset display to show it
-
-        const loginBtn = document.querySelector('.login-nav-btn');
-        if (loginBtn) {
-            loginBtn.textContent = (typeof window.__ === 'function')
-                ? window.__('Dashboard')
-                : (loginBtn.getAttribute('data-dashboard-text') || 'Dashboard');
-        }
-
-        const signupBtn = document.querySelector('.signup-nav-btn');
-        if (signupBtn) signupBtn.style.display = 'none';
-
-        // Admin only links
         try {
             const userData = JSON.parse(userStr);
-            if (userData && userData.isAdmin) {
-                const adminDropdown = document.getElementById('nav-admin-dropdown');
-                if (adminDropdown) adminDropdown.style.display = '';
-            }
+            updateHeaderNav(userData);
         } catch (e) { }
     }
 
@@ -212,21 +268,57 @@ async function handleLogin(e) {
     }
 }
 
-function checkLoginStatus() {
+function updateHeaderNav(user) {
+    if (!user) return;
+    const teamLink = document.getElementById('nav-team-link');
+    if (teamLink) teamLink.style.display = ''; // Reset display to show it
+
+    const loginBtn = document.querySelector('.login-nav-btn');
+    if (loginBtn) {
+        loginBtn.textContent = (typeof window.__ === 'function')
+            ? window.__('Dashboard')
+            : (loginBtn.getAttribute('data-dashboard-text') || 'Dashboard');
+    }
+
+    const signupBtn = document.querySelector('.signup-nav-btn');
+    if (signupBtn) signupBtn.style.display = 'none';
+
+    if (user.isAdmin) {
+        const adminDropdown = document.getElementById('nav-admin-dropdown');
+        if (adminDropdown) adminDropdown.style.display = '';
+    }
+}
+
+async function checkLoginStatus() {
     const userStr = sessionStorage.getItem('psobb_user');
     if (userStr) {
         try {
             const user = JSON.parse(userStr);
             showDashboard(user);
+            return;
         } catch (e) {
             sessionStorage.removeItem('psobb_user');
         }
+    }
+
+    // Attempt to automatically restore login status from server session cookie
+    try {
+        const response = await fetch('/api/account_data.php', { credentials: 'same-origin' });
+        if (response.ok) {
+            const user = await response.json();
+            sessionStorage.setItem('psobb_user', JSON.stringify(user));
+            showDashboard(user);
+        }
+    } catch (e) {
+        console.error('Failed to restore session:', e);
     }
 }
 
 function showDashboard(user) {
     const loginContainer = document.querySelector('.login-container-form');
     const dashboard = document.getElementById('dashboard');
+
+    updateHeaderNav(user);
 
     if (loginContainer) loginContainer.style.display = 'none';
     if (dashboard) {
@@ -1618,6 +1710,11 @@ window.switchDashboardTab = function (tabId) {
 // Switch Character Slot
 window.switchCharSlot = function (slotIndex) {
     window.activeSlot = slotIndex;
+    const resetMsgEl = document.getElementById('reset-mat-message');
+    if (resetMsgEl) {
+        resetMsgEl.style.display = 'none';
+        resetMsgEl.textContent = '';
+    }
     document.querySelectorAll('.slot-btn').forEach(btn => {
         btn.classList.remove('active');
         if (parseInt(btn.getAttribute('data-slot')) === slotIndex) {
@@ -3716,7 +3813,15 @@ const tekkerI18n = {
         maxSelect: "You can select at most 3 tokens.",
         tierInfo: "{count} Token(s) — Up to {stars}-star weapons unlocked",
         noSelected: "None",
-        combinedLabel: "Combined Stats"
+        combinedLabel: "Combined Stats",
+        keep3Error: "You must select exactly 3 attributes to keep.",
+        noticePrefix: "Notice:",
+        selectWeaponPrompt: "Please select a weapon in all three choice dropdowns.",
+        invalidWeapon: "Invalid weapon selection.",
+        tierLocked: "Weapon tier {tier} is locked. Select more tokens to unlock it.",
+        noDupes: "For Tier {tier} weapons with {count} token(s), you must select different items (no duplicates allowed).",
+        maxDupes: "You can select at most {max} duplicates of the same Tier {tier} weapon.",
+        tierSuffix: " (Tier {tier})"
     },
     jp: {
         choice1: "武器候補 1",
@@ -3734,7 +3839,15 @@ const tekkerI18n = {
         maxSelect: "選択できるトークンは最大3個までです。",
         tierInfo: "{count}個のトークン — 最大 {stars}★ の武器をアンロック",
         noSelected: "選択なし",
-        combinedLabel: "結合ステータス"
+        combinedLabel: "結合ステータス",
+        keep3Error: "残す属性を正確に3つ選択してください。",
+        noticePrefix: "注意:",
+        selectWeaponPrompt: "3つの武器候補すべてを選択してください。",
+        invalidWeapon: "無効な武器選択です。",
+        tierLocked: "ティア {tier} の武器はロックされています。より多くのトークンを選択してアンロックしてください。",
+        noDupes: "{count}個のトークンでティア {tier} の武器を選ぶ場合、すべて異なる武器を選択する必要があります（重複不可）。",
+        maxDupes: "同じティア {tier} 武器は最大 {max} 個までしか選択できません。",
+        tierSuffix: " (Tier {tier})"
     },
     ru: {
         choice1: "Выбор оружия 1",
@@ -3752,34 +3865,108 @@ const tekkerI18n = {
         maxSelect: "Можно выбрать максимум 3 жетона.",
         tierInfo: "Жетонов: {count} — Оружие до {stars}★ разблокировано",
         noSelected: "Нет",
-        combinedLabel: "Общие характеристики"
+        combinedLabel: "Общие характеристики",
+        keep3Error: "Необходимо выбрать ровно 3 характеристики для сохранения.",
+        noticePrefix: "Внимание:",
+        selectWeaponPrompt: "Выберите оружие во всех трёх выпадающих списках.",
+        invalidWeapon: "Недопустимый выбор оружия.",
+        tierLocked: "Оружие уровня {tier} заблокировано. Выберите больше жетонов для разблокировки.",
+        noDupes: "Для оружия {tier}★ с {count} жетоном(ами) нужно выбрать разные предметы (без дубликатов).",
+        maxDupes: "Можно выбрать максимум {max} одинаковых оружия {tier}★.",
+        tierSuffix: " ({tier}★)"
     }
 };
 
 const tier9Weapons = [
-    { hex: '004400', en: "Red Handgun", jp: "レッドハンドガン" },
-    { hex: '003E00', en: "Red Partisan", jp: "レッドパルチザン" },
-    { hex: '004100', en: "Red Slicer", jp: "レッドスライサー" },
-    { hex: '000E00', en: "Double Saber", jp: "ダブルセイバー" },
-    { hex: '000105', en: "DB's Saber", jp: "ＤＢの剣" }
+    // Hunter
+    { hex: '000207', en: "Dragon Slayer", jp: "ドラゴンスレイヤー", classes: ['HU'] },
+    { hex: '008900', en: "Musashi", jp: "ムサシ", classes: ['HU'] },
+    { hex: '000206', en: "Last Survivor", jp: "ラストサバイバー", classes: ['HU'] },
+    { hex: '000407', en: "Gae Bolg", jp: "ゲイボルグ", classes: ['HU'] },
+    { hex: '000307', en: "Cross Scar", jp: "クロススカー", classes: ['HU'] },
+    { hex: '000405', en: "Brionac", jp: "ブリオナック", classes: ['HU'] },
+    { hex: '000305', en: "Blade Dance", jp: "ブレイドダンス", classes: ['HU'] },
+    { hex: '000306', en: "Bloody Art", jp: "ブラッディ アート", classes: ['HU'] },
+    // Ranger
+    { hex: '00CD00', en: "Tanegashima", jp: "タネガシマ", classes: ['RA'] },
+    { hex: '00D200', en: "Ano Bazooka", jp: "アノバズーカ", classes: ['RA'] },
+    { hex: '000707', en: "Justy-23ST", jp: "ジャスティ−２３ＳＴ", classes: ['RA'] },
+    { hex: '000706', en: "Wals-MK2", jp: "ヴァルス−ＭＫ２", classes: ['RA'] },
+    { hex: '000705', en: "Visk-235W", jp: "ヴィスク−２３５Ｗ", classes: ['RA'] },
+    { hex: '008B00', en: "Photon Launcher", jp: "フォトンランチャー", classes: ['RA'] },
+    { hex: '000907', en: "Final Impact", jp: "ファイナルインパクト", classes: ['RA'] },
+    { hex: '000906', en: "Meteor Smash", jp: "メテオスマッシュ", classes: ['RA'] },
+    { hex: '000905', en: "Crush Bullet", jp: "クラッシュバレット", classes: ['RA'] },
+    // Force
+    { hex: '000B06', en: "Alive Aqhu", jp: "アライブアクウ", classes: ['FO'] },
+    { hex: '005500', en: "Rabbit Wand", jp: "ラビットウォンド", classes: ['FO'] },
+    { hex: '000B05', en: "Brave Hammer", jp: "ブレイブハンマー", classes: ['FO'] },
+    { hex: '000B04', en: "Battle Verge", jp: "バトルヴァージ", classes: ['FO'] },
+    { hex: '008C00', en: "Talis", jp: "タリス", classes: ['FO'] },
+    { hex: '000A06', en: "Club of Zumiuran", jp: "ズミウランの杖", classes: ['FO'] },
+    { hex: '000A05', en: "Mace of Adaman", jp: "アダマンの杖", classes: ['FO'] },
+    { hex: '000A04', en: "Club of Laconium", jp: "ラコニウムの杖", classes: ['FO'] },
+    { hex: '000C06', en: "Storm Wand: Indra", jp: "インドラの稲妻", classes: ['FO'] },
+    { hex: '000C05', en: "Ice Staff: Dagon", jp: "ダゴンの氷杖", classes: ['FO'] },
+    // All Classes
+    { hex: '000F00', en: "Brave Knuckle", jp: "ブレイブナックル", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000107', en: "Durandal", jp: "デュランダル", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000106', en: "Kaladbolg", jp: "カラドボルグ", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000D00', en: "Photon Claw", jp: "フォトンクロー", classes: ['HU', 'RA', 'FO'] },
+    { hex: '00CB00', en: "Tyrell's Parasol", jp: "タイレルズパラソル", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000607', en: "Bravace", jp: "ブレイバズ", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000605', en: "Varista", jp: "バリスタ", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000606', en: "Custom Ray ver.OO", jp: "カスタムレイｖｅｒ．ＯＯ", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000E00', en: "Double Saber", jp: "ダブルセイバー", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000506', en: "Diska of Liberator", jp: "リベレイターの円刃", classes: ['HU', 'RA', 'FO'] }
 ];
 
 const tier10Weapons = [
-    { hex: '003400', en: "Red Sword", jp: "レッドソード" },
-    { hex: '004200', en: "Handgun: Guld", jp: "ハンドガン：ガルド" },
-    { hex: '004300', en: "Handgun: Milla", jp: "ハンドガン：ミラ" },
-    { hex: '004500', en: "Frozen Shooter", jp: "フローズンシューター" },
-    { hex: '001300', en: "Holy Ray", jp: "ホーリーレイ" },
-    { hex: '002100', en: "Chain Sawd", jp: "チェインソード" },
-    { hex: '001000', en: "Orotiagito", jp: "オロチアギト" },
-    { hex: '003001', en: "Girasole", jp: "ジラソーレ" },
-    { hex: '000F02', en: "God Hand", jp: "ゴッドハンド" },
-    { hex: '00C800', en: "Daylight Scar", jp: "デイライトスカー" }
+    // Hunter
+    { hex: '00B700', en: "Shouren", jp: "ショウレン", classes: ['HU'] },
+    { hex: '002001', en: "Laconium Axe", jp: "ラコニウムの斧", classes: ['HU'] },
+    { hex: '006900', en: "Heart of Poumn", jp: "ハートオブポウム", classes: ['HU'] },
+    { hex: '008A02', en: "Kamui", jp: "カムイ", classes: ['HU'] },
+    { hex: '003400', en: "Red Sword", jp: "レッドソード", classes: ['HU'] },
+    // Ranger
+    { hex: '00070B', en: "Rianov 303SNR-3", jp: "リアノフ３０３ＳＮＲ−３", classes: ['RA'] },
+    { hex: '004E00', en: "Panzer Faust", jp: "パンツァーファウスト", classes: ['RA'] },
+    { hex: '00070C', en: "Rianov 303SNR-4", jp: "リアノフ３０３ＳＮＲ−４", classes: ['RA'] },
+    { hex: '001500', en: "Flame Visit", jp: "フレームビジット", classes: ['RA'] },
+    { hex: '006B00', en: "Yasminkov 7000V", jp: "ヤスミノコフ７０００Ｖ", classes: ['RA'] },
+    // Force
+    { hex: '000C07', en: "Earth Wand Brownie", jp: "大地の杖「ブラウニー」", classes: ['FO'] },
+    { hex: '00C400', en: "Siren Glass Hammer", jp: "サイレンガラスハンマー", classes: ['FO'] },
+    { hex: '002200', en: "Caduceus", jp: "カドゥケウス", classes: ['FO'] },
+    { hex: '00C200', en: "Solferino", jp: "ソルフェリーノ", classes: ['FO'] },
+    { hex: '009200', en: "Guardianna", jp: "ガーディアンナ", classes: ['FO'] },
+    // Multi-class (Hunter / Ranger)
+    { hex: '00B500', en: "Sacred Duster", jp: "セイクリッドダスター", classes: ['HU', 'RA'] },
+    { hex: '000F02', en: "God Hand", jp: "ゴッドハンド", classes: ['HU', 'RA'] },
+    { hex: '009800', en: "Rika's Claw", jp: "リカのクロー", classes: ['HU', 'RA'] },
+    { hex: '002900', en: "Yamigarasu", jp: "ヤミガラス", classes: ['HU', 'RA'] },
+    { hex: '00B400', en: "Kusanagi", jp: "クサナギ", classes: ['HU', 'RA'] },
+    // Multi-class (Hunter / Force)
+    { hex: '002700', en: "Ancient Saber", jp: "古の剣", classes: ['HU', 'FO'] },
+    { hex: '001101', en: "Soul Banish", jp: "ソウルバニッシュ", classes: ['HU', 'FO'] },
+    // All Classes
+    { hex: '000B07', en: "Valkyrie", jp: "ヴァルキリー", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000D03', en: "Phoenix Claw", jp: "フェニックスクロー", classes: ['HU', 'RA', 'FO'] },
+    { hex: '000F01', en: "Angry Fist", jp: "アングリーフィスト", classes: ['HU', 'RA', 'FO'] },
+    { hex: '00C600', en: "Shichishito", jp: "シチシトウ", classes: ['HU', 'RA', 'FO'] },
+    { hex: '009400', en: "Morning Glory", jp: "モーニンググローリー", classes: ['HU', 'RA', 'FO'] }
 ];
 
 const tier11Weapons = [
-    { hex: '001200', en: "Spread Needle", jp: "スプレッドニードル" },
-    { hex: '00AB00', en: "Lame d'Argent", jp: "ラメ・ド・アルジャン" }
+    // Hunter
+    { hex: '001001', en: "Agito (1975)", jp: "アギト (1975)", classes: ['HU'] },
+    // Ranger
+    { hex: '008D00', en: "Nug2000-Bazooka", jp: "ヌグ２０００バズーカ", classes: ['RA'] },
+    // Force
+    { hex: '00C900', en: "Decalog", jp: "デカログ", classes: ['FO'] },
+    { hex: '005A00', en: "Prophets of Motav", jp: "モタブの預言書", classes: ['FO'] },
+    // All Classes
+    { hex: '003A00', en: "Madam's Parasol", jp: "マダムのパラソル", classes: ['HU', 'RA', 'FO'] }
 ];
 
 window.loadTekkerTokens = async function () {
@@ -3875,6 +4062,178 @@ window.handleCardClick = function (event, tokenId) {
     }
 };
 
+function getWeaponTier(hex) {
+    if (tier9Weapons.some(w => w.hex === hex)) return 9;
+    if (tier10Weapons.some(w => w.hex === hex)) return 10;
+    if (tier11Weapons.some(w => w.hex === hex)) return 11;
+    return null;
+}
+
+window.syncWeaponDropdowns = function (changedSelectId, _unused, classFilterChanged = false) {
+    const checkboxes = Array.from(document.querySelectorAll('.tekker-select-cb'));
+    const checked = checkboxes.filter(cb => cb.checked);
+    const count = checked.length;
+    if (count === 0) return;
+
+    const w1 = document.getElementById('tekker-weapon-1');
+    const w2 = document.getElementById('tekker-weapon-2');
+    const w3 = document.getElementById('tekker-weapon-3');
+    const classFilter = document.getElementById('tekker-class-filter');
+    if (!w1 || !w2 || !w3) return;
+
+    const lang = getLang();
+    const t = tekkerI18n[lang];
+    const filterVal = classFilter ? classFilter.value : 'ALL';
+
+    let allAvailableWeapons = [];
+    tier9Weapons.forEach(w => { allAvailableWeapons.push({ ...w, tier: 9 }); });
+    if (count >= 2) {
+        tier10Weapons.forEach(w => { allAvailableWeapons.push({ ...w, tier: 10 }); });
+    }
+    if (count >= 3) {
+        tier11Weapons.forEach(w => { allAvailableWeapons.push({ ...w, tier: 11 }); });
+    }
+
+    let filteredWeapons = allAvailableWeapons;
+    if (filterVal !== 'ALL') {
+        filteredWeapons = allAvailableWeapons.filter(w => w.classes && w.classes.includes(filterVal));
+    }
+    if (filteredWeapons.length === 0) {
+        filteredWeapons = allAvailableWeapons;
+    }
+
+    const selects = [w1, w2, w3];
+    const validHexes = filteredWeapons.map(w => w.hex);
+
+    selects.forEach((el, idx) => {
+        const prevVal = el.value;
+        let valToSet = prevVal;
+        if (classFilterChanged || !validHexes.includes(prevVal)) {
+            valToSet = validHexes[idx % validHexes.length];
+        }
+
+        el.innerHTML = filteredWeapons.map(w => {
+            const selectedAttr = (w.hex === valToSet) ? 'selected' : '';
+            const tierSuffix = t.tierSuffix.replace('{tier}', w.tier);
+            const labelName = (lang === 'jp' ? w.jp : w.en) + tierSuffix;
+            return `<option value="${w.hex}" ${selectedAttr}>${labelName}</option>`;
+        }).join('');
+
+        el.value = valToSet;
+    });
+
+    const val1 = w1.value;
+    const val2 = w2.value;
+    const val3 = w3.value;
+
+    const claimBtn = document.getElementById('tekker-claim-btn');
+    let hasSelectionError = false;
+    let selectionErrorMsg = '';
+
+    if (!val1 || !val2 || !val3) {
+        hasSelectionError = true;
+        selectionErrorMsg = t.selectWeaponPrompt;
+    } else {
+        const counts = {};
+        [val1, val2, val3].forEach(v => {
+            counts[v] = (counts[v] || 0) + 1;
+        });
+
+        for (const hex in counts) {
+            const tier = getWeaponTier(hex);
+            if (!tier) {
+                hasSelectionError = true;
+                selectionErrorMsg = t.invalidWeapon;
+                break;
+            }
+            if (tier > 8 + count) {
+                hasSelectionError = true;
+                selectionErrorMsg = t.tierLocked.replace('{tier}', tier);
+                break;
+            }
+            const maxAllowed = count - (tier - 9);
+            if (counts[hex] > maxAllowed) {
+                hasSelectionError = true;
+                if (maxAllowed === 1) {
+                    selectionErrorMsg = t.noDupes.replace('{tier}', tier).replace('{count}', count);
+                } else {
+                    selectionErrorMsg = t.maxDupes.replace('{max}', maxAllowed).replace('{tier}', tier);
+                }
+                break;
+            }
+        }
+    }
+
+    const errContainer = document.getElementById('tekker-selection-error-container');
+    const errText = document.getElementById('tekker-selection-error-text');
+
+    if (hasSelectionError) {
+        if (errContainer && errText) {
+            errContainer.style.display = 'block';
+            errText.innerHTML = `⚠️ <b>${t.noticePrefix}</b> ${selectionErrorMsg}`;
+        }
+        if (claimBtn) claimBtn.disabled = true;
+        return;
+    }
+
+    if (errContainer) {
+        errContainer.style.display = 'none';
+    }
+
+    const keeperContainer = document.getElementById('tekker-keeper-selection-container');
+    const keeperActive = keeperContainer && keeperContainer.style.display !== 'none';
+    let keeperOk = true;
+    if (keeperActive) {
+        const keeperCheckedCount = document.querySelectorAll('.tekker-keeper-cb:checked').length;
+        if (keeperCheckedCount !== 3) {
+            keeperOk = false;
+        }
+    }
+
+    const stats = { stat_native: 0, stat_abeast: 0, stat_machine: 0, stat_dark: 0, stat_hit: 0 };
+    checked.forEach(cb => {
+        stats.stat_native += parseInt(cb.getAttribute('data-native') || 0);
+        stats.stat_abeast += parseInt(cb.getAttribute('data-abeast') || 0);
+        stats.stat_machine += parseInt(cb.getAttribute('data-machine') || 0);
+        stats.stat_dark += parseInt(cb.getAttribute('data-dark') || 0);
+        stats.stat_hit += parseInt(cb.getAttribute('data-hit') || 0);
+    });
+    if (keeperActive) {
+        const kept = Array.from(document.querySelectorAll('.tekker-keeper-cb:checked')).map(cb => cb.value);
+        Object.keys(stats).forEach(k => { if (!kept.includes(k)) stats[k] = 0; });
+    }
+    const overCap = Object.values(stats).some(v => v > 90);
+    const warningContainer = document.getElementById('tekker-cap-warning-container');
+    if (warningContainer) {
+        warningContainer.style.display = overCap ? 'block' : 'none';
+    }
+
+    if (claimBtn) {
+        claimBtn.disabled = !keeperOk || overCap;
+    }
+};
+
+window.handleKeeperChange = function () {
+    const checkboxes = Array.from(document.querySelectorAll('.tekker-keeper-cb'));
+    const checked = checkboxes.filter(cb => cb.checked);
+    const count = checked.length;
+
+    checkboxes.forEach(cb => {
+        if (!cb.checked) {
+            cb.disabled = (count >= 3);
+        } else {
+            cb.disabled = false;
+        }
+    });
+
+    const claimBtn = document.getElementById('tekker-claim-btn');
+    if (claimBtn) {
+        claimBtn.disabled = (count < 3);
+    }
+
+    window.syncWeaponDropdowns();
+};
+
 window.updateTekkerSelection = function () {
     const checkboxes = Array.from(document.querySelectorAll('.tekker-select-cb'));
     const checked = checkboxes.filter(cb => cb.checked);
@@ -3929,49 +4288,64 @@ window.updateTekkerSelection = function () {
         hit += parseInt(cb.getAttribute('data-hit') || 0);
     });
 
-    native = Math.min(100, native);
-    abeast = Math.min(100, abeast);
-    machine = Math.min(100, machine);
-    dark = Math.min(100, dark);
-    hit = Math.min(100, hit);
+    const overCap = (native > 90 || abeast > 90 || machine > 90 || dark > 90 || hit > 90);
+    const warningContainer = document.getElementById('tekker-cap-warning-container');
+    if (warningContainer) {
+        warningContainer.style.display = overCap ? 'block' : 'none';
+    }
 
     const statParts = [];
-    statParts.push(`<span class="tekker-stat-badge ${native > 0 ? 'has-val' : ''}">Native: +${native}%</span>`);
-    statParts.push(`<span class="tekker-stat-badge ${abeast > 0 ? 'has-val' : ''}">A.Beast: +${abeast}%</span>`);
-    statParts.push(`<span class="tekker-stat-badge ${machine > 0 ? 'has-val' : ''}">Machine: +${machine}%</span>`);
-    statParts.push(`<span class="tekker-stat-badge ${dark > 0 ? 'has-val' : ''}">Dark: +${dark}%</span>`);
-    statParts.push(`<span class="tekker-stat-badge ${hit > 0 ? 'has-hit' : ''}">Hit: +${hit}%</span>`);
+    statParts.push(`<span class="tekker-stat-badge ${native > 0 ? 'has-val' : ''} ${native > 90 ? 'over-cap' : ''}">Native: +${native}%</span>`);
+    statParts.push(`<span class="tekker-stat-badge ${abeast > 0 ? 'has-val' : ''} ${abeast > 90 ? 'over-cap' : ''}">A.Beast: +${abeast}%</span>`);
+    statParts.push(`<span class="tekker-stat-badge ${machine > 0 ? 'has-val' : ''} ${machine > 90 ? 'over-cap' : ''}">Machine: +${machine}%</span>`);
+    statParts.push(`<span class="tekker-stat-badge ${dark > 0 ? 'has-val' : ''} ${dark > 90 ? 'over-cap' : ''}">Dark: +${dark}%</span>`);
+    statParts.push(`<span class="tekker-stat-badge ${hit > 0 ? 'has-hit' : ''} ${hit > 90 ? 'over-cap' : ''}">Hit: +${hit}%</span>`);
     const combinedStatsHtml = statParts.join('');
 
     document.getElementById('tekker-selected-count').textContent = count;
     document.getElementById('tekker-combined-stats').innerHTML = combinedStatsHtml;
 
-    // Determine allowed weapons and stars level
-    let allowedList = [];
-    let stars = 9;
-    if (count === 1) {
-        allowedList = [...tier9Weapons];
-        stars = 9;
-    } else if (count === 2) {
-        allowedList = [...tier9Weapons, ...tier10Weapons];
-        stars = 10;
+    // Handle >3 stats keeper selection checkboxes
+    const activeAttributes = [];
+    if (native > 0) activeAttributes.push({ key: 'stat_native', label: 'Native' });
+    if (abeast > 0) activeAttributes.push({ key: 'stat_abeast', label: 'A.Beast' });
+    if (machine > 0) activeAttributes.push({ key: 'stat_machine', label: 'Machine' });
+    if (dark > 0) activeAttributes.push({ key: 'stat_dark', label: 'Dark' });
+    if (hit > 0) activeAttributes.push({ key: 'stat_hit', label: 'Hit' });
+
+    const keeperContainer = document.getElementById('tekker-keeper-selection-container');
+    const keeperCheckboxesDiv = document.getElementById('tekker-keeper-checkboxes');
+    const claimBtn = document.getElementById('tekker-claim-btn');
+
+    if (activeAttributes.length > 3) {
+        if (keeperContainer && keeperCheckboxesDiv) {
+            const checkedKeys = Array.from(document.querySelectorAll('.tekker-keeper-cb:checked')).map(cb => cb.value);
+            keeperContainer.style.display = 'block';
+            keeperCheckboxesDiv.innerHTML = activeAttributes.map(attr => {
+                const isChecked = checkedKeys.includes(attr.key) ? 'checked' : '';
+                return `
+                    <label style="font-family:'Share Tech Mono', monospace; font-size:0.85rem; color:#fff; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                        <input type="checkbox" class="tekker-keeper-cb" value="${attr.key}" ${isChecked} onchange="window.handleKeeperChange()" />
+                        ${attr.label}
+                    </label>
+                `;
+            }).join('');
+            window.handleKeeperChange();
+        }
     } else {
-        allowedList = [...tier9Weapons, ...tier10Weapons, ...tier11Weapons];
-        stars = 11;
+        if (keeperContainer) keeperContainer.style.display = 'none';
+        if (keeperCheckboxesDiv) keeperCheckboxesDiv.innerHTML = '';
+        if (claimBtn) claimBtn.disabled = false;
     }
+
+    let stars = 9;
+    if (count === 1) stars = 9;
+    else if (count === 2) stars = 10;
+    else stars = 11;
 
     document.getElementById('tekker-unlocked-tier').textContent = t.tierInfo.replace('{count}', count).replace('{stars}', stars);
 
-    // Populate dropdown choices, preserving selections if they exist and are still valid
-    const selects = ['tekker-weapon-1', 'tekker-weapon-2', 'tekker-weapon-3'];
-    selects.forEach(sid => {
-        const sel = document.getElementById(sid);
-        const prevVal = sel.value;
-        sel.innerHTML = allowedList.map(w => `<option value="${w.hex}">${lang === 'jp' ? w.jp : w.en}</option>`).join('');
-        if (allowedList.some(w => w.hex === prevVal)) {
-            sel.value = prevVal;
-        }
-    });
+    window.syncWeaponDropdowns();
 };
 
 window.submitTekkerClaim = async function () {
@@ -3990,6 +4364,22 @@ window.submitTekkerClaim = async function () {
 
     if (alertBox) alertBox.style.display = 'none';
     if (claimBtn) claimBtn.disabled = true;
+
+    const keeperContainer = document.getElementById('tekker-keeper-selection-container');
+    let keepAttributes = [];
+    if (keeperContainer && keeperContainer.style.display !== 'none') {
+        const keeperCBs = Array.from(document.querySelectorAll('.tekker-keeper-cb:checked'));
+        keepAttributes = keeperCBs.map(cb => cb.value);
+        if (keepAttributes.length !== 3) {
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.className = 'alert-box danger';
+                alertBox.innerHTML = `❌ <b>${t.errorPrefix}</b> ${t.keep3Error}`;
+            }
+            if (claimBtn) claimBtn.disabled = false;
+            return;
+        }
+    }
 
     const overlay = document.getElementById('drop-animation-overlay');
     const box = document.getElementById('drop-item-box');
@@ -4030,6 +4420,7 @@ window.submitTekkerClaim = async function () {
                     body: JSON.stringify({
                         token_ids: tokenIds,
                         weapons: [w1, w2, w3],
+                        keep_attributes: keepAttributes,
                         csrf_token: window.getCSRFToken()
                     })
                 })
