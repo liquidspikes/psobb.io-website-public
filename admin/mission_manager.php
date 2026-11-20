@@ -1,10 +1,146 @@
 <?php
 require_once __DIR__ . '/../api/config.php';
 start_secure_session();
+$isGenerateLoreAjax = ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'generate_lore_copy'));
 if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
+    if ($isGenerateLoreAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin session expired. Please refresh and log in again.']);
+        exit;
+    }
     header("Location: ../login.php");
     exit;
 }
+
+if ($isGenerateLoreAjax) {
+    header('Content-Type: application/json; charset=utf-8');
+    verify_csrf_token();
+    require_once __DIR__ . '/../api/lang.php';
+    require_once __DIR__ . '/../api/db.php';
+    require_once __DIR__ . '/../api/functions.php';
+    require_once __DIR__ . '/../api/bounty_lore.php';
+
+    if (empty($GEMINI_API_KEY)) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'GEMINI_API_KEY is not configured.']);
+        exit;
+    }
+
+    $scope = (($_POST['scope'] ?? 'mission') === 'community_event') ? 'community_event' : 'mission';
+    $goalType = strtoupper(trim((string)($_POST['goal_type'] ?? 'BOSS_ARENA')));
+    $goalTarget = trim((string)($_POST['goal_target'] ?? ''));
+    $timeLimit = (int)($_POST['time_limit'] ?? 0);
+    $targetAmount = (int)($_POST['target_amount'] ?? 0);
+    $reward = trim((string)($_POST['reward_item_string'] ?? ''));
+
+    if (($goalType === 'SPEEDRUN_BOSS' || $goalType === 'SPEEDRUN_FLOOR') && $timeLimit > 0 && strpos($goalTarget, '_') === false) {
+        $goalTarget .= '_' . $timeLimit;
+    }
+    if ($scope === 'community_event' && $goalTarget === '' && in_array($goalType, ['MESETA', 'LEVEL_UP', 'MAT_CONSUME', 'PLAYTIME', 'CHALLENGE_STAGES'], true)) {
+        $goalTarget = 'ANY';
+    }
+    if ($goalTarget === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => __('Please select or enter a Goal Target first.')]);
+        exit;
+    }
+
+    $db = get_db();
+    $recentTitles = [];
+    $table = ($scope === 'community_event') ? 'community_events' : 'missions';
+    $tRes = @$db->query("SELECT title FROM {$table} ORDER BY id DESC LIMIT 15");
+    if ($tRes) {
+        while ($tRow = $tRes->fetchArray(SQLITE3_ASSOC)) {
+            if (!empty($tRow['title'])) {
+                $recentTitles[] = $tRow['title'];
+            }
+        }
+        $tRes->finalize();
+    }
+    $recentStr = !empty($recentTitles) ? implode(', ', $recentTitles) : 'None';
+
+    $objective = html_entity_decode(strip_tags(getClearObjective($goalType, $goalTarget)), ENT_QUOTES, 'UTF-8');
+    $resolved = bounty_lore_setting_for_objective($goalType, $goalTarget);
+    $sid = $resolved['setting_id'];
+    $lore = bounty_lore();
+    $giver = ($lore && isset($lore['settings'][$sid])) ? bounty_pick_giver($sid) : null;
+    $userLang = $PSO_LANG ?? 'en';
+
+    if ($scope === 'community_event') {
+        $prompt = bounty_build_community_event_prompt($sid, $giver, [
+            'goal' => $goalType,
+            'objective' => $objective,
+            'target_amount' => $targetAmount,
+            'target' => $goalTarget,
+            'reward' => $reward,
+            'recent_titles' => $recentStr,
+            'is_location_goal' => $resolved['is_location_goal'],
+            'floor' => $resolved['floor'],
+            'location_override' => $resolved['location_override'],
+        ], $userLang);
+    } else {
+        $prompt = bounty_build_admin_mission_prompt($sid, $giver, [
+            'goal' => $goalType,
+            'objective' => $objective,
+            'difficulty' => 'Standard',
+            'is_location_goal' => $resolved['is_location_goal'],
+            'floor' => $resolved['floor'],
+            'target' => $goalTarget,
+            'reward' => $reward,
+            'recent_titles' => $recentStr,
+            'location_override' => $resolved['location_override'],
+        ], $userLang);
+    }
+
+    $model = !empty($GEMINI_MODEL) ? $GEMINI_MODEL : 'gemini-2.5-flash';
+    $geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" . $model . ":generateContent?key=" . $GEMINI_API_KEY;
+    $payload = json_encode([
+        'contents' => [['parts' => [['text' => $prompt]]]],
+        'generationConfig' => [
+            'responseMimeType' => 'application/json',
+            'temperature' => 0.9,
+        ],
+    ]);
+    $ctx = stream_context_create([
+        'http' => [
+            'header' => "Content-type: application/json\r\n",
+            'method' => 'POST',
+            'content' => $payload,
+            'timeout' => 20,
+            'ignore_errors' => true,
+        ],
+    ]);
+    $raw = @file_get_contents($geminiUrl, false, $ctx);
+    if (!$raw) {
+        http_response_code(502);
+        echo json_encode(['success' => false, 'error' => __('Failed to contact Gemini API.')]);
+        exit;
+    }
+
+    $jsonRes = json_decode($raw, true);
+    $text = $jsonRes['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    $text = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim((string)$text));
+    $generated = json_decode($text, true);
+
+    if (!is_array($generated) || empty(trim((string)($generated['title'] ?? ''))) || empty(trim((string)($generated['description'] ?? '')))) {
+        http_response_code(502);
+        echo json_encode(['success' => false, 'error' => __('AI returned an invalid response. Please try again.')]);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'title' => trim((string)$generated['title']),
+        'description' => trim((string)$generated['description']),
+        'setting' => $sid,
+        'setting_name' => $lore['settings'][$sid]['name'] ?? $sid,
+        'episode' => $resolved['episode'],
+        'client' => $giver['name'] ?? "Hunter's Guild",
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $page_title = __('Manage Missions');
 include '../includes/header.php'; 
 
@@ -205,9 +341,10 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
     }
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; opacity: 0.8;}
-    input[type="text"], input[type="number"], select {
-        width: 100%; padding: 8px; background: rgba(0,0,0,0.4); border: 1px solid #444; color: #fff;
+    input[type="text"], input[type="number"], select, textarea {
+        width: 100%; padding: 8px; background: rgba(0,0,0,0.4); border: 1px solid #444; color: #fff; font-family: inherit; box-sizing: border-box;
     }
+    textarea { resize: vertical; line-height: 1.4; }
 </style>
 
 <main class="container">
@@ -230,17 +367,23 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         <!-- Add Mission Form -->
         <div class="admin-card">
             <h3 style="color: #00bfff;"><?= __('Create Daily Bounty Template') ?></h3>
-            <form method="POST">
+            <form method="POST" id="add_mission_form">
                 <input type="hidden" name="action" value="add_mission">
                 
                 <div class="form-group">
-                    <label><?= __('Mission Title') ?></label>
-                    <input type="text" name="title" required placeholder="<?= htmlspecialchars(__('e.g. Become a Millionaire')) ?>">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap;">
+                        <label for="mission_title_input" style="margin-bottom:0;"><?= __('Mission Title') ?></label>
+                        <button type="button" id="btn_gen_mission_lore" onclick="generateLoreCopy('mission')" class="dl-btn" style="padding:3px 10px; font-size:0.78rem; border-color:#00ffcc; color:#00ffcc; background:rgba(0,255,204,0.12);">
+                            <i class="fas fa-magic"></i> <?= __('Generate Lore Copy') ?>
+                        </button>
+                    </div>
+                    <input type="text" id="mission_title_input" name="title" required placeholder="<?= htmlspecialchars(__('e.g. Become a Millionaire')) ?>">
+                    <div id="mission_lore_status" style="font-size:0.75rem; margin-top:4px; min-height:1em; color:#00ffcc;"></div>
                 </div>
                 
                 <div class="form-group">
-                    <label><?= __('Description') ?></label>
-                    <input type="text" name="description" required placeholder="<?= htmlspecialchars(__('User friendly text of what to do')) ?>">
+                    <label for="mission_desc_input"><?= __('Description') ?></label>
+                    <textarea id="mission_desc_input" name="description" rows="3" required placeholder="<?= htmlspecialchars(__('User friendly text of what to do')) ?>"></textarea>
                 </div>
 
                 <div style="display:flex; gap:10px;">
@@ -340,6 +483,16 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         // Initialize UI on load just in case
         document.addEventListener('DOMContentLoaded', () => { updateGoalTargetUI(); updateCEGoalTargetUI(); });
         
+        const ceBossOptions = [
+            ...bossOptions,
+            {val: 'EP1_BOSS_RUSH', text: <?= json_encode(__('Any Ep1 Boss (Ep1 Boss Rush)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: 'EP2_BOSS_RUSH', text: <?= json_encode(__('Any Ep2 Boss (Ep2 Boss Rush)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: 'DIGITAL_BLASPHEMY', text: <?= json_encode(__('Vol Opt + Gol Dragon + Shambertin (Digital Blasphemy)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: 'DRACONIC_DOMINION', text: <?= json_encode(__('Dragon + Gol Dragon + Shambertin (Draconic Dominion)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: 'CATACLYSMIC_CORE', text: <?= json_encode(__('Dark Falz + Olga Flow + Shambertin (Cataclysmic Core)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: 'ALL_BOSSES', text: <?= json_encode(__('Any Boss Across All Episodes (Ultimate Gauntlet)'), JSON_UNESCAPED_UNICODE) ?>}
+        ];
+
         function updateCEGoalTargetUI() {
             const type = document.getElementById('ce_goal_type_select').value;
             const container = document.getElementById('ce_goal_target_container');
@@ -348,7 +501,7 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
             if (type === 'BOSS_ARENA') {
                 label.textContent = <?= json_encode(__('Select Target Boss'), JSON_UNESCAPED_UNICODE) ?>;
                 let html = '<select name="goal_target" required style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
-                bossOptions.forEach(b => html += `<option value="${b.val}">${b.text}</option>`);
+                ceBossOptions.forEach(b => html += `<option value="${b.val}">${b.text}</option>`);
                 html += '</select>';
                 container.innerHTML = html;
             } else if (type === 'EXPLORATION' || type === 'PATROL') {
@@ -366,6 +519,74 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                 if(type === 'BATTLE_WINS' || type === 'CHALLENGE_STAGES' || type === 'LEVEL') ph = <?= json_encode(__('e.g. 10'), JSON_UNESCAPED_UNICODE) ?>;
                 if(type === 'PLAYTIME') ph = <?= json_encode(__('Play time in seconds (e.g. 3600)'), JSON_UNESCAPED_UNICODE) ?>;
                 container.innerHTML = `<input type="text" name="goal_target" required placeholder="${ph}" style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">`;
+            }
+        }
+
+        async function generateLoreCopy(scope) {
+            const isCE = (scope === 'community_event');
+            const form = document.getElementById(isCE ? 'add_ce_form' : 'add_mission_form');
+            const btn = document.getElementById(isCE ? 'btn_gen_ce_lore' : 'btn_gen_mission_lore');
+            const status = document.getElementById(isCE ? 'ce_lore_status' : 'mission_lore_status');
+            const titleInput = document.getElementById(isCE ? 'ce_title_input' : 'mission_title_input');
+            const descInput = document.getElementById(isCE ? 'ce_desc_input' : 'mission_desc_input');
+
+            const goalTypeEl = form.querySelector('[name="goal_type"]');
+            const goalTargetEl = form.querySelector('[name="goal_target"]');
+            const timeLimitEl = form.querySelector('[name="time_limit"]');
+            const targetAmountEl = form.querySelector('[name="target_amount"]');
+            const rewardEl = form.querySelector('[name="reward_item_string"]');
+
+            const goalTarget = goalTargetEl ? goalTargetEl.value.trim() : '';
+            if (!goalTarget) {
+                status.style.color = '#ff8800';
+                status.textContent = <?= json_encode(__('Please select or enter a Goal Target first.'), JSON_UNESCAPED_UNICODE) ?>;
+                if (goalTargetEl) goalTargetEl.focus();
+                return;
+            }
+
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            const body = new URLSearchParams();
+            body.set('action', 'generate_lore_copy');
+            body.set('scope', scope);
+            body.set('csrf_token', csrfToken);
+            body.set('goal_type', goalTypeEl ? goalTypeEl.value : 'BOSS_ARENA');
+            body.set('goal_target', goalTarget);
+            if (timeLimitEl) body.set('time_limit', timeLimitEl.value.trim());
+            if (targetAmountEl) body.set('target_amount', targetAmountEl.value.trim());
+            if (rewardEl) body.set('reward_item_string', rewardEl.value.trim());
+
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + <?= json_encode(__('Writing...'), JSON_UNESCAPED_UNICODE) ?>;
+            status.style.color = '#aaa';
+            status.textContent = <?= json_encode(__('Consulting Ragol lore archive...'), JSON_UNESCAPED_UNICODE) ?>;
+
+            try {
+                const res = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-CSRF-Token': csrfToken,
+                    },
+                    body: body.toString(),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    status.style.color = '#ff4444';
+                    status.textContent = (data && data.error) ? data.error : <?= json_encode(__('Failed to generate lore copy.'), JSON_UNESCAPED_UNICODE) ?>;
+                    return;
+                }
+                titleInput.value = data.title;
+                descInput.value = data.description;
+                status.style.color = isCE ? '#ffaa00' : '#00ffcc';
+                status.textContent = `${data.setting_name} (Ep ${data.episode}) — ${data.client}`;
+            } catch (err) {
+                status.style.color = '#ff4444';
+                status.textContent = <?= json_encode(__('Network error while contacting generator.'), JSON_UNESCAPED_UNICODE) ?>;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
             }
         }
         </script>
@@ -443,17 +664,23 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         <div class="admin-card">
             <h3 style="color: #ffaa00;"><?= __('Create Community Event') ?></h3>
             <p><?= __('Generates a server-wide shared goal. Anyone who contributes will get the reward when the total runs out!') ?></p>
-            <form method="POST">
+            <form method="POST" id="add_ce_form">
                 <input type="hidden" name="action" value="add_community_event">
                 
                 <div class="form-group">
-                    <label><?= __('Event Title') ?></label>
-                    <input type="text" name="title" required placeholder="<?= htmlspecialchars(__('e.g. The Great Dragon Purge')) ?>">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap;">
+                        <label for="ce_title_input" style="margin-bottom:0;"><?= __('Event Title') ?></label>
+                        <button type="button" id="btn_gen_ce_lore" onclick="generateLoreCopy('community_event')" class="dl-btn" style="padding:3px 10px; font-size:0.78rem; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.12);">
+                            <i class="fas fa-magic"></i> <?= __('Generate Lore Copy') ?>
+                        </button>
+                    </div>
+                    <input type="text" id="ce_title_input" name="title" required placeholder="<?= htmlspecialchars(__('e.g. The Great Dragon Purge')) ?>">
+                    <div id="ce_lore_status" style="font-size:0.75rem; margin-top:4px; min-height:1em; color:#ffaa00;"></div>
                 </div>
                 
                 <div class="form-group">
-                    <label><?= __('Description') ?></label>
-                    <input type="text" name="description" required placeholder="<?= htmlspecialchars(__('Slay 50 Dragons together to unlock a reward!')) ?>">
+                    <label for="ce_desc_input"><?= __('Description') ?></label>
+                    <textarea id="ce_desc_input" name="description" rows="3" required placeholder="<?= htmlspecialchars(__('Slay 50 Dragons together to unlock a reward!')) ?>"></textarea>
                 </div>
 
                 <div style="display:flex; gap:10px;">

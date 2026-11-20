@@ -100,6 +100,98 @@ if (is_array($lore)) {
             check($b[3] <= $lvl && $b[0] !== 12, "boss pick at level $lvl respects level gate and current floor");
         }
     }
+
+    // --- 5. Community Events, Admin Templates & Broadcasts -------------------
+    $objCases = [
+        ['BOSS_ARENA', '11', 1, 'ep1_forest'],
+        ['BOSS_ARENA', '12@1', 1, 'ep1_caves'],
+        ['BOSS_ARENA', '12@2', 2, 'ep2_gal_da_val'],
+        ['BOSS_ARENA', '13@1', 1, 'ep1_mines'],
+        ['BOSS_ARENA', '13@2', 2, 'ep2_seabed'],
+        ['BOSS_ARENA', '14@1', 1, 'ep1_ruins'],
+        ['BOSS_ARENA', '14@2', 2, 'ep2_vr_temple'],
+        ['BOSS_ARENA', '15', 2, 'ep2_vr_spaceship'],
+        ['BOSS_ARENA', '9', 4, 'ep4_desert'],
+        ['BOSS_ARENA', '16', 2, 'ep2_vr_spaceship'],
+        ['BOSS_ARENA', '17', 2, 'ep2_vr_temple'],
+        ['BOSS_ARENA', '18', 2, 'ep2_seabed'],
+        ['BOSS_ARENA', '19', 4, 'ep4_desert'],
+        ['BOSS_ARENA', 'EP1_BOSS_RUSH', 1, 'ep1_ruins'],
+        ['BOSS_ARENA', 'EP2_BOSS_RUSH', 2, 'ep2_seabed'],
+        ['BOSS_ARENA', 'DIGITAL_BLASPHEMY', 4, 'ep4_desert'],
+        ['BOSS_ARENA', 'DRACONIC_DOMINION', 4, 'ep4_desert'],
+        ['BOSS_ARENA', 'CATACLYSMIC_CORE', 4, 'ep4_desert'],
+        ['BOSS_ARENA', 'ALL_BOSSES', 4, 'ep4_desert'],
+        ['BOSS_ARENA', 'ANY_DRAGON', 2, 'ep2_vr_spaceship'],
+        ['EXPLORATION', '5', 1, 'ep1_caves'],
+        ['SPEEDRUN_FLOOR', '7_300', 1, 'ep1_mines'],
+    ];
+    foreach ($objCases as [$gt, $gta, $expEp, $expSid]) {
+        $res = bounty_lore_setting_for_objective($gt, $gta, 'Operation Example', 'Lore-grounded description', 7);
+        check($res['episode'] === $expEp && $res['setting_id'] === $expSid, "objective ($gt, $gta) -> ep$expEp / $expSid (got ep{$res['episode']} / {$res['setting_id']})");
+    }
+
+    $hubA = bounty_lore_setting_for_objective('LEVEL_UP', 'ANY', 'Fleet Mobilisation', 'Train together', 42);
+    $hubB = bounty_lore_setting_for_objective('LEVEL_UP', 'ANY', 'Fleet Mobilisation', 'Train together', 42);
+    check($hubA['setting_id'] === $hubB['setting_id'] && !$hubA['is_location_goal'], 'seeded hub objective selection is deterministic');
+
+    $ep2Hub = bounty_lore_setting_for_objective('MAT_CONSUME', 'ANY', 'Lab Conditioning', 'Pioneer 2 Laboratory research quota');
+    check($ep2Hub['setting_id'] === 'ep2_lab', 'Lab context selects ep2_lab hub setting');
+
+    // Episode-qualified 12@2 must resolve to Ep2 even with Ep1 distraction text
+    $bt12 = parse_boss_target('12@2');
+    check($bt12['floor'] === 12 && $bt12['episode'] === 2, 'cron_community parse_boss_target handles 12@2');
+    check(get_boss_episode_by_context('Caves Anomaly', 'Silent patrol without boss name', $bt12['floor'], $bt12['episode']) === 2, 'explicit 12@2 keeps Episode 2 despite Caves keyword');
+
+    // Seeded giver keeps consistent cast speaker across all milestones of one CE
+    $g1 = bounty_pick_giver_seeded('ep2_seabed', 19);
+    $g2 = bounty_pick_giver_seeded('ep2_seabed', 19);
+    check($g1 !== null && $g1['id'] === $g2['id'], 'bounty_pick_giver_seeded is deterministic for one CE id');
+
+    // Admin Daily Bounty Template prompt
+    $adminPrompt = bounty_build_admin_mission_prompt('ep2_gal_da_val', $g1, [
+        'goal' => 'BOSS_ARENA',
+        'objective' => '[Ep 2] Defeat Gal Gryphon',
+        'difficulty' => 'Standard',
+        'is_location_goal' => true,
+        'floor' => null,
+        'target' => '12@2',
+        'reward' => '5 Photon Drop',
+        'recent_titles' => 'Storm Over CCA',
+        'location_override' => null,
+    ], 'en');
+    check(strpos($adminPrompt, 'Gal Da Val') !== false && strpos($adminPrompt, '"description"') !== false && strpos($adminPrompt, 'do NOT invent or name a specific hunter') !== false, 'admin mission prompt is lore-grounded and reusable');
+
+    // Admin Community Event prompt
+    $ceRes = bounty_lore_setting_for_objective('BOSS_ARENA', 'DIGITAL_BLASPHEMY', '', '', 9);
+    $ceGiver = bounty_pick_giver_seeded($ceRes['setting_id'], 9);
+    $cePrompt = bounty_build_community_event_prompt($ceRes['setting_id'], $ceGiver, [
+        'goal' => 'BOSS_ARENA',
+        'objective' => 'Defeat Vol Opt, Gol Dragon, or Shambertin',
+        'target_amount' => 75000,
+        'target' => 'DIGITAL_BLASPHEMY',
+        'reward' => '3x Random Rare Drops',
+        'recent_titles' => 'Ancient Cataclysm',
+        'is_location_goal' => $ceRes['is_location_goal'],
+        'floor' => $ceRes['floor'],
+        'location_override' => $ceRes['location_override'],
+    ], 'en');
+    check(strpos($cePrompt, '75,000') !== false && strpos($cePrompt, 'Subterranean Desert') !== false && strpos($cePrompt, 'Hidden truths') !== false, 'community event prompt grounds setting, scale, and spoiler guard');
+
+    // Community milestone broadcasts (0%, 50%, 100%)
+    $sampleCE = [
+        'id' => 14,
+        'title' => 'Operation: Digital Blasphemy',
+        'description' => 'Corrupted cybernetic mainframes are threatening all three sectors.',
+        'goal_type' => 'BOSS_ARENA',
+        'goal_target' => 'DIGITAL_BLASPHEMY',
+    ];
+    $bcStart = bounty_build_community_broadcast_prompt($sampleCE, 'start', '0%', 'psobb.io');
+    $bcMid   = bounty_build_community_broadcast_prompt($sampleCE, '50', '50%', 'psobb.io');
+    $bcEnd   = bounty_build_community_broadcast_prompt($sampleCE, '100', '100%', 'psobb.io');
+    check($bcStart['speaker'] === $bcMid['speaker'] && $bcMid['speaker'] === $bcEnd['speaker'], 'all milestones for CE #14 share the same cast speaker (' . $bcStart['speaker'] . ')');
+    check($bcStart['speaker'] !== 'Mission Control' && strpos($bcStart['prompt'], 'BILINGUAL OUTPUT REQUIRED') !== false, 'broadcast prompt uses lore speaker and bilingual directive');
+    check(strpos($bcEnd['prompt'], 'psobb.io') !== false && strpos($bcMid['prompt'], '50%') !== false, 'broadcast prompts include milestone percentage and server claim URL at 100%');
 }
 
 echo "\n$passes passed, $fails failed\n";

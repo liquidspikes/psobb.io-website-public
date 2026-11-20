@@ -139,8 +139,10 @@ function bounty_setting_for_ep1_floor($floor)
 /**
  * A setting for an objective with no place of its own (Meseta, levels, materials...):
  * one of the episodes' hubs (Pioneer 2 in 3084-85, the Lab in 3085, Pioneer 2 in 3086).
+ *
+ * @param int|null $seed When set, selects deterministically instead of randomly.
  */
-function bounty_pick_hub_setting()
+function bounty_pick_hub_setting($seed = null)
 {
     $lore = bounty_lore();
     $hubs = $lore['world']['hubs'] ?? ['1' => 'ep1_pioneer2', '2' => 'ep2_lab', '4' => 'ep4_pioneer2'];
@@ -152,6 +154,12 @@ function bounty_pick_hub_setting()
     }
     if (empty($available)) {
         return [1, 'ep1_pioneer2'];
+    }
+    if ($seed !== null) {
+        ksort($available);
+        $eps = array_keys($available);
+        $ep = $eps[abs((int) $seed) % count($eps)];
+        return [$ep, $available[$ep]];
     }
     $ep = array_rand($available);
     return [$ep, $available[$ep]];
@@ -184,17 +192,191 @@ function bounty_episode_setting($episode)
 /**
  * Picks a quest giver from the setting's era-appropriate cast.
  *
+ * @param string   $setting_id
+ * @param int|null $seed When set, picks deterministically so recurring messages keep one voice.
  * @return array|null ['id'=>ns_id, ...card] or null if the setting has no cast.
  */
-function bounty_pick_giver($setting_id)
+function bounty_pick_giver_seeded($setting_id, $seed = null)
 {
     $lore = bounty_lore();
     $setting = $lore['settings'][$setting_id] ?? null;
     if (!$setting || empty($setting['cast'])) {
         return null;
     }
-    $id = $setting['cast'][array_rand($setting['cast'])];
+    $castIds = array_values($setting['cast']);
+    if ($seed !== null) {
+        $id = $castIds[abs((int) $seed) % count($castIds)];
+    } else {
+        $id = $castIds[array_rand($castIds)];
+    }
     return ['id' => $id] + $lore['cast'][$id];
+}
+
+/**
+ * Picks a quest giver from the setting's era-appropriate cast.
+ *
+ * @return array|null ['id'=>ns_id, ...card] or null if the setting has no cast.
+ */
+function bounty_pick_giver($setting_id)
+{
+    return bounty_pick_giver_seeded($setting_id, null);
+}
+
+/**
+ * Maps any bounty or Community Event goal_type + goal_target to the appropriate lore setting card.
+ *
+ * Handles multi-boss Community Event targets (EP1_BOSS_RUSH, DIGITAL_BLASPHEMY, etc.),
+ * episode-qualified single bosses ("12@2"), Ep1 field floors (including speedrun "7_300"),
+ * and non-location hub objectives. Safe to call even if api/lore/ files are absent.
+ *
+ * @return array ['episode'=>int, 'setting_id'=>string, 'is_location_goal'=>bool, 'floor'=>int|null, 'location_override'=>string|null]
+ */
+function bounty_lore_setting_for_objective($goal_type, $goal_target = '', $title = '', $desc = '', $seed = null)
+{
+    $goal_type = strtoupper(trim((string) $goal_type));
+    $goal_target = trim((string) $goal_target);
+    $lore = bounty_lore();
+
+    $multiBoss = [
+        'EP1_BOSS_RUSH' => [
+            'episode' => 1,
+            'setting_id' => bounty_episode_setting(1),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'This fleet-wide operation spans all four surveyed regions of Ragol in Episode I: Forest, Caves, Mines, and the Ruins beneath them.',
+        ],
+        'EP2_BOSS_RUSH' => [
+            'episode' => 2,
+            'setting_id' => bounty_episode_setting(2),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'This fleet-wide operation spans the Pioneer 2 Laboratory VR simulators, Gal Da Val Island, and the Seabed facility beneath it.',
+        ],
+        'DIGITAL_BLASPHEMY' => [
+            'episode' => 4,
+            'setting_id' => ($lore && isset($lore['settings']['ep4_desert'])) ? 'ep4_desert' : bounty_episode_setting(4),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'This fleet-wide operation targets Vol Opt in the Mines, Gol Dragon inside the Lab VR Spaceship simulator, and Shambertin in the Subterranean Desert.',
+        ],
+        'DRACONIC_DOMINION' => [
+            'episode' => 4,
+            'setting_id' => ($lore && isset($lore['settings']['ep4_desert'])) ? 'ep4_desert' : bounty_episode_setting(4),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'This fleet-wide operation targets the Dragon beneath the Central Dome, Gol Dragon in the Lab VR Spaceship simulator, and Shambertin in the Subterranean Desert.',
+        ],
+        'CATACLYSMIC_CORE' => [
+            'episode' => 4,
+            'setting_id' => ($lore && isset($lore['settings']['ep4_desert'])) ? 'ep4_desert' : bounty_episode_setting(4),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'This fleet-wide operation strikes the deepest threats uncovered in the Ruins, the Seabed depths, and the Subterranean Desert.',
+        ],
+        'ALL_BOSSES' => [
+            'episode' => 4,
+            'setting_id' => ($lore && isset($lore['settings']['ep4_desert'])) ? 'ep4_desert' : bounty_episode_setting(4),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'This Guild-wide general mobilisation calls on Hunter teams to hunt major threats across every surveyed region of Ragol and the Lab simulators.',
+        ],
+        'ANY_DRAGON' => [
+            'episode' => 2,
+            'setting_id' => ($lore && isset($lore['settings']['ep2_vr_spaceship'])) ? 'ep2_vr_spaceship' : 'ep1_forest',
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'Hunters may strike either the Dragon beneath the Central Dome on Ragol or the Gol Dragon inside the Lab\'s VR Spaceship simulator.',
+        ],
+    ];
+
+    $bossGoals = ['BOSS_ARENA', 'SPEEDRUN_BOSS', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS'];
+    if (in_array($goal_type, $bossGoals, true)) {
+        if (isset($multiBoss[$goal_target])) {
+            return $multiBoss[$goal_target];
+        }
+
+        if (function_exists('parse_boss_target')) {
+            $parsed = parse_boss_target($goal_target);
+            $floor = (int) $parsed['floor'];
+            $explicitEp = $parsed['episode'];
+        } else {
+            $floor = (int) $goal_target;
+            $explicitEp = preg_match('/@([124])/', $goal_target, $m) ? (int) $m[1] : null;
+        }
+
+        // Map legacy synthetic Community Event IDs (16-19) when no explicit episode is present.
+        $legacyMap = [16 => [15, 2], 17 => [14, 2], 18 => [13, 2], 19 => [9, 4]];
+        if ($explicitEp === null && isset($legacyMap[$floor])) {
+            list($floor, $explicitEp) = $legacyMap[$floor];
+        }
+
+        if ($explicitEp === null) {
+            if (function_exists('get_boss_episode_by_context')) {
+                $ep = get_boss_episode_by_context($title, $desc, $floor, null);
+            } else {
+                $ep = ($floor === 15) ? 2 : (($floor === 9) ? 4 : 1);
+            }
+        } else {
+            $ep = (int) $explicitEp;
+        }
+
+        foreach (bounty_boss_table() as $b) {
+            if ($b[0] === $floor && $b[1] === $ep) {
+                return [
+                    'episode' => $ep,
+                    'setting_id' => $b[4],
+                    'is_location_goal' => true,
+                    'floor' => null,
+                    'location_override' => null,
+                ];
+            }
+        }
+        return [
+            'episode' => $ep,
+            'setting_id' => bounty_episode_setting($ep),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => null,
+        ];
+    }
+
+    if (in_array($goal_type, ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR'], true)) {
+        $floor = (int) explode('_', $goal_target)[0];
+        return [
+            'episode' => 1,
+            'setting_id' => bounty_setting_for_ep1_floor($floor),
+            'is_location_goal' => true,
+            'floor' => ($floor >= 1 && $floor <= 10) ? $floor : null,
+            'location_override' => null,
+        ];
+    }
+
+    // Hub / non-location objective: honor explicit Episode cues in existing text when present.
+    $contextText = mb_strtolower($title . ' ' . $desc);
+    $hubs = $lore['world']['hubs'] ?? ['1' => 'ep1_pioneer2', '2' => 'ep2_lab', '4' => 'ep4_pioneer2'];
+    if ($contextText !== '' && trim($contextText) !== '') {
+        if (preg_match('/\b(ep\s*4|episode\s*4|crater|desert|meteor|shambertin|saint-milion)\b/i', $contextText)) {
+            $sid = $hubs['4'] ?? 'ep4_pioneer2';
+            if (!$lore || isset($lore['settings'][$sid])) {
+                return ['episode' => 4, 'setting_id' => $sid, 'is_location_goal' => false, 'floor' => null, 'location_override' => null];
+            }
+        }
+        if (preg_match('/\b(ep\s*2|episode\s*2|lab|vr\s*temple|vr\s*spaceship|gal\s*da\s*val|seabed|olga\s*flow|gal\s*gryphon|gol\s*dragon|barba\s*ray)\b/i', $contextText)) {
+            $sid = $hubs['2'] ?? 'ep2_lab';
+            if (!$lore || isset($lore['settings'][$sid])) {
+                return ['episode' => 2, 'setting_id' => $sid, 'is_location_goal' => false, 'floor' => null, 'location_override' => null];
+            }
+        }
+    }
+
+    list($ep, $sid) = bounty_pick_hub_setting($seed);
+    return [
+        'episode' => (int) $ep,
+        'setting_id' => $sid,
+        'is_location_goal' => false,
+        'floor' => null,
+        'location_override' => null,
+    ];
 }
 
 /**
@@ -329,6 +511,8 @@ function bounty_goal_meaning($goal, $target = null)
         'CHALLENGE_STAGES' => 'Clear that many of the challenge trials, set courses where a team starts with basic gear.',
         'CHALLENGE_RUN' => 'Clear the named challenge trial course or courses, set courses where a team starts over with basic issued gear, within the time given if there is one.',
         'BATTLE_RULE_WINS' => 'Win first place that many times in sanctioned battle-simulation bouts between hunters, fought under the named rules.',
+        'LEVEL_UP' => 'Earn field levels across participating hunters (every level gained by hunters contributes toward the shared total).',
+        'MAT_CONSUME' => 'Use stat Materials across participating hunters (HP, TP, Power, Def, Mind, Evade, or Luck Materials all contribute).',
         'MAT_HP' => 'Keep using HP Materials, items that permanently strengthen the body, until the hunter\'s career total reaches that number.',
         'MAT_TP' => 'Keep using TP Materials, items that permanently strengthen technique power, until the hunter\'s career total reaches that number.',
         'MAT_POWER' => 'Keep using Power Materials, items that permanently raise attack strength, until the hunter\'s career total reaches that number.',
@@ -400,15 +584,228 @@ THE JOB (the server has fixed the mechanics; do not change them):
 }
 
 /**
+ * Language directive shared by JSON-returning lore prompts.
+ */
+function bounty_lang_directive($user_lang)
+{
+    if ($user_lang === 'jp') {
+        return "CRITICAL LANGUAGE DIRECTIVE: The player's client is set to Japanese. You MUST respond entirely in natural, fluent Japanese, including the title and description.\n";
+    }
+    if ($user_lang === 'ru') {
+        return "CRITICAL LANGUAGE DIRECTIVE: The user's interface is set to Russian. You MUST respond entirely in natural, fluent Russian, including the title and description.\n";
+    }
+    return "";
+}
+
+/**
+ * Resolves the where-to-go instruction and location phrase shared by admin/event builders.
+ */
+function bounty_resolve_location_instruction($setting_id, array $spec, &$setting_name)
+{
+    $lore = bounty_lore();
+    $setting_name = ($lore && isset($lore['settings'][$setting_id]['name'])) ? $lore['settings'][$setting_id]['name'] : $setting_id;
+    if (!empty($spec['location_override'])) {
+        return $spec['location_override'];
+    }
+    if (!empty($spec['is_location_goal'])) {
+        return "The operation takes place in {$setting_name}, and the story must give hunters a clear reason to go there for this objective.";
+    }
+    return "This objective has no fixed place: set it aboard Pioneer 2 (the setting's home is {$setting_name}) or wherever this client would be at this moment, and do not send hunters to any particular area of Ragol.";
+}
+
+/**
+ * Builds a lore-grounded Gemini prompt for creating a reusable Daily Bounty Template
+ * inside admin/mission_manager.php. Falls back cleanly if api/lore/ files are missing.
+ *
+ * @param string     $setting_id
+ * @param array|null $giver
+ * @param array      $spec ['goal', 'objective', 'difficulty', 'is_location_goal', 'floor', 'target', 'reward', 'recent_titles', 'location_override']
+ * @param string     $user_lang
+ * @return string
+ */
+function bounty_build_admin_mission_prompt($setting_id, $giver, array $spec, $user_lang = 'en')
+{
+    $lore = bounty_lore();
+    $setting_name = $setting_id;
+    $location_instruction = bounty_resolve_location_instruction($setting_id, $spec, $setting_name);
+    $goal = (string) ($spec['goal'] ?? 'BOSS_ARENA');
+    $objective = (string) ($spec['objective'] ?? '');
+    $target = $spec['target'] ?? '';
+    $difficulty = (string) ($spec['difficulty'] ?? 'Standard');
+    $reward = trim((string) ($spec['reward'] ?? ''));
+    $recent = trim((string) ($spec['recent_titles'] ?? 'None'));
+    $meaning = bounty_goal_meaning($goal, $target);
+    $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor']) : '';
+    $clientName = $giver['name'] ?? "a Hunter's Guild client";
+
+    if ($lore && isset($lore['settings'][$setting_id])) {
+        $prompt = "You are the Hunter's Guild aboard Pioneer 2, drafting one reusable Hunter's Guild bounty board posting for a Phantasy Star Online: Blue Burst server.\n\n";
+        $prompt .= bounty_lore_prompt($setting_id, $giver);
+    } else {
+        $prompt = "You are the Hunter's Guild aboard Pioneer 2, drafting a lore-accurate bounty board posting for Phantasy Star Online: Blue Burst.\n\n";
+    }
+
+    $prompt .= "\nTHE POSTING (mechanics are fixed; do not alter the objective):\n"
+        . "- Objective category: {$goal}\n"
+        . "- Objective: {$objective}\n"
+        . ($meaning !== '' ? "- What it asks of a hunter: {$meaning}\n" : '')
+        . ($floorPhrase !== '' ? "- In the story, call the place {$floorPhrase}.\n" : '')
+        . "- Target tier / tone: {$difficulty}.\n"
+        . ($reward !== '' ? "- Guild payout noted on the slip: {$reward}.\n" : '')
+        . "- {$location_instruction}\n"
+        . "- Client perspective: Write from {$clientName}'s side, in their voice. Since this is a reusable board template, do NOT invent or name a specific hunter — address whoever accepts the contract naturally as \"you\" or \"a hunter\".\n"
+        . "- Give {$clientName} a specific, believable reason in this setting to post this exact objective now.\n"
+        . "- If the setting card says people do not yet know a creature's true name or nature, describe it only as people would at this moment.\n"
+        . "- Title: 2 to 6 words, specific and fresh. Description: 2 to 4 sentences, under 600 characters.\n"
+        . "- Existing bounty titles to avoid repeating: [ {$recent} ].\n\n";
+
+    $prompt .= bounty_lang_directive($user_lang);
+    $prompt .= "CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes matching this schema:\n"
+        . "{\n"
+        . "  \"title\": \"A specific bounty title\",\n"
+        . "  \"description\": \"The reusable Hunter's Guild posting written in the client's voice\"\n"
+        . "}";
+    return $prompt;
+}
+
+/**
+ * Builds a lore-grounded Gemini prompt for authoring a fleet-wide Global Community Event
+ * inside admin/mission_manager.php. Falls back cleanly if api/lore/ files are missing.
+ *
+ * @param string     $setting_id
+ * @param array|null $giver
+ * @param array      $spec ['goal', 'objective', 'target_amount', 'target', 'reward', 'recent_titles', 'is_location_goal', 'floor', 'location_override']
+ * @param string     $user_lang
+ * @return string
+ */
+function bounty_build_community_event_prompt($setting_id, $giver, array $spec, $user_lang = 'en')
+{
+    $lore = bounty_lore();
+    $setting_name = $setting_id;
+    $location_instruction = bounty_resolve_location_instruction($setting_id, $spec, $setting_name);
+    $goal = (string) ($spec['goal'] ?? 'BOSS_ARENA');
+    $objective = (string) ($spec['objective'] ?? '');
+    $target = $spec['target'] ?? '';
+    $amount = (int) ($spec['target_amount'] ?? 0);
+    $reward = trim((string) ($spec['reward'] ?? ''));
+    $recent = trim((string) ($spec['recent_titles'] ?? 'None'));
+    $meaning = bounty_goal_meaning($goal, $target);
+    $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor']) : '';
+    $clientName = $giver['name'] ?? "the Hunter's Guild command desk";
+
+    if ($lore && isset($lore['settings'][$setting_id])) {
+        $prompt = "You are Pioneer 2 Fleet Command and the Hunter's Guild, issuing a major fleet-wide cooperative Global Community Event for a Phantasy Star Online: Blue Burst server.\n\n";
+        $prompt .= bounty_lore_prompt($setting_id, $giver);
+    } else {
+        $prompt = "You are the Hunter's Guild aboard Pioneer 2, issuing a major cooperative Global Community Event for Phantasy Star Online: Blue Burst.\n\n";
+    }
+
+    $scaleLine = $amount > 0
+        ? ($goal === 'PLAYTIME'
+            ? number_format($amount) . " collective hours across all participating hunters"
+            : number_format($amount) . " collective points/units across all participating hunters")
+        : "Fleet-wide cooperative server milestone";
+
+    $prompt .= "\nTHE OPERATION (mechanics are fixed; do not change them):\n"
+        . "- Event goal category: {$goal}\n"
+        . "- Shared objective: {$objective}\n"
+        . ($meaning !== '' ? "- How hunters contribute: {$meaning}\n" : '')
+        . "- Collective fleet target: {$scaleLine}\n"
+        . ($floorPhrase !== '' ? "- In the story, call the place {$floorPhrase}.\n" : '')
+        . ($reward !== '' ? "- Completion reward for contributors: {$reward}.\n" : '')
+        . "- {$location_instruction}\n"
+        . "- Speaker & framing: Present this as a major cooperative mobilization led by {$clientName}, speaking in their voice to all hunters across Pioneer 2.\n"
+        . "- Give an urgent, canon-faithful reason why scores of hunters must coordinate together right now. Obey all canon constraints and hidden-truth spoiler guards.\n"
+        . "- Title: 2 to 6 words (evocative operation name, avoiding clichés like 'Whispers of...' or 'Echoes of...'). Description: 2 to 4 sentences, under 600 characters, explaining both the crisis and how hunters rally together.\n"
+        . "- Previous community event titles to avoid repeating: [ {$recent} ].\n\n";
+
+    $prompt .= bounty_lang_directive($user_lang);
+    $prompt .= "CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes matching this schema:\n"
+        . "{\n"
+        . "  \"title\": \"An evocative operation title\",\n"
+        . "  \"description\": \"The lore-grounded Guild briefing calling all hunters to cooperate\"\n"
+        . "}";
+    return $prompt;
+}
+
+/**
+ * Builds the lore-grounded bilingual (EN + JP) broadcast prompt for cron_community.php milestones.
+ * Uses seeded setting/speaker selection on $ce['id'] so all 5 broadcasts (0%, 20%, 50%, 80%, 100%)
+ * speak consistently in the same character's voice.
+ *
+ * @return array ['prompt' => string, 'speaker' => string]
+ */
+function bounty_build_community_broadcast_prompt(array $ce, $milestone_type, $pct_str, $srv_addr)
+{
+    $eventId = (int) ($ce['id'] ?? 0);
+    $title = trim((string) ($ce['title'] ?? 'Global Operation'));
+    $desc = trim((string) ($ce['description'] ?? ''));
+    $goalType = trim((string) ($ce['goal_type'] ?? 'BOSS_ARENA'));
+    $goalTarget = trim((string) ($ce['goal_target'] ?? ''));
+    $lore = bounty_lore();
+
+    $resolved = bounty_lore_setting_for_objective($goalType, $goalTarget, $title, $desc, $eventId);
+    $sid = $resolved['setting_id'];
+    $giver = ($lore && isset($lore['settings'][$sid])) ? bounty_pick_giver_seeded($sid, $eventId) : null;
+    $speaker = $giver['name'] ?? ($lore ? 'Hunters Guild' : 'Mission Control');
+
+    if ($milestone_type === 'start') {
+        $milestoneLine = "The Global Community Event has just launched (0%)! Broadcast a dramatic rallying call ordering all available hunters to deploy and contribute.";
+    } elseif ($milestone_type === '100') {
+        $milestoneLine = "Hunters have reached 100% and completed the operation! Broadcast the victory and tell every participant to claim their reward at {$srv_addr}.";
+    } else {
+        $milestoneLine = "Hunters just passed {$pct_str} of the shared operation goal! Broadcast a crisp, motivating tactical status update in character.";
+    }
+
+    if ($lore && isset($lore['settings'][$sid])) {
+        $world = $lore['world'];
+        $s = $lore['settings'][$sid];
+        $ep = (int) ($s['episode'] ?? $resolved['episode']);
+        $prompt = "You are {$speaker}, broadcasting an urgent Pioneer 2 Hunter's Guild bulletin across an active Phantasy Star Online: Blue Burst server.\n\n";
+        $prompt .= "WRITING RULES:\n" . bounty_lore_lines($world['rules'] ?? [], 12) . "\n\n";
+        $prompt .= "THE SETTING: " . ($s['name'] ?? $sid) . " (Episode {$ep}). Moment: " . ($s['era'] ?? '') . "\n"
+            . trim((string) ($s['summary'] ?? '')) . "\n";
+        if (!empty($s['hidden_truths'])) {
+            $prompt .= "Hidden truths (NEVER state or hint at these):\n" . bounty_lore_lines($s['hidden_truths'], 8) . "\n";
+        }
+        if (!empty($s['avoid'])) {
+            $prompt .= "Avoid:\n" . bounty_lore_lines($s['avoid'], 8) . "\n";
+        }
+        if ($giver) {
+            $prompt .= "\nYOUR VOICE ({$speaker}): " . ($giver['role'] ?? '') . "\n";
+            if (!empty($giver['voice'])) $prompt .= "Tone & diction: " . $giver['voice'] . "\n";
+            if (!empty($giver['never'])) $prompt .= "You must never:\n" . bounty_lore_lines($giver['never'], 4) . "\n";
+        }
+        if (!empty($resolved['location_override'])) {
+            $prompt .= "\nScope note: " . $resolved['location_override'] . "\n";
+        }
+    } else {
+        $prompt = "You are '{$speaker}', broadcasting an official PSOBB server bulletin.\n";
+    }
+
+    $prompt .= "\nACTIVE COMMUNITY EVENT:\n"
+        . "- Title: {$title}\n"
+        . "- Goal type: {$goalType}" . ($goalTarget !== '' ? " (Target: {$goalTarget})" : '') . "\n"
+        . ($desc !== '' ? "- Briefing: {$desc}\n" : '')
+        . "\nMILESTONE DIRECTIVE:\n- {$milestoneLine}\n\n"
+        . "CRITICAL FORMAT & LENGTH DIRECTIVES:\n"
+        . "- This is a global in-game Simple Mail broadcast: write plain text ONLY (no markdown asterisks, no bullet points, no JSON, and do NOT start with '[{$speaker}]' — the server prepends that automatically).\n"
+        . "- Stay strictly in character, keep spoilers locked out, and keep the ENTIRE message compact (around 150-300 characters total).\n"
+        . "- BILINGUAL OUTPUT REQUIRED: Write 1 crisp English sentence (under 25 words), followed by ' / ', followed by its natural Japanese translation (1 crisp sentence).";
+
+    return [
+        'prompt' => $prompt,
+        'speaker' => $speaker,
+    ];
+}
+
+/**
  * The end of every bounty prompt (lore-grounded or generic): the language directive and the
  * JSON schema Gemini must return.
  */
 function bounty_prompt_tail($user_lang, $goal, $target_id)
 {
-    $tail = "";
-    if ($user_lang === 'jp') {
-        $tail .= "CRITICAL LANGUAGE DIRECTIVE: The player's client is set to Japanese. You MUST respond entirely in natural, fluent Japanese, including the quest title and description.\n";
-    }
+    $tail = bounty_lang_directive($user_lang);
     $tail .= "
 CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes strictly matching this exact schema block, do not include any other markdown:
 {

@@ -19,11 +19,12 @@ require_once __DIR__ . '/lang.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/bounty_lore.php';
 
-$o = getopt('', ['goal::', 'level::', 'class::', 'name::', 'setting::', 'floor::', 'giver::', 'lang::', 'seed::']);
+$o = getopt('', ['mode::', 'goal::', 'target::', 'level::', 'class::', 'name::', 'setting::', 'floor::', 'giver::', 'lang::', 'milestone::', 'seed::']);
 if (isset($o['seed'])) {
     mt_srand((int) $o['seed']);
     srand((int) $o['seed']);
 }
+$mode = strtolower($o['mode'] ?? 'bounty');
 $goal = strtoupper($o['goal'] ?? 'BOSS_ARENA');
 $level = (int) ($o['level'] ?? 30);
 $class = $o['class'] ?? 'HUmar';
@@ -100,21 +101,71 @@ if (!empty($o['giver']) && isset($lore['cast'][$o['giver']])) {
     $giver = bounty_pick_giver($setting_id);
 }
 
-$prompt = bounty_build_prompt($setting_id, $giver, [
-    'hunter_name' => $name,
-    'level' => $level,
-    'class' => $class,
-    'completed_line' => 'They are eager for their next assignment.',
-    'goal' => $goal,
-    'objective' => $friendly,
-    'difficulty' => $difficulty,
-    'is_location_goal' => in_array($goal, array_merge($boss_goals, $floor_goals)),
-    'quest_giver' => $giver['name'] ?? "the Hunter's Guild",
-    'hex_twist' => '',
-    'recent_titles' => 'None',
-    'floor' => in_array($goal, $floor_goals) ? (int) $target_id : null,
-    'target' => $target_id,
-]) . bounty_prompt_tail($lang, $goal, $target_id);
+if ($mode === 'broadcast') {
+    $ms = (string) ($o['milestone'] ?? 'start');
+    $pctMap = ['start' => '0%', '20' => '20%', '50' => '50%', '80' => '80%', '100' => '100%'];
+    $ceTarget = $o['target'] ?? $target_id;
+    $ceFriendly = isset($o['target']) ? html_entity_decode(strip_tags(getClearObjective($goal, $ceTarget)), ENT_QUOTES, 'UTF-8') : $friendly;
+    $bc = bounty_build_community_broadcast_prompt([
+        'id' => (int) ($o['seed'] ?? 1),
+        'title' => 'Sample Global Operation',
+        'description' => "Collective objective: $ceFriendly",
+        'goal_type' => $goal,
+        'goal_target' => $ceTarget,
+    ], $ms, $pctMap[$ms] ?? "{$ms}%", 'psobb.io');
+    fwrite(STDERR, "mode: broadcast ($ms) | speaker: {$bc['speaker']} | goal: $goal | target: $ceTarget | " . strlen($bc['prompt']) . " bytes\n");
+    echo $bc['prompt'], "\n";
+} elseif ($mode === 'community-event') {
+    $ceTarget = $o['target'] ?? $target_id;
+    $ceFriendly = isset($o['target']) ? html_entity_decode(strip_tags(getClearObjective($goal, $ceTarget)), ENT_QUOTES, 'UTF-8') : $friendly;
+    $res = bounty_lore_setting_for_objective($goal, $ceTarget);
+    $ceSid = $o['setting'] ?? $res['setting_id'];
+    $ceGiver = (!empty($o['giver']) && isset($lore['cast'][$o['giver']]))
+        ? ['id' => $o['giver']] + $lore['cast'][$o['giver']]
+        : bounty_pick_giver($ceSid);
+    $prompt = bounty_build_community_event_prompt($ceSid, $ceGiver, [
+        'goal' => $goal,
+        'objective' => $ceFriendly,
+        'target_amount' => 75000,
+        'target' => $ceTarget,
+        'reward' => '3x Random Rare Drops',
+        'recent_titles' => 'None',
+        'is_location_goal' => $res['is_location_goal'],
+        'floor' => $res['floor'],
+        'location_override' => $res['location_override'],
+    ], $lang);
+    fwrite(STDERR, "mode: community-event | setting: $ceSid | client: " . ($ceGiver['id'] ?? '-') . " | goal: $goal | target: $ceTarget | " . strlen($prompt) . " bytes\n");
+    echo $prompt, "\n";
+} elseif ($mode === 'admin-mission') {
+    $prompt = bounty_build_admin_mission_prompt($setting_id, $giver, [
+        'goal' => $goal,
+        'objective' => $friendly,
+        'difficulty' => $difficulty,
+        'is_location_goal' => in_array($goal, array_merge($boss_goals, $floor_goals)),
+        'floor' => in_array($goal, $floor_goals) ? (int) $target_id : null,
+        'target' => $target_id,
+        'reward' => '5 Photon Drop',
+        'recent_titles' => 'None',
+    ], $lang);
+    fwrite(STDERR, "mode: admin-mission | setting: $setting_id | client: " . ($giver['id'] ?? '-') . " | goal: $goal | target: $target_id | " . strlen($prompt) . " bytes\n");
+    echo $prompt, "\n";
+} else {
+    $prompt = bounty_build_prompt($setting_id, $giver, [
+        'hunter_name' => $name,
+        'level' => $level,
+        'class' => $class,
+        'completed_line' => 'They are eager for their next assignment.',
+        'goal' => $goal,
+        'objective' => $friendly,
+        'difficulty' => $difficulty,
+        'is_location_goal' => in_array($goal, array_merge($boss_goals, $floor_goals)),
+        'quest_giver' => $giver['name'] ?? "the Hunter's Guild",
+        'hex_twist' => '',
+        'recent_titles' => 'None',
+        'floor' => in_array($goal, $floor_goals) ? (int) $target_id : null,
+        'target' => $target_id,
+    ]) . bounty_prompt_tail($lang, $goal, $target_id);
 
-fwrite(STDERR, "setting: $setting_id | client: " . ($giver['id'] ?? '-') . " | goal: $goal | target: $target_id | " . strlen($prompt) . " bytes\n");
-echo $prompt, "\n";
+    fwrite(STDERR, "setting: $setting_id | client: " . ($giver['id'] ?? '-') . " | goal: $goal | target: $target_id | " . strlen($prompt) . " bytes\n");
+    echo $prompt, "\n";
+}
