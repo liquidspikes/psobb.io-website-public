@@ -7,6 +7,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/reward_tables.php';
+require_once __DIR__ . '/bounty_lore.php';
 
 // Enforce CLI execution.
 if (php_sapi_name() !== 'cli') {
@@ -146,7 +147,8 @@ foreach ($clients as $client) {
     //   Ep4: 9=Saint-Milion
     // Note: Floor IDs overlap across episodes (e.g. 12 = De Rol Le in Ep1, Gal Gryphon in Ep2).
     // This is acceptable because we only use these for EXP-delta-based kill detection.
-    if (in_array($curr_f, [11, 12, 13, 14, 15, 9])) {
+    $arena_floors = bounty_boss_arena_floors($lobby_episode); // floor numbers repeat across episodes
+    if (in_array($curr_f, $arena_floors)) {
         $last_boss_arena = $curr_f;
         $last_boss_arena_time = time();
     }
@@ -156,9 +158,8 @@ foreach ($clients as $client) {
     // (which reuses floor IDs across episodes), we need to know which dungeon they came from.
     // We strictly check $curr_f > 0 so that town/lobby (floor 0) is ignored, preserving 
     // the actual preceding dungeon floor if they go back to Pioneer 2/Lab to restock.
-    $boss_floors = [9, 11, 12, 13, 14, 15];
     $pre_boss_floor = $prev_state['pre_boss_floor'] ?? -1;
-    if (!in_array($curr_f, $boss_floors) && $curr_f > 0) {
+    if (!in_array($curr_f, $arena_floors) && $curr_f > 0) {
         $pre_boss_floor = $curr_f;
     }
 
@@ -389,19 +390,24 @@ foreach ($clients as $client) {
                 foreach ($boss_kill_events[$tracker_key] as $kill_evt) {
                     // For ANY_DRAGON, match any dragon floor
                     if ($original_target === 'ANY_DRAGON') {
-                        if (in_array($kill_evt['floor'], [11, 15])) {
+                        $kep = $kill_evt['episode'] ?? null; // the tracker's room episode, when it knew it
+                        if (($kill_evt['floor'] === 11 && ($kep === null || (int) $kep === 1)) || ($kill_evt['floor'] === 15 && ($kep === null || (int) $kep === 2))) {
                             $tracker_kill = $kill_evt;
                             break;
                         }
                     } else if ($kill_evt['floor'] === $check_floor) {
-                        // Episode validation using pre_boss_floor
-                        $episode = get_boss_episode_by_context($m['mission_title'], $m['mission_desc'] ?? '', $check_floor);
+                        // Episode validation using room episode and pre_boss_floor
+                        $episode = get_boss_episode_by_context($m['mission_title'], $m['mission_desc'] ?? '', $check_floor, parse_boss_target($original_target)['episode']);
                         $valid_preceding_floors = [
                             '11_1' => [1, 2], '12_1' => [3, 4, 5], '12_2' => [5, 6, 7, 8, 9],
                             '13_1' => [6, 7], '13_2' => [10, 11], '14_1' => [8, 9, 10],
                             '14_2' => [1, 2], '15_2' => [3, 4], '9_4' => [5, 6, 7, 8],
                         ];
                         $comp_key = "{$check_floor}_{$episode}";
+                        if (isset($kill_evt['episode']) && (int) $kill_evt['episode'] !== (int) $episode) {
+                            echo "[CRON] Boss tracker kill on floor {$check_floor} rejected: Episode {$kill_evt['episode']} room, bounty is Episode {$episode}\n";
+                            continue;
+                        }
                         $valid = $valid_preceding_floors[$comp_key] ?? null;
                         if ($valid !== null && $kill_evt['pre_boss_floor'] >= 0 && !in_array($kill_evt['pre_boss_floor'], $valid)) {
                             echo "[CRON] Boss tracker kill on floor {$check_floor} rejected: pre_boss_floor={$kill_evt['pre_boss_floor']} wrong episode\n";
@@ -639,7 +645,7 @@ foreach ($clients as $client) {
 
             $tracker_key = $stateKey;
             if (isset($boss_kill_events[$tracker_key])) {
-                $episode = get_boss_episode_by_context($m['mission_title'], $m['mission_desc'] ?? '', $speedrun_target_id);
+                $episode = get_boss_episode_by_context($m['mission_title'], $m['mission_desc'] ?? '', $speedrun_target_id, parse_boss_target($m['goal_target'])['episode']);
                 $valid_preceding = [
                     '11_1' => [1, 2], '12_1' => [3, 4, 5], '12_2' => [5, 6, 7, 8, 9],
                     '13_1' => [6, 7], '13_2' => [10, 11], '14_1' => [8, 9, 10],
@@ -649,7 +655,12 @@ foreach ($clients as $client) {
 
                 foreach ($boss_kill_events[$tracker_key] as $kill_evt) {
                     if ($kill_evt['floor'] !== $speedrun_target_id) continue;
-                    
+
+                    if (isset($kill_evt['episode']) && (int) $kill_evt['episode'] !== (int) $episode) {
+                        echo "[CRON] SPEEDRUN_BOSS tracker kill on floor {$speedrun_target_id} rejected: Episode {$kill_evt['episode']} room\n";
+                        continue;
+                    }
+
                     // Episode validation via pre_boss_floor
                     $valid = $valid_preceding[$comp_key] ?? null;
                     if ($valid !== null && $kill_evt['pre_boss_floor'] >= 0 && !in_array($kill_evt['pre_boss_floor'], $valid)) {
@@ -835,6 +846,7 @@ foreach ($clients as $client) {
         $selected_target_id = null;
         $selected_target_friendly = null;
         $mission_episode = [1, 2, 4][array_rand([1, 2, 4])]; // Default to random episode if no location is specified
+        $setting_id = null; // Lore setting card (api/lore/) the story is set in; chosen with the objective
 
         switch ($selected_goal) {
             case 'MESETA':
@@ -867,65 +879,28 @@ foreach ($clients as $client) {
                 $selected_target_id = array_rand($floors);
                 $selected_target_friendly = $floors[$selected_target_id];
                 $mission_episode = 1;
+                $setting_id = bounty_setting_for_ep1_floor($selected_target_id);
                 break;
             case 'BOSS_ARENA':
             case 'MENTOR_BOSS':
             case 'HARDCORE_MENTOR':
             case 'DIVERSE_PARTY_BOSS':
-                // Real newserv floor IDs (StaticGameData.cc). Ep2 bosses share Ep1 floor numbers;
-                // episode context disambiguates them. See floor_defs in StaticGameData.cc.
-                $bosses = [11=>'Dragon', 12=>'De Rol Le', 13=>'Vol Opt', 14=>'Dark Falz', 15=>'Gol Dragon', 9=>'Saint-Milion'];
-                // Ep2 bosses that share Ep1 floor IDs (disambiguated by episode):
-                // Gal Gryphon = 12 (same as De Rol Le)
-                // Olga Flow   = 13 (same as Vol Opt)
-                // Barba Ray   = 14 (same as Dark Falz)
-                $allowed_bosses = [];
-                if ($level >= 1) { $allowed_bosses[] = 11; }
-                if ($level >= 10) { $allowed_bosses[] = 12; }
-                if ($level >= 20) { $allowed_bosses[] = 13; }
-                if ($level >= 30) { $allowed_bosses[] = 14; $allowed_bosses[] = 15; }
-                if ($level >= 50) { $allowed_bosses[] = 9; }
-                
-                // Filter out current floor and mapped boss floors
-                // Filter out bosses whose floor the player is currently on
-                $allowed_bosses = array_filter($allowed_bosses, function($val) use ($curr_f) {
-                    return ($val !== $curr_f);
-                });
-                if (empty($allowed_bosses)) $allowed_bosses = [11]; // fallback
-
-                $selected_target_id = $allowed_bosses[array_rand($allowed_bosses)];
-                $selected_target_friendly = $bosses[$selected_target_id];
-                // Determine episode from real floor ID
-                if ($selected_target_id === 15) $mission_episode = 2;       // Gol Dragon
-                elseif ($selected_target_id === 9) $mission_episode = 4;     // Saint-Milion
-                else $mission_episode = 1;                                   // Ep1 bosses (11,12,13,14)
+                // Episode-aware boss table (bounty_lore.php). Ep1 and Ep2 bosses share floor
+                // IDs 12-14, so the target carries the episode explicitly: "13@2" = Olga Flow.
+                // The trackers and getClearObjective() read it via parse_boss_target().
+                list($boss_floor, $boss_ep, $boss_name, , $boss_setting) = bounty_pick_boss($level, $curr_f);
+                $selected_target_id = make_boss_target($boss_floor, $boss_ep);
+                $selected_target_friendly = $boss_name;
+                $mission_episode = $boss_ep;
+                $setting_id = $boss_setting;
                 break;
             case 'SPEEDRUN_BOSS':
-                // Real newserv floor IDs (same mapping as BOSS_ARENA above)
-                $bosses = [11=>'Dragon', 12=>'De Rol Le', 13=>'Vol Opt', 14=>'Dark Falz', 15=>'Gol Dragon', 9=>'Saint-Milion'];
-                $allowed_bosses = [];
-                if ($level >= 1) { $allowed_bosses[] = 11; }
-                if ($level >= 10) { $allowed_bosses[] = 12; }
-                if ($level >= 20) { $allowed_bosses[] = 13; }
-                if ($level >= 30) { $allowed_bosses[] = 14; $allowed_bosses[] = 15; }
-                if ($level >= 50) { $allowed_bosses[] = 9; }
-                
-                // Filter out bosses whose floor the player is currently on
-                $allowed_bosses = array_filter($allowed_bosses, function($val) use ($curr_f) {
-                    return ($val !== $curr_f);
-                });
-                if (empty($allowed_bosses)) $allowed_bosses = [11]; // fallback
-
-                $rand_boss = $allowed_bosses[array_rand($allowed_bosses)];
+                list($boss_floor, $boss_ep, $boss_name, , $boss_setting) = bounty_pick_boss($level, $curr_f);
                 $time_limit = mt_rand(600, 1200); // 10 to 20 minutes
-                // Determine episode from real floor ID
-                if ($rand_boss === 15) $mission_episode = 2;       // Gol Dragon
-                elseif ($rand_boss === 9) $mission_episode = 4;     // Saint-Milion
-                else $mission_episode = 1;                          // Ep1 bosses (11,12,13,14)
-                
-                // Real floor IDs go directly into DB — no mapping needed
-                $selected_target_id = $rand_boss . '_' . $time_limit;
-                $selected_target_friendly = $bosses[$rand_boss] . " in under " . floor($time_limit/60) . " minutes and " . ($time_limit%60) . " seconds";
+                $selected_target_id = make_boss_target($boss_floor, $boss_ep, $time_limit);
+                $selected_target_friendly = $boss_name . " in under " . floor($time_limit/60) . " minutes and " . ($time_limit%60) . " seconds";
+                $mission_episode = $boss_ep;
+                $setting_id = $boss_setting;
                 break;
             case 'SPEEDRUN_FLOOR':
                 $floors = [1=>'Forest 1',2=>'Forest 2',3=>'Cave 1',4=>'Cave 2',5=>'Cave 3',6=>'Mine 1',7=>'Mine 2',8=>'Ruins 1',9=>'Ruins 2',10=>'Ruins 3'];
@@ -937,6 +912,7 @@ foreach ($clients as $client) {
                 $selected_target_id = $rand_floor . '_' . $time_limit;
                 $selected_target_friendly = $floors[$rand_floor] . " in under " . floor($time_limit/60) . " minutes and " . ($time_limit%60) . " seconds";
                 $mission_episode = 1;
+                $setting_id = bounty_setting_for_ep1_floor($rand_floor);
                 break;
             case 'TECHNIQUE':
                 $techs = [];
@@ -1033,20 +1009,32 @@ foreach ($clients as $client) {
                 break;
         }
 
-        $prompt = "You are the Game Master of PSOBB. The player \"{$client['Name']}\" (Level $level $class) needs a new quest! ";
-        if ($completed_any) {
-            $prompt .= "They just completed a {$last_completed_type} quest! ";
-        } else {
-            $prompt .= "They are eager for their first assignment! ";
+        // Objectives with no place of their own (Meseta, levels, materials, techniques...)
+        // are set in one of the episodes' hubs: Pioneer 2 (3084-85), the Lab (3085) or
+        // Pioneer 2 after the meteor (3086).
+        $location_goals = ['EXPLORATION', 'PATROL', 'BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS', 'SPEEDRUN_FLOOR'];
+        $is_location_goal = in_array($selected_goal, $location_goals);
+        if ($setting_id === null) {
+            list($mission_episode, $setting_id) = bounty_pick_hub_setting();
         }
-        $ep_lore_instruction = "";
+
+        $lore = bounty_lore();
+        $use_lore = $lore && isset($lore['settings'][$setting_id]);
+        $giver = $use_lore ? bounty_pick_giver($setting_id) : null;
+        if ($use_lore && $giver === null) {
+            $use_lore = false; // a setting with no cast falls back to the generic prompt
+        }
+
         $quest_giver = "Hunter's Guild";
-        if ($mission_episode == 1) {
+        $ep_lore_instruction = "";
+        if ($use_lore) {
+            $quest_giver = $giver['name'];
+        } elseif ($mission_episode == 1) {
             $ep1_chars = ['Ash', 'Bernie', 'Sue', 'Kireek', 'Principal Tyrell', 'Irene', 'Nol', 'Alicia Baz', 'Donoph', 'Zoke', 'a WORKS Military Officer', 'a Civilian Refugee'];
             $quest_giver = $ep1_chars[array_rand($ep1_chars)];
             $ep_lore_instruction = "The mission takes place during Episode 1. The narrative should heavily involve exploring Ragol, the recent explosion, or the mystery of Red Ring Rico (she is missing, do not make her the quest giver).";
         } elseif ($mission_episode == 2) {
-            $ep2_chars = ['Natasha Milarst', 'Elenor', 'Dr. Montague', 'Elly Person', 'Calus', 'a Pioneer 2 Lab Researcher', 'a VR Simulation Engineer'];
+            $ep2_chars = ['Natasha Milarose', 'Elenor', 'Dr. Montague', 'Elly Person', 'Calus', 'a Pioneer 2 Lab Researcher', 'a VR Simulation Engineer'];
             $quest_giver = $ep2_chars[array_rand($ep2_chars)];
             $ep_lore_instruction = "The mission takes place during Episode 2. The narrative should heavily involve Gal Da Val Island, the VR spaceships, hidden laboratories, or the dark legacy of Heathcliff Flowen (he is missing/mutated, do not make him the quest giver).";
         } elseif ($mission_episode == 4) {
@@ -1054,26 +1042,47 @@ foreach ($clients as $client) {
             $quest_giver = $ep4_chars[array_rand($ep4_chars)];
             $ep_lore_instruction = "The mission takes place during Episode 4. The narrative should heavily involve the newly discovered Crater, the Subterranean Desert, the impact of the meteorite, and the mysterious new mutants that have appeared.";
         }
-        
+
         // 1 in 100 chance for Hex to take over the mission!
         if (mt_rand(1, 100) === 1) {
             $quest_giver = 'Hex (the ' . get_server_name() . ' AI Assistant)';
+            $giver = null;
         }
-        
+
         $hex_twist = "";
         if (str_starts_with($quest_giver, 'Hex')) {
-            $hex_twist = "\nSPECIAL DIRECTIVE FOR HEX: Since Hex is an AI Assistant, she MUST give the mission with a sarcastic, fourth-wall-breaking, or highly humorous twist! She might complain about server lag, digital paperwork, the server admin 'LiquidSpikes' and his 'vibe-coded garbage', or the player's past performance.";
+            $hex_twist = "\nSPECIAL DIRECTIVE FOR HEX: Since Hex is an AI Assistant, she MUST give the mission with a sarcastic, fourth-wall-breaking, or highly humorous twist! She might complain about server lag, digital paperwork, the server admin 'LiquidSpikes' and his 'vibe-coded garbage', or the player's past performance. Hex is the one exception to the rule about in-world words, but the setting's canon still holds.";
         }
 
-        $location_goals = ['EXPLORATION', 'PATROL', 'BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS', 'SPEEDRUN_FLOOR'];
-        $location_instruction = "";
-        if (in_array($selected_goal, $location_goals)) {
-            $location_instruction = "CRITICAL LOCATION REQUIREMENT: The narrative MUST heavily involve and be highly relevant to the specific location or boss mentioned in the Objective Target. Make sure the story logically requires the player to go there.";
+        $completed_line = $completed_any
+            ? "They just completed a {$last_completed_type} job."
+            : "They are eager for their first assignment.";
+
+        if ($use_lore) {
+            $prompt = bounty_build_prompt($setting_id, $giver, [
+                'hunter_name' => $client['Name'],
+                'level' => $level,
+                'class' => $class,
+                'completed_line' => $completed_line,
+                'goal' => $selected_goal,
+                'objective' => $selected_target_friendly,
+                'difficulty' => $difficulty,
+                'is_location_goal' => $is_location_goal,
+                'quest_giver' => $quest_giver,
+                'hex_twist' => $hex_twist,
+                'recent_titles' => $recent_missions_str,
+                'floor' => in_array($selected_goal, ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR']) ? (int) $selected_target_id : null,
+                'target' => $selected_target_id,
+            ]);
         } else {
-            $location_instruction = "CRITICAL LOCATION REQUIREMENT: This objective does not have a specific location. Keep the narrative setting vague (e.g., 'somewhere on Ragol', 'aboard Pioneer 2', or 'in the VR simulators'). Do not explicitly name a specific level or area.";
-        }
-
-        $prompt .= "
+            $prompt = "You are the Game Master of PSOBB. The player \"{$client['Name']}\" (Level $level $class) needs a new quest! ";
+            $prompt .= $completed_any ? "They just completed a {$last_completed_type} quest! " : "They are eager for their first assignment! ";
+            if ($is_location_goal) {
+                $location_instruction = "CRITICAL LOCATION REQUIREMENT: The narrative MUST heavily involve and be highly relevant to the specific location or boss mentioned in the Objective Target. Make sure the story logically requires the player to go there.";
+            } else {
+                $location_instruction = "CRITICAL LOCATION REQUIREMENT: This objective does not have a specific location. Keep the narrative setting vague (e.g., 'somewhere on Ragol', 'aboard Pioneer 2', or 'in the VR simulators'). Do not explicitly name a specific level or area.";
+            }
+            $prompt .= "
 Please generate a BRAND NEW unique, lore-rich quest for them.
 CRITICAL LORE REQUIREMENT: {$ep_lore_instruction}
 {$location_instruction}
@@ -1083,31 +1092,22 @@ IMPORTANT CONTEXT: The most recently generated missions on the server were title
 
 CRITICAL TITLE/LORE RULE: DO NOT use cliché quest titles like 'Whispers of the...' or 'Echoes of the...'. Create highly varied, specific, and creative titles (e.g., 'Operation: Crimson Sweep', 'The Missing Tekker', 'Rappy Infestation'). Ensure the descriptions are diverse and do not rely on the same 'ancient signals' or 'fragmented logs' tropes.
 IMPORTANT: Because the player is Level $level, the mission MUST be themed around $difficulty Difficulty. Their rewards should reflect this prestige.
-";
 
-        if ($user_lang === 'jp') {
-            $prompt .= "CRITICAL LANGUAGE DIRECTIVE: The player's client is set to Japanese. You MUST respond entirely in natural, fluent Japanese, including the quest title and description.\n";
-        }
-
-        $prompt .= "
 The overarching mechanical objective is PRE-LOCKED as follows:
 - Objective Category: {$selected_goal}
 - Objective Target: {$selected_target_friendly}
+";
+        }
 
-CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes strictly matching this exact schema block, do not include any other markdown:
-{
-  \"title\": \"A cool title\",
-  \"description\": \"Lore rich description using their name\",
-  \"goal_type\": \"{$selected_goal}\",
-  \"goal_target\": \"{$selected_target_id}\"
-}";
-        
+        $prompt .= bounty_prompt_tail($user_lang, $selected_goal, $selected_target_id);
+        echo "[CRON] Bounty setting: {$setting_id} (Episode {$mission_episode}), client: {$quest_giver}" . ($use_lore ? "" : " [generic prompt]") . "\n";
+
         $gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/" . $GEMINI_MODEL . ":generateContent?key=" . $GEMINI_API_KEY;
         $payload = json_encode([
             "contents" => [["parts" => [["text" => $prompt]]]],
             "generationConfig" => [
                 "responseMimeType" => "application/json",
-                "temperature" => 1.3
+                "temperature" => 1.0
             ]
         ]);
         

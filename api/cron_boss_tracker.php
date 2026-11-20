@@ -10,6 +10,10 @@
  * Writes to two event files consumed by cron_missions.php:
  *   db/.boss_kills.json  — Confirmed boss kill events
  *   db/.floor_clears.json — Floor transition events with timing
+ *
+ * Boss arenas are judged per episode, from the room's episode in /y/lobbies: floor numbers repeat
+ * across episodes, and 9 (the Episode 4 arena) is Ruins 2 in Episode 1 and the Seaside in Episode 2,
+ * while 11 (the Episode 1 Dragon) is the lower Seabed in Episode 2. Events carry the episode.
  * --------------------------------------------------------------------------
  */
 require_once __DIR__ . '/config.php';
@@ -25,7 +29,22 @@ if (!flock($lock_file, LOCK_EX | LOCK_NB)) {
     exit;
 }
 
-$boss_floors = [9, 11, 12, 13, 14, 15];
+/**
+ * Boss arena floors in a room of this episode. A room the tracker hasn't seen in /y/lobbies falls back
+ * to the old episode-blind list; a lobby (not a game) has none.
+ */
+function tracker_boss_floors($episode, $is_game = true)
+{
+    if (!$is_game) return [];
+    switch ((int) $episode) {
+        case 1: return [11, 12, 13, 14];  // Dragon, De Rol Le, Vol Opt, Dark Falz
+        case 2: return [12, 13, 14, 15];  // Gal Gryphon, Olga Flow, Barba Ray, Gol Dragon
+        case 4: return [9];               // Saint-Milion / Shambertin / Kondrieu
+    }
+    return [9, 11, 12, 13, 14, 15];
+}
+
+$rooms = []; // lobby ID => ['episode' => 1|2|4|null, 'is_game' => bool], kept if a fetch fails
 $state_file = __DIR__ . '/../db/.boss_tracker_state.json';
 $kills_file = __DIR__ . '/../db/.boss_kills.json';
 $floor_clears_file = __DIR__ . '/../db/.floor_clears.json';
@@ -44,6 +63,17 @@ while (time() - $script_start < 55) {
     if (!is_array($clients) || empty($clients)) {
         sleep(5);
         continue;
+    }
+
+    // Each room's episode, so a floor number is read as the right area
+    $lobbies = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', (string) @file_get_contents($NEWSERV_API_URL . "/y/lobbies")), true);
+    if (is_array($lobbies)) {
+        $rooms = [];
+        foreach ($lobbies as $l) {
+            if (!isset($l['ID'])) continue;
+            $ep = (isset($l['Episode']) && preg_match('/(\d)/', (string) $l['Episode'], $mm)) ? (int) $mm[1] : null;
+            $rooms[$l['ID']] = ['episode' => $ep, 'is_game' => !empty($l['IsGame'])];
+        }
     }
 
     // Load previous state
@@ -71,9 +101,21 @@ while (time() - $script_start < 55) {
         $curr_items = count($client['InventoryItems'] ?? []);
         $curr_level = (int)($client['Level'] ?? 1);
         $lobby_id = $client['LobbyID'] ?? null;
+        $room = ($lobby_id !== null) ? ($rooms[$lobby_id] ?? null) : null;
+        $episode = $room['episode'] ?? null;
+        $boss_floors = $room ? tracker_boss_floors($episode, $room['is_game']) : tracker_boss_floors(null);
 
         $prev = $prev_states[$key] ?? null;
         $prev_floor = $prev ? (int)$prev['floor'] : -1;
+        // The previous floor is read in the room the player was in then (states from before this
+        // change carry no episode: same room as now means same episode).
+        if ($prev && array_key_exists('episode', $prev)) {
+            $prev_boss_floors = tracker_boss_floors($prev['episode'], $prev['is_game'] ?? true);
+        } elseif ($prev && ($prev['lobby_id'] ?? null) === $lobby_id) {
+            $prev_boss_floors = $boss_floors;
+        } else {
+            $prev_boss_floors = tracker_boss_floors(null);
+        }
 
         // Skip zero-EXP loading screen artifacts
         if ($curr_exp === 0 && $prev && $prev['exp'] > 0) {
@@ -82,7 +124,8 @@ while (time() - $script_start < 55) {
         }
 
         $in_boss = in_array($curr_floor, $boss_floors);
-        $was_in_boss = $prev ? in_array($prev_floor, $boss_floors) : false;
+        $was_in_boss = $prev ? in_array($prev_floor, $prev_boss_floors) : false;
+        $room_fields = ['episode' => $episode, 'is_game' => $room ? $room['is_game'] : true];
 
         // ================================================================
         // FLOOR TRANSITION TRACKING (for SPEEDRUN_FLOOR)
@@ -99,6 +142,7 @@ while (time() - $script_start < 55) {
                     'time_on_floor' => $time_on_prev_floor,
                     'time' => time(),
                     'lobby_id' => $lobby_id,
+                    'episode' => $episode,
                 ];
             }
         }
@@ -109,11 +153,11 @@ while (time() - $script_start < 55) {
 
         // ── Player just entered a boss room ──
         if ($in_boss && !$was_in_boss) {
-            $pre_boss = ($prev && $prev_floor > 0 && !in_array($prev_floor, $boss_floors))
+            $pre_boss = ($prev && $prev_floor > 0) // the previous floor wasn't an arena
                 ? $prev_floor
                 : ($prev['pre_boss_floor'] ?? -1);
             
-            $new_states[$key] = [
+            $new_states[$key] = $room_fields + [
                 'floor' => $curr_floor,
                 'exp' => $curr_exp,
                 'items' => $curr_items,
@@ -131,8 +175,9 @@ while (time() - $script_start < 55) {
 
         // ── Player is still in the boss room ──
         if ($in_boss && $was_in_boss && $curr_floor === $prev_floor) {
-            $entry_exp = $prev['entry_exp'] ?? $curr_exp;
-            $entry_items = $prev['entry_items'] ?? $curr_items;
+            // (no entry reading: the arena was entered under an older state, so count from the last pass)
+            $entry_exp = $prev['entry_exp'] ?? $prev['exp'] ?? $curr_exp;
+            $entry_items = $prev['entry_items'] ?? $prev['items'] ?? $curr_items;
             $exp_delta = $curr_exp - $entry_exp;
             $item_delta = $curr_items - $entry_items;
 
@@ -155,9 +200,10 @@ while (time() - $script_start < 55) {
                     'time_in_arena' => $time_in_arena,
                     'pre_boss_floor' => $pre_boss,
                     'lobby_id' => $lobby_id,
+                    'episode' => $episode,
                 ];
 
-                $new_states[$key] = array_merge($prev, [
+                $new_states[$key] = array_merge($prev, $room_fields, [
                     'floor' => $curr_floor,
                     'exp' => $curr_exp,
                     'items' => $curr_items,
@@ -167,7 +213,7 @@ while (time() - $script_start < 55) {
             }
 
             // Still fighting
-            $new_states[$key] = array_merge($prev, [
+            $new_states[$key] = array_merge($prev, $room_fields, [
                 'floor' => $curr_floor,
                 'exp' => $curr_exp,
                 'items' => $curr_items,
@@ -201,7 +247,8 @@ while (time() - $script_start < 55) {
                     'entry_time' => $entry_time,
                     'time_in_arena' => $time_in_arena,
                     'pre_boss_floor' => $pre_boss,
-                    'lobby_id' => $lobby_id,
+                    'lobby_id' => $prev['lobby_id'] ?? $lobby_id, // the room the arena was in
+                    'episode' => array_key_exists('episode', $prev) ? $prev['episode'] : $episode,
                 ];
             }
         }
@@ -217,7 +264,7 @@ while (time() - $script_start < 55) {
             ? ($prev['floor_entry_time'] ?? time())
             : time();
 
-        $new_states[$key] = [
+        $new_states[$key] = $room_fields + [
             'floor' => $curr_floor,
             'exp' => $curr_exp,
             'items' => $curr_items,

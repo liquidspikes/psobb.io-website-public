@@ -2935,6 +2935,16 @@ function describeBountyObjective(goalType, goalTarget) {
         'ANY_DRAGON': 'a Dragon-type boss'
     };
 
+    // Boss targets are "<floor>" or, since the lore-grounded generator, "<floor>@<episode>":
+    // Episodes 1 and 2 share floors 12-14 (see parse_boss_target() in api/functions.php).
+    const ep2BossFloorMap = { '12': 'Gal Gryphon', '13': 'Olga Flow', '14': 'Barba Ray' };
+    const bossNameFor = (t) => {
+        const m = String(t).match(/^(\d+)(?:@(\d))?$/);
+        if (!m) return bossFloorMap[t] || `Boss (Floor ${t})`;
+        if (m[2] === '2' && ep2BossFloorMap[m[1]]) return ep2BossFloorMap[m[1]];
+        return bossFloorMap[m[1]] || `Boss (Floor ${m[1]})`;
+    };
+
     // Floor ID -> Area Name mapping for PATROL/EXPLORATION
     const areaFloorMap = {
         '0': 'Pioneer 2', '1': 'Forest 1', '2': 'Forest 2',
@@ -2953,7 +2963,7 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'MENTOR_BOSS':
         case 'HARDCORE_MENTOR':
         case 'DIVERSE_PARTY_BOSS': {
-            const bossName = bossFloorMap[target] || `Boss (Floor ${target})`;
+            const bossName = bossNameFor(target);
             const prefix = goalType === 'MENTOR_BOSS' ? 'Mentor a rookie and defeat '
                 : goalType === 'HARDCORE_MENTOR' ? 'Carry 3+ rookies and defeat '
                     : goalType === 'DIVERSE_PARTY_BOSS' ? 'Defeat with a diverse party: '
@@ -2962,7 +2972,7 @@ function describeBountyObjective(goalType, goalTarget) {
         }
         case 'SPEEDRUN_BOSS': {
             const parts = target.split('_');
-            const bossName = bossFloorMap[parts[0]] || `Boss (Floor ${parts[0]})`;
+            const bossName = bossNameFor(parts[0]);
             const timeLimit = parts[1] ? ` in under ${Math.floor(parts[1] / 60)}m ${parts[1] % 60}s` : '';
             return `Speedrun ${bossName}${timeLimit}`;
         }

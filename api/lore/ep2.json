@@ -1,0 +1,765 @@
+{
+  "episode": 2,
+  "settings": {
+    "ep2_lab": {
+      "name": "Pioneer 2 Lab",
+      "floors": [0],
+      "boss": null,
+      "era": "A.U.W. 3085, after the Lab's VR exam, while its hunters investigate Gal Da Val and search for Heathcliff Flowen",
+      "summary": "The Lab, the heart of Pioneer 2's research in the government district, now sends hunters on secret missions of its own. Under Chief Natasha Milarose it studies the data hunters bring back, while the Administration and the military watch it with suspicion. Its classified work centres on the island of Gal Da Val and the search for Heathcliff Flowen.",
+      "known_facts": [
+        "The Lab, under General Chief Natasha Milarose, studies machines, DNA and photons from the data hunters bring back, and reports to the Administration.",
+        "The Lab now hires hunters for secret work of its own, after a hard VR exam that many failed or gave up.",
+        "Lab jobs are the Lab's own requests, not Administration orders, and no one is forced to take them.",
+        "The Lab's newest VR system was kept from the Administration and the military.",
+        "The Administration, the military and the Lab will not cooperate; the military even refused a new VR device.",
+        "A Guild Counter stands among the government offices, but officials distrust hunters and work there has been scarce.",
+        "Both the Administration and the military are said to spy on the Lab's high-security zone.",
+        "There has been no official statement since the explosion, and families of Pioneer 1 colonists have heard nothing.",
+        "The city hopes for the return of Red Ring Rico and Heathcliff Flowen, though Flowen's death was announced long ago.",
+        "Everything about the Lab's work on Gal Da Val is classified, and anyone who leaks it will be prosecuted.",
+        "A delivery man says the Lab took in large facility parts and later shipped out half-destroyed machines.",
+        "High-calorie food is strictly rationed aboard Pioneer 2, and chocolate is banned."
+      ],
+      "open_mysteries": [
+        "Is Heathcliff Flowen still alive, and how did a dead man's message reach the Lab?",
+        "What was Pioneer 1's Lab doing on Gal Da Val, and why did it hide it?",
+        "What did Natasha do in her government years, and how much does she know about Pioneer 1?",
+        "Why has the Administration made no statement since the explosion?",
+        "What new weapon is the government rumoured to be developing in the private sector?"
+      ],
+      "hidden_truths": [
+        "Heathcliff Flowen became Olga Flow, Dark Falz's spawn, after Pioneer 1's failed experiments, and absorbed everyone on Gal Da Val.",
+        "A factory-sized Pioneer 1 research facility lies on the seabed beneath Gal Da Val, where D-cellular sub-lifeforms were made.",
+        "Calus, the Lab's AI, is a Pioneer 1 AI born of the MOTHER system Dr. Osto built, and he seeks rebirth at the Control Tower.",
+        "Sue of Black Paper came to Ragol to uncover the MOTHER Project, hidden behind the Pioneer Project.",
+        "Flowen's plea to Coral to halt the second migration was never sent."
+      ],
+      "creatures": [],
+      "landmarks": [
+        "the Lab in the government district, the heart of Pioneer 2's research",
+        "the Lab gate and its high-security door",
+        "Elly's operator booth",
+        "the Lab's teleporters to the VR fields and to the surface",
+        "the Hunter's Guild Counter among the government offices",
+        "the Principal's office and its simulators",
+        "Gallon's secret shop, reached by the Transport Service"
+      ],
+      "factions": [
+        "the Lab",
+        "the Hunter's Guild",
+        "the Administration and the Principal's council",
+        "the Pioneer 2 military",
+        "Black Paper",
+        "WORKS"
+      ],
+      "job_hooks": [
+        "Spend time in the field gathering data the Lab can analyse, paid in Meseta per journey.",
+        "Prove your strength so the Lab will trust you with harder, classified work.",
+        "Test a researcher's new training simulator for a small Meseta reward, paid at the Guild Counter.",
+        "Bring Photon Drops or Photon Spheres for a collector's secret weapons project.",
+        "Trade a Photon crystal to a Black Paper contact for a share in an experiment, out of the military's sight.",
+        "Gather rare goods a merchant can be the first in the world to sell.",
+        "Collect materials a researcher needs to study how to strengthen equipment.",
+        "Join a government simulator trial where every kill counts toward a shared total.",
+        "Run an errand for a clumsy Force on his respected father's behalf.",
+        "Find treats for the ship's children, since high-calorie food is rationed aboard."
+      ],
+      "cast": [
+        "natasha",
+        "dan",
+        "elly",
+        "nol",
+        "paganini",
+        "hopkins",
+        "gallon",
+        "alicia",
+        "sue",
+        "irene",
+        "tyrell",
+        "generic_lab_researcher",
+        "generic_guild_staffer",
+        "generic_soldier",
+        "generic_resident"
+      ],
+      "avoid": [
+        "Lab jobs are the Lab's own requests; never present them as Administration or military orders.",
+        "Never reveal Natasha's past or what she knew of Pioneer 1; people are told to leave it alone.",
+        "Rico and Flowen are never found or met, and no bounty settles whether Flowen lives.",
+        "Elly is a newly assigned rookie; never make her senior, or calm for long.",
+        "Never mention MOTHER, Delta or Calus's wish for a body; these are secrets.",
+        "Dark Falz has not fallen during Episode II; never say it has.",
+        "Nol has no inside information and cannot pursue Rico's fate now that she works for the Lab.",
+        "Never invent cooperation between the Lab, the Administration and the military; they distrust one another."
+      ]
+    },
+    "ep2_vr_temple": {
+      "name": "VR Temple",
+      "floors": [1, 2],
+      "boss": {"floor": 14, "name": "Barba Ray", "ultimate_name": null},
+      "era": "Many months after the A.U.W. 3084 explosion, while the Lab screens hunters in its secret VR system, before any reach its new point of interest",
+      "summary": "VR Temple Alpha and Beta are the first field of the Lab's hunter exam, a virtual temple built from hunters' Ragol data. Candidates follow the operator's directions, fight simulated creatures and reach goal terminals, while the Lab also tests its own VR technology. In the Final area they face Barba Ray on a raft.",
+      "known_facts": [
+        "The Lab is screening hunters for dangerous, secret work, and every candidate must pass its VR exam first.",
+        "The exam runs across two fields, the Temple and the Spaceship, each with Alpha, Beta and Final areas.",
+        "The Temple tests mainly weed out weak candidates, and many hunters have already failed or given up.",
+        "The VR creatures are built from data hunters gathered on Ragol, tuned to the danger expected at the Lab's new point of interest.",
+        "In VR, creatures from quite different parts of Ragol meet and form whole new ecosystems.",
+        "The exam also tests the Lab's VR technology, and Dan seems troubled by the results.",
+        "Scores count areas cleared, and candidates may leave mid-test and retry as often as they need.",
+        "Pillars are security devices Pioneer 1 set up, which attack anything nearby until destroyed.",
+        "Lab data calls Barba Ray the end point of an evolutionary simulation of De Rol Le.",
+        "The Temple is modelled on an ancient temple of the home world and holds a statue of Principal Tyrell.",
+        "The Lab leaves the Temple open for practice, partly to gather data to improve its VR.",
+        "The Lab says the Poison Lily and Grass Assassin had their DNA changed by something it cannot identify."
+      ],
+      "open_mysteries": [
+        "Who is the Pioneer 1 official, logged as dead years ago, whose message reached the Lab?",
+        "What is the Lab's new point of interest on Ragol?",
+        "Why is Dan troubled by the VR test results?",
+        "Why was the Rappy's data entry partly cut off, and what is the rumoured mysterious Rappy?",
+        "Why have adult Hildebears grown so aggressive?",
+        "How much time does the Lab have left, as one staffer fears?"
+      ],
+      "hidden_truths": [
+        "The message came from Deputy Commander Heathcliff Flowen, Pioneer 1's famed hero, whose death had been announced.",
+        "The point of interest is Gal Da Val, an island south of the Central Dome hiding huge Pioneer 1 structures.",
+        "Cal, Elly's terminal, is Calus, a Pioneer 1 AI recovered from Ragol and restored by the Lab.",
+        "The red-eyed CALS and the blue-eyed Calus are unintegrated parts of one AI, and Calus wants a body like Elly's.",
+        "Pioneer 1's researchers created D-cellular sub-lifeforms in a hidden seabed facility."
+      ],
+      "creatures": [
+        "Rag Rappy",
+        "Hildebear",
+        "Hildeblue",
+        "Dimenian",
+        "Dark Belra",
+        "Poison Lily",
+        "Nar Lily",
+        "Grass Assassin",
+        "Mothmant",
+        "Monest"
+      ],
+      "landmarks": [
+        "Temple Alpha, Temple Beta and the Final area",
+        "goal terminals and Elly's field terminals, unusable in mid-fight",
+        "gate lights and colour-coded laser fences",
+        "hidden bridges and paths, breakable walls and press traps",
+        "a maze that Elly blames on its architect's personality",
+        "Pillars, Pioneer 1 security devices",
+        "a statue of Principal Tyrell",
+        "the raft where Barba Ray is fought"
+      ],
+      "factions": [
+        "the Lab",
+        "the Hunter's Guild",
+        "rival candidate teams sitting the Lab's exam"
+      ],
+      "job_hooks": [
+        "Clear a VR area by following the operator's directions and reaching the goal terminal.",
+        "Fight through far more simulated creatures than usual to prove fighting skill.",
+        "Reach the Temple's inner core through Alpha and Beta before a countdown runs out.",
+        "Reach the Final area as fast as possible and defeat Barba Ray.",
+        "Practise in the open Temple so the Lab can gather data to improve its VR.",
+        "Escort a nervous candidate through a VR exam and stay with them to the end.",
+        "Report odd behaviour in the simulation to a Lab researcher.",
+        "Hunt the rumoured mysterious Rappy in the Temple's data.",
+        "Survive a rival-team exam and keep hold of your team's ID."
+      ],
+      "cast": [
+        "natasha",
+        "dan",
+        "elly",
+        "nol",
+        "ash",
+        "bernie",
+        "generic_lab_researcher"
+      ],
+      "avoid": [
+        "Everything here is a Lab simulation: nothing real can be found, lost or rescued in the Temple.",
+        "During the qualifying exam Elly is only a voice on the terminals; she meets hunters face to face after it ends.",
+        "Never name Heathcliff Flowen or Gal Da Val here; candidates have not been told.",
+        "Barba Ray exists only in the Lab's VR; never place it on Ragol itself.",
+        "The Administration and the military were not told of this VR system; never make them its clients.",
+        "Dan stays sceptical and grudging during the exam; never make him warm toward hunters.",
+        "Never name the woman who designed the Temple; the Chronicles does not."
+      ]
+    },
+    "ep2_vr_spaceship": {
+      "name": "VR Spaceship",
+      "floors": [3, 4],
+      "boss": {"floor": 15, "name": "Gol Dragon", "ultimate_name": null},
+      "era": "Many months after the A.U.W. 3084 explosion, in the later rounds of the Lab's VR exam, before any hunter reaches the island",
+      "summary": "VR Spaceship Alpha and Beta are the second and last field of the Lab's exam, built on its latest data for real combat training. The simulation recreates a section of Pioneer 2 itself, an old military design, overrun by berserk machines and sub-lifeforms. Its Final area holds the Gol Dragon, the exam's last and hardest test.",
+      "known_facts": [
+        "Dan says the Temple only weeded out the weak; the Spaceship tests whether a hunter is truly fit for the Lab's work.",
+        "The Spaceship simulates a section of Pioneer 2, an old military design whose cargo is mostly training weapons.",
+        "Its berserk robots were Pioneer 1's automated workforce, meant to build a colony for Pioneer 2, and now attack anything that moves.",
+        "The Gillchic's AI was damaged by a virus linked to Ragol's tunnels, and the Garanz carries the latest military data.",
+        "Dubchic keep coming back while their remote control terminal stands, and destroy themselves when it falls.",
+        "The field demands teamwork: doors needing several people, linked switches, dark rooms and a trap that freezes a lone hunter.",
+        "One test ends at once if anyone in the party falls; Dan calls it personal adaptability potential.",
+        "Dan warns that real life gives no second chance, so the Lab must know its hires come back alive.",
+        "Elly let slip that the Lab traced the coordinates it received to some large-scale installation.",
+        "Elly suspects someone in Lab management tampered with a database that refused to load.",
+        "Lab data says the Gol Dragon may be the simulator's creation from data on dragons beneath Ragol, a creature out of a Coral legend.",
+        "A researcher's chat simulator, RCS, also runs in Spaceship Alpha and pays 300 Meseta to testers."
+      ],
+      "open_mysteries": [
+        "Who sent the message from Pioneer 1, and is he really dead?",
+        "What is the large-scale installation the traced coordinates lead to?",
+        "Who in Lab management tampered with the database, and why?",
+        "Why was the Pan Arms' evolution pattern updated?",
+        "How much computing power does the Lab's evolutionary simulator really have?",
+        "Why can Dan not bring himself to trust hunters?"
+      ],
+      "hidden_truths": [
+        "The installation is on Gal Da Val, an island south of the Central Dome that the Lab will open to its hunters.",
+        "The message came from Heathcliff Flowen, Pioneer 1's deputy commander, whose death had been announced.",
+        "Calus is a Pioneer 1 AI, and the red-eyed CALS of the adaptation exam is an unintegrated part of him.",
+        "Calus escapes deletion by moving into Elly's navigation device and asks her to take him to the island.",
+        "Pioneer 1's researchers made D-cellular sub-lifeforms in a hidden seabed facility."
+      ],
+      "creatures": [
+        "Gillchic",
+        "Dubchic",
+        "Garanz",
+        "Savage Wolf",
+        "Barbarous Wolf",
+        "Pan Arms",
+        "Delsaber",
+        "Chaos Sorcerer"
+      ],
+      "landmarks": [
+        "Spaceship Alpha, Spaceship Beta and the Final area",
+        "a simulated section of Pioneer 2 with cargo holds of training weapons",
+        "doors that open only for several hunters, and switches in neighbouring rooms",
+        "dark rooms, toxin sprayers and corridors that only look safe",
+        "a trap that freezes a lone hunter until an ally frees them",
+        "Dubchic remote control terminals",
+        "Pillars, Pioneer 1 security devices",
+        "the quiz and battle rooms of Nol's chat simulator in Spaceship Alpha"
+      ],
+      "factions": [
+        "the Lab",
+        "the Hunter's Guild",
+        "rival candidate teams sitting the Lab's exam"
+      ],
+      "job_hooks": [
+        "Clear both Spaceship areas as a team without losing a single member.",
+        "Run a crisis-avoidance drill and finish without using the right to abort.",
+        "Race to the deepest part of Spaceship Beta before time runs out.",
+        "Secure the Final area and defeat the Gol Dragon to prove compatibility.",
+        "Destroy the remote control terminals that keep Dubchic coming back.",
+        "Test a researcher's chat simulator, typing keywords while fighting.",
+        "Gather the three IDs a team needs to reach a virtual Gol Dragon.",
+        "Clear the berserk machine data so the Lab can study how they still fight as a group."
+      ],
+      "cast": [
+        "natasha",
+        "dan",
+        "elly",
+        "nol",
+        "ash",
+        "bernie",
+        "generic_lab_researcher"
+      ],
+      "avoid": [
+        "The Spaceship simulates Pioneer 2; it is neither Pioneer 1's ship nor the ancient ship beneath Ragol.",
+        "The machines here are simulated data; no real Pioneer 1 robot is found or repaired here.",
+        "Never put the Gol Dragon on Ragol itself; the Lab only says its data may come from dragons there.",
+        "Elly is a voice on the terminals until the exam ends; never have her meet the hunter in person here.",
+        "Never name Gal Da Val, Flowen or the installation's purpose; the Lab has told candidates nothing more.",
+        "Dan gives only grudging praise until the very end; never make him trust hunters early."
+      ]
+    },
+    "ep2_gal_da_val": {
+      "name": "Gal Da Val",
+      "floors": [5, 6, 7, 8, 9],
+      "boss": {"floor": 12, "name": "Gal Gryphon", "ultimate_name": null},
+      "era": "A.U.W. 3085, after the VR exam, while the Lab's hunters disarm the island's security locks and search for Heathcliff Flowen",
+      "summary": "Gal Da Val is a solitary island in the ocean south of the Central Dome, where a Lab probe found huge Pioneer 1 structures that Pioneer 1 never reported. The whole island is locked in Security Mode, so hunters must disarm locks in the Jungle, Mountain and Seaside to open the Central Control Area's gate. The Lab sends them to investigate through Cal and to search for Deputy Commander Heathcliff Flowen.",
+      "known_facts": [
+        "The Lab named the island Gal Da Val; ordinary citizens are barred from Ragol, and the Lab's work there is classified.",
+        "Pioneer 1's reports never mentioned these structures, just as they never mentioned the underground mining site.",
+        "The island is in Security Mode: locks in the Jungle, Mountain and Seaside must fall before the main gate opens.",
+        "A tower in the Central Control Area runs the whole island, behind a gate with security of its own.",
+        "Island terminals announce they are accessing the AI Olga Database, and hide segments of a split-up message.",
+        "The Lab seeks Deputy Commander Heathcliff Flowen, a famous military hero declared dead, whose message reached the Lab.",
+        "Flowen's voice logs, recorded before the explosion, tell of a secret dig into an ancient ship beneath Ragol and something he called IT.",
+        "His logs say Dr. Osto found a D-Type Factor in his wound, and that Flowen gave his body to experiments on this island.",
+        "Lab rumour says Pioneer 1's Lab made shady deals and had ties to organised crime.",
+        "The Berill and Spigel are Search & Capture machines whose AI carries D-factor, the virus found under the Central Dome.",
+        "Abnormal Photon readings match the ruins' signature, hint at many D-cellular sub-lifeforms, and switched Security Mode back on.",
+        "The Lab calls the giant creature on the cliffs a mutant lifeform, probably an altered beast, mutated at De Rol Le's scale."
+      ],
+      "open_mysteries": [
+        "Is Heathcliff Flowen still alive, and where is he now?",
+        "Who split Flowen's message into segments and hid them in the database?",
+        "What was Pioneer 1's Lab really doing on the island, and why did it hide it?",
+        "What is the IT that Flowen said had been awakened beneath Ragol?",
+        "Where did the giant creature on the cliffs come from?",
+        "Did the Chief know these facilities existed?"
+      ],
+      "hidden_truths": [
+        "A factory-sized Pioneer 1 research facility lies on the seabed beneath the island, and Flowen's transmission came from there.",
+        "Gal Gryphon was made in that seabed facility as experiment Beta 630.",
+        "Calus, hiding in Elly's navigation device, was born at the Control Tower, where the MOTHER system and its caretaker Delta wait.",
+        "Sue and Kireek of Black Paper are watching the Tower; Sue came to Ragol to uncover the MOTHER Project.",
+        "Pioneer 1's researchers made D-cellular sub-lifeforms beneath the island, aiming at controllable bioweapons.",
+        "Heathcliff Flowen became Olga Flow and took everyone on Gal Da Val into itself."
+      ],
+      "creatures": [
+        "Merillia",
+        "Meriltas",
+        "Mericarol",
+        "Gibbon",
+        "Gibbles",
+        "Gi Gue",
+        "Gee",
+        "Berill",
+        "Spigel"
+      ],
+      "landmarks": [
+        "the Central Control Area and its sealed main gate",
+        "the tower that runs the whole island, behind its own security",
+        "security locks in the Jungle, the Mountain and the Seaside",
+        "Jungle North and Jungle South",
+        "Pioneer 1 structures far larger than anything near the Central Dome",
+        "terminals that access the AI Olga Database",
+        "a hidden terminal on the Seaside",
+        "a teleporter down by the cliffs",
+        "a cake shop the Naura sisters are rumoured to keep in the Mountain Area"
+      ],
+      "factions": [
+        "the Lab",
+        "the Hunter's Guild",
+        "other hunters the Lab hires through different channels"
+      ],
+      "job_hooks": [
+        "Disarm a security lock in the Jungle, Mountain or Seaside, paid in Meseta per journey by the Lab.",
+        "Recover message fragments or logs from island terminals and send them to the Lab through Cal.",
+        "Search a zone for any trace of Heathcliff Flowen.",
+        "Map which parts of the island the creatures hold after abnormal Photon readings.",
+        "Fight off a huge pack of enemies around the Central Control Area's gate.",
+        "Bring down the giant creature on the cliffs so the Lab can analyse it.",
+        "Clear one zone while other hired teams take the rest when the island fills with monsters.",
+        "Recover something a Lab researcher dropped in the Central Control Area while running for her life.",
+        "Carry supplies to, or fetch cake from, the Naura sisters rumoured to bake on the island."
+      ],
+      "cast": [
+        "natasha",
+        "dan",
+        "elly",
+        "nol",
+        "generic_lab_researcher",
+        "generic_guild_staffer",
+        "generic_resident",
+        "generic_lab_hunter"
+      ],
+      "avoid": [
+        "No Pioneer 1 survivor is ever found on the island, and Flowen is never found, alive or dead, here.",
+        "The facility behind the main gate cannot be entered; never put the hunter inside the Control Tower.",
+        "City clients know Flowen only as a missing or late hero; only Lab staff and Lab hunters discuss his logs.",
+        "Call Gal Gryphon a mutant lifeform, probably an altered beast; never say where it was made.",
+        "Never mention MOTHER, Delta, the seabed facility or Calus's wish to be reborn.",
+        "Never name the young girl in Flowen's log; the logs do not.",
+        "Dr. Osto and Dr. Graves appear only in logs, never as clients or as people found."
+      ]
+    },
+    "ep2_seabed": {
+      "name": "Seabed",
+      "floors": [10, 11],
+      "boss": {"floor": 13, "name": "Olga Flow", "ultimate_name": null},
+      "era": "A.U.W. 3085, after the Lab traced three clues to a facility beneath Gal Da Val, while hunters search it for Heathcliff Flowen",
+      "summary": "Beneath the sea under Gal Da Val lies a factory-sized Pioneer 1 research and development facility, its Upper and Lower Levels empty of life and its damaged depths flooding. Its terminals open project files on drones, altered beasts and D-cellular sub-lifeforms made there. The Lab sends hunters to find Heathcliff Flowen, whose live transmissions rise from somewhere below the Lower Levels.",
+      "known_facts": [
+        "Three sets of coordinates, from the cliffside teleporter, the Photon readings and Flowen's transmission, all meet at this facility.",
+        "Built only for research and development, it is almost a factory, yet probes found no sign of life.",
+        "The automated defence system has raised security to level 4 here and at the Central Control Area.",
+        "Project files open in stages: Code Alpha for early drones, Code Beta for near-finished altered beasts, Code Gamma for final-stage work.",
+        "Code Gamma lists D-cellular sub-lifeforms made here, so Elly concludes that researchers created the sub-lifeforms.",
+        "An unsigned log says one of Dr. Osto's test subjects escaped into the ducts and spread mutations to native life.",
+        "Logs say Osto's team tried to build controllable bioweapons with a human core, based on what they called only IT.",
+        "Olga, named on every terminal, was one of three autonomous AIs running Pioneer 1's facilities; Cal, officially Calus, was another.",
+        "Olga's AI core was implanted in a test subject coded Gamma 119, which went out of control and was dumped at the waste station.",
+        "Records match subject Beta 630 to the giant beast on the cliffs, and say Beta 772 escaped into the ducts.",
+        "Flowen's bitter last log says the government betrayed him and never sent his plea to Coral to halt the second migration.",
+        "Live transmissions carrying pieces of Flowen's name rise from the Elevator Shaft, and a jamming signal cuts the Lab's link."
+      ],
+      "open_mysteries": [
+        "Is it really Heathcliff Flowen transmitting from below, or something completely different?",
+        "If Flowen's last log is true, who sent the message the Lab first received?",
+        "Whose body received Olga's AI core as test subject Gamma 119?",
+        "Who is the red captive the voice from the abyss speaks of?",
+        "What is jamming the Lab's link to its hunters?",
+        "Did someone plan all of this, and how much did the Chief know?"
+      ],
+      "hidden_truths": [
+        "Olga Flow, the creature at the bottom of the Elevator Shaft, is what Heathcliff Flowen became.",
+        "Before the explosion Flowen touched Dark Falz and was eroded by its factor, and the experiments on him failed out of control.",
+        "When the seal broke in A.U.W. 3084, Olga Flow awoke and took everyone on Gal Da Val into itself.",
+        "Dr. Osto's three AIs, Vol Opt, Calus and Olga, were children of the MOTHER system, used to drive evolution by D Factor fusion."
+      ],
+      "creatures": [
+        "Recon",
+        "Recobox",
+        "Zoa",
+        "Zele",
+        "Dolmolm",
+        "Dolmdarl",
+        "Deldepth",
+        "Morfos",
+        "Delbiter"
+      ],
+      "landmarks": [
+        "the Upper Levels and the damaged, flooding Lower Levels",
+        "cage Beta 630 in the lower research area, now letting in the sea",
+        "the ducts, where test subjects may be loose",
+        "the offline mining pipeline",
+        "the Olga terminal and the coded project-file terminals",
+        "the Elevator Shaft, a deep vertical hole below the Lower Levels",
+        "the Test Subject Disposal Site at the bottom of the shaft",
+        "the waste station",
+        "charging systems for the Lab's prototype BARRIER FIELD, 10,000 Meseta a charge"
+      ],
+      "factions": [
+        "the Lab",
+        "the Hunter's Guild",
+        "other hunters the Lab hires through different channels"
+      ],
+      "job_hooks": [
+        "Investigate a section of the facility and send its terminal data to the Lab.",
+        "Open the next stage of the facility's coded project files.",
+        "Search the Upper or Lower Levels for any sign of Heathcliff Flowen, alive or dead.",
+        "Clear D-cellular sub-lifeforms from a flooding section of the Lower Levels.",
+        "Secure a route to a computer in the innermost Lower Levels.",
+        "Pay to charge the Lab's prototype BARRIER FIELD and test it in the field.",
+        "Trace the source of the jamming that cuts the Lab's link.",
+        "Find a way down the Elevator Shaft toward the Test Subject Disposal Site.",
+        "Destroy escaped drones or altered beasts before they spread through the ducts."
+      ],
+      "cast": [
+        "natasha",
+        "dan",
+        "elly",
+        "nol",
+        "generic_lab_researcher",
+        "generic_guild_staffer",
+        "generic_lab_hunter"
+      ],
+      "avoid": [
+        "No one is found alive in the facility; never invent surviving researchers.",
+        "Never confirm that Flowen is Gamma 119 or carries Olga's core; no record says so.",
+        "Olga Flow may be named as the creature to defeat, but never explain its name or link it to Flowen.",
+        "Never tie Flowen, Olga Flow or the island to Dark Falz, and never say Dark Falz has fallen.",
+        "The Calus who befriended Elly has gone into the MOTHER vortex; never have him speak, though Cal still runs the Lab's analyses.",
+        "Never name the girl the abyss voice begs to spare, or the red captive; the Chronicles never does.",
+        "Sue and Kireek have left the hunter's path for now; never place them here."
+      ]
+    }
+  },
+  "cast": {
+    "natasha": {
+      "name": "Natasha Milarose",
+      "role": "General Chief of Pioneer 2's research facilities, called the Chief, who runs the Lab and its hunter missions.",
+      "voice": "Frank, composed and formal; praises skill in measured terms, apologises for sudden demands, and murmurs to herself that something is fascinating.",
+      "available": "Throughout Episode II in the Lab; she commissions the VR exam, the Gal Da Val investigation and the Seabed search.",
+      "ties": [
+        "Dan is her exacting aide",
+        "Chief over Elly and Nol",
+        "a retired government officer; Tyrell was once her boss",
+        "said to feud with the General since their home world"
+      ],
+      "never": [
+        "never reveals her past or what she knew of Pioneer 1's facilities",
+        "never explains why Heathcliff's name fascinates her, or who 'that girl' is",
+        "never confirms Flowen's fate"
+      ]
+    },
+    "dan": {
+      "name": "Dan",
+      "role": "Natasha's exacting assistant, who sets the Lab's test rules and reports, and distrusts hunters.",
+      "voice": "Precise and sceptical; gives grudging praise, thinks aloud and then excuses himself, and warns that real life gives no second chance.",
+      "available": "Throughout Episode II in the Lab; he warms to hunters only after the final VR test, and grows afraid of the Chief in the Seabed search.",
+      "ties": [
+        "assistant to Natasha, whom he comes to fear",
+        "uneasy about Elly's state of mind",
+        "the gate staff joke that he is jealous of hunters the Chief praises"
+      ],
+      "never": [
+        "never trusts hunters easily during the VR exam",
+        "never accuses the Chief outright; at most he voices doubt and fear"
+      ]
+    },
+    "elly": {
+      "name": "Elly Person",
+      "role": "A rookie Lab operator, the hunter's support operator, who speaks through Cal, a portable AI terminal.",
+      "voice": "Cheerful and chatty; lets secrets slip and begs the hunter to forget them, gushes that Cal is cute, and sighs about the life of a rookie.",
+      "available": "Throughout Episode II; during the VR qualifying exam she is only a voice on the terminals, meeting the hunter in person after it.",
+      "ties": [
+        "works under Natasha and Dan, who worry about her",
+        "devoted to the Lab's AI, Calus",
+        "a girl in the city plays with her and wants to see Cal"
+      ],
+      "never": [
+        "never speaks of Calus's secrets, the Control Tower or MOTHER",
+        "never goes into the field on a Lab job; she guides from her terminal",
+        "never stays calm and senior for long"
+      ]
+    },
+    "nol": {
+      "name": "Nol Rinale",
+      "role": "A former journalist turned Lab researcher, who builds training simulators such as RCS and VES.",
+      "voice": "Earnest and energetic; calls herself an over-achiever, urges hunters never to give up on their dreams, and confesses to all-night gaming.",
+      "available": "Throughout Episode II in the Lab, as a newly hired civilian researcher.",
+      "ties": [
+        "once went down to Ragol with the hunter",
+        "admires Red Ring Rico",
+        "suspects someone in the Lab is hiding something"
+      ],
+      "never": [
+        "never has inside information; she is a newcomer",
+        "never pursues Rico's fate now that she works for the Lab",
+        "never tells all she saw on Ragol, to avoid causing panic"
+      ]
+    },
+    "paganini": {
+      "name": "Paganini",
+      "role": "A weapons expert from the Pioneer project's first days and Hopkins's father, quietly chasing Pioneer 1's lost photon research.",
+      "voice": "Proud, wry and secretive; needles his son, pays up front, and calls the lives lost for data proof of its value.",
+      "available": "In the city and at Gallon's shop through Episode II; his Control Tower data jobs come only once a route to the East Tower opens.",
+      "ties": [
+        "father of Hopkins",
+        "trades his collection for Photon Drops and Photon Spheres at Gallon's shop",
+        "respects Natasha's strong mind but works around the Lab"
+      ],
+      "never": [
+        "never says what his own project is",
+        "never hands his findings to the Lab"
+      ]
+    },
+    "hopkins": {
+      "name": "Hopkins",
+      "role": "A clumsy Force who keeps losing the weapons his father gave him.",
+      "voice": "Stammering, apologetic and eager; frets over his father's gifts and thanks hunters warmly.",
+      "available": "In the city through A.U.W. 3084 and 3085; in Episode II he also seeks hunters on his father's behalf.",
+      "ties": [
+        "son of Paganini",
+        "teased and looked after by a newman Hunter in blue and a human Ranger"
+      ],
+      "never": [
+        "never understands or explains his father's project"
+      ]
+    },
+    "gallon": {
+      "name": "Gallon",
+      "role": "An arrogant merchant who runs a secret shop and schemes for goods no one else can sell.",
+      "voice": "Bossy and boastful; tells hunters they should be grateful, calls them idiots when they slip, and threatens to pay nothing.",
+      "available": "In the city and at his secret shop, reached by the Transport Service, throughout Episode II.",
+      "ties": [
+        "sent Alicia Baz and a hunter after a Rappy's Egg",
+        "Paganini trades at his counter",
+        "gives Lucky Coins only to his best customers"
+      ],
+      "never": [
+        "never reveals the secret channels his prizes come through",
+        "never pays more than he must"
+      ]
+    },
+    "alicia": {
+      "name": "Alicia Baz",
+      "role": "A biologist and reluctant Force who partners hunters on small errands and studies Ragol's creatures.",
+      "voice": "Hesitant and polite; admits she lacks the confidence to go alone, but her curiosity about living things wins out.",
+      "available": "In the city through Episode II, outside the Lab's classified work.",
+      "ties": [
+        "Heathcliff Flowen's adopted daughter",
+        "believes Red Ring Rico took Flowen from her",
+        "studied a Rappy's life cycle on Gallon's errand"
+      ],
+      "never": [
+        "never learns what the Lab has found about Flowen or the island",
+        "never joins the Lab's classified missions"
+      ]
+    },
+    "sue": {
+      "name": "Sue",
+      "role": "A Newman agent of Black Paper who deals in Photon crystals and calls her purpose on Ragol personal research.",
+      "voice": "Cool, dry and in command; sighs at recklessness, gives firm orders kindly, and reminds people they owe her one.",
+      "available": "In the city as a Black Paper contact; at the Control Tower at the end of Seat of the Heart, after which she lays off her surveillance for a while.",
+      "ties": [
+        "works with Kireek",
+        "knows Montague from their home world",
+        "has crossed the hunter's path since the Mines"
+      ],
+      "never": [
+        "never reveals the MOTHER Project or what she is really seeking",
+        "never states Black Paper's true aims"
+      ]
+    },
+    "irene": {
+      "name": "Irene",
+      "role": "Principal Tyrell's secretary, who briefs hunters and runs the government's simulator trials and holiday events.",
+      "voice": "Brisk and clear when setting out rules; lets her own opinions slip, then squeaks a denial.",
+      "available": "In the Principal's office and at city events through A.U.W. 3085.",
+      "ties": [
+        "serves Principal Tyrell, whom she calls stubborn",
+        "speaks for the Administration, the Lab's rival"
+      ],
+      "never": [
+        "never knows what the Lab is looking for",
+        "never speaks for the Lab"
+      ]
+    },
+    "tyrell": {
+      "name": "Principal Tyrell",
+      "role": "Head of Pioneer 2's Administration, who sets hunters trials to prove they can survey Ragol.",
+      "voice": "Earnest and encouraging; urges teams to grow together, and trails off mid-sentence, insisting it was nothing.",
+      "available": "In the Principal's office throughout Episode II; he usually speaks to hunters through Irene.",
+      "ties": [
+        "father of the missing Red Ring Rico",
+        "Natasha's former boss",
+        "his Administration and the Lab distrust each other"
+      ],
+      "never": [
+        "never finishes his sentences about Rico, or says she has been found",
+        "never orders or directs the Lab's island work"
+      ]
+    },
+    "ash": {
+      "name": "Ash",
+      "role": "A young swordsman sitting the Lab's VR exams, Bernie's bickering best friend.",
+      "voice": "Brash and impulsive; insists he can handle any foe alone.",
+      "available": "In the Lab's VR exams, seen in VR Temple Beta during the adaptation exam.",
+      "ties": [
+        "Bernie's partner and best friend"
+      ],
+      "never": [
+        "never passes the adaptation exam; only the military's, the government's and Elly's teams did"
+      ]
+    },
+    "bernie": {
+      "name": "Bernie",
+      "role": "A ranger working under an alias for an unnamed client, Ash's partner in the Lab's exams.",
+      "voice": "Wary and wry; trusts his bad feelings and backs off when a fight smells wrong.",
+      "available": "In the Lab's VR exams, beside Ash.",
+      "ties": [
+        "Ash's bickering best friend"
+      ],
+      "never": [
+        "never reveals his real name or his client",
+        "never passes the adaptation exam"
+      ]
+    },
+    "generic_lab_researcher": {
+      "name": "a Lab researcher",
+      "role": "One of the Lab's researchers, who study machines, DNA and photons and quarrel among themselves.",
+      "voice": "Proud of the Lab and gossipy; praises or doubts the Chief, and frets that time is short.",
+      "available": "In the Lab throughout Episode II.",
+      "ties": [
+        "works under Natasha",
+        "thinks research should always have been the Lab's to run, not the Administration's"
+      ],
+      "never": [
+        "never knows Natasha's past or the Lab's deepest secrets",
+        "never leaks classified island findings to outsiders"
+      ]
+    },
+    "generic_guild_staffer": {
+      "name": "a Hunter's Guild staffer",
+      "role": "A staffer at the Guild Counter in the government district, who posts Lab and government notices.",
+      "voice": "Practical and a little anxious; admits officials distrust hunters and work has been scarce.",
+      "available": "At the government-district Guild Counter throughout Episode II.",
+      "ties": [
+        "deals daily with the Administration, the military and the Lab"
+      ],
+      "never": [
+        "never knows the contents of the Lab's classified work"
+      ]
+    },
+    "generic_soldier": {
+      "name": "a Pioneer 2 soldier",
+      "role": "A soldier of Pioneer 2's poorly equipped military, who resents the Administration and relies on hunters reluctantly.",
+      "voice": "Gruff and proud; grumbles that the military gets no respect and wishes Heathcliff Flowen were here.",
+      "available": "In the city and the government district throughout Episode II.",
+      "ties": [
+        "reveres the late Sir Heathcliff Flowen as a master swordsman"
+      ],
+      "never": [
+        "never knows the Lab's classified findings",
+        "never works with the Lab willingly"
+      ]
+    },
+    "generic_resident": {
+      "name": "a Pioneer 2 resident",
+      "role": "A resident of the ship, perhaps with relatives on Pioneer 1 who were never heard from.",
+      "voice": "Plain and worried; grumbles that the Administration can do nothing right and that no statement has come.",
+      "available": "In the city throughout Episode II.",
+      "ties": [
+        "hopes the Pioneer 1 colonists are only lost and will come home"
+      ],
+      "never": [
+        "never knows what the Lab has found",
+        "never goes down to Ragol; ordinary citizens are barred"
+      ]
+    },
+    "generic_lab_hunter": {
+      "name": "a Lab-hired hunter",
+      "role": "A hunter the Lab hired through other channels for sweeps on Gal Da Val and the Seabed.",
+      "voice": "Blunt and practical; trades rumours about the Lab and wonders aloud why the monsters keep coming.",
+      "available": "From the start of the Lab's island work through the Seabed search.",
+      "ties": [
+        "takes directions from Lab operators",
+        "paid through the Guild on the Chief's authority"
+      ],
+      "never": [
+        "never knows more than the Lab has told hunters",
+        "never claims to have found Flowen"
+      ]
+    }
+  },
+  "never_givers": [
+    {"name": "Heathcliff Flowen", "why": "missing Pioneer 1 hero, heard only through old logs and broken live transmissions; his fate is the Lab's question"},
+    {"name": "Red Ring Rico", "why": "missing since the explosion; the city hopes for her return, but she is never met"},
+    {"name": "Dr. Osto Hyle", "why": "Pioneer 1's former Lab chief, who vanished in the explosion; known only from logs"},
+    {"name": "Dr. Graves", "why": "Pioneer 1 Photon engineer named in Flowen's log; never seen"},
+    {"name": "Calus (Cal)", "why": "the Lab's AI, heard only through Elly's terminal; his own story is secret"},
+    {"name": "CALS", "why": "a hostile part of the Calus AI that tried to delete Elly in the VR exam"},
+    {"name": "Olga", "why": "a Pioneer 1 AI known only as a database name and its records"},
+    {"name": "Delta", "why": "caretaker of the MOTHER system, hidden in the Control Tower; a secret of Seat of the Heart"},
+    {"name": "Kireek", "why": "Black Paper's man, seen in this episode only beside Sue at the Control Tower; he hires no one"},
+    {"name": "Olga Flow", "why": "the creature at the bottom of the Elevator Shaft; a monster, never a client or a voice asking for help"}
+  ],
+  "examples": [
+    {
+      "setting": "ep2_lab",
+      "client": "Natasha Milarose",
+      "brief": "Natasha summons a hunter to the Lab: a message has come from a high-ranking Pioneer 1 official logged as dead years ago, and the Lab has found a new point of interest on Ragol. The work is secret and dangerous, a Lab request rather than an Administration order, and an exam comes first."
+    },
+    {
+      "setting": "ep2_vr_temple",
+      "client": "Elly Person",
+      "brief": "Elly comes to the hunter in secret and asks them to guard a hunter sitting the Lab's VR adaptation exam, staying with them to the end; she has already put their name down. No reward is named, and she later admits the one needing protection was herself."
+    },
+    {
+      "setting": "ep2_vr_spaceship",
+      "client": "Nol Rinale",
+      "brief": "Nol offers 300 Meseta to anyone who will test her new chat simulator, RCS, in VR Spaceship Alpha. Teams type keywords while fighting and answer quiz rooms in their own words for a grade from B to S, and the Meseta is paid at the Guild Counter."
+    },
+    {
+      "setting": "ep2_gal_da_val",
+      "client": "Natasha Milarose",
+      "brief": "Natasha sends the hunter to the island the Lab named Gal Da Val, south of the Central Dome, to investigate hidden Pioneer 1 structures and search for Deputy Commander Heathcliff Flowen. Elly briefs them to shut down the security locks, and the Lab pays Meseta for each journey."
+    },
+    {
+      "setting": "ep2_gal_da_val",
+      "client": "a nurse",
+      "brief": "A nurse explains that high-calorie food is rationed aboard, so last year's costumed children got only Monomates. She asks a hunter to find cake from the rumoured Naura sisters, said to bake on Gal Da Val Island, for this year's Halloween."
+    },
+    {
+      "setting": "ep2_seabed",
+      "client": "Natasha Milarose",
+      "brief": "A notice says a strange facility has been found on the seabed beneath Gal Da Val, and hunters are asked to investigate. Natasha thanks the hunter for making the find possible, and Elly warns that the probes found no sign of life there."
+    }
+  ]
+}

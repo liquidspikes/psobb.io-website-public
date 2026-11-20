@@ -3,7 +3,7 @@
  * Provides fast caching for static assets and handles basic offline fallbacks.
  */
 
-const CACHE_NAME = 'psobb-portal-cache-v2';
+const CACHE_NAME = 'psobb-portal-cache-v3';
 const ASSETS_TO_CACHE = [
   '/login.php',
   '/css/style.css',

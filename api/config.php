@@ -637,10 +637,21 @@ $BOT_TOKEN = $_ENV['BOT_TOKEN'] ?? '';
 
 class SQLiteSessionHandler implements SessionHandlerInterface {
     private $db;
+    private $lastReadId = null;
+    private $lastReadData = null;
+    private $lastAccessed = 0;
 
     public function __construct() {
         require_once __DIR__ . '/db.php';
-        $this->db = get_db();
+        // Ensure schema/tables exist once, then open a dedicated SQLite3 handle
+        // so unfinalized SELECT cursors on get_db() never trigger SQLITE_BUSY_SNAPSHOT
+        // during session_write_close().
+        get_db();
+        $path = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/../db/website.db'));
+        $this->db = new SQLite3($path);
+        $this->db->enableExceptions(true);
+        $this->db->busyTimeout(30000);
+        $this->db->exec("PRAGMA synchronous = NORMAL;");
     }
 
     #[\ReturnTypeWillChange]
@@ -650,42 +661,110 @@ class SQLiteSessionHandler implements SessionHandlerInterface {
 
     #[\ReturnTypeWillChange]
     public function close() {
+        if ($this->db instanceof SQLite3) {
+            @$this->db->close();
+            $this->db = null;
+        }
         return true;
     }
 
     #[\ReturnTypeWillChange]
     public function read($id) {
-        $stmt = $this->db->prepare('SELECT data FROM sessions WHERE id = :id');
-        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
-        $result = $stmt->execute();
-        if ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            return $row['data'];
+        try {
+            $stmt = $this->db->prepare('SELECT data, last_accessed FROM sessions WHERE id = :id');
+            $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            $row = $result ? $result->fetchArray(SQLITE3_ASSOC) : false;
+            if ($result) {
+                $result->finalize();
+            }
+            $stmt->close();
+            if ($row !== false) {
+                $data = (string)($row['data'] ?? '');
+                $this->lastReadId = $id;
+                $this->lastReadData = $data;
+                $this->lastAccessed = (int)($row['last_accessed'] ?? 0);
+                return $data;
+            }
+            $this->lastReadId = $id;
+            $this->lastReadData = '';
+            $this->lastAccessed = 0;
+        } catch (Throwable $e) {
+            error_log('[SQLiteSessionHandler::read] ' . $e->getMessage());
         }
         return '';
     }
 
     #[\ReturnTypeWillChange]
     public function write($id, $data) {
-        $stmt = $this->db->prepare('REPLACE INTO sessions (id, data, last_accessed) VALUES (:id, :data, :time)');
-        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
-        $stmt->bindValue(':data', $data, SQLITE3_TEXT);
-        $stmt->bindValue(':time', time(), SQLITE3_INTEGER);
-        return (bool)$stmt->execute();
+        $now = time();
+        if (
+            $this->lastReadId === $id &&
+            $this->lastReadData !== null &&
+            $this->lastReadData === $data &&
+            $this->lastAccessed > 0 &&
+            ($now - $this->lastAccessed) < 300
+        ) {
+            return true;
+        }
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                $stmt = $this->db->prepare('REPLACE INTO sessions (id, data, last_accessed) VALUES (:id, :data, :time)');
+                $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+                $stmt->bindValue(':data', $data, SQLITE3_TEXT);
+                $stmt->bindValue(':time', $now, SQLITE3_INTEGER);
+                $res = $stmt->execute();
+                if ($res) {
+                    $res->finalize();
+                }
+                $stmt->close();
+                $this->lastReadId = $id;
+                $this->lastReadData = $data;
+                $this->lastAccessed = $now;
+                return true;
+            } catch (Throwable $e) {
+                if ($attempt === 2) {
+                    error_log('[SQLiteSessionHandler::write] ' . $e->getMessage());
+                    return false;
+                }
+                usleep(50000 * ($attempt + 1));
+            }
+        }
+        return false;
     }
 
     #[\ReturnTypeWillChange]
     public function destroy($id) {
-        $stmt = $this->db->prepare('DELETE FROM sessions WHERE id = :id');
-        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
-        return (bool)$stmt->execute();
+        try {
+            $stmt = $this->db->prepare('DELETE FROM sessions WHERE id = :id');
+            $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+            $res = $stmt->execute();
+            if ($res) {
+                $res->finalize();
+            }
+            $stmt->close();
+            return true;
+        } catch (Throwable $e) {
+            error_log('[SQLiteSessionHandler::destroy] ' . $e->getMessage());
+            return false;
+        }
     }
 
     #[\ReturnTypeWillChange]
     public function gc($max_lifetime) {
-        $stmt = $this->db->prepare('DELETE FROM sessions WHERE last_accessed < :old');
-        $stmt->bindValue(':old', time() - $max_lifetime, SQLITE3_INTEGER);
-        $stmt->execute();
-        return $this->db->changes();
+        try {
+            $stmt = $this->db->prepare('DELETE FROM sessions WHERE last_accessed < :old');
+            $stmt->bindValue(':old', time() - $max_lifetime, SQLITE3_INTEGER);
+            $res = $stmt->execute();
+            if ($res) {
+                $res->finalize();
+            }
+            $stmt->close();
+            return $this->db->changes();
+        } catch (Throwable $e) {
+            error_log('[SQLiteSessionHandler::gc] ' . $e->getMessage());
+            return false;
+        }
     }
 }
 
