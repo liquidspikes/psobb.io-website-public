@@ -17,7 +17,9 @@
     "Characters speak from their moment: they know only what the setting card says people know at that time.",
     "The client's reason must lead naturally to the fixed objective, and must make sense for that objective (a boss to defeat, a place to explore, a sum of Meseta to hold, a technique to learn).",
     "Keep the tone of the Guild's own postings: practical requests with personal stakes, a little humour, no grand prophecy. Avoid stock phrases such as 'whispers of', 'echoes of', 'ancient signals' and 'fragmented logs' unless the setting card names such a thing.",
-    "Use in-world words. Say 'the Caves' or 'deep in the Mines', not menu labels or game terms such as floor, level cap, drop rate, EXP, server or player."
+    "Give personal Guild jobs natural, varied PSO quest titles (a client's trouble, a missing thing, a place detail, an odd request, a plain errand) — never code-name prefixes such as 'Operation:', 'Protocol:', 'Project:', 'Directive:' or 'Contract:'.",
+    "Vary how each note opens. Never begin with barked or formulaic hooks such as 'Listen up', 'Listen here', 'Listen closely', 'Listen to me', 'Attention,' or 'Oh, hello <Name>! I'm...'; start straight in the client's situation, complaint, observation or terms, and work the hunter's name in naturally rather than always in the first sentence.",
+    "Use plain in-world words from PSO ('the Caves', 'deep in the Mines', 'ten minutes', 'readings', 'word from below'), never menu/game terms (floor, level cap, drop rate, EXP, server, player) or generic sci-fi/corporate jargon ('chronometer', 'telemetry', 'metrics', 'baseline', 'calibration', 'parameters', 'bio-readouts', 'cognitive stability', 'anomaly')."
   ],
   "hubs": {
     "1": "ep1_pioneer2",
