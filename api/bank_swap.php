@@ -40,8 +40,8 @@ if (!$input || !isset($input['character_name']) || !isset($input['target_bank_in
 $characterName = trim($input['character_name']);
 $targetBankIndex = (int)$input['target_bank_index'];
 
-// Bank Index Validation: -1 is Shared Bank, 0-19 are character banks.
-if ($targetBankIndex < -1 || $targetBankIndex > 19) {
+// Bank Index Validation: -1 is Shared Bank, 0+ map to character bank slots.
+if ($targetBankIndex < -1 || $targetBankIndex > 126) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid bank index selected', 'success' => false]);
     exit;
@@ -78,8 +78,22 @@ if (!$foundClient) {
     exit;
 }
 
+if ($targetBankIndex >= 0 && $targetBankIndex !== (int)($foundClient['BBCharacterIndex'] ?? -2)) {
+    $username = strtolower(trim($_SESSION['user']['username'] ?? ($foundClient['Account']['BBLicenses'][0]['UserName'] ?? '')));
+    $playersDir = get_newserv_players_dir();
+    if ($username !== '' && is_dir($playersDir)) {
+        $hasBankFile = file_exists(resolve_player_file($playersDir, "player_{$username}_{$targetBankIndex}.psobank"));
+        $hasCharFile = file_exists(resolve_player_file($playersDir, "player_{$username}_{$targetBankIndex}.psochar"));
+        if (!$hasBankFile && !$hasCharFile) {
+            http_response_code(400);
+            echo json_encode(['error' => 'No character exists in that slot.', 'success' => false]);
+            exit;
+        }
+    }
+}
+
 // 4. Build the $bank command
-// newserv: $bank 0 or negative = shared bank, $bank 1-127 = character bank at index n-1
+// newserv: $bank 0 or negative = shared bank, $bank [slot] = character bank at index slot-1
 if ($targetBankIndex === -1) {
     $cmdIndex = '0';
 } else {

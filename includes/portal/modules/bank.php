@@ -15,8 +15,12 @@ $existing_slots = $existing_slots ?? [0];
                     style="border: 1px solid rgba(0, 255, 255, 0.15); background: rgba(0, 10, 20, 0.5); padding: 1.5rem; border-radius: 10px;">
                     <div class="item-grid-title" style="flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
                         <span>🏦 <?= __('Bank Vault') ?></span>
-                        <span style="font-size:0.9rem; color:#ffaa00; font-family:'Share Tech Mono', monospace;"
-                            id="viewer-bank-meseta">0 Meseta</span>
+                        <span style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <span style="font-size:0.85rem; color:#aaa; font-family:'Share Tech Mono', monospace;"
+                                id="viewer-bank-count">0 items</span>
+                            <span style="font-size:0.9rem; color:#ffaa00; font-family:'Share Tech Mono', monospace;"
+                                id="viewer-bank-meseta">0 Meseta</span>
+                        </span>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
                         <select id="viewer-bank-select"

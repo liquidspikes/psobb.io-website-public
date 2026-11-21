@@ -20,6 +20,7 @@ if ($isGenerateLoreAjax) {
     require_once __DIR__ . '/../api/db.php';
     require_once __DIR__ . '/../api/functions.php';
     require_once __DIR__ . '/../api/bounty_lore.php';
+    require_once __DIR__ . '/../api/bounty_generator.php';
 
     if (empty($GEMINI_API_KEY)) {
         http_response_code(500);
@@ -93,39 +94,11 @@ if ($isGenerateLoreAjax) {
         ], $userLang);
     }
 
-    $model = !empty($GEMINI_MODEL) ? $GEMINI_MODEL : 'gemini-2.5-flash';
-    $geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" . $model . ":generateContent?key=" . $GEMINI_API_KEY;
-    $payload = json_encode([
-        'contents' => [['parts' => [['text' => $prompt]]]],
-        'generationConfig' => [
-            'responseMimeType' => 'application/json',
-            'temperature' => 0.9,
-        ],
-    ]);
-    $ctx = stream_context_create([
-        'http' => [
-            'header' => "Content-type: application/json\r\n",
-            'method' => 'POST',
-            'content' => $payload,
-            'timeout' => 20,
-            'ignore_errors' => true,
-        ],
-    ]);
-    $raw = @file_get_contents($geminiUrl, false, $ctx);
-    if (!$raw) {
-        http_response_code(502);
-        echo json_encode(['success' => false, 'error' => __('Failed to contact Gemini API.')]);
-        exit;
-    }
-
-    $jsonRes = json_decode($raw, true);
-    $text = $jsonRes['candidates'][0]['content']['parts'][0]['text'] ?? '';
-    $text = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim((string)$text));
-    $generated = json_decode($text, true);
+    $generated = bounty_gemini_json($prompt);
 
     if (!is_array($generated) || empty(trim((string)($generated['title'] ?? ''))) || empty(trim((string)($generated['description'] ?? '')))) {
         http_response_code(502);
-        echo json_encode(['success' => false, 'error' => __('AI returned an invalid response. Please try again.')]);
+        echo json_encode(['success' => false, 'error' => __('AI returned an invalid or rate-limited response. Please try again.')]);
         exit;
     }
 

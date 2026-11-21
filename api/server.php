@@ -16,7 +16,9 @@ if ($data_json === FALSE) {
         'BBGlobalEXPMultiplier' => $rates['raw_exp'],
         'ServerGlobalDropRateMultiplier' => $rates['raw_drop'],
         'EXP' => (string)$rates['raw_exp'],
-        'Drop' => (string)$rates['raw_drop']
+        'Drop' => (string)$rates['raw_drop'],
+        'EXPDisplay' => $rates['exp'],
+        'DropDisplay' => $rates['drop']
     ]);
 } else {
     $data = json_decode($data_json, true);
@@ -24,6 +26,8 @@ if ($data_json === FALSE) {
     $data["ServerGlobalDropRateMultiplier"] = $rates['raw_drop'];
     $data["EXP"] = (string)$rates['raw_exp'];
     $data["Drop"] = (string)$rates['raw_drop'];
+    $data["EXPDisplay"] = $rates['exp'];
+    $data["DropDisplay"] = $rates['drop'];
     echo json_encode($data);
 }
 ?>

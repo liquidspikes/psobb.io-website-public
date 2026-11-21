@@ -1491,6 +1491,48 @@ footer {
     max-width: 65%;
 }
 
+.guide-card-glass ul.guide-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.guide-card-glass ul.guide-list li + li {
+    margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+    .guide-modal-dialog {
+        padding: 1rem;
+        width: 96%;
+        max-height: 88vh;
+        height: auto;
+    }
+    .guide-tab-btn {
+        padding: 6px 10px;
+        font-size: 0.78rem;
+        flex: 1 1 calc(50% - 8px);
+    }
+    .guide-section-grid {
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .guide-card-glass {
+        padding: 0.85rem;
+    }
+    .guide-card-glass h3 {
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    .command-row {
+        gap: 8px;
+        padding: 6px 0;
+        font-size: 0.85rem;
+    }
+}
+
 #guide-modal-content::-webkit-scrollbar {
     width: 6px;
 }

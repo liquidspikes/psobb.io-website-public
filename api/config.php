@@ -84,7 +84,7 @@ $SMTP_FROM = $_ENV['SMTP_FROM'] ?? ('noreply@' . $SERVER_ADDRESS);
 
 // Integrations
 $GEMINI_API_KEY = $_ENV['GEMINI_API_KEY'] ?? '';
-$GEMINI_MODEL = $_ENV['GEMINI_MODEL'] ?? 'gemini-3.5-flash';
+$GEMINI_MODEL = !empty($_ENV['GEMINI_MODEL']) ? $_ENV['GEMINI_MODEL'] : 'gemma-4-26b-a4b-it';
 
 // Rates & Telemetry Defaults
 $EXP_RATE        = $_ENV['EXP_RATE'] ?? $SITE_CONFIG['exp_rate'] ?? '1x';
@@ -332,6 +332,24 @@ if (!function_exists('format_rate_multiplier')) {
     }
 }
 
+if (!function_exists('parse_rate_number')) {
+    /**
+     * Extract a numeric rate multiplier from values like '2', '2x', or '1.5x'.
+     */
+    function parse_rate_number($val, float $default = 1.0): float {
+        if ($val === null || $val === '') {
+            return $default;
+        }
+        if (is_numeric($val)) {
+            return (float)$val;
+        }
+        if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$val, $m)) {
+            return (float)$m[1];
+        }
+        return $default;
+    }
+}
+
 if (!function_exists('get_server_rates')) {
     /**
      * Dynamically retrieve live server rates directly from NewServ.
@@ -370,7 +388,8 @@ if (!function_exists('get_server_rates')) {
         $mesetaMult = null;
 
         // 1. Primary source: Query live NewServ REST API (/y/config)
-        $apiUrl = (!empty($NEWSERV_API_URL) ? $NEWSERV_API_URL : 'http://127.0.0.1:8443') . '/y/config';
+        $baseApiUrl = $_ENV['NEWSERV_API_URL'] ?? $NEWSERV_API_URL ?? 'http://127.0.0.1:8443';
+        $apiUrl = (!empty($baseApiUrl) ? $baseApiUrl : 'http://127.0.0.1:8443') . '/y/config';
         $ctx = stream_context_create([
             'http' => [
                 'timeout' => 0.8,
@@ -390,48 +409,41 @@ if (!function_exists('get_server_rates')) {
             }
         }
 
-        // 2. Secondary fallback: Read NewServ config.json directly if API is unavailable
+        // 2. Secondary fallback: Read NewServ config.json via NEWSERV_PLAYERS_DIR if API is unavailable
         if ($expMult === null || $dropMult === null) {
-            $candidates = [
-                '/opt/newserv/system/config.json',
-            ];
             $playersDir = function_exists('get_newserv_players_dir') ? get_newserv_players_dir() : '';
-            if (!empty($playersDir)) {
-                $candidates[] = dirname(rtrim($playersDir, '/\\')) . '/config.json';
-            }
-            foreach ($candidates as $cfgPath) {
-                if (file_exists($cfgPath) && is_readable($cfgPath)) {
-                    $raw = @file_get_contents($cfgPath);
-                    if ($raw) {
-                        if ($expMult === null && preg_match('/"BBGlobalEXPMultiplier"\s*:\s*([0-9.]+)/', $raw, $m)) {
-                            $expMult = $m[1];
-                        }
-                        if ($dropMult === null && preg_match('/"ServerGlobalDropRateMultiplier"\s*:\s*([0-9.]+)/', $raw, $m)) {
-                            $dropMult = $m[1];
-                        }
-                        if ($expMult !== null && $dropMult !== null) {
-                            break;
-                        }
+            $cfgPath = !empty($playersDir) ? dirname(rtrim($playersDir, '/\\')) . '/config.json' : '';
+            if ($cfgPath !== '' && file_exists($cfgPath) && is_readable($cfgPath)) {
+                $raw = @file_get_contents($cfgPath);
+                if ($raw) {
+                    $cleanRaw = (string)preg_replace('~/\*.*?\*/~s', '', $raw);
+                    if ($expMult === null && preg_match('/^\s*"BBGlobalEXPMultiplier"\s*:\s*([0-9]+(?:\.[0-9]+)?)/m', $cleanRaw, $m)) {
+                        $expMult = $m[1];
+                    }
+                    if ($dropMult === null && preg_match('/^\s*"ServerGlobalDropRateMultiplier"\s*:\s*([0-9]+(?:\.[0-9]+)?)/m', $cleanRaw, $m)) {
+                        $dropMult = $m[1];
                     }
                 }
             }
         }
 
-        // 3. Fallbacks if neither NewServ API nor config.json provided rates
-        $fallbackExp    = $_ENV['EXP_RATE'] ?? $SITE_CONFIG['exp_rate'] ?? '1x';
-        $fallbackDrop   = $_ENV['DROP_RATE'] ?? $SITE_CONFIG['drop_rate'] ?? '1x';
-        $fallbackMeseta = $_ENV['MESETA_RATE'] ?? $SITE_CONFIG['meseta_rate'] ?? '1x';
+        // 3. Fallbacks (.env overrides config/site.json) if neither NewServ API nor config.json provided rates
+        $fallbackExp    = !empty($_ENV['EXP_RATE']) ? $_ENV['EXP_RATE'] : ($SITE_CONFIG['exp_rate'] ?? '1x');
+        $fallbackDrop   = !empty($_ENV['DROP_RATE']) ? $_ENV['DROP_RATE'] : ($SITE_CONFIG['drop_rate'] ?? '1x');
+        $fallbackMeseta = !empty($_ENV['MESETA_RATE']) ? $_ENV['MESETA_RATE'] : ($SITE_CONFIG['meseta_rate'] ?? '1x');
 
         $rates = [
             'exp'        => format_rate_multiplier($expMult, $fallbackExp),
             'drop'       => format_rate_multiplier($dropMult, $fallbackDrop),
             'meseta'     => format_rate_multiplier($mesetaMult, $fallbackMeseta),
-            'raw_exp'    => $expMult !== null ? (float)$expMult : 1.0,
-            'raw_drop'   => $dropMult !== null ? (float)$dropMult : 1.0,
+            'raw_exp'    => $expMult !== null ? (float)$expMult : parse_rate_number($fallbackExp, 1.0),
+            'raw_drop'   => $dropMult !== null ? (float)$dropMult : parse_rate_number($fallbackDrop, 1.0),
             'updated_at' => time(),
         ];
 
-        @file_put_contents($cacheFile, json_encode($rates));
+        if ($expMult !== null || $dropMult !== null) {
+            @file_put_contents($cacheFile, json_encode($rates));
+        }
         $staticCache = $rates;
         return $rates;
     }

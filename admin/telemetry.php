@@ -1,60 +1,189 @@
 <?php
 require_once __DIR__ . '/../api/config.php';
+require_once __DIR__ . '/../api/functions.php';
+
+if (!function_exists('telemetry_floor_name')) {
+    /**
+     * Resolve exact floor/area name from newserv StaticGameData.cc floor_defs for a room episode.
+     */
+    function telemetry_floor_name(int $floor, ?int $ep, bool $isGame): string
+    {
+        if (!$isGame) {
+            return $floor === 15 ? 'Visual Lobby' : "Lobby (Floor {$floor})";
+        }
+        if ($ep === 2) {
+            $map = [
+                0  => 'Lab (Pioneer 2)',
+                1  => 'VR Temple Alpha',
+                2  => 'VR Temple Beta',
+                3  => 'VR Spaceship Alpha',
+                4  => 'VR Spaceship Beta',
+                5  => 'Central Control Area',
+                6  => 'Jungle North',
+                7  => 'Jungle East',
+                8  => 'Mountain',
+                9  => 'Seaside',
+                10 => 'Seabed Upper',
+                11 => 'Seabed Lower',
+                12 => 'Gal Gryphon',
+                13 => 'Olga Flow',
+                14 => 'Barba Ray',
+                15 => 'Gol Dragon',
+                16 => 'Seaside (Night)',
+                17 => 'Control Tower',
+            ];
+            return $map[$floor] ?? "Ep2 Floor {$floor}";
+        }
+        if ($ep === 4) {
+            $map = [
+                0  => 'Pioneer 2',
+                1  => 'Crater East',
+                2  => 'Crater West',
+                3  => 'Crater South',
+                4  => 'Crater North',
+                5  => 'Crater Interior',
+                6  => 'Subterranean Desert 1',
+                7  => 'Subterranean Desert 2',
+                8  => 'Subterranean Desert 3',
+                9  => 'Meteor Impact Site (Boss)',
+                10 => 'Test Map',
+                15 => 'Lobby (Transition)',
+            ];
+            return $map[$floor] ?? "Ep4 Floor {$floor}";
+        }
+        $map = [
+            0  => 'Pioneer 2',
+            1  => 'Forest 1',
+            2  => 'Forest 2',
+            3  => 'Cave 1',
+            4  => 'Cave 2',
+            5  => 'Cave 3',
+            6  => 'Mine 1',
+            7  => 'Mine 2',
+            8  => 'Ruins 1',
+            9  => 'Ruins 2',
+            10 => 'Ruins 3',
+            11 => 'Dragon',
+            12 => 'De Rol Le',
+            13 => 'Vol Opt',
+            14 => 'Dark Falz',
+            15 => 'Lobby (Transition)',
+            16 => 'Battle Spaceship',
+            17 => 'Battle Palace',
+        ];
+        return $map[$floor] ?? "Floor {$floor}";
+    }
+}
+
+if (!function_exists('telemetry_is_boss_arena')) {
+    /**
+     * Check whether a floor is a genuine boss arena for the active game episode.
+     */
+    function telemetry_is_boss_arena(int $floor, ?int $ep, bool $isGame): bool
+    {
+        if (!$isGame) {
+            return false;
+        }
+        if ($ep === 1) {
+            return in_array($floor, [11, 12, 13, 14], true);
+        }
+        if ($ep === 2) {
+            return in_array($floor, [12, 13, 14, 15], true);
+        }
+        if ($ep === 4) {
+            return $floor === 9;
+        }
+        return false;
+    }
+}
+
+if (PHP_SAPI === 'cli' && defined('TELEMETRY_HELPERS_ONLY')) {
+    return;
+}
+
 start_secure_session();
 if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     header("Location: ../login.php");
     exit;
 }
-$page_title = __('Live Telemetry Debug') . ' - ' . get_server_name();
-include '../includes/header.php'; 
 
-// Fetch Live Game State
-$options = [
-    'http' => [
-        'header' => "Content-type: application/json\r\n",
-        'method' => 'GET'
-    ]
-];
-$context = stream_context_create($options);
-$response = @file_get_contents($NEWSERV_API_URL . '/y/clients', false, $context);
-$clients = $response ? json_decode($response, true) : [];
-
-// Load Cron State Cache
-$state_cache_file = __DIR__ . '/../db/.cron_player_state.json';
-$player_states = file_exists($state_cache_file) ? json_decode(file_get_contents($state_cache_file), true) : [];
-if (!is_array($player_states)) $player_states = [];
-
-// Real newserv floor IDs (StaticGameData.cc floor_defs).
-// Floor IDs are episode-local: Ep1 & Ep2 share the same numbering.
-// We show Ep1 names by default; Ep2/Ep4 disambiguation requires LobbyEpisode.
-$floor_names = [
-    0  => 'Pioneer 2 / Lab',
-    1  => 'Forest 1 / VR Temple α',
-    2  => 'Forest 2 / VR Temple β',
-    3  => 'Cave 1 / VR Ship α',
-    4  => 'Cave 2 / VR Ship β',
-    5  => 'Cave 3 / CCA',
-    6  => 'Mine 1 / Jungle N',
-    7  => 'Mine 2 / Jungle E',
-    8  => 'Ruins 1 / Mountain',
-    9  => 'Ruins 2 / Seaside / Saint-Milion',
-    10 => 'Ruins 3 / Seabed Upper',
-    11 => 'Dragon / Seabed Lower',
-    12 => 'De Rol Le / Gal Gryphon',
-    13 => 'Vol Opt / Olga Flow',
-    14 => 'Dark Falz / Barba Ray',
-    15 => 'Lobby / Gol Dragon',
-];
-
-// Fetch Telemetry Log
 $debug_log_file = __DIR__ . '/../api/.debug_telemetry.json';
-$telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($debug_log_file), true) : [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear_debug_log') {
+    verify_csrf_token($_POST['csrf_token'] ?? '');
+    @file_put_contents($debug_log_file, '[]', LOCK_EX);
+    header('Location: telemetry.php');
+    exit;
+}
+
+$page_title = __('Live Telemetry Debug') . ' - ' . get_server_name();
+include '../includes/header.php';
+
+// Fetch Live Game State (/y/clients + /y/lobbies)
+$context = stream_context_create([
+    'http' => [
+        'header'  => "Content-type: application/json\r\n",
+        'method'  => 'GET',
+        'timeout' => 2.0,
+    ]
+]);
+
+$clients_raw = @file_get_contents($NEWSERV_API_URL . '/y/clients', false, $context);
+$clients = [];
+if ($clients_raw !== false && $clients_raw !== '') {
+    $decoded_clients = json_decode((string)iconv('UTF-8', 'UTF-8//IGNORE', $clients_raw), true);
+    if (is_array($decoded_clients)) {
+        $clients = $decoded_clients;
+    }
+}
+
+$lobbies_raw = @file_get_contents($NEWSERV_API_URL . '/y/lobbies', false, $context);
+$lobbyMap = [];
+if ($lobbies_raw !== false && $lobbies_raw !== '') {
+    $decoded_lobbies = json_decode((string)iconv('UTF-8', 'UTF-8//IGNORE', $lobbies_raw), true);
+    if (is_array($decoded_lobbies)) {
+        foreach ($decoded_lobbies as $lobby) {
+            if (!isset($lobby['ID'])) {
+                continue;
+            }
+            $isGame = !empty($lobby['IsGame']);
+            $ep = null;
+            if ($isGame && isset($lobby['Episode']) && preg_match('/(\d)/', (string)$lobby['Episode'], $m)) {
+                $ep = (int)$m[1];
+            }
+            $lobbyMap[(string)$lobby['ID']] = [
+                'name'       => trim((string)($lobby['Name'] ?? '')),
+                'is_game'    => $isGame,
+                'difficulty' => trim((string)($lobby['Difficulty'] ?? '')),
+                'mode'       => trim((string)($lobby['Mode'] ?? '')),
+                'episode'    => $ep,
+            ];
+        }
+    }
+}
+
+// Load runtime state caches keyed by "{AccountID}_{CharName}"
+$loadJsonArray = static function (string $path): array {
+    if (!is_readable($path)) {
+        return [];
+    }
+    $raw = @file_get_contents($path);
+    if ($raw === false || $raw === '') {
+        return [];
+    }
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : [];
+};
+
+$player_states    = $loadJsonArray(__DIR__ . '/../db/.cron_player_state.json');
+$tracker_states   = $loadJsonArray(__DIR__ . '/../db/.boss_tracker_state.json');
+$community_states = $loadJsonArray(__DIR__ . '/../api/.cron_community_state.json');
+$telemetry_logs   = $loadJsonArray($debug_log_file);
 ?>
 
 <style>
     .admin-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: 1fr;
         gap: 1.5rem;
         margin-top: 2rem;
     }
@@ -63,6 +192,7 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
         border: 1px solid var(--primary-color);
         padding: 1.5rem;
         border-radius: 8px;
+        min-width: 0;
     }
     .admin-card h3 {
         margin-top: 0;
@@ -71,19 +201,29 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
         margin-bottom: 1rem;
         color: var(--secondary-color);
     }
-    
-    /* Compact Table Styling for iframe */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .telemetry-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
     .telemetry-table th, .telemetry-table td {
         font-size: 0.85rem;
-        padding: 0.4rem;
+        padding: 0.45rem 0.55rem;
         white-space: nowrap;
+        text-align: left;
     }
-    
-    /* Custom styling removed per user request to eliminate inner scrollbars */
+    @media (max-width: 640px) {
+        .admin-card {
+            padding: 1rem;
+        }
+    }
 </style>
 
 <main class="container">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
             <h1><?= __("Live Telemetry Debug") ?></h1>
             <div style="font-size:0.9rem; opacity:0.7;"><?= __("Monitor real-time player locations and server hook detections.") ?></div>
@@ -100,9 +240,9 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
     ?>
 
     <div class="admin-grid">
-        <!-- Live Players Map -->
-        <div class="admin-card" style="grid-column: span 2;">
-            <h3><?= __("Live Connected Players") ?></h3>
+        <!-- Live Players Table -->
+        <div class="admin-card">
+            <h3><?= __("Live Connected Players") ?> (<?= count($clients) ?>)</h3>
             <div class="table-responsive">
                 <table class="telemetry-table">
                     <thead style="position: sticky; top: 0; z-index: 1;">
@@ -110,64 +250,106 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
                             <th><?= __("Char") ?></th>
                             <th><?= __("Acc ID") ?></th>
                             <th><?= __("Lv") ?></th>
-                            <th><?= __("Prev") ?></th>
-                            <th><?= __("Curr") ?></th>
+                            <th><?= __("Room") ?></th>
+                            <th><?= __("Last Area") ?></th>
+                            <th><?= __("Curr Area") ?></th>
                             <th><?= __("Time") ?></th>
-                            <th><?= __("Old EXP") ?></th>
-                            <th><?= __("New EXP") ?></th>
-                            <th><?= __("Delta") ?></th>
+                            <th><?= __("EXP") ?></th>
+                            <th><?= __("1m Delta") ?></th>
+                            <th><?= __("Kills") ?></th>
                             <th><?= __("Status") ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($clients)): ?>
-                            <tr><td colspan="6"><?= __("No players currently online.") ?></td></tr>
+                            <tr><td colspan="11" style="opacity:0.7; padding:1rem 0.5rem;"><?= __("No players currently online.") ?></td></tr>
                         <?php else: ?>
                             <?php foreach ($clients as $client): ?>
-                                <?php 
-                                    $charName = $client['Name'] ?? 'Unknown';
+                                <?php
+                                    $charName = trim((string)($client['Name'] ?? 'Unknown')) ?: 'Unknown';
                                     $accId = (string)($client['Account']['AccountID'] ?? 'Unknown');
+                                    $stateKey = "{$accId}_{$charName}";
                                     $level = $client['Level'] ?? '?';
-                                    $currFloorId = $client['LocationFloor'] ?? 0;
-                                    $currFloorName = $floor_names[$currFloorId] ?? "Floor $currFloorId";
-                                    
-                                    $state = $player_states[$accId] ?? [];
-                                    $prevFloorId = $state['floor'] ?? $currFloorId;
-                                    $prevFloorName = $floor_names[$prevFloorId] ?? "Floor $prevFloorId";
-                                    
-                                    $floorEnteredTime = $state['floor_entered_time'] ?? time();
-                                    $secondsOnFloor = time() - $floorEnteredTime;
-                                    $minsOnFloor = floor($secondsOnFloor / 60);
-                                    $secsOnFloor = $secondsOnFloor % 60;
-                                    $timeOnFloorStr = sprintf("%d:%02d", $minsOnFloor, $secsOnFloor);
-                                    
-                                    $currExp = $client['EXP'] ?? 0;
-                                    $prevExp = $state['exp'] ?? $currExp;
-                                    $expDelta = $currExp - $prevExp;
-                                    
-                                    // Real newserv boss floor IDs (episode-local).
-                                    // 9=Saint-Milion(Ep4), 11=Dragon(Ep1), 12=DeRolLe/GalGryphon,
-                                    // 13=VolOpt/OlgaFlow, 14=DarkFalz/BarbaRay, 15=GolDragon(Ep2)
-                                    $inBossRoom = in_array($currFloorId, [9, 11, 12, 13, 14, 15]);
-                                    
-                                    // Visual indicator for significant EXP spike (e.g., boss kill)
-                                    $spikeStyle = ($expDelta >= 10) ? 'color:#00C851; font-weight:bold;' : '';
+                                    $currFloorId = (int)($client['LocationFloor'] ?? 0);
+
+                                    $lobbyId = $client['LobbyID'] ?? null;
+                                    $lobby = ($lobbyId !== null && isset($lobbyMap[(string)$lobbyId])) ? $lobbyMap[(string)$lobbyId] : null;
+                                    $isGame = $lobby ? !empty($lobby['is_game']) : false;
+                                    $ep = $lobby ? $lobby['episode'] : null;
+
+                                    $bts = $tracker_states[$stateKey] ?? [];
+                                    if ($lobby === null && isset($bts['is_game'])) {
+                                        $isGame = !empty($bts['is_game']);
+                                        $ep = isset($bts['episode']) ? (int)$bts['episode'] : null;
+                                    }
+
+                                    $cps = $player_states[$stateKey] ?? (($player_states[$accId]['char_name'] ?? null) === $charName ? $player_states[$accId] : []);
+                                    $ccsRaw = $community_states[$stateKey] ?? ($community_states[$accId] ?? []);
+                                    $ccs = (is_array($ccsRaw) && (empty($ccsRaw['char_name']) || $ccsRaw['char_name'] === $charName)) ? $ccsRaw : [];
+
+                                    $currFloorName = telemetry_floor_name($currFloorId, $ep, $isGame);
+                                    $inBossRoom = telemetry_is_boss_arena($currFloorId, $ep, $isGame);
+
+                                    $roomLabel = $isGame
+                                        ? ('Ep' . ($ep ?: '?') . ' · ' . ($lobby['name'] ?: "Game #" . ($lobbyId ?? '?')) . (!empty($lobby['difficulty']) ? " ({$lobby['difficulty']})" : ''))
+                                        : ('Lobby #' . ($lobbyId ?? '?'));
+
+                                    if (isset($cps['floor']) && (int)$cps['floor'] !== $currFloorId && (int)$cps['floor'] >= 0) {
+                                        $prevEp = $isGame ? ($ep ?? 1) : 1;
+                                        $prevFloorName = telemetry_floor_name((int)$cps['floor'], $prevEp, $isGame || ((int)$cps['floor'] > 0 && (int)$cps['floor'] !== 15));
+                                    } elseif (isset($bts['pre_boss_floor']) && (int)$bts['pre_boss_floor'] >= 0 && (int)$bts['pre_boss_floor'] !== $currFloorId) {
+                                        $prevFloorName = telemetry_floor_name((int)$bts['pre_boss_floor'], $ep ?? 1, true);
+                                    } else {
+                                        $prevFloorName = '—';
+                                    }
+
+                                    if (isset($bts['floor'], $bts['floor_entry_time']) && (int)$bts['floor'] === $currFloorId) {
+                                        $floorEnteredTime = (int)$bts['floor_entry_time'];
+                                    } elseif (isset($cps['floor'], $cps['floor_entered_time']) && (int)$cps['floor'] === $currFloorId) {
+                                        $floorEnteredTime = (int)$cps['floor_entered_time'];
+                                    } else {
+                                        $floorEnteredTime = time();
+                                    }
+                                    $secondsOnFloor = max(0, time() - $floorEnteredTime);
+                                    $timeOnFloorStr = sprintf("%d:%02d", floor($secondsOnFloor / 60), $secondsOnFloor % 60);
+
+                                    $currExp = (int)($client['EXP'] ?? 0);
+                                    if ($inBossRoom && isset($bts['entry_exp'])) {
+                                        $prevExp = (int)$bts['entry_exp'];
+                                    } elseif (isset($ccs['exp'])) {
+                                        $prevExp = (int)$ccs['exp'];
+                                    } elseif (isset($cps['exp'])) {
+                                        $prevExp = (int)$cps['exp'];
+                                    } else {
+                                        $prevExp = $currExp;
+                                    }
+                                    $expDelta = max(0, $currExp - $prevExp);
+                                    $spikeStyle = ($expDelta >= 10) ? 'color:#00C851; font-weight:bold;' : 'opacity:0.75;';
+
+                                    $kills = (int)($client['EnemyKillCount'] ?? 0);
+                                    $rareKills = (int)($client['RareEnemyKillCount'] ?? 0);
+                                    $killsDisplay = number_format($kills) . ($rareKills > 0 ? " (+{$rareKills}R)" : '');
                                 ?>
                                 <tr>
-                                    <td style="font-weight:bold; color:var(--pso-blue);"><?php echo htmlspecialchars($charName); ?></td>
-                                    <td style="font-family:monospace;"><?php echo htmlspecialchars($accId); ?></td>
-                                    <td><?php echo htmlspecialchars($level); ?></td>
-                                    <td style="opacity:0.7;"><?php echo htmlspecialchars($prevFloorName); ?></td>
-                                    <td style="<?php echo $inBossRoom ? 'color:#ffaa00; font-weight:bold;' : ''; ?>">
-                                        <?php echo htmlspecialchars($currFloorName); ?>
+                                    <td style="font-weight:bold; color:var(--pso-blue);"><?= htmlspecialchars($charName) ?></td>
+                                    <td style="font-family:monospace;"><?= htmlspecialchars($accId) ?></td>
+                                    <td><?= htmlspecialchars((string)$level) ?></td>
+                                    <td style="opacity:0.85;"><?= htmlspecialchars($roomLabel) ?></td>
+                                    <td style="opacity:0.7;"><?= htmlspecialchars($prevFloorName) ?></td>
+                                    <td style="<?= $inBossRoom ? 'color:#ffaa00; font-weight:bold;' : '' ?>">
+                                        <?= htmlspecialchars($currFloorName) ?>
                                     </td>
-                                    <td style="opacity:0.7;"><?php echo $timeOnFloorStr; ?></td>
-                                    <td style="opacity:0.7;"><?php echo number_format($prevExp); ?></td>
-                                    <td><?php echo number_format($currExp); ?></td>
-                                    <td style="<?php echo $spikeStyle; ?>">+<?php echo number_format($expDelta); ?></td>
+                                    <td style="opacity:0.75;"><?= htmlspecialchars($timeOnFloorStr) ?></td>
+                                    <td><?= number_format($currExp) ?></td>
+                                    <td style="<?= $spikeStyle ?>">+<?= number_format($expDelta) ?></td>
+                                    <td style="opacity:0.85;"><?= htmlspecialchars($killsDisplay) ?></td>
                                     <td>
                                         <?php if ($inBossRoom): ?>
-                                            <span style="color:#ffaa00; font-size:0.7rem; border:1px solid #ffaa00; padding:2px 4px; border-radius:3px;">BOSS ARENA</span>
+                                            <span style="color:#ffaa00; font-size:0.7rem; border:1px solid #ffaa00; padding:2px 6px; border-radius:3px;">BOSS ARENA</span>
+                                        <?php elseif ($isGame && $currFloorId !== 15): ?>
+                                            <span style="color:#00C851; font-size:0.7rem; border:1px solid #00C851; padding:2px 6px; border-radius:3px;">IN GAME</span>
+                                        <?php else: ?>
+                                            <span style="color:#7ec8e3; font-size:0.7rem; border:1px solid rgba(0,255,255,0.35); padding:2px 6px; border-radius:3px;">LOBBY</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -179,17 +361,26 @@ $telemetry_logs = file_exists($debug_log_file) ? json_decode(file_get_contents($
         </div>
 
         <!-- Telemetry Log -->
-        <div class="admin-card" style="grid-column: span 1;">
-            <h3 style="color: #00ffcc;"><?= __('Recent Hook Detections') ?></h3>
+        <div class="admin-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem; margin-bottom:1rem;">
+                <h3 style="color: #00ffcc; margin:0; border:none; padding:0;"><?= __('Recent Hook Detections') ?></h3>
+                <?php if (!empty($telemetry_logs)): ?>
+                    <form method="POST" style="margin:0;" onsubmit="return confirm('Clear recorded hook detections log?');">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+                        <input type="hidden" name="action" value="clear_debug_log">
+                        <button type="submit" class="dl-btn" style="padding:3px 10px; font-size:0.75rem; border-color:rgba(255,68,68,0.6); color:#ff7777; background:rgba(255,68,68,0.1);"><?= __('Clear Log') ?></button>
+                    </form>
+                <?php endif; ?>
+            </div>
             <div style="background: rgba(0,0,0,0.8); border: 1px solid #333; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.85rem;">
                 <?php if (empty($telemetry_logs)): ?>
-                    <div style="color: #666; text-align: center; margin-top: 50px;"><?= __('No telemetry events recorded yet.') ?></div>
+                    <div style="color: #666; text-align: center; padding: 24px 0;"><?= __('No telemetry events recorded yet.') ?></div>
                 <?php else: ?>
                     <?php foreach ($telemetry_logs as $log): ?>
                         <div style="margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px;">
-                            <div style="color: #888; font-size: 0.75rem;"><?php echo date('Y-m-d H:i:s', $log['time'] ?? 0); ?> | <?php echo htmlspecialchars($log['char'] ?? 'Unknown'); ?></div>
+                            <div style="color: #888; font-size: 0.75rem;"><?= date('Y-m-d H:i:s', (int)($log['time'] ?? 0)) ?> | <?= htmlspecialchars((string)($log['char'] ?? 'Unknown')) ?></div>
                             <div style="color: #00ffcc; margin-top: 3px;">
-                                &gt; Killed <strong><?php echo htmlspecialchars($log['boss'] ?? '?'); ?></strong> (+<?php echo number_format($log['exp_delta'] ?? 0); ?> EXP)
+                                &gt; Killed <strong><?= htmlspecialchars((string)($log['boss'] ?? '?')) ?></strong> (+<?= number_format((int)($log['exp_delta'] ?? 0)) ?> EXP)
                             </div>
                         </div>
                     <?php endforeach; ?>

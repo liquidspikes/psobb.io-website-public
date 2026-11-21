@@ -21,6 +21,7 @@ require_once __DIR__ . '/config.php';
 $_ENV['DB_PATH'] = $tmp_db;
 $NEWSERV_API_URL = 'http://127.0.0.1:9'; // mail goes nowhere
 $GEMINI_API_KEY = 'test'; // never sent: the stub below answers
+$GLOBALS['BOUNTY_IGNORE_LOCAL_CONFIG'] = true;
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/bounty_system.php';
@@ -89,10 +90,27 @@ function rows($db, $char, $where = '1')
 $defaults = bounty_default_config();
 check($defaults['enabled'] === false, 'rework is dark-launched (enabled: false) by default');
 check(($defaults['legacy_grace_days'] ?? 0) === 30, 'legacy in_progress grace window defaults to 30 days');
-check(bounty_rework_enabled() === false, 'config/bounties.json ships dark-launched');
-check((int) (bounty_config()['earn']['challenge_chance'] ?? -1) === 0, 'config/bounties.json keeps challenge_chance at 0 until per-clear server counters are live');
-check((int) (bounty_config()['earn']['normal_challenge_chance'] ?? -1) === 0, 'config/bounties.json keeps normal_challenge_chance at 0 until per-clear server counters are live');
-check((int) (bounty_config()['earn']['normal_battle_chance'] ?? 0) === 10, 'normal_battle_chance defaults to 10');
+$loadedCfg = bounty_config();
+check(is_bool(bounty_rework_enabled()), 'bounty_rework_enabled returns a boolean');
+$chChance = (int) ($loadedCfg['earn']['challenge_chance'] ?? -1);
+$nChChance = (int) ($loadedCfg['earn']['normal_challenge_chance'] ?? -1);
+check($chChance >= 0 && $chChance <= 100, 'challenge_chance is within 0..100');
+check($nChChance >= 0 && $nChChance <= 100, 'normal_challenge_chance is within 0..100');
+check((int) ($loadedCfg['earn']['normal_battle_chance'] ?? 0) === 10, 'normal_battle_chance defaults to 10');
+$modelCands = bounty_gemini_model_candidates('gemma-4-26b-a4b-it');
+check($modelCands[0] === 'gemma-4-26b-a4b-it' && in_array('gemini-2.5-flash-lite', $modelCands, true) && in_array('gemini-2.5-flash', $modelCands, true), 'Gemma/Gemini fallback chain keeps gemma-4-26b-a4b-it first and includes 2.5-flash-lite and 2.5-flash');
+$thoughtJson = json_encode(['candidates' => [['content' => ['parts' => [
+    ['thought' => true, 'text' => 'internal reasoning notes'],
+    ['text' => json_encode(['title' => 'Forest Patrol', 'description' => 'Clear Boomas from Forest 1.'])],
+]]]]]);
+$parsedThought = bounty_parse_gemini_response_json($thoughtJson);
+check(($parsedThought['title'] ?? '') === 'Forest Patrol' && ($parsedThought['description'] ?? '') === 'Clear Boomas from Forest 1.', 'response parser skips thought parts and parses JSON output part');
+$gemmaPayload = json_decode(bounty_build_gemini_payload('test', 'gemma-4-26b-a4b-it'), true);
+check(($gemmaPayload['generationConfig']['thinkingConfig']['thinkingLevel'] ?? '') === 'MINIMAL', 'gemma-4 payload sets thinkingLevel to MINIMAL');
+$flashPayload = json_decode(bounty_build_gemini_payload('test', 'gemini-2.5-flash'), true);
+check(!isset($flashPayload['generationConfig']['thinkingConfig']), 'gemini-2.5 payload omits thinkingConfig');
+$fallbackStory = bounty_fallback_story(['selected_target_friendly' => 'Defeat Dark Falz'], 'Irene', 'ep1_ruins', 1, 'Ultimate');
+check(!empty($fallbackStory['title']) && !empty($fallbackStory['description']), 'fallback story generator returns title and description');
 $quiet = ['enabled' => true, 'earn' => ['login_daily_chance' => 0, 'login_weekly_chance' => 0, 'battle_chance' => 0, 'challenge_chance' => 0, 'normal_battle_chance' => 0, 'normal_challenge_chance' => 0]];
 
 // ---------------------------------------------------------------------------

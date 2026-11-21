@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../api/config.php';
 require_once __DIR__ . '/../api/functions.php';
+require_once __DIR__ . '/../api/bounty_system.php';
 require_once __DIR__ . '/../includes/portal/modules.php';
 start_secure_session();
 
@@ -15,14 +16,28 @@ include '../includes/header.php';
 
 $cfg = get_site_config();
 $aboutCfg = get_about_config();
+$bountyCfg = bounty_config();
 
-// Test NewServ connectivity for readiness check
+// Test NewServ connectivity & inspect live feature config for readiness check
 $newservStatus = false;
+$newservLiveConfig = [];
+$newservTelemetryReady = false;
 try {
     $ctx = stream_context_create(['http' => ['timeout' => 1.5]]);
     $res = @file_get_contents($NEWSERV_API_URL . '/y/summary', false, $ctx);
     if ($res !== false) {
         $newservStatus = true;
+        $cfgRaw = @file_get_contents($NEWSERV_API_URL . '/y/config', false, $ctx);
+        $decodedCfg = $cfgRaw !== false ? json_decode($cfgRaw, true) : null;
+        if (is_array($decodedCfg)) {
+            $newservLiveConfig = $decodedCfg;
+        }
+        $cliRaw = @file_get_contents($NEWSERV_API_URL . '/y/clients', false, $ctx);
+        $decodedCli = $cliRaw !== false ? json_decode($cliRaw, true) : null;
+        if (is_array($decodedCli) && !empty($decodedCli)) {
+            $sampleCli = $decodedCli[0];
+            $newservTelemetryReady = array_key_exists('KillCounts', $sampleCli) && array_key_exists('ChallengeClearCount', $sampleCli);
+        }
     }
 } catch (Exception $e) {}
 
@@ -575,6 +590,12 @@ input:checked + .slider:before {
             </span>
         </div>
         <div class="readiness-pill">
+            <span class="label"><?= __('Bounty System') ?></span>
+            <span class="status <?= !empty($bountyCfg['enabled']) ? 'status-ok' : 'status-warn' ?>">
+                <i class="fas <?= !empty($bountyCfg['enabled']) ? 'fa-crosshairs' : 'fa-pause-circle' ?>"></i> <?= !empty($bountyCfg['enabled']) ? __('Rework Live') : __('Dark-Launched (Classic Active)') ?>
+            </span>
+        </div>
+        <div class="readiness-pill">
             <span class="label"><?= __('Active Visual Theme') ?></span>
             <span class="status" style="color:var(--pso-blue);">
                 <i class="fas fa-paint-brush"></i> <?= htmlspecialchars(get_active_theme_vars()['preset_name']) ?>
@@ -595,6 +616,9 @@ input:checked + .slider:before {
         </button>
         <button type="button" class="settings-tab-btn" data-tab="tab-modules">
             <i class="fas fa-cubes"></i> <?= __('Modules & Rates') ?>
+        </button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-bounties">
+            <i class="fas fa-crosshairs"></i> <?= __('Bounty System & NewServ') ?>
         </button>
         <button type="button" class="settings-tab-btn" data-tab="tab-about">
             <i class="fas fa-terminal"></i> <?= __('About & Command Deck') ?>
@@ -1088,6 +1112,165 @@ input:checked + .slider:before {
             </div>
         </div>
 
+        <!-- TAB 6: BOUNTY SYSTEM & NEWSERV -->
+        <div id="tab-bounties" class="tab-pane">
+            <?php
+            $reqPatches = is_array($newservLiveConfig['BBRequiredPatches'] ?? null) ? $newservLiveConfig['BBRequiredPatches'] : [];
+            $liveToolShop = !empty($newservLiveConfig['BBExtendedToolShop']);
+            $liveBankPatch = in_array('BankSize', $reqPatches, true);
+            $liveStackLimits = in_array('StackLimits', $reqPatches, true);
+            $liveDmgSync = in_array('EnemyDamageSync', $reqPatches, true);
+            ?>
+            <div class="settings-grid">
+                <!-- Live NewServ Telemetry & Features -->
+                <div class="settings-card">
+                    <h3><i class="fas fa-server"></i> <?= __('Live NewServ Feature & Telemetry Status') ?></h3>
+                    <p style="font-size:0.85rem; color:#aaa; margin-top:0; margin-bottom:1rem;">
+                        <?= __('Detected directly from NewServ HTTP endpoints (/y/config and /y/clients). Runtime Bounty overrides save to gitignored config/bounties.local.json.') ?>
+                    </p>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <strong><?= __('Extended Pioneer 2 Tool Shop') ?></strong>
+                            <span><?= __('All 13 common recovery & utility items stocked at all levels') ?></span>
+                        </div>
+                        <span class="status <?= $liveToolShop ? 'status-ok' : 'status-warn' ?>">
+                            <?= $liveToolShop ? __('Enabled') : ($newservStatus ? __('Disabled') : __('Unknown')) ?>
+                        </span>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <strong><?= __('Bank Capacity (BankSize)') ?></strong>
+                            <span><?= __('Extended bank patch enforced on client login') ?></span>
+                        </div>
+                        <span class="status <?= $liveBankPatch ? 'status-ok' : 'status-warn' ?>">
+                            <?= $liveBankPatch ? __('Enabled') : ($newservStatus ? __('Default') : __('Unknown')) ?>
+                        </span>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <strong><?= __('Client Patches (StackLimits & EnemyDamageSync)') ?></strong>
+                            <span><?= __('Required patches enforced on client login') ?></span>
+                        </div>
+                        <span class="status <?= ($liveStackLimits && $liveDmgSync) ? 'status-ok' : 'status-warn' ?>">
+                            <?= ($liveStackLimits && $liveDmgSync) ? __('Active') : ($newservStatus ? __('Partial') : __('Unknown')) ?>
+                        </span>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <strong><?= __('KillCounts & ChallengeClearCount Telemetry') ?></strong>
+                            <span><?= __('Per-enemy kills and per-clear Challenge Mode counters from NewServ') ?></span>
+                        </div>
+                        <span class="status <?= $newservTelemetryReady ? 'status-ok' : 'status-warn' ?>">
+                            <?= $newservTelemetryReady ? __('Live in /y/clients') : ($newservStatus ? __('No online client sample') : __('Server Offline')) ?>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Bounty Rework Master Controls -->
+                <div class="settings-card">
+                    <h3><i class="fas fa-toggle-on"></i> <?= __('Bounty System Rework Master Controls') ?></h3>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <strong><?= __('Enable Bounty System Rework') ?></strong>
+                            <span><?= __('Activates Tiers (Common–Mythic), Daily/Weekly caps, Drop/Battle/Challenge pools, Contracts & Exchange Tokens') ?></span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="bounty_enabled" <?= !empty($bountyCfg['enabled']) ? 'checked' : '' ?>>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="field-group" style="margin-top:1rem;">
+                        <label>
+                            <?= __('Slot & Cap Scope') ?>
+                            <small><?= __('Track active slots and daily/weekly caps per character or shared across the account') ?></small>
+                        </label>
+                        <select class="field-select" id="bounty_limit_scope">
+                            <option value="character" <?= ($bountyCfg['limit_scope'] ?? 'character') === 'character' ? 'selected' : '' ?>><?= __('Per Character') ?></option>
+                            <option value="account" <?= ($bountyCfg['limit_scope'] ?? 'character') === 'account' ? 'selected' : '' ?>><?= __('Per Account') ?></option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>
+                            <?= __('Legacy Bounty Grace Window (Days)') ?>
+                            <small><?= __('Days before unfinished pre-rework in-progress bounties expire once rework goes live') ?></small>
+                        </label>
+                        <input type="number" min="1" max="365" class="field-input" id="bounty_legacy_grace_days" value="<?= (int)($bountyCfg['legacy_grace_days'] ?? 30) ?>">
+                    </div>
+                    <div style="margin-top:1rem;">
+                        <button type="button" class="dl-btn" onclick="loadRecommendedBountyDefaults()" style="width:100%; border-color:#ffaa00; color:#ffaa00; background:rgba(255,170,0,0.12); cursor:pointer;">
+                            <i class="fas fa-magic"></i> <?= __('Load Recommended Live Defaults') ?>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pool & Mode Earn Chances -->
+                <div class="settings-card">
+                    <h3><i class="fas fa-dice"></i> <?= __('Pool & Mode Earn Chances (%)') ?></h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="field-group">
+                            <label><?= __('Login Daily Chance (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_login_daily_chance" value="<?= (int)($bountyCfg['earn']['login_daily_chance'] ?? 10) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Login Weekly Chance (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_login_weekly_chance" value="<?= (int)($bountyCfg['earn']['login_weekly_chance'] ?? 3) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Challenge Mode Chance (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_challenge_chance" value="<?= (int)($bountyCfg['earn']['challenge_chance'] ?? 0) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Normal -> Challenge (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_normal_challenge_chance" value="<?= (int)($bountyCfg['earn']['normal_challenge_chance'] ?? 0) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Battle Mode Chance (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_battle_chance" value="<?= (int)($bountyCfg['earn']['battle_chance'] ?? 25) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Normal -> Battle (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_normal_battle_chance" value="<?= (int)($bountyCfg['earn']['normal_battle_chance'] ?? 10) ?>">
+                        </div>
+                    </div>
+                    <div class="field-group" style="margin-top:12px;">
+                        <label><?= __('Standard Completion Grants') ?></label>
+                        <input type="number" min="0" max="5" class="field-input" id="bounty_completion_grants" value="<?= (int)($bountyCfg['earn']['completion_grants'] ?? 1) ?>">
+                    </div>
+                </div>
+
+                <!-- Drops, Contracts & Reward Engine -->
+                <div class="settings-card">
+                    <h3><i class="fas fa-gem"></i> <?= __('Drops, Contracts & Reward Engine') ?></h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="field-group">
+                            <label><?= __('Contract Drop Share (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_drop_share" value="<?= (int)($bountyCfg['contracts']['drop_share'] ?? 25) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Rare Weekly Share (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_rare_weekly_chance" value="<?= (int)($bountyCfg['drops']['rare_weekly_chance'] ?? 50) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Drop Rate Multiplier') ?></label>
+                            <input type="number" min="1" max="50" class="field-input" id="bounty_drop_rate_multiplier" value="<?= (int)($bountyCfg['reward_engine']['drop_rate_multiplier'] ?? 10) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Max Weapon Attribute (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_max_attribute" value="<?= (int)($bountyCfg['reward_engine']['max_attribute'] ?? 90) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Max Hit (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_max_hit" value="<?= (int)($bountyCfg['reward_engine']['max_hit'] ?? 50) ?>">
+                        </div>
+                        <div class="field-group">
+                            <label><?= __('Mythic Exchange Chance (%)') ?></label>
+                            <input type="number" min="0" max="100" class="field-input" id="bounty_mythic_exchange_chance" value="<?= (int)($bountyCfg['reward_engine']['mythic_exchange_chance'] ?? 3) ?>">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Sticky / Global Save Bar -->
         <div style="background: rgba(0, 15, 30, 0.9); border: 1px solid var(--pso-blue); border-radius: 8px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);">
             <div>
@@ -1465,6 +1648,40 @@ document.getElementById('site-settings-form').addEventListener('submit', async f
         crew: collectCrewData()
     };
 
+    // Collect Bounty System Rework runtime config (persisted to config/bounties.local.json)
+    const numVal = (id, fallback) => {
+        const el = document.getElementById(id);
+        if (!el) return fallback;
+        const n = parseInt(el.value, 10);
+        return Number.isFinite(n) ? n : fallback;
+    };
+    payload.bounties = {
+        enabled: !!document.getElementById('bounty_enabled')?.checked,
+        limit_scope: document.getElementById('bounty_limit_scope')?.value || 'character',
+        legacy_grace_days: numVal('bounty_legacy_grace_days', 30),
+        earn: {
+            login_daily_chance: numVal('bounty_login_daily_chance', 10),
+            login_weekly_chance: numVal('bounty_login_weekly_chance', 3),
+            completion_grants: numVal('bounty_completion_grants', 1),
+            challenge_chance: numVal('bounty_challenge_chance', 0),
+            normal_challenge_chance: numVal('bounty_normal_challenge_chance', 0),
+            battle_chance: numVal('bounty_battle_chance', 25),
+            normal_battle_chance: numVal('bounty_normal_battle_chance', 10)
+        },
+        contracts: {
+            drop_share: numVal('bounty_drop_share', 25)
+        },
+        drops: {
+            rare_weekly_chance: numVal('bounty_rare_weekly_chance', 50)
+        },
+        reward_engine: {
+            drop_rate_multiplier: numVal('bounty_drop_rate_multiplier', 10),
+            max_attribute: numVal('bounty_max_attribute', 90),
+            max_hit: numVal('bounty_max_hit', 50),
+            mythic_exchange_chance: numVal('bounty_mythic_exchange_chance', 3)
+        }
+    };
+
     try {
         const res = await fetch('/api/admin_save_settings.php', {
             method: 'POST',
@@ -1484,6 +1701,26 @@ document.getElementById('site-settings-form').addEventListener('submit', async f
         showAlert('Connection error: ' + err.message, 'error');
     }
 });
+
+function loadRecommendedBountyDefaults() {
+    document.getElementById('bounty_enabled').checked = true;
+    document.getElementById('bounty_limit_scope').value = 'character';
+    document.getElementById('bounty_legacy_grace_days').value = 30;
+    document.getElementById('bounty_login_daily_chance').value = 10;
+    document.getElementById('bounty_login_weekly_chance').value = 3;
+    document.getElementById('bounty_completion_grants').value = 1;
+    document.getElementById('bounty_challenge_chance').value = 25;
+    document.getElementById('bounty_normal_challenge_chance').value = 3;
+    document.getElementById('bounty_battle_chance').value = 25;
+    document.getElementById('bounty_normal_battle_chance').value = 10;
+    document.getElementById('bounty_drop_share').value = 25;
+    document.getElementById('bounty_rare_weekly_chance').value = 50;
+    document.getElementById('bounty_drop_rate_multiplier').value = 10;
+    document.getElementById('bounty_max_attribute').value = 90;
+    document.getElementById('bounty_max_hit').value = 50;
+    document.getElementById('bounty_mythic_exchange_chance').value = 3;
+    showAlert('Recommended live Bounty System Rework defaults loaded — click "Save Site Settings" to apply.', 'success');
+}
 
 function showAlert(msg, type) {
     const el = document.getElementById('settings-alert');

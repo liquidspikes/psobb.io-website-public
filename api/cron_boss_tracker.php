@@ -30,18 +30,73 @@ if (!flock($lock_file, LOCK_EX | LOCK_NB)) {
 }
 
 /**
- * Boss arena floors in a room of this episode. A room the tracker hasn't seen in /y/lobbies falls back
- * to the old episode-blind list; a lobby (not a game) has none.
+ * Boss arena floors in a room of this episode. Unknown episode or non-game lobby returns [].
  */
 function tracker_boss_floors($episode, $is_game = true)
 {
-    if (!$is_game) return [];
+    if (!$is_game || $episode === null) return [];
     switch ((int) $episode) {
         case 1: return [11, 12, 13, 14];  // Dragon, De Rol Le, Vol Opt, Dark Falz
         case 2: return [12, 13, 14, 15];  // Gal Gryphon, Olga Flow, Barba Ray, Gol Dragon
         case 4: return [9];               // Saint-Milion / Shambertin / Kondrieu
     }
-    return [9, 11, 12, 13, 14, 15];
+    return [];
+}
+
+/**
+ * Human-readable boss name for verified episode + arena floor.
+ */
+function tracker_boss_name(?int $episode, int $floor): string
+{
+    if ($episode === 1) {
+        $map = [
+            11 => 'Dragon / Sil Dragon',
+            12 => 'De Rol Le',
+            13 => 'Vol Opt',
+            14 => 'Dark Falz',
+        ];
+        return $map[$floor] ?? "Ep1 Boss (Floor {$floor})";
+    }
+    if ($episode === 2) {
+        $map = [
+            12 => 'Gal Gryphon',
+            13 => 'Olga Flow',
+            14 => 'Barba Ray',
+            15 => 'Gol Dragon',
+        ];
+        return $map[$floor] ?? "Ep2 Boss (Floor {$floor})";
+    }
+    if ($episode === 4 && $floor === 9) {
+        return 'Saint-Milion / Shambertin / Kondrieu';
+    }
+    return "Boss (Floor {$floor})";
+}
+
+/**
+ * Append one episode-verified boss kill entry to api/.debug_telemetry.json for Admin Telemetry.
+ */
+function tracker_append_debug_telemetry(string $charName, ?int $episode, int $floor, int $expDelta, int $itemDelta): void
+{
+    $debugLogFile = __DIR__ . '/.debug_telemetry.json';
+    $logs = [];
+    if (file_exists($debugLogFile)) {
+        $decoded = json_decode((string)@file_get_contents($debugLogFile), true);
+        if (is_array($decoded)) {
+            $logs = $decoded;
+        }
+    }
+    array_unshift($logs, [
+        'time'       => time(),
+        'char'       => $charName ?: 'Unknown',
+        'boss'       => tracker_boss_name($episode, $floor),
+        'episode'    => $episode,
+        'exp_delta'  => max(0, $expDelta),
+        'loot_delta' => max(0, $itemDelta),
+    ]);
+    if (count($logs) > 50) {
+        $logs = array_slice($logs, 0, 50);
+    }
+    @file_put_contents($debugLogFile, json_encode($logs), LOCK_EX);
 }
 
 $rooms = []; // lobby ID => ['episode' => 1|2|4|null, 'is_game' => bool], kept if a fetch fails
@@ -202,6 +257,7 @@ while (time() - $script_start < 55) {
                     'lobby_id' => $lobby_id,
                     'episode' => $episode,
                 ];
+                tracker_append_debug_telemetry($charName, $episode, $curr_floor, (int)$exp_delta, (int)$item_delta);
 
                 $new_states[$key] = array_merge($prev, $room_fields, [
                     'floor' => $curr_floor,
@@ -239,6 +295,7 @@ while (time() - $script_start < 55) {
 
                 echo "[TRACKER] EXIT KILL! {$charName} (Acc {$accId}) floor {$boss_floor} | entered " . date('H:i:s', $entry_time) . " | exited " . date('H:i:s') . " | {$time_in_arena}s in arena | EXP +{$exp_delta}\n";
 
+                $kill_ep = array_key_exists('episode', $prev) ? $prev['episode'] : $episode;
                 $kill_events[$key][] = [
                     'floor' => $boss_floor,
                     'time' => time(),
@@ -248,8 +305,9 @@ while (time() - $script_start < 55) {
                     'time_in_arena' => $time_in_arena,
                     'pre_boss_floor' => $pre_boss,
                     'lobby_id' => $prev['lobby_id'] ?? $lobby_id, // the room the arena was in
-                    'episode' => array_key_exists('episode', $prev) ? $prev['episode'] : $episode,
+                    'episode' => $kill_ep,
                 ];
+                tracker_append_debug_telemetry($charName, $kill_ep !== null ? (int)$kill_ep : null, (int)$boss_floor, (int)$exp_delta, (int)$item_delta);
             }
         }
 

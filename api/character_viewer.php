@@ -320,7 +320,7 @@ if (file_exists($psocharPath)) {
         $bankNumItems = unpack('V', substr($bankBlock, 0, 4))[1];
         $bankMeseta = unpack('V', substr($bankBlock, 4, 4))[1];
         
-        for ($i = 0; $i < min(200, $bankNumItems); $i++) {
+        for ($i = 0; $i < min(1000, $bankNumItems); $i++) {
             $offset = 8 + $i * 24;
             if ($offset + 24 <= strlen($bankBlock)) {
                 $itemBytes = substr($bankBlock, $offset, 20);
@@ -346,7 +346,7 @@ if (file_exists($psocharPath)) {
         if ($sharedData && strlen($sharedData) >= 8) {
             $shNumItems = unpack('V', substr($sharedData, 0, 4))[1];
             $sharedBankMeseta = unpack('V', substr($sharedData, 4, 4))[1];
-            for ($i = 0; $i < min(200, $shNumItems); $i++) {
+            for ($i = 0; $i < min(1000, $shNumItems); $i++) {
                 $offset = 8 + $i * 24;
                 if ($offset + 24 <= strlen($sharedData)) {
                     $itemBytes = substr($sharedData, $offset, 20);
