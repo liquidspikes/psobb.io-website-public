@@ -192,6 +192,44 @@ if (is_array($lore)) {
     check($bcStart['speaker'] === $bcMid['speaker'] && $bcMid['speaker'] === $bcEnd['speaker'], 'all milestones for CE #14 share the same cast speaker (' . $bcStart['speaker'] . ')');
     check($bcStart['speaker'] !== 'Mission Control' && strpos($bcStart['prompt'], 'BILINGUAL OUTPUT REQUIRED') !== false, 'broadcast prompt uses lore speaker and bilingual directive');
     check(strpos($bcEnd['prompt'], 'psobb.io') !== false && strpos($bcMid['prompt'], '50%') !== false, 'broadcast prompts include milestone percentage and server claim URL at 100%');
+
+    // --- 6. Anti-repetition & PSO vocabulary guards -------------------------
+    check(count($lore['world']['rules'] ?? []) <= 12, 'world.json rules fit within the 12-line broadcast cap');
+    check(
+        bounty_clean_recent_titles('Operation: Thick Hide, Protocol: Sand Stasis, Project: Echo, Directive: Zero, Contract: Iron, Thick Hide, Clear the Waterway')
+            === 'Thick Hide, Sand Stasis, Echo, Zero, Iron, Clear the Waterway',
+        'bounty_clean_recent_titles strips code-name prefixes and deduplicates'
+    );
+    check(bounty_clean_recent_titles('') === 'None' && bounty_clean_recent_titles('Operation: , None') === 'None', 'bounty_clean_recent_titles handles empty inputs');
+    check(
+        strpos(bounty_goal_meaning('PATROL'), 'ten minutes') !== false
+            && bounty_goal_meaning('EPISODE_RUN') !== ''
+            && bounty_goal_meaning('AREA_SWEEP') !== '',
+        'bounty_goal_meaning gives PATROL an in-world duration and covers rework goals'
+    );
+    $antiRepPrompt = bounty_build_prompt('ep1_caves', $g1, [
+        'hunter_name' => 'Ash',
+        'level' => 55,
+        'class' => 'HUmar',
+        'completed_line' => '',
+        'goal' => 'PATROL',
+        'objective' => 'Cave 2',
+        'difficulty' => 'Very Hard',
+        'is_location_goal' => true,
+        'quest_giver' => $g1['name'] ?? 'Guild',
+        'hex_twist' => '',
+        'recent_titles' => 'Operation: Thick Hide, Protocol: Sand Stasis, Quiet Watch',
+        'floor' => 4,
+        'target' => '4',
+    ]);
+    check(strpos($antiRepPrompt, 'Operation: Thick Hide') === false, 'bounty_build_prompt strips Operation: prefix from recent_titles');
+    check(strpos($antiRepPrompt, '[ Thick Hide, Sand Stasis, Quiet Watch ]') !== false, 'bounty_build_prompt embeds cleaned recent_titles');
+    check(
+        strpos($antiRepPrompt, 'chronometer') !== false
+            && strpos($antiRepPrompt, 'Listen up') !== false
+            && strpos($antiRepPrompt, 'ten minutes') !== false,
+        'bounty_build_prompt carries anti-jargon, anti-cold-open, and patrol duration rules'
+    );
 }
 
 echo "\n$passes passed, $fails failed\n";

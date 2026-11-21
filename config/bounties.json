@@ -1,0 +1,9 @@
+{
+    "_comment": "Active Bounty System Rework configuration. Staged dark-launched (enabled: false), with challenge_chance & normal_challenge_chance: 0 until newserv emits per-clear Challenge counters. Full defaults in config/bounties.example.json and api/BOUNTY_SYSTEM.md.",
+    "enabled": false,
+    "legacy_grace_days": 30,
+    "earn": {
+        "challenge_chance": 0,
+        "normal_challenge_chance": 0
+    }
+}

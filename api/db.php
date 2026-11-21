@@ -381,6 +381,52 @@ function get_db(bool $reset = false)
         if (!$hasMissionCreatedAt) {
             $db->exec("ALTER TABLE missions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
         }
+
+        // --- Bounty System Rework (api/bounty_system.php) ---
+        // missions: tier (common..mythic), cadence (daily/weekly), pool (standard/drop/battle/challenge),
+        //   source (login/completion/boss/rare_enemy/battle/challenge), reward_spec (JSON: item bases whose
+        //   stats roll on claim), meta (JSON: e.g. the difficulty a drop came from).
+        // player_missions: period_key (the reset period it was earned in), expires_at (unix), earned_at,
+        //   activated_at, rerolled (0/1), progress (JSON, weekly objectives).
+        // Rows from before the rework keep NULLs here and behave exactly as before.
+        $bountyCols = [
+            'missions' => ['tier' => 'TEXT', 'cadence' => 'TEXT', 'pool' => 'TEXT', 'source' => 'TEXT', 'reward_spec' => 'TEXT', 'meta' => 'TEXT'],
+            'player_missions' => ['period_key' => 'TEXT', 'expires_at' => 'INTEGER', 'earned_at' => 'INTEGER', 'activated_at' => 'INTEGER', 'rerolled' => 'INTEGER DEFAULT 0', 'progress' => 'TEXT'],
+        ];
+        foreach ($bountyCols as $bTable => $bCols) {
+            $bHave = [];
+            $result = $db->query("PRAGMA table_info($bTable)");
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $bHave[] = $row['name'];
+            }
+            $result->finalize();
+            foreach ($bCols as $bName => $bDef) {
+                if (!in_array($bName, $bHave, true)) {
+                    $db->exec("ALTER TABLE $bTable ADD COLUMN $bName $bDef");
+                }
+            }
+        }
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_player_missions_scope ON player_missions(account_id, character_name, status)");
+
+        // --- Enemy kill counts (api/enemy_kills.php): each character's own kills, by episode, difficulty,
+        //   game mode and enemy, from newserv's KillCounts in /y/clients. A boss counts once per fight. ---
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS enemy_kill_counts (
+                account_id INTEGER NOT NULL,
+                character_name TEXT NOT NULL,
+                episode INTEGER NOT NULL,
+                difficulty TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                enemy TEXT NOT NULL,
+                name TEXT,
+                rare INTEGER DEFAULT 0,
+                boss INTEGER DEFAULT 0,
+                kills INTEGER NOT NULL DEFAULT 0,
+                first_kill_at INTEGER,
+                last_kill_at INTEGER,
+                PRIMARY KEY (account_id, character_name, episode, difficulty, mode, enemy)
+            )
+        ");
         
         // --- Auto-migration for Community Event Participants & Game Mods ---
         $db->exec("
@@ -758,19 +804,43 @@ function send_email($to, $subject, $message)
             'textContent' => $message
         ];
 
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'accept: application/json',
-            'api-key: ' . $BREVO_API_KEY,
-            'content-type: application/json'
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $payloadJson = json_encode($data);
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadJson);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'accept: application/json',
+                'api-key: ' . $BREVO_API_KEY,
+                'content-type: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+            $response = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        } else {
+            $safeApiKey = str_replace(["\r", "\n"], '', (string)$BREVO_API_KEY);
+            $ctx = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "accept: application/json\r\napi-key: " . $safeApiKey . "\r\ncontent-type: application/json\r\n",
+                    'content' => $payloadJson,
+                    'timeout' => 10,
+                    'ignore_errors' => true,
+                ],
+            ]);
+            $http_response_header = [];
+            $response = @file_get_contents($url, false, $ctx);
+            $httpCode = 0;
+            if (!empty($http_response_header[0]) && preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0], $hm)) {
+                $httpCode = (int) $hm[1];
+            }
+            if ($response === false) {
+                $response = 'stream request failed';
+            }
+        }
 
         $success = ($httpCode >= 200 && $httpCode < 300);
         $logEntry .= " | Via: Brevo API | Success: " . ($success ? 'Yes' : 'No') . " | Resp: $response\n";

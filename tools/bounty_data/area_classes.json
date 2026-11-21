@@ -1,0 +1,135 @@
+{
+ "_comment": "Share of each enemy class (Native, A.Beast, Machine, Dark) among the enemies of each area, from the BB spawn files bundled with newserv (Control Tower and Seaside Night from quests). Classes from the SchtPSO legacy wiki and the Destiny Wiki, cross-checked against the Episode III card data in newserv. Mothmants and Recons counted as many as are out at once. Bounty weapons take their attributes from these shares.",
+ "ep1_forest": {
+  "native": 1.0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 0
+ },
+ "ep1_caves": {
+  "native": 0,
+  "abeast": 1.0,
+  "machine": 0,
+  "dark": 0
+ },
+ "ep1_mines": {
+  "native": 0,
+  "abeast": 0,
+  "machine": 1.0,
+  "dark": 0
+ },
+ "ep1_ruins": {
+  "native": 0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 1.0
+ },
+ "ep2_vr_temple": {
+  "native": 0.29,
+  "abeast": 0.34,
+  "machine": 0,
+  "dark": 0.37
+ },
+ "ep2_vr_spaceship": {
+  "native": 0.33,
+  "abeast": 0.04,
+  "machine": 0.47,
+  "dark": 0.16
+ },
+ "ep2_jungle": {
+  "native": 0.34,
+  "abeast": 0.54,
+  "machine": 0.12,
+  "dark": 0
+ },
+ "ep2_mountain": {
+  "native": 0.83,
+  "abeast": 0.15,
+  "machine": 0.02,
+  "dark": 0
+ },
+ "ep2_seaside": {
+  "native": 0.89,
+  "abeast": 0.09,
+  "machine": 0.02,
+  "dark": 0
+ },
+ "ep2_seabed": {
+  "native": 0,
+  "abeast": 0.35,
+  "machine": 0.5,
+  "dark": 0.15
+ },
+ "ep2_control_tower": {
+  "native": 0.17,
+  "abeast": 0.1,
+  "machine": 0.31,
+  "dark": 0.42
+ },
+ "ep4_crater": {
+  "native": 0.96,
+  "abeast": 0.04,
+  "machine": 0,
+  "dark": 0
+ },
+ "ep4_desert": {
+  "native": 0.41,
+  "abeast": 0.13,
+  "machine": 0,
+  "dark": 0.46
+ },
+ "boss_dragon": {
+  "native": 1.0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 0
+ },
+ "boss_de_rol_le": {
+  "native": 0,
+  "abeast": 1.0,
+  "machine": 0,
+  "dark": 0
+ },
+ "boss_vol_opt": {
+  "native": 0,
+  "abeast": 0,
+  "machine": 1.0,
+  "dark": 0
+ },
+ "boss_dark_falz": {
+  "native": 0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 1.0
+ },
+ "boss_barba_ray": {
+  "native": 0,
+  "abeast": 1.0,
+  "machine": 0,
+  "dark": 0
+ },
+ "boss_gol_dragon": {
+  "native": 1.0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 0
+ },
+ "boss_gal_gryphon": {
+  "native": 0,
+  "abeast": 1.0,
+  "machine": 0,
+  "dark": 0
+ },
+ "boss_olga_flow": {
+  "native": 0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 1.0
+ },
+ "boss_saint_milion": {
+  "native": 0,
+  "abeast": 0,
+  "machine": 0,
+  "dark": 1.0
+ }
+}

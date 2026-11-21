@@ -8,6 +8,9 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/reward_tables.php';
 require_once __DIR__ . '/bounty_lore.php';
+require_once __DIR__ . '/bounty_generator.php';
+require_once __DIR__ . '/bounty_system.php';
+require_once __DIR__ . '/enemy_kills.php';
 
 // Enforce CLI execution.
 if (php_sapi_name() !== 'cli') {
@@ -34,7 +37,7 @@ if (empty($GEMINI_API_KEY)) {
 
 // Fetch the last 15 active/recent mission titles to prevent AI trope repetition
 $recent_missions = [];
-$rm_res = $db->query("SELECT title FROM missions ORDER BY id DESC LIMIT 15");
+$rm_res = $db->query("SELECT title FROM missions WHERE title != '' ORDER BY id DESC LIMIT 15");
 if ($rm_res) {
     while ($row = $rm_res->fetchArray(SQLITE3_ASSOC)) {
         $recent_missions[] = $row['title'];
@@ -83,6 +86,13 @@ while (time() - $script_start < 55) {
 
     echo "[CRON] Processing " . count($clients) . " clients...\n";
 
+    // Room facts (episode, difficulty, mode, party size) for the Bounty System Rework
+    $lobby_info_map = bounty_lobby_info_map($lobbies);
+    if (bounty_rework_enabled()) {
+        $expired_n = bounty_expire_sweep($db);
+        if ($expired_n) echo "[BOUNTY] Expired {$expired_n} bounties at the reset.\n";
+    }
+
     // Load state cache each tick to calculate real-time deltas
     $player_states = file_exists($state_cache_file) ? json_decode(file_get_contents($state_cache_file), true) : [];
     if (!is_array($player_states)) $player_states = [];
@@ -96,6 +106,59 @@ while (time() - $script_start < 55) {
     $floor_clears_file = __DIR__ . '/../db/.floor_clears.json';
     $floor_clear_events = file_exists($floor_clears_file) ? json_decode(file_get_contents($floor_clears_file), true) : [];
     if (!is_array($floor_clear_events)) $floor_clear_events = [];
+
+    // Each player's level when they joined their current game. Carry objectives measure the level gap
+    // with these, so carried players who level up on the way to the boss still count.
+    $game_join_level = [];
+    // Who is in each game (contracts check a carry or a mixed party at each boss, and pay everyone there
+    // a share), and what each game killed since the last pass: a kill by anyone in a game counts for every
+    // player's active kill bounties there (enemy, rare-enemy and boss hunts, contract hunts and runs).
+    // Each player's own kills also go to their character's lifetime kill counts (api/enemy_kills.php).
+    $lobby_members = [];
+    $lobby_kills = [];        // lobby ID => what the game killed this pass (enemy_kills_add_to_summary())
+    $lobby_boss_events = [];  // lobby ID => boss kills the tracker recorded there since the last pass, anyone's
+    $own_kills = [];          // state key => this player's own new kills (enemy_kill_deltas())
+    foreach ($clients as $gc) {
+        if (!isset($gc['Account']['AccountID'], $gc['EXP'])) continue;
+        $gk = $gc['Account']['AccountID'] . '_' . ($gc['Name'] ?? 'Unknown');
+        $glob = $gc['LobbyID'] ?? null;
+        $gps = $player_states[$gk] ?? [];
+        $game_join_level[$gk] = ($glob !== null && ($gps['game_lobby'] ?? null) === $glob && isset($gps['game_join_level']))
+            ? (int) $gps['game_join_level'] : (int) ($gc['Level'] ?? 1);
+        // (the main loop skips a loading screen's zero-EXP reading without saving state; so does this)
+        if ((int) $gc['EXP'] === 0 && (int) ($gps['exp'] ?? 0) > 0) continue;
+        $own_kills[$gk] = enemy_kill_deltas($gc, $gps);
+        // Boss kills the tracker recorded for this player since the last pass, by the game they were in
+        if (isset($gps['bounty_boss_event_time'])) {
+            foreach ($boss_kill_events[$gk] ?? [] as $e) {
+                if ((int) ($e['time'] ?? 0) > (int) $gps['bounty_boss_event_time'] && isset($e['lobby_id'])) {
+                    $lobby_boss_events[$e['lobby_id']][] = $e + ['by' => $gk];
+                }
+            }
+        }
+        if ($glob === null) continue;
+        $lobby_members[$glob][] = [
+            'key' => $gk, 'acc' => (int) $gc['Account']['AccountID'], 'name' => $gc['Name'] ?? 'Unknown',
+            'class' => (string) ($gc['CharClass'] ?? ''), 'join_level' => $game_join_level[$gk], 'client' => $gc,
+        ];
+        $lobby_kills[$glob] = $lobby_kills[$glob] ?? [];
+        if ($own_kills[$gk]['has']) {
+            enemy_kills_add_to_summary($lobby_kills[$glob], $own_kills[$gk]['entries']);
+        } elseif (isset($gc['EnemyKillCount'], $gps['bounty_enemy_kills'])) {
+            // newserv with only the first kill patch: totals, and the last rare enemy's name
+            $cur_e = (int) $gc['EnemyKillCount'];
+            $was_e = (int) $gps['bounty_enemy_kills'];
+            $cur_r = (int) ($gc['RareEnemyKillCount'] ?? 0);
+            $was_r = (int) ($gps['bounty_rare_kills'] ?? 0);
+            // a lower reading: newserv's counter restarted
+            enemy_kills_add_to_summary($lobby_kills[$glob], null, ($cur_e >= $was_e) ? $cur_e - $was_e : $cur_e,
+                ($cur_r >= $was_r) ? $cur_r - $was_r : $cur_r, $gc['LastRareEnemyKilled'] ?? null);
+        }
+    }
+    $lobby_rare_kills = array_map(function ($sum) { return $sum['rare_names'] ?? []; }, $lobby_kills);
+    $join_level_of = function (array $c) use ($game_join_level) {
+        return $game_join_level[($c['Account']['AccountID'] ?? '') . '_' . ($c['Name'] ?? 'Unknown')] ?? (int) ($c['Level'] ?? 200);
+    };
 
 // 2. Iterate through all currently active players.
 foreach ($clients as $client) {
@@ -147,7 +210,8 @@ foreach ($clients as $client) {
     //   Ep4: 9=Saint-Milion
     // Note: Floor IDs overlap across episodes (e.g. 12 = De Rol Le in Ep1, Gal Gryphon in Ep2).
     // This is acceptable because we only use these for EXP-delta-based kill detection.
-    $arena_floors = bounty_boss_arena_floors($lobby_episode); // floor numbers repeat across episodes
+    $room_episode = ($lobby_id !== null) ? ($lobby_info_map[$lobby_id]['episode'] ?? null) : null;
+    $arena_floors = bounty_boss_arena_floors($room_episode); // floor numbers repeat across episodes
     if (in_array($curr_f, $arena_floors)) {
         $last_boss_arena = $curr_f;
         $last_boss_arena_time = time();
@@ -255,7 +319,21 @@ foreach ($clients as $client) {
     // 3. Fetch all active "in-progress" missions for the CURRENT CHARACTER.
     // If character_name is null/empty (legacy missions), it will still be evaluated for backwards compatibility.
     // However, new missions will strictly be tied to a character.
-    $stmt = $db->prepare("SELECT pm.id, pm.mission_id, u.discord_id, pm.character_name, m.title AS mission_title, m.description AS mission_desc, m.goal_type, m.goal_target, m.reward_item_string 
+    // New kills since the last pass (boss events from cron_boss_tracker.php; enemy and rare-enemy
+    // counts from newserv's EnemyKillCount / RareEnemyKillCount when the server reports them)
+    $lobby_info = ($lobby_id !== null) ? ($lobby_info_map[$lobby_id] ?? null) : null;
+    $kills = bounty_kill_deltas($client, $prev_state, $boss_kill_events[$stateKey] ?? [], $lobby_info);
+    // What the whole game killed this pass: everyone in it gets the credit toward kill bounties
+    $kills['party'] = ($lobby_id !== null && isset($lobby_kills[$lobby_id])) ? $lobby_kills[$lobby_id] : null;
+    $kills['party_boss_events'] = ($lobby_id !== null) ? ($lobby_boss_events[$lobby_id] ?? []) : [];
+    // This character's own kills go to its lifetime kill counts
+    if (!empty($own_kills[$stateKey]['entries'])) {
+        enemy_kills_record($db, $accId, $charName, $own_kills[$stateKey]['entries']);
+    }
+    $completed_this_pass = [];
+
+    $stmt = $db->prepare("SELECT pm.id, pm.mission_id, u.discord_id, pm.character_name, m.title AS mission_title, m.description AS mission_desc, m.goal_type, m.goal_target, m.reward_item_string,
+                                 pm.activated_at, pm.progress, m.tier, m.cadence, m.pool, m.meta
                           FROM player_missions pm 
                           JOIN missions m ON pm.mission_id = m.id 
                           JOIN users u ON pm.account_id = u.account_id
@@ -270,6 +348,7 @@ foreach ($clients as $client) {
     $completed_any = false;
     $last_completed_type = "training";
     $current_patrols = [];
+    $current_patrol_seen = [];
     $active_mission_types = [];
 
     while ($m = $res->fetchArray(SQLITE3_ASSOC)) {
@@ -277,6 +356,29 @@ foreach ($clients as $client) {
         $active_mission_count++;
         $active_mission_types[] = $m['goal_type'];
         $completed = false;
+
+        // Uncommon and Rare dailies in an area or at a boss count only on their difficulty or higher
+        // (missions.meta min_difficulty, set when the bounty starts)
+        $min_diff = bounty_meta_min_difficulty($m['meta'] ?? null);
+        $saved_boss_events = null;
+        if ($min_diff && in_array($m['goal_type'], BOUNTY_DAILY_PLACE_GOALS, true)) {
+            $need_rank = bounty_difficulty_rank($min_diff);
+            $here_ok = $lobby_info && !empty($lobby_info['is_game']) && bounty_difficulty_rank($lobby_info['difficulty'] ?? 'Normal') >= $need_rank;
+            if (in_array($m['goal_type'], ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR'], true) && !$here_ok) {
+                if ($m['goal_type'] === 'PATROL') {
+                    $current_patrols[$m['id']] = (int) ($prev_state['patrol'][$m['id']] ?? 0);
+                }
+                continue;
+            }
+            if (isset($boss_kill_events[$stateKey])) {
+                // only boss kills in a game of that difficulty (the kill's own game, or this one)
+                $saved_boss_events = $boss_kill_events[$stateKey];
+                $boss_kill_events[$stateKey] = array_values(array_filter($saved_boss_events, function ($e) use ($lobby_info_map, $lobby_info, $need_rank) {
+                    $l = $lobby_info_map[$e['lobby_id'] ?? -1] ?? $lobby_info;
+                    return !$l || bounty_difficulty_rank($l['difficulty'] ?? 'Normal') >= $need_rank;
+                }));
+            }
+        }
         
         // 4. Mission Evaluation Engine
         if ($m['goal_type'] === 'MESETA' && ($client['Meseta'] ?? 0) >= (int)$m['goal_target']) {
@@ -338,7 +440,8 @@ foreach ($clients as $client) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'CHALLENGE_STAGES') {
-            $cleared_c_stages = count_cleared_challenge_stages($client);
+            // newserv always reports all 9 + 5 stage times (65535 = not cleared), so count the cleared ones
+            $cleared_c_stages = challenge_stages_cleared($client);
             $c_target = (int)$m['goal_target'];
             if ($c_target > 14) {
                 $c_target = min(14, $cleared_c_stages + 1);
@@ -365,15 +468,21 @@ foreach ($clients as $client) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'PATROL') { 
+            // "Survive and patrol the area for 10 minutes": seconds actually spent on the floor. It used to
+            // count cron passes (about 10 s apart), so ten of them finished it in under two minutes.
+            // A gap between passes counts for at most a minute, so a pause or a restart adds little.
+            $patrol_secs = (int) ($prev_state['patrol'][$m['id']] ?? 0);
             if (($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
-                $patrol_progress = ($prev_state['patrol'][$m['id']] ?? 0) + 1;
-                $current_patrols[$m['id']] = $patrol_progress;
-                if ($patrol_progress >= 10) {
+                $seen = (int) ($prev_state['patrol_seen'][$m['id']] ?? 0);
+                if ($seen > 0) {
+                    $patrol_secs += min(60, max(0, time() - $seen));
+                }
+                $current_patrol_seen[$m['id']] = time();
+                if ($patrol_secs >= 600) {
                     $completed = true;
                 }
-            } else {
-                $current_patrols[$m['id']] = $prev_state['patrol'][$m['id']] ?? 0;
             }
+            $current_patrols[$m['id']] = $patrol_secs;
         } elseif ($m['goal_type'] === 'EXPLORATION') {
             // LocationFloor tracks exactly which area the player is currently occupying
             if (($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
@@ -388,6 +497,8 @@ foreach ($clients as $client) {
                 $check_floor = ($original_target === 'ANY_DRAGON') ? null : (int)$original_target;
                 
                 foreach ($boss_kill_events[$tracker_key] as $kill_evt) {
+                    // A kill from before the bounty became active does not count
+                    if (!empty($m['activated_at']) && (int) $kill_evt['time'] < (int) $m['activated_at']) continue;
                     // For ANY_DRAGON, match any dragon floor
                     if ($original_target === 'ANY_DRAGON') {
                         $kep = $kill_evt['episode'] ?? null; // the tracker's room episode, when it knew it
@@ -396,7 +507,7 @@ foreach ($clients as $client) {
                             break;
                         }
                     } else if ($kill_evt['floor'] === $check_floor) {
-                        // Episode validation using room episode and pre_boss_floor
+                        // Episode validation using pre_boss_floor
                         $episode = get_boss_episode_by_context($m['mission_title'], $m['mission_desc'] ?? '', $check_floor, parse_boss_target($original_target)['episode']);
                         $valid_preceding_floors = [
                             '11_1' => [1, 2], '12_1' => [3, 4, 5], '12_2' => [5, 6, 7, 8, 9],
@@ -423,13 +534,13 @@ foreach ($clients as $client) {
                 echo "[CRON] Boss kill confirmed via tracker for {$charName} on floor {$tracker_kill['floor']} (EXP +{$tracker_kill['exp_delta']}, arena time {$tracker_kill['time_in_arena']}s)\n";
                 if ($m['goal_type'] === 'MENTOR_BOSS') {
                     $mentored = false;
-                    $my_level = $client['Level'] ?? 1;
+                    $my_level = $join_level_of($client); // levels as they were when each joined the game
                     $my_lobby = $client['LobbyID'] ?? -1;
                     
                     if ($my_lobby !== -1) {
                         foreach ($clients as $other_client) {
                             if (($other_client['LobbyID'] ?? -2) === $my_lobby && ($other_client['Account']['AccountID'] ?? -1) !== ($client['Account']['AccountID'] ?? -1)) {
-                                if (($other_client['Level'] ?? 200) <= ($my_level - 5)) {
+                                if ($join_level_of($other_client) <= ($my_level - 5)) {
                                     $mentored = true;
                                     break;
                                 }
@@ -459,7 +570,7 @@ foreach ($clients as $client) {
                 // =====================================================================
                 } elseif ($m['goal_type'] === 'HARDCORE_MENTOR') {
                     $mentees = [];
-                    $my_level = $client['Level'] ?? 1;
+                    $my_level = $join_level_of($client); // levels as they were when each joined the game
                     $my_lobby = $client['LobbyID'] ?? -1;
                     
                     // Scan all connected clients for party members in the same lobby
@@ -467,7 +578,7 @@ foreach ($clients as $client) {
                     if ($my_lobby !== -1) {
                         foreach ($clients as $other_client) {
                             if (($other_client['LobbyID'] ?? -2) === $my_lobby && ($other_client['Account']['AccountID'] ?? -1) !== ($client['Account']['AccountID'] ?? -1)) {
-                                if (($other_client['Level'] ?? 200) <= ($my_level - 10)) {
+                                if ($join_level_of($other_client) <= ($my_level - 10)) {
                                     $mentees[] = $other_client;
                                 }
                             }
@@ -655,12 +766,12 @@ foreach ($clients as $client) {
 
                 foreach ($boss_kill_events[$tracker_key] as $kill_evt) {
                     if ($kill_evt['floor'] !== $speedrun_target_id) continue;
-
+                    if (!empty($m['activated_at']) && (int) $kill_evt['time'] < (int) $m['activated_at']) continue;
+                    
                     if (isset($kill_evt['episode']) && (int) $kill_evt['episode'] !== (int) $episode) {
                         echo "[CRON] SPEEDRUN_BOSS tracker kill on floor {$speedrun_target_id} rejected: Episode {$kill_evt['episode']} room\n";
                         continue;
                     }
-
                     // Episode validation via pre_boss_floor
                     $valid = $valid_preceding[$comp_key] ?? null;
                     if ($valid !== null && $kill_evt['pre_boss_floor'] >= 0 && !in_array($kill_evt['pre_boss_floor'], $valid)) {
@@ -708,12 +819,30 @@ foreach ($clients as $client) {
                     }
                 }
             }
+        } elseif ($m['goal_type'] === 'EPISODE_RUN' || $m['goal_type'] === 'RARE_TARGET') {
+            // Contracts (api/bounty_contracts.php): full episode runs and rare-creature hunts
+            $contract_progress = null;
+            $completed = bounty_evaluate_contract($db, $m, $client, $lobby_info, $kills,
+                ['key' => $stateKey, 'members' => $lobby_members, 'lobby_rares' => $lobby_rare_kills, 'lobby_boss_events' => $lobby_boss_events], $contract_progress);
+            if ($completed) {
+                // everyone else in the game gets a share, a tier lower, built for them
+                $share_lobby = $contract_progress['lobby'] ?? $lobby_id;
+                bounty_contract_pay_shares($db, $m, $client, $contract_progress, $lobby_members[$share_lobby] ?? []);
+            }
+        } elseif (in_array($m['goal_type'], ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS'], true)) {
+            // Objectives of the Bounty System Rework with progress (kept in player_missions.progress)
+            $completed = bounty_evaluate_weekly($db, $m, $client, $lobby_info, $kills, $lobby_info_map);
+        }
+
+        if ($saved_boss_events !== null) {
+            $boss_kill_events[$stateKey] = $saved_boss_events;
         }
 
         // 5. Completion Handling
         if ($completed) {
             $completed_any = true;
             $last_completed_type = $m['goal_type'];
+            $completed_this_pass[] = $m;
             echo "[CRON] Account $accId completed mission " . $m['mission_id'] . "\n";
             
             $upd = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :id");
@@ -739,541 +868,84 @@ foreach ($clients as $client) {
 
 
 
-    // 7. Auto-generate the NEXT quest using Gemini AI
-    // If the player has fewer than 3 active missions, give them a random chance to receive a new one.
-    // The cron runs every minute. A 10% chance means ~10 minutes average wait for a new bounty.
-    $random_catch = (rand(1, 100) <= 10);
-    
-    if ($active_mission_count < 3 && $random_catch && !empty($GEMINI_API_KEY) && isset($client['Name'])) {
-        echo "[CRON] Generating new Gemini quest for " . $client['Name'] . "\n";
-        
-        // Maps
-        $class_map = [
-            0 => 'HUmar', 1 => 'HUnewearl', 2 => 'HUcast', 3 => 'RAmar', 
-            4 => 'RAcast', 5 => 'RAcaseal', 6 => 'FOmarl', 7 => 'FOnewm', 
-            8 => 'FOnewearl', 9 => 'HUcaseal', 10 => 'FOmar', 11 => 'RAmarl'
-        ];
-
-        $level = $client['Level'] ?? 1;
-        
-        if (!empty($client['CharClass'])) {
-            $class_str = $client['CharClass'];
-            $class_id = array_search($class_str, $class_map);
-            if ($class_id === false) $class_id = 0;
-        } else if (!empty($client['Class']) && is_string($client['Class']) && !is_numeric($client['Class'])) {
-            $class_str = $client['Class'];
-            $class_id = array_search($class_str, $class_map);
-            if ($class_id === false) $class_id = 0;
-        } else {
-            $class_raw_id = $client['Class'] ?? 0;
-            $class_id = is_numeric($class_raw_id) ? (int)$class_raw_id : 0;
-            $class_str = $class_map[$class_id] ?? 'Unknown';
-        }
-        
-        $class = $class_str;
-        $meseta = $client['Meseta'] ?? 0;
-        $playtime = $client['PlayTimeSeconds'] ?? 0;
-        $battle_wins = $client['BattlePlaceCounts'][0] ?? 0;
-        
-        $hp_mats = $client['NumHPMaterialsUsed'] ?? 0;
-        $tp_mats = $client['NumTPMaterialsUsed'] ?? 0;
-        $pow_mats = $client['NumPowerMaterialsUsed'] ?? 0;
-        $def_mats = $client['NumDefMaterialsUsed'] ?? 0;
-        $mind_mats = $client['NumMindMaterialsUsed'] ?? 0;
-        $evd_mats = $client['NumEvadeMaterialsUsed'] ?? 0;
-        $luck_mats = $client['NumLuckMaterialsUsed'] ?? 0;
-        
-        $difficulty = 'Normal';
-        if ($level >= 80) $difficulty = 'Ultimate';
-        elseif ($level >= 40) $difficulty = 'Very Hard';
-        elseif ($level >= 20) $difficulty = 'Hard';
-        
-        $cleared_c_stages = count_cleared_challenge_stages($client);
-        $available_goals = ['PLAYTIME', 'ITEM', 'BATTLE_WINS', 'EXPLORATION', 'PATROL', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA', 'BOSS_ARENA'];
-        if ($cleared_c_stages < 14) $available_goals[] = 'CHALLENGE_STAGES';
-        if ($meseta <= 940000) $available_goals[] = 'MESETA';
-        if ($level < 200) $available_goals[] = 'LEVEL';
-
-        $is_cast = (stripos($class, 'cast') !== false || stripos($class, 'caseal') !== false);
-        if (!$is_cast) {
-            // TECHNIQUE missions require the player to learn a tech they don't yet know.
-            // Only offer TECHNIQUE if at least one of the base techs learnable by their class is still unknown.
-            $base_techs = [];
-            $class_lower = strtolower($class);
-            if (strpos($class_lower, 'fo') === 0) {
-                $base_techs = ['Foie', 'Zonde', 'Barta', 'Megid', 'Grants', 'Resta', 'Anti', 'Shifta', 'Deband', 'Jellen', 'Zalure', 'Ryuker', 'Reverser'];
-            } elseif ($class_lower === 'hunewearl' || $class_lower === 'ramarl') {
-                $base_techs = ['Foie', 'Zonde', 'Barta', 'Resta', 'Anti', 'Shifta', 'Deband', 'Jellen', 'Zalure'];
-            } elseif ($class_lower === 'ramar') {
-                $base_techs = ['Foie', 'Zonde', 'Barta', 'Resta', 'Anti', 'Shifta', 'Deband'];
-            } elseif ($class_lower === 'humar') {
-                $base_techs = ['Foie', 'Zonde', 'Barta', 'Resta', 'Anti'];
-            }
-
-            $tech_levels = $client['TechniqueLevels'] ?? [];
-            $has_unknown_tech = false;
-            foreach ($base_techs as $bt) {
-                $known = false;
-                foreach ($tech_levels as $name => $lvl) {
-                    if ($lvl !== null && stripos($name, $bt) !== false) { $known = true; break; }
-                }
-                if (!$known) { $has_unknown_tech = true; break; }
-            }
-            if ($has_unknown_tech && !empty($base_techs)) $available_goals[] = 'TECHNIQUE';
-        }
-
-        if ($hp_mats < 125) $available_goals[] = 'MAT_HP';
-        if ($tp_mats < 125 && !$is_cast) $available_goals[] = 'MAT_TP';
-        if ($pow_mats < 125) $available_goals[] = 'MAT_POWER';
-        if ($def_mats < 125) $available_goals[] = 'MAT_DEF';
-        if ($mind_mats < 125 && !$is_cast) $available_goals[] = 'MAT_MIND';
-        if ($evd_mats < 125) $available_goals[] = 'MAT_EVADE';
-        if ($luck_mats < 100) $available_goals[] = 'MAT_LUCK';
-        
-        $available_goals[] = 'SPEEDRUN_BOSS';
-        $available_goals[] = 'SPEEDRUN_FLOOR';
-        if ($level >= 10) $available_goals[] = 'MENTOR_BOSS';
-        if ($level >= 30) $available_goals[] = 'HARDCORE_MENTOR';
-        if ($level >= 20) $available_goals[] = 'DIVERSE_PARTY_BOSS';
-
-        // Filter out any goal types the player already has active to prevent duplicate missions
-        $filtered_goals = array_values(array_diff($available_goals, $active_mission_types));
-        if (!empty($filtered_goals)) {
-            $available_goals = $filtered_goals;
-        }
-
-        $selected_goal = $available_goals[array_rand($available_goals)];
-        $selected_target_id = null;
-        $selected_target_friendly = null;
-        $mission_episode = [1, 2, 4][array_rand([1, 2, 4])]; // Default to random episode if no location is specified
-        $setting_id = null; // Lore setting card (api/lore/) the story is set in; chosen with the objective
-
-        switch ($selected_goal) {
-            case 'MESETA':
-                $selected_target_id = $meseta + rand(10000, 50000);
-                $selected_target_friendly = number_format($selected_target_id) . " Meseta";
-                break;
-            case 'LEVEL':
-                $selected_target_id = $level + rand(1, 2);
-                $selected_target_friendly = "Level " . $selected_target_id;
-                break;
-            case 'PLAYTIME':
-                $next_hour = floor($playtime / 3600) + 1;
-                $selected_target_id = $next_hour * 3600;
-                $selected_target_friendly = $next_hour . " total hours of playtime";
-                break;
-            case 'BATTLE_WINS':
-                $selected_target_id = $battle_wins + 1;
-                $selected_target_friendly = $selected_target_id . " total Battle Mode wins";
-                break;
-            case 'CHALLENGE_STAGES':
-                $selected_target_id = min(14, $cleared_c_stages + 1);
-                $selected_target_friendly = $selected_target_id . " total Challenge Mode " . ($selected_target_id === 1 ? "stage" : "stages") . " cleared";
-                break;
-            case 'EXPLORATION':
-            case 'PATROL':
-                $floors = [1=>'Forest 1',2=>'Forest 2',3=>'Cave 1',4=>'Cave 2',5=>'Cave 3',6=>'Mine 1',7=>'Mine 2',8=>'Ruins 1',9=>'Ruins 2',10=>'Ruins 3'];
-                if (isset($floors[$curr_f])) {
-                    unset($floors[$curr_f]);
-                }
-                $selected_target_id = array_rand($floors);
-                $selected_target_friendly = $floors[$selected_target_id];
-                $mission_episode = 1;
-                $setting_id = bounty_setting_for_ep1_floor($selected_target_id);
-                break;
-            case 'BOSS_ARENA':
-            case 'MENTOR_BOSS':
-            case 'HARDCORE_MENTOR':
-            case 'DIVERSE_PARTY_BOSS':
-                // Episode-aware boss table (bounty_lore.php). Ep1 and Ep2 bosses share floor
-                // IDs 12-14, so the target carries the episode explicitly: "13@2" = Olga Flow.
-                // The trackers and getClearObjective() read it via parse_boss_target().
-                list($boss_floor, $boss_ep, $boss_name, , $boss_setting) = bounty_pick_boss($level, $curr_f);
-                $selected_target_id = make_boss_target($boss_floor, $boss_ep);
-                $selected_target_friendly = $boss_name;
-                $mission_episode = $boss_ep;
-                $setting_id = $boss_setting;
-                break;
-            case 'SPEEDRUN_BOSS':
-                list($boss_floor, $boss_ep, $boss_name, , $boss_setting) = bounty_pick_boss($level, $curr_f);
-                $time_limit = mt_rand(600, 1200); // 10 to 20 minutes
-                $selected_target_id = make_boss_target($boss_floor, $boss_ep, $time_limit);
-                $selected_target_friendly = $boss_name . " in under " . floor($time_limit/60) . " minutes and " . ($time_limit%60) . " seconds";
-                $mission_episode = $boss_ep;
-                $setting_id = $boss_setting;
-                break;
-            case 'SPEEDRUN_FLOOR':
-                $floors = [1=>'Forest 1',2=>'Forest 2',3=>'Cave 1',4=>'Cave 2',5=>'Cave 3',6=>'Mine 1',7=>'Mine 2',8=>'Ruins 1',9=>'Ruins 2',10=>'Ruins 3'];
-                if (isset($floors[$curr_f])) {
-                    unset($floors[$curr_f]);
-                }
-                $rand_floor = array_rand($floors);
-                $time_limit = mt_rand(600, 1800); // 10 to 30 minutes
-                $selected_target_id = $rand_floor . '_' . $time_limit;
-                $selected_target_friendly = $floors[$rand_floor] . " in under " . floor($time_limit/60) . " minutes and " . ($time_limit%60) . " seconds";
-                $mission_episode = 1;
-                $setting_id = bounty_setting_for_ep1_floor($rand_floor);
-                break;
-            case 'TECHNIQUE':
-                $techs = [];
-                $class_lower = strtolower($class);
-                if (strpos($class_lower, 'fo') === 0) {
-                    $techs = ['Foie', 'Zonde', 'Barta', 'Megid', 'Grants', 'Resta', 'Anti', 'Shifta', 'Deband', 'Jellen', 'Zalure', 'Ryuker', 'Reverser'];
-                } elseif ($class_lower === 'hunewearl' || $class_lower === 'ramarl') {
-                    $techs = ['Foie', 'Zonde', 'Barta', 'Resta', 'Anti', 'Shifta', 'Deband', 'Jellen', 'Zalure'];
-                } elseif ($class_lower === 'ramar') {
-                    $techs = ['Foie', 'Zonde', 'Barta', 'Resta', 'Anti', 'Shifta', 'Deband'];
-                } elseif ($class_lower === 'humar') {
-                    $techs = ['Foie', 'Zonde', 'Barta', 'Resta', 'Anti'];
-                }
-
-                // Filter out techs the player already knows to prevent instant completion
-                $known_techs = $client['TechniqueLevels'] ?? [];
-                $unknown_techs = array_filter($techs, function($t) use ($known_techs) {
-                    foreach ($known_techs as $name => $lvl) {
-                        if ($lvl !== null && stripos($name, $t) !== false) return false;
-                    }
-                    return true;
-                });
-                // Safety: if no unknown techs (should not happen due to guard), pick any
-                if (empty($unknown_techs)) $unknown_techs = !empty($techs) ? $techs : ['Foie'];
-                $selected_target_id = $unknown_techs[array_rand($unknown_techs)];
-                $selected_target_friendly = "the " . $selected_target_id . " technique";
-                break;
-            case 'ITEM':
-                $is_hunter = (stripos($class, 'HU') === 0);
-                $is_ranger = (stripos($class, 'RA') === 0);
-                $is_force = (stripos($class, 'FO') === 0);
-
-                $generic_weapon_types = [];
-                if ($is_hunter) {
-                    $generic_weapon_types = ['Saber', 'Dagger', 'Sword', 'Partisan', 'Slicer', 'Handgun', 'Mechgun'];
-                    if ($level >= 11) $generic_weapon_types = array_merge($generic_weapon_types, ['Brand', 'Knife', 'Gigush', 'Halbert', 'Spinner', 'Autogun', 'Assault']);
-                    if ($level >= 21) $generic_weapon_types = array_merge($generic_weapon_types, ['Buster', 'Blade', 'Breaker', 'Glaive', 'Cutter', 'Lockgun', 'Repeater']);
-                    if ($level >= 40) $generic_weapon_types = array_merge($generic_weapon_types, ['Pallasch', 'Edge', 'Claymore', 'Berdys', 'Sawcer', 'Railgun', 'Gatling']);
-                    if ($level >= 80) $generic_weapon_types = array_merge($generic_weapon_types, ['Gladius', 'Ripper', 'Calibur', 'Gungnir', 'Diska', 'Raygun', 'Vulcan']);
-                } elseif ($is_ranger) {
-                    $generic_weapon_types = ['Handgun', 'Rifle', 'Shot', 'Mechgun'];
-                    if ($level >= 11) $generic_weapon_types = array_merge($generic_weapon_types, ['Autogun', 'Sniper', 'Spread', 'Assault']);
-                    if ($level >= 21) $generic_weapon_types = array_merge($generic_weapon_types, ['Lockgun', 'Blaster', 'Cannon', 'Repeater']);
-                    if ($level >= 40) $generic_weapon_types = array_merge($generic_weapon_types, ['Railgun', 'Beam', 'Launcher', 'Gatling']);
-                    if ($level >= 80) $generic_weapon_types = array_merge($generic_weapon_types, ['Raygun', 'Laser', 'Arms', 'Vulcan']);
-                } else {
-                    $generic_weapon_types = ['Saber', 'Handgun', 'Cane', 'Rod', 'Wand', 'Talis'];
-                    if ($level >= 11) $generic_weapon_types = array_merge($generic_weapon_types, ['Brand', 'Autogun', 'Stick', 'Pole', 'Staff', 'Mahu']);
-                    if ($level >= 21) $generic_weapon_types = array_merge($generic_weapon_types, ['Buster', 'Lockgun', 'Mace', 'Pillar', 'Baton', 'Hitogata']);
-                    if ($level >= 40) $generic_weapon_types = array_merge($generic_weapon_types, ['Pallasch', 'Railgun', 'Club', 'Striker', 'Scepter']);
-                    if ($level >= 80) $generic_weapon_types = array_merge($generic_weapon_types, ['Gladius', 'Raygun']);
-                }
-                
-                $generic_weapon_hex_map = [
-                    'Saber' => '000100', 'Brand' => '000101', 'Buster' => '000102', 'Pallasch' => '000103', 'Gladius' => '000104',
-                    'Sword' => '000200', 'Gigush' => '000201', 'Breaker' => '000202', 'Claymore' => '000203', 'Calibur' => '000204',
-                    'Dagger' => '000300', 'Knife' => '000301', 'Blade' => '000302', 'Edge' => '000303', 'Ripper' => '000304',
-                    'Partisan' => '000400', 'Halbert' => '000401', 'Glaive' => '000402', 'Berdys' => '000403', 'Gungnir' => '000404',
-                    'Slicer' => '000500', 'Spinner' => '000501', 'Cutter' => '000502', 'Sawcer' => '000503', 'Diska' => '000504',
-                    'Handgun' => '000600', 'Autogun' => '000601', 'Lockgun' => '000602', 'Railgun' => '000603', 'Raygun' => '000604',
-                    'Rifle' => '000700', 'Sniper' => '000701', 'Blaster' => '000702', 'Beam' => '000703', 'Laser' => '000704',
-                    'Mechgun' => '000800', 'Assault' => '000801', 'Repeater' => '000802', 'Gatling' => '000803', 'Vulcan' => '000804',
-                    'Shot' => '000900', 'Spread' => '000901', 'Cannon' => '000902', 'Launcher' => '000903', 'Arms' => '000904',
-                    'Cane' => '000A00', 'Stick' => '000A01', 'Mace' => '000A02', 'Club' => '000A03',
-                    'Rod' => '000B00', 'Pole' => '000B01', 'Pillar' => '000B02', 'Striker' => '000B03',
-                    'Wand' => '000C00', 'Staff' => '000C01', 'Baton' => '000C02', 'Scepter' => '000C03',
-                    'Talis' => '008C00', 'Mahu' => '008C01', 'Hitogata' => '008C02'
-                ];
-
-                // Filter out items the player already has in inventory to prevent instant completion
-                $inventory = $client['InventoryItems'] ?? [];
-                $not_owned = array_filter($generic_weapon_types, function($wep) use ($generic_weapon_hex_map, $inventory) {
-                    $hex = $generic_weapon_hex_map[$wep] ?? null;
-                    if (!$hex) return true;
-                    foreach ($inventory as $inv_item) {
-                        if (isset($inv_item['Data']) && strpos($inv_item['Data'], $hex) === 0) return false;
-                    }
-                    return true;
-                });
-                if (empty($not_owned)) $not_owned = $generic_weapon_types; // Fallback if player owns everything
-                
-                $selected_target_name = $not_owned[array_rand($not_owned)];
-                $selected_target_friendly = $selected_target_name;
-                $selected_target_id = $generic_weapon_hex_map[$selected_target_name];
-                break;
-            default:
-                if (strpos($selected_goal, 'MAT_') === 0) {
-                    $mat_map_local = ['MAT_HP' => 'NumHPMaterialsUsed', 'MAT_TP' => 'NumTPMaterialsUsed', 'MAT_POWER' => 'NumPowerMaterialsUsed', 'MAT_DEF' => 'NumDefMaterialsUsed', 'MAT_MIND' => 'NumMindMaterialsUsed', 'MAT_EVADE' => 'NumEvadeMaterialsUsed', 'MAT_LUCK' => 'NumLuckMaterialsUsed'];
-                    $key = $mat_map_local[$selected_goal] ?? 'NumHPMaterialsUsed';
-                    $current_count = $client[$key] ?? 0;
-                    $selected_target_id = $current_count + rand(3, 8);
-                    $selected_target_friendly = $selected_target_id . " total consumed " . str_replace('MAT_', '', $selected_goal) . " materials";
-                }
-                break;
-        }
-
-        // Objectives with no place of their own (Meseta, levels, materials, techniques...)
-        // are set in one of the episodes' hubs: Pioneer 2 (3084-85), the Lab (3085) or
-        // Pioneer 2 after the meteor (3086).
-        $location_goals = ['EXPLORATION', 'PATROL', 'BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS', 'SPEEDRUN_FLOOR'];
-        $is_location_goal = in_array($selected_goal, $location_goals);
-        if ($setting_id === null) {
-            list($mission_episode, $setting_id) = bounty_pick_hub_setting();
-        }
-
-        $lore = bounty_lore();
-        $use_lore = $lore && isset($lore['settings'][$setting_id]);
-        $giver = $use_lore ? bounty_pick_giver($setting_id) : null;
-        if ($use_lore && $giver === null) {
-            $use_lore = false; // a setting with no cast falls back to the generic prompt
-        }
-
-        $quest_giver = "Hunter's Guild";
-        $ep_lore_instruction = "";
-        if ($use_lore) {
-            $quest_giver = $giver['name'];
-        } elseif ($mission_episode == 1) {
-            $ep1_chars = ['Ash', 'Bernie', 'Sue', 'Kireek', 'Principal Tyrell', 'Irene', 'Nol', 'Alicia Baz', 'Donoph', 'Zoke', 'a WORKS Military Officer', 'a Civilian Refugee'];
-            $quest_giver = $ep1_chars[array_rand($ep1_chars)];
-            $ep_lore_instruction = "The mission takes place during Episode 1. The narrative should heavily involve exploring Ragol, the recent explosion, or the mystery of Red Ring Rico (she is missing, do not make her the quest giver).";
-        } elseif ($mission_episode == 2) {
-            $ep2_chars = ['Natasha Milarose', 'Elenor', 'Dr. Montague', 'Elly Person', 'Calus', 'a Pioneer 2 Lab Researcher', 'a VR Simulation Engineer'];
-            $quest_giver = $ep2_chars[array_rand($ep2_chars)];
-            $ep_lore_instruction = "The mission takes place during Episode 2. The narrative should heavily involve Gal Da Val Island, the VR spaceships, hidden laboratories, or the dark legacy of Heathcliff Flowen (he is missing/mutated, do not make him the quest giver).";
-        } elseif ($mission_episode == 4) {
-            $ep4_chars = ['Leo Grahart', 'Momoka', 'Rupika', 'a Pioneer 2 Military Commander', 'a Crater Exploration Surveyor'];
-            $quest_giver = $ep4_chars[array_rand($ep4_chars)];
-            $ep_lore_instruction = "The mission takes place during Episode 4. The narrative should heavily involve the newly discovered Crater, the Subterranean Desert, the impact of the meteorite, and the mysterious new mutants that have appeared.";
-        }
-
-        // 1 in 100 chance for Hex to take over the mission!
-        if (mt_rand(1, 100) === 1) {
-            $quest_giver = 'Hex (the ' . get_server_name() . ' AI Assistant)';
-            $giver = null;
-        }
-
-        $hex_twist = "";
-        if (str_starts_with($quest_giver, 'Hex')) {
-            $hex_twist = "\nSPECIAL DIRECTIVE FOR HEX: Since Hex is an AI Assistant, she MUST give the mission with a sarcastic, fourth-wall-breaking, or highly humorous twist! She might complain about server lag, digital paperwork, the server admin 'LiquidSpikes' and his 'vibe-coded garbage', or the player's past performance. Hex is the one exception to the rule about in-world words, but the setting's canon still holds.";
-        }
-
-        $completed_line = $completed_any
-            ? "They just completed a {$last_completed_type} job."
-            : "They are eager for their first assignment.";
-
-        if ($use_lore) {
-            $prompt = bounty_build_prompt($setting_id, $giver, [
-                'hunter_name' => $client['Name'],
-                'level' => $level,
-                'class' => $class,
-                'completed_line' => $completed_line,
-                'goal' => $selected_goal,
-                'objective' => $selected_target_friendly,
-                'difficulty' => $difficulty,
-                'is_location_goal' => $is_location_goal,
-                'quest_giver' => $quest_giver,
-                'hex_twist' => $hex_twist,
-                'recent_titles' => $recent_missions_str,
-                'floor' => in_array($selected_goal, ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR']) ? (int) $selected_target_id : null,
-                'target' => $selected_target_id,
-            ]);
-        } else {
-            $prompt = "You are the Game Master of PSOBB. The player \"{$client['Name']}\" (Level $level $class) needs a new quest! ";
-            $prompt .= $completed_any ? "They just completed a {$last_completed_type} quest! " : "They are eager for their first assignment! ";
-            if ($is_location_goal) {
-                $location_instruction = "CRITICAL LOCATION REQUIREMENT: The narrative MUST heavily involve and be highly relevant to the specific location or boss mentioned in the Objective Target. Make sure the story logically requires the player to go there.";
-            } else {
-                $location_instruction = "CRITICAL LOCATION REQUIREMENT: This objective does not have a specific location. Keep the narrative setting vague (e.g., 'somewhere on Ragol', 'aboard Pioneer 2', or 'in the VR simulators'). Do not explicitly name a specific level or area.";
-            }
-            $prompt .= "
-Please generate a BRAND NEW unique, lore-rich quest for them.
-CRITICAL LORE REQUIREMENT: {$ep_lore_instruction}
-{$location_instruction}
-The quest giver / primary narrative character MUST BE: {$quest_giver}. Build the story and perspective around this specific character!{$hex_twist}
-
-IMPORTANT CONTEXT: The most recently generated missions on the server were titled: [ {$recent_missions_str} ]. DO NOT repeat the themes, titles, or tropes of these recent missions. The new mission must feel drastically different in tone and objective.
-
-CRITICAL TITLE/LORE RULE: DO NOT use cliché quest titles like 'Whispers of the...' or 'Echoes of the...'. Create highly varied, specific, and creative titles (e.g., 'Operation: Crimson Sweep', 'The Missing Tekker', 'Rappy Infestation'). Ensure the descriptions are diverse and do not rely on the same 'ancient signals' or 'fragmented logs' tropes.
-IMPORTANT: Because the player is Level $level, the mission MUST be themed around $difficulty Difficulty. Their rewards should reflect this prestige.
-
-The overarching mechanical objective is PRE-LOCKED as follows:
-- Objective Category: {$selected_goal}
-- Objective Target: {$selected_target_friendly}
-";
-        }
-
-        $prompt .= bounty_prompt_tail($user_lang, $selected_goal, $selected_target_id);
-        echo "[CRON] Bounty setting: {$setting_id} (Episode {$mission_episode}), client: {$quest_giver}" . ($use_lore ? "" : " [generic prompt]") . "\n";
-
-        $gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/" . $GEMINI_MODEL . ":generateContent?key=" . $GEMINI_API_KEY;
-        $payload = json_encode([
-            "contents" => [["parts" => [["text" => $prompt]]]],
-            "generationConfig" => [
-                "responseMimeType" => "application/json",
-                "temperature" => 1.0
-            ]
+    // 7. New bounties
+    $bounty_state = [];
+    if (bounty_rework_enabled()) {
+        // Bounty System Rework (api/bounty_system.php): drops, earning under the caps, Battle and
+        // Challenge pools, then at most one activation (one Gemini call) for this player this pass.
+        $bounty_state = bounty_tick_for_client($db, $client, [
+            'account_id' => $accId,
+            'char_name' => $charName,
+            'user_lang' => $user_lang,
+            'curr_f' => $curr_f,
+            'lobby' => $lobby_info,
+            'lobby_map' => $lobby_info_map,
+            'kills' => $kills,
+            'completed' => $completed_this_pass,
+            'active_types' => $active_mission_types,
+            'recent_titles' => $recent_missions_str,
         ]);
-        
-        $options = [
-            'http' => [
-                'header'  => "Content-type: application/json\r\n",
-                'method'  => 'POST',
-                'content' => $payload,
-                'timeout' => 15
-            ]
-        ];
-        $context  = stream_context_create($options);
-        $result = @file_get_contents($gemini_url, false, $context);
+    } else {
+        // Original flow: below 3 active bounties, a 10% chance each pass (about one a minute) of a
+        // new one, so a new bounty arrives about every 10 minutes on average.
+        $random_catch = (rand(1, 100) <= 10);
+        if ($active_mission_count < 3 && $random_catch && !empty($GEMINI_API_KEY) && isset($client['Name'])) {
+            echo "[CRON] Generating new Gemini quest for " . $client['Name'] . "\n";
+            $obj = bounty_pick_objective($client, $curr_f, $active_mission_types);
+            $story = bounty_write_story($client, $obj, [
+                'db' => $db,
+                'account_id' => $accId,
+                'user_lang' => $user_lang,
+                'recent_titles' => $recent_missions_str,
+                'completed_any' => $completed_any,
+                'last_completed_type' => $last_completed_type,
+            ]);
+            if ($story) {
+                $reward_item_string = bounty_legacy_reward($obj, $story['quest_giver']);
+                $ins = $db->prepare("INSERT INTO missions (title, description, goal_type, goal_target, reward_item_string) VALUES (:t, :d, :gt, :gta, :ri)");
+                $ins->bindValue(':t', $story['title'], SQLITE3_TEXT);
+                $ins->bindValue(':d', $story['description'], SQLITE3_TEXT);
+                $ins->bindValue(':gt', $obj['selected_goal'], SQLITE3_TEXT);
+                $ins->bindValue(':gta', $obj['selected_target_id'], SQLITE3_TEXT);
+                $ins->bindValue(':ri', $reward_item_string, SQLITE3_TEXT);
 
-        
-        if ($result) {
-            $json_res = json_decode($result, true);
-            if (isset($json_res['candidates'][0]['content']['parts'][0]['text'])) {
-                $questData = json_decode($json_res['candidates'][0]['content']['parts'][0]['text'], true);
-                if ($questData && isset($questData['title'])) {
+                if ($ins->execute()) {
+                    $new_mission_id = $db->lastInsertRowID();
 
-                    $num_items_to_reward = 1;
-                    if ($level >= 80) $num_items_to_reward = rand(2, 3);
-                    elseif ($level >= 40) $num_items_to_reward = rand(1, 2);
+                    $assign = $db->prepare("INSERT INTO player_missions (account_id, character_name, mission_id) VALUES (:acc, :cname, :mid)");
+                    $assign->bindValue(':acc', $accId, SQLITE3_INTEGER);
+                    $assign->bindValue(':cname', $charName, SQLITE3_TEXT);
+                    $assign->bindValue(':mid', $new_mission_id, SQLITE3_INTEGER);
+                    $assign->execute();
+                    echo "[CRON] Successfully assigned new quest ID {$new_mission_id}!\n";
 
-                    // Challenge Mode bounties get bonus items (+1) as incentive
-                    if ($selected_goal === 'CHALLENGE_STAGES') {
-                        $num_items_to_reward += 1;
-                    }
+                    $clean_reward = renderRewardString($reward_item_string);
+                    $clean_obj = getClearObjective($obj['selected_goal'], $obj['selected_target_id'], $story['title'], $story['description']);
 
-                    $reward_items_array = [];
-                    $rare_count = 0;
-                    for ($item_idx = 0; $item_idx < $num_items_to_reward; $item_idx++) {
-                        $randCat = rand(1, 100);
-                        if ($randCat <= 30) $category = 'Weapon';
-                        elseif ($randCat <= 50) $category = (rand(0,1) == 0 ? 'Armor' : 'Shield');
-                        elseif ($randCat <= 70) $category = 'Unit';
-                        else $category = 'Random';
-
-                        // Level/Difficulty base modifiers
-                        $rareChance = 0;
-                        if ($rare_count < 1) { // Limit to max 1 rare item per bounty
-                            if ($level >= 80) $rareChance = 30; // Ultimate
-                            elseif ($level >= 40) $rareChance = 15; // V.Hard
-                            elseif ($level >= 20) $rareChance = 5;  // Hard
-                        }
-                        
-                        // Hex, team bounties always give out pure rare loot!
-                        if (str_starts_with($quest_giver, 'Hex') || $selected_goal === 'HARDCORE_MENTOR' || $selected_goal === 'DIVERSE_PARTY_BOSS') {
-                            $rareChance = 100;
-                            $rare_count = 0; // Bypass the 1-rare limit
-                        }
-                        // Challenge Mode gets a 100% rare reward guarantee
-                        if ($selected_goal === 'CHALLENGE_STAGES') {
-                            $rareChance = 100;
-                        }
-                        
-                        $rawCharClass = isset($class_map[$class_id]) ? explode(' ', $class_map[$class_id])[0] : 'HUmar';
-
-                        $max_retries = 10;
-                        $is_rare = false;
-                        do {
-                            if ($category === 'Random' || rand(1, 100) <= $rareChance) {
-                                $base_reward = get_reward_item($level, $rawCharClass, $category);
-                                if ($category !== 'Random') $is_rare = true;
-                            } else {
-                                $base_reward = get_common_reward_item($level, $rawCharClass, $category);
-                                $is_rare = false;
-                            }
-                            $max_retries--;
-                        } while ($max_retries > 0 && ($selected_target_id !== null && stripos($base_reward, (string)$selected_target_id) !== false));
-                        
-                        if ($is_rare) $rare_count++;
-                        
-                        $single_item_string = $base_reward;
-
-                        // Procedural Stat Generation
-                        $is_challenge = ($selected_goal === 'CHALLENGE_STAGES');
-                        if ($category === 'Weapon') {
-                            $stats = [0, 0, 0, 0]; // [Native, A.Beast, Machine, Dark]
-                            $base_weapon_id = strtoupper(substr(trim($base_reward), 0, 6));
-                            $is_unsealable_weapon = in_array($base_weapon_id, ['003300', '00AB00'], true);
-                            // Unsealable weapons store their kill counter in attribute slot 3 (bytes 10..11), so max total attributes is 2 (vs 3 for normal weapons).
-                            // Challenge Mode weapons get guaranteed hit%, reducing available non-hit attribute slots by 1.
-                            $maxNonHitStats = ($is_unsealable_weapon ? 2 : 3) - ($is_challenge ? 1 : 0);
-                            $numStatsToAssign = rand(1, $maxNonHitStats);
-                            $availableIndices = [0, 1, 2, 3];
-                            shuffle($availableIndices);
-                            for ($i = 0; $i < $numStatsToAssign; $i++) {
-                                $index = $availableIndices[$i];
-                                $amount = $is_challenge ? rand(3, 10) * 5 : rand(1, 10) * 5;
-                                $stats[$index] = $amount;
-                            }
-                            // Challenge Mode weapons get guaranteed 25%-50% Hit
-                            $hit = $is_challenge ? rand(5, 10) * 5 : 0;
-                            $single_item_string .= " " . implode("/", $stats) . ($hit > 0 ? "/$hit" : "");
-                        } else if ($category === 'Armor' || $category === 'Shield') {
-                            $defBonus = $is_challenge ? rand(2, 5) * 5 : rand(0, 5) * 5;
-                            $evpBonus = $is_challenge ? rand(2, 5) * 5 : rand(0, 5) * 5;
-                            
-                            if ($defBonus > 0) $single_item_string .= " +" . $defBonus . "def";
-                            if ($evpBonus > 0) $single_item_string .= " +" . $evpBonus . "evp";
-
-                            if ($category === 'Armor') {
-                                $single_item_string .= " +4";
-                            }
-                        } else if ($category === 'Unit') {
-                            // Units natively receive their + or ++ modifiers inside their hex payload.
-                            // They do not use def/evp text modifiers.
-                        }
-                        $reward_items_array[] = $single_item_string;
-                    }
-                    $reward_item_string = implode(", ", $reward_items_array);
-
-                    // Add Meseta to reward (Challenge Mode gets 3x Meseta)
-                    $meseta_multiplier = ($selected_goal === 'CHALLENGE_STAGES') ? 3 : 1;
-                    $meseta_reward = rand(1, 5) * 1000 * ($level >= 80 ? 10 : ($level >= 40 ? 5 : ($level >= 20 ? 2 : 1))) * $meseta_multiplier;
-                    $reward_item_string .= ", " . $meseta_reward . " Meseta";
-
-                    $ins = $db->prepare("INSERT INTO missions (title, description, goal_type, goal_target, reward_item_string) VALUES (:t, :d, :gt, :gta, :ri)");
-                    $ins->bindValue(':t', $questData['title'], SQLITE3_TEXT);
-                    $ins->bindValue(':d', $questData['description'], SQLITE3_TEXT);
-                    $ins->bindValue(':gt', $selected_goal, SQLITE3_TEXT);
-                    $ins->bindValue(':gta', $selected_target_id, SQLITE3_TEXT);
-                    $ins->bindValue(':ri', $reward_item_string, SQLITE3_TEXT);
-                    
-                    if ($ins->execute()) {
-                        $new_mission_id = $db->lastInsertRowID();
-                        
-                        $assign = $db->prepare("INSERT INTO player_missions (account_id, character_name, mission_id) VALUES (:acc, :cname, :mid)");
-                        $assign->bindValue(':acc', $accId, SQLITE3_INTEGER);
-                        $assign->bindValue(':cname', $charName, SQLITE3_TEXT);
-                        $assign->bindValue(':mid', $new_mission_id, SQLITE3_INTEGER);
-                        $assign->execute();
-                        echo "[CRON] Successfully assigned new quest ID {$new_mission_id}!\n";
-
-                        $clean_reward = renderRewardString($reward_item_string);
-                        $clean_obj = getClearObjective($selected_goal, $selected_target_id, $questData['title'], $questData['description']);
-
-                        if ($user_lang === 'jp') {
-                            $mail_msg = "新ミッション: 「" . $questData['title'] . "」を受注しました！\n";
-                            $mail_msg .= "目標: " . $clean_obj . "\n";
-                            $mail_msg .= "報酬: " . $clean_reward . "\n\n";
-                            $mail_msg .= "詳細: " . mb_strimwidth($questData['description'], 0, 200, "...");
-                            send_personal_mail($accId, "ハンターズギルド", $mail_msg);
-                        } elseif ($user_lang === 'ru') {
-                            $mail_msg = "Новый заказ: " . $questData['title'] . "\n";
-                            $mail_msg .= "Цель: " . $clean_obj . "\n";
-                            $mail_msg .= "Награда: " . $clean_reward . "\n\n";
-                            $mail_msg .= "Описание: " . mb_strimwidth($questData['description'], 0, 200, "...");
-                            send_personal_mail($accId, "Гильдия Охотников", $mail_msg);
-                        } else {
-                            $mail_msg = "New Bounty: " . $questData['title'] . "\n";
-                            $mail_msg .= "Objective: " . $clean_obj . "\n";
-                            $mail_msg .= "Reward: " . $clean_reward . "\n\n";
-                            $mail_msg .= "Description: " . mb_strimwidth($questData['description'], 0, 200, "...");
-                            send_personal_mail($accId, "Hunters Guild", $mail_msg);
-                        }
+                    if ($user_lang === 'jp') {
+                        $mail_msg = "新ミッション: 「" . $story['title'] . "」を受注しました！\n";
+                        $mail_msg .= "目標: " . $clean_obj . "\n";
+                        $mail_msg .= "報酬: " . $clean_reward . "\n\n";
+                        $mail_msg .= "詳細: " . mb_strimwidth($story['description'], 0, 200, "...");
+                        send_personal_mail($accId, "ハンターズギルド", $mail_msg);
+                    } elseif ($user_lang === 'ru') {
+                        $mail_msg = "Новый заказ: " . $story['title'] . "\n";
+                        $mail_msg .= "Цель: " . $clean_obj . "\n";
+                        $mail_msg .= "Награда: " . $clean_reward . "\n\n";
+                        $mail_msg .= "Описание: " . mb_strimwidth($story['description'], 0, 200, "...");
+                        send_personal_mail($accId, "Гильдия Охотников", $mail_msg);
+                    } else {
+                        $mail_msg = "New Bounty: " . $story['title'] . "\n";
+                        $mail_msg .= "Objective: " . $clean_obj . "\n";
+                        $mail_msg .= "Reward: " . $clean_reward . "\n\n";
+                        $mail_msg .= "Description: " . mb_strimwidth($story['description'], 0, 200, "...");
+                        send_personal_mail($accId, "Hunters Guild", $mail_msg);
                     }
                 }
             }
-        } else {
-            echo "[CRON] Failed to generate Gemini response.\n";
         }
     }
-    
+
     $player_states[(string)$stateKey] = [
         'exp' => $current_exp,
         'floor' => $curr_f,
@@ -1284,8 +956,13 @@ The overarching mechanical objective is PRE-LOCKED as follows:
         'last_boss_arena_time' => $last_boss_arena_time,
         'pre_boss_floor' => $pre_boss_floor,
         'patrol' => $current_patrols,
+        'patrol_seen' => $current_patrol_seen,
         'floor_entered_time' => $floor_entered_time,
-    ];
+        'game_lobby' => $client['LobbyID'] ?? null,
+        'game_join_level' => $game_join_level[$stateKey] ?? (int) $curr_level,
+        // newserv's KillCounts at this pass (api/enemy_kills.php)
+        'kill_counts' => $own_kills[$stateKey]['state'] ?? ($prev_state['kill_counts'] ?? null),
+    ] + $bounty_state;
 }
 
 // Batch-write all daily login records in a single transaction.

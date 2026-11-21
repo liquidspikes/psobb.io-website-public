@@ -35,8 +35,9 @@ if (!$pmId || !$account_id) {
 try {
     $db = get_db();
     
-    // Ensure the mission belongs to the current user and is currently in_progress
-    $check_stmt = $db->prepare("SELECT id FROM player_missions WHERE id = :id AND account_id = :accId AND status = 'in_progress'");
+    // Ensure the mission belongs to the current user and is active (or, with the Bounty System
+    // Rework, waiting in the queue for a slot)
+    $check_stmt = $db->prepare("SELECT id FROM player_missions WHERE id = :id AND account_id = :accId AND status IN ('in_progress', 'queued')");
     $check_stmt->bindValue(':id', $pmId, SQLITE3_INTEGER);
     $check_stmt->bindValue(':accId', $account_id, SQLITE3_INTEGER);
     $check_res = $check_stmt->execute();

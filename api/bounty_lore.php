@@ -500,7 +500,7 @@ function bounty_goal_meaning($goal, $target = null)
         'SPEEDRUN_BOSS' => 'Defeat the named creature within the time limit, counted from entering its lair, so the client has a reason to need it done fast.',
         'SPEEDRUN_FLOOR' => 'Cross the named area within the time limit, so the client has a reason to need speed.',
         'EXPLORATION' => 'Reach the named area.',
-        'PATROL' => 'Stay in the named area and keep watch there for a while.',
+        'PATROL' => 'Stay in the named area and keep watch there for ten minutes.',
         'MESETA' => 'Hold at least that much Meseta at once (saved up, not spent).',
         'LEVEL' => 'Grow stronger through field experience until reaching that level.',
         'PLAYTIME' => 'Put in that much total time on duty as a Hunter.',
@@ -520,6 +520,12 @@ function bounty_goal_meaning($goal, $target = null)
         'MAT_MIND' => 'Keep using Mind Materials, items that permanently raise mental strength, until the hunter\'s career total reaches that number.',
         'MAT_EVADE' => 'Keep using Evade Materials, items that permanently sharpen reflexes, until the hunter\'s career total reaches that number.',
         'MAT_LUCK' => 'Keep using Luck Materials, items that permanently improve luck, until the hunter\'s career total reaches that number.',
+        'AREA_SWEEP' => 'Visit every area of that episode on the required difficulty over the course of the week.',
+        'BOSS_HUNT' => 'Defeat bosses across Ragol on the required difficulty over the course of the week.',
+        'ENEMY_HUNT' => 'Clear out that many hostile creatures across Ragol on the required difficulty over the course of the week.',
+        'RARE_HUNT' => 'Track down and defeat rare creatures on Ragol on the required difficulty over the course of the week.',
+        'RARE_TARGET' => 'Track down and defeat the named rare creature where it appears on the required difficulty.',
+        'EPISODE_RUN' => 'Fight through every area and defeat every guardian of that episode in a single expedition under the contract\'s conditions.',
     ];
     return $m[$goal] ?? '';
 }
@@ -540,6 +546,35 @@ function bounty_floor_phrase($floor)
 }
 
 /**
+ * Strips legacy code-name prefixes ("Operation:", "Protocol:", "Project:", "Directive:",
+ * "Contract:") from a comma-separated recent-titles list before embedding it in a prompt, so
+ * older database rows do not seed few-shot prefix mimicry on new Guild postings.
+ */
+function bounty_clean_recent_titles($recent_titles)
+{
+    $raw = trim((string) $recent_titles);
+    if ($raw === '' || strcasecmp($raw, 'None') === 0) {
+        return 'None';
+    }
+    $parts = preg_split('/\s*,\s*/', $raw);
+    $cleaned = [];
+    $seen = [];
+    foreach ($parts as $part) {
+        $t = trim(preg_replace('/^(?:Operation|Protocol|Project|Directive|Contract)\s*:\s*/iu', '', (string) $part));
+        if ($t === '' || strcasecmp($t, 'None') === 0) {
+            continue;
+        }
+        $key = function_exists('mb_strtolower') ? mb_strtolower($t, 'UTF-8') : strtolower($t);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $cleaned[] = $t;
+    }
+    return $cleaned ? implode(', ', $cleaned) : 'None';
+}
+
+/**
  * Builds the full lore-grounded Gemini prompt (without the language directive and JSON
  * schema, which bounty_prompt_tail() adds) for one bounty.
  *
@@ -557,6 +592,7 @@ function bounty_build_prompt($setting_id, $giver, array $job)
 {
     $lore = bounty_lore();
     $setting_name = $lore['settings'][$setting_id]['name'] ?? $setting_id;
+    $clean_recent = bounty_clean_recent_titles($job['recent_titles'] ?? 'None');
     if (!empty($job['location_override'])) {
         $location_instruction = $job['location_override'];
     } elseif (!empty($job['is_location_goal'])) {
@@ -575,10 +611,10 @@ THE JOB (the server has fixed the mechanics; do not change them):
 - Difficulty: {$job['difficulty']} (the hunter is Level {$job['level']}). For a fight, let the danger match it; for an objective with no fight, let it set how much is at stake for the client." . (empty($job['extra_lines']) ? '' : "\n- " . implode("\n- ", (array) $job['extra_lines'])) . "
 - {$location_instruction}
 - The client is " . preg_replace_callback('/^(A|An|The) /', fn($m) => strtolower($m[0]), $job['quest_giver']) . ". Tell it from their side, in their voice.{$job['hex_twist']}
-- Give the client a believable, specific reason to want exactly this objective done now (a client who never explains themselves can set terms instead). Mention the hunter by name once.
+- Give the client a believable, specific reason to want exactly this objective done now (a client who never explains themselves can set terms instead). Weave the hunter's name in naturally once (do not always put it in the opening clause, and never open with \"Listen up\", \"Listen here\", \"Listen closely\", \"Listen to me\" or \"Attention\").
 - The objective names its target for the hunter's records only. If the setting card says people do not yet know a creature's name or nature, the client must describe it only as people would at this moment (for example, \"whatever waits at the heart of the ruins\").
-- Description: 2 to 4 sentences, under 600 characters. Title: 2 to 6 words, specific and fresh.
-- Recently posted titles on this server: [ {$job['recent_titles']} ]. Do not repeat their titles, plots or tropes.
+- Description: 2 to 4 sentences, under 600 characters, opening straight in the client's situation, complaint, observation or terms with varied sentence structure. Title: 2 to 6 words, specific, grounded in PSO's Hunter's Guild style (like 'Missing Partner', 'A Debt in the Caves', 'Samples from Below', 'Quiet Watch'), and NEVER prefixed with 'Operation:', 'Protocol:', 'Project:', 'Directive:' or 'Contract:'.
+- Recently posted titles on this server: [ {$clean_recent} ]. Do not repeat their words, sentence shapes, plots or tropes.
 ";
     return $prompt;
 }
@@ -633,7 +669,7 @@ function bounty_build_admin_mission_prompt($setting_id, $giver, array $spec, $us
     $target = $spec['target'] ?? '';
     $difficulty = (string) ($spec['difficulty'] ?? 'Standard');
     $reward = trim((string) ($spec['reward'] ?? ''));
-    $recent = trim((string) ($spec['recent_titles'] ?? 'None'));
+    $recent = bounty_clean_recent_titles($spec['recent_titles'] ?? 'None');
     $meaning = bounty_goal_meaning($goal, $target);
     $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor']) : '';
     $clientName = $giver['name'] ?? "a Hunter's Guild client";
@@ -656,7 +692,7 @@ function bounty_build_admin_mission_prompt($setting_id, $giver, array $spec, $us
         . "- Client perspective: Write from {$clientName}'s side, in their voice. Since this is a reusable board template, do NOT invent or name a specific hunter — address whoever accepts the contract naturally as \"you\" or \"a hunter\".\n"
         . "- Give {$clientName} a specific, believable reason in this setting to post this exact objective now.\n"
         . "- If the setting card says people do not yet know a creature's true name or nature, describe it only as people would at this moment.\n"
-        . "- Title: 2 to 6 words, specific and fresh. Description: 2 to 4 sentences, under 600 characters.\n"
+        . "- Title: 2 to 6 words, specific and grounded in PSO's Hunter's Guild style (never prefixed with 'Operation:', 'Protocol:', 'Project:', 'Directive:' or 'Contract:'). Description: 2 to 4 sentences, under 600 characters, opening straight in the client's situation without 'Listen up/here/closely' hooks.\n"
         . "- Existing bounty titles to avoid repeating: [ {$recent} ].\n\n";
 
     $prompt .= bounty_lang_directive($user_lang);
@@ -716,13 +752,13 @@ function bounty_build_community_event_prompt($setting_id, $giver, array $spec, $
         . "- {$location_instruction}\n"
         . "- Speaker & framing: Present this as a major cooperative mobilization led by {$clientName}, speaking in their voice to all hunters across Pioneer 2.\n"
         . "- Give an urgent, canon-faithful reason why scores of hunters must coordinate together right now. Obey all canon constraints and hidden-truth spoiler guards.\n"
-        . "- Title: 2 to 6 words (evocative operation name, avoiding clichés like 'Whispers of...' or 'Echoes of...'). Description: 2 to 4 sentences, under 600 characters, explaining both the crisis and how hunters rally together.\n"
+        . "- Title: 2 to 6 words (evocative fleet-wide event title — vary the structure rather than defaulting to 'Operation:', and avoid clichés like 'Whispers of...' or 'Echoes of...'). Description: 2 to 4 sentences, under 600 characters, explaining both the crisis and how hunters rally together.\n"
         . "- Previous community event titles to avoid repeating: [ {$recent} ].\n\n";
 
     $prompt .= bounty_lang_directive($user_lang);
     $prompt .= "CRITICAL RULE: Return ONLY valid JSON properly formatted with double quotes matching this schema:\n"
         . "{\n"
-        . "  \"title\": \"An evocative operation title\",\n"
+        . "  \"title\": \"An evocative event title\",\n"
         . "  \"description\": \"The lore-grounded Guild briefing calling all hunters to cooperate\"\n"
         . "}";
     return $prompt;

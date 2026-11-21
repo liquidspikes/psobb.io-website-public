@@ -1744,6 +1744,7 @@ window.loadCharSlot = async function (slotIndex) {
             renderActiveBank();
             populateChatCharacterSelect();
             renderActiveCharacterSectionId(data.character);
+            if (window.loadKillCounts) window.loadKillCounts(data.character.name);
         } else {
             throw new Error(data.error || 'Failed to sync character metadata.');
         }
@@ -1830,6 +1831,62 @@ function renderCharacterProfile() {
 }
 
 // Render Backpack Inventory
+// Kill counts: the character's lifetime kills of each enemy and boss, by episode and difficulty
+window.killCountsEpisode = null;
+window.loadKillCounts = async function (characterName) {
+    const table = document.getElementById('kill-counts-table');
+    if (!table) return;
+    table.innerHTML = '';
+    try {
+        const res = await fetch(`/api/kill_counts.php?character=${encodeURIComponent(characterName || '')}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to load kill counts.');
+        window.killCountsData = data;
+        renderKillCounts();
+    } catch (e) {
+        table.innerHTML = `<div style="color:#ff4444; font-size:0.8rem;">⚠️ ${e.message}</div>`;
+    }
+};
+
+function renderKillCounts() {
+    const data = window.killCountsData;
+    const tabs = document.getElementById('kill-counts-tabs');
+    const table = document.getElementById('kill-counts-table');
+    const summary = document.getElementById('kill-counts-summary');
+    if (!data || !tabs || !table) return;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+    const fmt = n => (n ? Number(n).toLocaleString() : '<span style="opacity:0.3;">0</span>');
+    const eps = Object.keys(data.episodes || {});
+    if (summary) {
+        summary.textContent = data.totals && data.totals.kills
+            ? [[data.totals.kills, 'kill', 'kills'], [data.totals.bosses, 'boss', 'bosses'], [data.totals.rares, 'rare enemy', 'rare enemies']]
+                .map(([n, one, many]) => `${Number(n).toLocaleString()} ${_t(Number(n) === 1 ? one : many)}`).join(' · ')
+            : '';
+    }
+    if (!eps.length) {
+        tabs.innerHTML = '';
+        table.innerHTML = `<p style="color:rgba(255,255,255,0.5); font-size:0.8rem;">${_t('No kills recorded for this character yet. Kills are counted while you play once the server reports them.')}</p>`;
+        return;
+    }
+    if (!eps.includes(window.killCountsEpisode)) window.killCountsEpisode = eps[0];
+    tabs.innerHTML = eps.map(ep => `<button class="dl-btn${ep === window.killCountsEpisode ? ' active' : ''}" style="font-size:0.75rem; padding:4px 10px;"
+        onclick="window.killCountsEpisode='${ep}'; renderKillCounts();">${_t('Episode')} ${ep}</button>`).join('');
+    const rows = data.episodes[window.killCountsEpisode] || [];
+    const diffs = ['Normal', 'Hard', 'Very Hard', 'Ultimate'];
+    const anyChallenge = rows.some(r => r.challenge > 0);
+    const head = [_t('Enemy'), ...diffs.map(d => _t(d)), ...(anyChallenge ? [_t('Challenge')] : []), _t('Total')];
+    const body = rows.map(r => {
+        const tag = r.boss ? ' <span title="Boss" style="color:#ffcc33;">♛</span>' : (r.rare ? ' <span title="Rare" style="color:#c77dff;">★</span>' : '');
+        const alt = r.ultimate_name ? ` <span style="opacity:0.5; font-size:0.85em;">(${esc(r.ultimate_name)})</span>` : '';
+        const cells = [...diffs.map(d => fmt(r.counts[d])), ...(anyChallenge ? [fmt(r.challenge)] : []), `<strong>${fmt(r.total)}</strong>`];
+        return `<tr><td style="text-align:left; padding:3px 8px;">${esc(r.name || r.enemy)}${alt}${tag}</td>${cells.map(c => `<td style="text-align:right; padding:3px 8px;">${c}</td>`).join('')}</tr>`;
+    }).join('');
+    table.innerHTML = `<table style="width:100%; border-collapse:collapse; font-size:0.8rem; font-family:'Share Tech Mono',monospace;">
+        <thead><tr>${head.map((h, i) => `<th style="text-align:${i ? 'right' : 'left'}; padding:4px 8px; color:#00ffff; border-bottom:1px solid rgba(0,255,255,0.25);">${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>${body}</tbody></table>
+        <p style="color:rgba(255,255,255,0.4); font-size:0.7rem; margin-top:6px;">${_t('Your own killing blows. A boss counts once per fight. Names in brackets are the Ultimate forms.')}</p>`;
+}
+
 function renderInventory() {
     const c = window.activeCharData;
     if (!c || !c.inventory) return;
@@ -2959,6 +3016,12 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'LEVEL': return `Reach Level ${target}`;
         case 'MESETA': return `Accumulate ${Number(target).toLocaleString()} Meseta`;
         case 'PLAYTIME': return `Accumulate ${Number(target).toLocaleString()} seconds of play time`;
+        case 'PLAY_HOURS': {
+            // "<seconds needed>:<play time when the bounty started>"
+            const need = parseInt(String(target).split(':')[0], 10) || 3600;
+            const h = Math.floor(need / 3600), m = Math.floor((need % 3600) / 60);
+            return `Play for ${h ? `${h} hour${h !== 1 ? 's' : ''}` : ''}${h && m ? ' ' : ''}${m ? `${m} min` : ''} (counted from when the bounty starts)`;
+        }
         case 'BOSS_ARENA':
         case 'MENTOR_BOSS':
         case 'HARDCORE_MENTOR':
@@ -2982,12 +3045,12 @@ function describeBountyObjective(goalType, goalTarget) {
             const timeLimit = parts[1] ? ` in under ${Math.floor(parts[1] / 60)}m ${parts[1] % 60}s` : '';
             return `Speedrun ${areaName}${timeLimit}`;
         }
-        case 'PATROL': return `Patrol ${areaFloorMap[target] || 'Area ' + target} (10 ticks)`;
+        case 'PATROL': return `Patrol ${areaFloorMap[target] || 'Area ' + target} for 10 minutes`;
         case 'EXPLORATION': return `Explore ${areaFloorMap[target] || 'Area ' + target}`;
         case 'ITEM': return `Obtain the target item`;
         case 'TECHNIQUE': return `Learn technique: ${target}`;
         case 'BATTLE_WINS': return `Win ${target} Battle Mode match${parseInt(target) !== 1 ? 'es' : ''}`;
-        case 'CHALLENGE_STAGES': return `Complete ${target} Challenge Mode stage${parseInt(target) !== 1 ? 's' : ''}`;
+        case 'CHALLENGE_STAGES': return `Clear Challenge Mode stages until ${target} of the 14 are cleared (each stage counts once)`;
         case 'MAT_HP': return `Use ${target} HP Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_TP': return `Use ${target} TP Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_POWER': return `Use ${target} Power Material${parseInt(target) !== 1 ? 's' : ''}`;
@@ -2995,6 +3058,41 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'MAT_DEF': return `Use ${target} Def Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_EVADE': return `Use ${target} Evade Material${parseInt(target) !== 1 ? 's' : ''}`;
         case 'MAT_LUCK': return `Use ${target} Luck Material${parseInt(target) !== 1 ? 's' : ''}`;
+        // Bounty System Rework weeklies: targets are "N@Difficulty" (episode number for AREA_SWEEP)
+        case 'AREA_SWEEP':
+        case 'BOSS_HUNT':
+        case 'ENEMY_HUNT':
+        case 'RARE_HUNT': {
+            const [n, diff = 'Normal'] = String(target).split('@');
+            const where = diff === 'Ultimate' ? 'on Ultimate' : `on ${diff} or higher`;
+            if (goalType === 'AREA_SWEEP') return `[Weekly] Visit every area of Episode ${n} ${where}`;
+            const one = Number(n) === 1;
+            const what = goalType === 'BOSS_HUNT' ? (one ? 'boss' : 'bosses') : goalType === 'RARE_HUNT' ? (one ? 'rare enemy' : 'rare enemies') : (one ? 'enemy' : 'enemies');
+            return `[Weekly] Defeat ${Number(n).toLocaleString()} ${what} ${where}`;
+        }
+        case 'CHALLENGE_RUN': {
+            // "E:first-last:limitSeconds:pace" (the API also sends the full wording as objective_text)
+            const [ep, range = '1-1'] = String(target).split(':');
+            const [a, b = a] = range.split('-');
+            return a === b ? `[Challenge] Clear Episode ${ep} Challenge Mode Stage ${a}` : `[Challenge] Clear Episode ${ep} Challenge Mode Stages ${a}–${b}`;
+        }
+        case 'BATTLE_RULE_WINS': {
+            const [quest, wins = '1'] = String(target).split(':');
+            return `[Battle] Win ${wins} Battle Mode match${Number(wins) !== 1 ? 'es' : ''} of Battle ${Number(quest) - 500}`;
+        }
+        // Contracts (the API also sends the full wording as objective_text)
+        case 'EPISODE_RUN': {
+            const [ep = '1', variant = 'timed'] = String(target).split('@')[0].split(':');
+            const how = { diverse: 'with a mixed party', carry: 'carrying newer hunters', timed: 'against the clock' }[variant] || '';
+            return `[Contract] Full Episode ${ep} run in one game ${how}`.trim();
+        }
+        case 'RARE_TARGET': {
+            const [what = '', n = '1', ep = '1'] = String(target).split('@')[0].split(':');
+            const name = what.toLowerCase().split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            return `[Contract] Defeat ${n} ${name} in Episode ${ep}`;
+        }
+        case 'CONTRACT_SHARE': return 'Your share of a contract another hunter finished with you in the game';
+        case 'PENDING': return 'Waiting for a free slot: the objective and reward are set when it becomes active';
         default: return `${goalType}: ${target}`;
     }
 }
@@ -3062,7 +3160,20 @@ window.loadMyBounties = async function () {
 
         // --- Bounties ---
         const completed = data.bounties.filter(b => b.status === 'ready_to_redeem');
-        const inProgress = data.bounties.filter(b => b.status === 'in_progress');
+        const inProgress = data.bounties.filter(b => b.status === 'in_progress' || b.status === 'rerolling' || b.status === 'queued');
+        // Bounty System Rework: tier, kind, expiry and weekly progress (absent on older bounties)
+        const tierColors = { 'Common': '#c8c8c8', 'Uncommon': '#1eff64', 'Rare': '#4da6ff', 'Ultra Rare': '#c77dff', 'Mythic Rare': '#ffcc33' };
+        const bountyTags = (b) => {
+            if (!b.tier_label) {
+                return b.expires_in ? `<div style="margin-top:4px; font-size:0.65rem; font-family:'Share Tech Mono',monospace;"><span style="color:#ffaa00;">${_t(b.expires_in)}</span></div>` : '';
+            }
+            const col = tierColors[b.tier_label] || '#c8c8c8';
+            return `<div style="margin-top:4px; font-size:0.65rem; font-family:'Share Tech Mono',monospace;">
+                <span style="border:1px solid ${col}; color:${col}; border-radius:3px; padding:1px 6px; text-transform:uppercase;">${_t(b.tier_label)}</span>
+                <span style="color:rgba(255,255,255,0.55); margin-left:6px;">${_t(b.kind || '')}</span>
+                ${b.expires_in ? `<span style="color:#ffaa00; margin-left:6px;">${_t(b.expires_in)}</span>` : ''}
+            </div>`;
+        };
 
         // Claimable bounties
         if (completed.length > 0) {
@@ -3092,20 +3203,23 @@ window.loadMyBounties = async function () {
             if (activeSection && activeList) {
                 activeSection.style.display = 'block';
                 activeList.innerHTML = inProgress.map(b => {
-                    const reward = b.reward_decoded || b.reward_item_string || '';
-                    const objective = describeBountyObjective(b.goal_type, b.goal_target);
+                    const reward = b.reward_decoded || b.reward_item_string || (b.status === 'queued' ? _t('Chosen when it starts, from the area it sends you to') : '');
+                    const objective = b.status === 'rerolling' ? _t('Rerolling: a new objective arrives the next time this character is online')
+                        : (b.objective_text ? `[${({ BATTLE_RULE_WINS: 'Battle', EPISODE_RUN: 'Contract', RARE_TARGET: 'Contract' })[b.goal_type] || 'Challenge'}] ${b.objective_text.replace(/^\[(Battle|Challenge|Contract)\] /, '')}` : describeBountyObjective(b.goal_type, b.goal_target)) + (b.min_difficulty_text ? ` ${b.min_difficulty_text}` : '') + (b.progress_text ? ` (${b.progress_text})` : '');
+                    const statusLabel = b.status === 'queued' ? _t('UP NEXT') : b.status === 'rerolling' ? _t('REROLLING') : _t('IN PROGRESS');
                     return `
                     <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,10,20,0.4); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                             <div style="flex:1; min-width:0;">
-                                <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${b.title}</span>
+                                <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${b.title || _t('Bounty waiting for a free slot')}</span>
+                                ${bountyTags(b)}
                                 <div style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:6px;">📋 <strong>${_t('Objective:')}</strong> ${objective}</div>
                                 <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${b.character_name || 'Unknown'}</div>
-                                ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}</div>` : ''}
+                                ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}${b.stats_hidden ? ` <span style="color:rgba(255,255,255,0.4);">(${_t('stats roll on claim')})</span>` : ''}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('IN PROGRESS')}</span>
-                                <button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('✕ Abandon')}</button>
+                                <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${statusLabel}</span>
+                                ${b.status === 'rerolling' ? '' : `<button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('✕ Abandon')}</button>`}
                             </div>
                         </div>
                     </div>`;
