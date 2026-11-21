@@ -42,14 +42,8 @@ if ($message === '') {
     exit;
 }
 
-// Ignore third-party extension errors, generic cross-origin Script error noise, and benign ResizeObserver warnings
-$extPattern = '/^(?:chrome|moz|safari|edge)-extension:\/\//i';
-if (
-    preg_match($extPattern, $source) ||
-    preg_match('/(?:chrome|moz|safari|edge)-extension:\/\//i', $stack) ||
-    stripos($message, 'ResizeObserver loop') !== false ||
-    (($message === 'Script error.' || $message === 'Script error') && $source === '' && $stack === '')
-) {
+// Ignore third-party extension/wallet injections, generic cross-origin Script error noise, and benign ResizeObserver warnings
+if (psobb_is_ignored_client_error($message, $source, $stack)) {
     echo json_encode(['success' => true, 'ignored' => 'noise']);
     exit;
 }

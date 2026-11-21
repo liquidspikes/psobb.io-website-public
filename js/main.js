@@ -16,19 +16,29 @@ function _t(str) {
     const seenKeys = new Set();
     let sentCount = 0;
 
-    function isIgnoredSource(src) {
-        if (!src) return false;
-        return /^(?:chrome|moz|safari|edge)-extension:\/\//i.test(src) || src.indexOf('/api/log_client_error.php') !== -1;
+    function isIgnoredClientError(msgStr, src, stack) {
+        if (src && (/^(?:chrome|moz|safari|edge)-extension:\/\//i.test(src) || src.indexOf('/api/log_client_error.php') !== -1)) {
+            return true;
+        }
+        if (stack && (/(?:chrome|moz|safari|edge)-extension:\/\//i.test(stack) || stack.indexOf('/api/log_client_error.php') !== -1)) {
+            return true;
+        }
+        if (msgStr.indexOf('ResizeObserver loop') !== -1) {
+            return true;
+        }
+        if (/\b(?:window\.ethereum|ethereum\.selectedAddress|__firefox__|__crWeb|webkit\.messageHandlers)\b/i.test(`${msgStr} ${stack}`)) {
+            return true;
+        }
+        return (msgStr === 'Script error.' || msgStr === 'Script error') && !src && !stack;
     }
 
     function sendReport(kind, message, meta) {
         if (sentCount >= 5) return;
         const msgStr = String(message || '').trim().slice(0, 400);
-        if (!msgStr || msgStr.indexOf('ResizeObserver loop') !== -1) return;
+        if (!msgStr) return;
         const src = String((meta && meta.source) || '').slice(0, 240);
         const stack = String((meta && meta.stack) || '').slice(0, 400);
-        if (isIgnoredSource(src) || isIgnoredSource(stack)) return;
-        if ((msgStr === 'Script error.' || msgStr === 'Script error') && !src && !stack) return;
+        if (isIgnoredClientError(msgStr, src, stack)) return;
 
         const key = `${kind}|${msgStr}|${src}|${(meta && meta.line) || 0}`;
         if (seenKeys.has(key)) return;

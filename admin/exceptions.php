@@ -29,7 +29,11 @@ function load_recent_player_exceptions(string $logPath, int $limit = 1000): arra
         $items = [];
         foreach ($lines as $ln) {
             $row = json_decode($ln, true);
-            if (is_array($row) && !empty($row['ts'])) {
+            if (
+                is_array($row) &&
+                !empty($row['ts']) &&
+                !(function_exists('psobb_is_ignored_exception_record') && psobb_is_ignored_exception_record($row))
+            ) {
                 $items[] = $row;
             }
         }
