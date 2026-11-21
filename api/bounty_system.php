@@ -215,12 +215,15 @@ function bounty_default_config()
 }
 
 /**
- * The settings: defaults, then config/bounties.json. Passing $override (tests only) merges it
- * over the current settings for the rest of the run.
+ * The settings: defaults, then config/bounties.json, then optional gitignored config/bounties.local.json.
+ * Passing $override (tests only) merges it over the current settings for the rest of the run.
  */
-function bounty_config(?array $override = null)
+function bounty_config(?array $override = null, bool $reload = false)
 {
     static $cfg = null;
+    if ($reload) {
+        $cfg = null;
+    }
     if ($override !== null) {
         $cfg = array_replace_recursive(bounty_config(), $override);
         return $cfg;
@@ -237,6 +240,17 @@ function bounty_config(?array $override = null)
         } else {
             // error_log, not echo: web pages and JSON endpoints load this file too.
             error_log("[BOUNTY] config/bounties.json is not valid JSON; using defaults.");
+        }
+    }
+    if (empty($GLOBALS['BOUNTY_IGNORE_LOCAL_CONFIG'])) {
+        $localPath = __DIR__ . '/../config/bounties.local.json';
+        if (is_readable($localPath)) {
+            $localOver = json_decode((string) file_get_contents($localPath), true);
+            if (is_array($localOver)) {
+                $cfg = array_replace_recursive($cfg, $localOver);
+            } else {
+                error_log("[BOUNTY] config/bounties.local.json is not valid JSON; ignoring local overrides.");
+            }
         }
     }
     return $cfg;

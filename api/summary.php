@@ -17,7 +17,9 @@ if ($data_json === FALSE) {
             "BBGlobalEXPMultiplier" => $rates['raw_exp'],
             "ServerGlobalDropRateMultiplier" => $rates['raw_drop'],
             "EXP" => (string)$rates['raw_exp'],
-            "Drop" => (string)$rates['raw_drop']
+            "Drop" => (string)$rates['raw_drop'],
+            "EXPDisplay" => $rates['exp'],
+            "DropDisplay" => $rates['drop']
         ],
         "Clients" => [],
         "Games" => []
@@ -29,6 +31,8 @@ if ($data_json === FALSE) {
         $data["Server"]["ServerGlobalDropRateMultiplier"] = $rates['raw_drop'];
         $data["Server"]["EXP"] = (string)$rates['raw_exp'];
         $data["Server"]["Drop"] = (string)$rates['raw_drop'];
+        $data["Server"]["EXPDisplay"] = $rates['exp'];
+        $data["Server"]["DropDisplay"] = $rates['drop'];
     }
 
     // Extract Mode and Strip Newserv mode prefix from Game Names (E=Normal, B=Battle, C=Challenge)

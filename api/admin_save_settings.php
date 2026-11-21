@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/bounty_system.php';
 start_secure_session();
 
 header('Content-Type: application/json');
@@ -129,6 +130,70 @@ if (!is_dir($dir)) {
 }
 $saved = @file_put_contents($cfgPath, json_encode($newConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
+// Persist optional gitignored Bounty System Rework runtime overrides
+$bountySaveError = false;
+$savedBounties = null;
+if (isset($data['bounties']) && is_array($data['bounties'])) {
+    $b = $data['bounties'];
+    $localBountyPath = __DIR__ . '/../config/bounties.local.json';
+    $existingLocal = [];
+    if (is_readable($localBountyPath)) {
+        $decodedLocal = json_decode((string) @file_get_contents($localBountyPath), true);
+        if (is_array($decodedLocal)) {
+            $existingLocal = $decodedLocal;
+        }
+    }
+    $existingLocal['enabled'] = !empty($b['enabled']);
+    $existingLocal['legacy_grace_days'] = (int) clamp((int) ($b['legacy_grace_days'] ?? 30), 1, 365);
+    $existingLocal['limit_scope'] = in_array($b['limit_scope'] ?? '', ['character', 'account'], true)
+        ? $b['limit_scope']
+        : 'character';
+
+    $earnIn = is_array($b['earn'] ?? null) ? $b['earn'] : [];
+    $existingEarn = is_array($existingLocal['earn'] ?? null) ? $existingLocal['earn'] : [];
+    $existingLocal['earn'] = array_merge($existingEarn, [
+        'login_daily_chance'      => (int) clamp((int) ($earnIn['login_daily_chance'] ?? 10), 0, 100),
+        'login_weekly_chance'     => (int) clamp((int) ($earnIn['login_weekly_chance'] ?? 3), 0, 100),
+        'completion_grants'       => (int) clamp((int) ($earnIn['completion_grants'] ?? 1), 0, 5),
+        'battle_chance'           => (int) clamp((int) ($earnIn['battle_chance'] ?? 25), 0, 100),
+        'challenge_chance'        => (int) clamp((int) ($earnIn['challenge_chance'] ?? 0), 0, 100),
+        'normal_battle_chance'    => (int) clamp((int) ($earnIn['normal_battle_chance'] ?? 10), 0, 100),
+        'normal_challenge_chance' => (int) clamp((int) ($earnIn['normal_challenge_chance'] ?? 0), 0, 100),
+    ]);
+
+    $contractsIn = is_array($b['contracts'] ?? null) ? $b['contracts'] : [];
+    $existingContracts = is_array($existingLocal['contracts'] ?? null) ? $existingLocal['contracts'] : [];
+    $existingLocal['contracts'] = array_merge($existingContracts, [
+        'drop_share' => (int) clamp((int) ($contractsIn['drop_share'] ?? 25), 0, 100),
+    ]);
+
+    $dropsIn = is_array($b['drops'] ?? null) ? $b['drops'] : [];
+    $existingDrops = is_array($existingLocal['drops'] ?? null) ? $existingLocal['drops'] : [];
+    $existingLocal['drops'] = array_merge($existingDrops, [
+        'rare_weekly_chance' => (int) clamp((int) ($dropsIn['rare_weekly_chance'] ?? 50), 0, 100),
+    ]);
+
+    $rewardIn = is_array($b['reward_engine'] ?? null) ? $b['reward_engine'] : [];
+    $existingReward = is_array($existingLocal['reward_engine'] ?? null) ? $existingLocal['reward_engine'] : [];
+    $existingLocal['reward_engine'] = array_merge($existingReward, [
+        'drop_rate_multiplier'   => (int) clamp((int) ($rewardIn['drop_rate_multiplier'] ?? 10), 1, 50),
+        'max_attribute'          => (int) clamp((int) ($rewardIn['max_attribute'] ?? 90), 0, 100),
+        'max_hit'                => (int) clamp((int) ($rewardIn['max_hit'] ?? 50), 0, 100),
+        'mythic_exchange_chance' => (int) clamp((int) ($rewardIn['mythic_exchange_chance'] ?? 3), 0, 100),
+    ]);
+
+    $written = @file_put_contents(
+        $localBountyPath,
+        json_encode($existingLocal, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n",
+        LOCK_EX
+    );
+    if ($written === false) {
+        $bountySaveError = true;
+    } else {
+        $savedBounties = bounty_config(null, true);
+    }
+}
+
 // Handle About page / Command Deck configuration
 if (isset($data['about']) && is_array($data['about'])) {
     $aboutInput = $data['about'];
@@ -162,7 +227,7 @@ if (isset($data['about']) && is_array($data['about'])) {
     @file_put_contents($aboutPath, json_encode($cleanedAbout, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
 
-if ($saved) {
+if ($saved && !$bountySaveError) {
     // Also sync discord_server into theme.json if present
     $themePath = __DIR__ . '/../config/theme.json';
     if (file_exists($themePath)) {
@@ -177,8 +242,12 @@ if ($saved) {
     echo json_encode([
         'success' => true,
         'message' => 'Site and server settings saved successfully!',
-        'config' => $newConfig
+        'config' => $newConfig,
+        'bounties' => $savedBounties,
     ]);
+} elseif ($bountySaveError) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Failed to save bounty configuration to disk.']);
 } else {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Failed to write site configuration to disk.']);

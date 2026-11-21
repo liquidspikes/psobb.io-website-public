@@ -46,8 +46,10 @@ if ($lobbies_response) {
 }
 $lobby_episode_map = [];
 $lobby_difficulty_map = [];
+$lobby_is_game_map = [];
 foreach ($lobbies as $l) {
     if (isset($l['ID'])) {
+        $lobby_is_game_map[$l['ID']] = !empty($l['IsGame']);
         if (isset($l['Episode'])) {
             $lobby_episode_map[$l['ID']] = $l['Episode'];
         }
@@ -173,64 +175,58 @@ try {
 foreach ($clients as $client) {
     if (!isset($client['Account']['AccountID'])) continue;
     $accId = (string)$client['Account']['AccountID'];
-    
+    $curr_char_name = trim((string)($client['Name'] ?? '')) ?: 'Unknown';
+    $state_key = $accId . '_' . $curr_char_name;
+
     $current_exp = $client['EXP'] ?? 0;
     $current_item_count = count($client['InventoryItems'] ?? []);
-    $prev_state = $player_states[$accId] ?? [];
-    
+    $prev_state = $player_states[$state_key] ?? ((($player_states[$accId]['char_name'] ?? null) === $curr_char_name) ? $player_states[$accId] : []);
+
     $prev_exp = $prev_state['exp'] ?? $current_exp;
     $prev_items = $prev_state['items'] ?? $current_item_count;
     $curr_level = $client['Level'] ?? 1;
     $prev_level = $prev_state['level'] ?? $curr_level;
-    
+
     $curr_meseta = $client['Meseta'] ?? 0;
     $prev_meseta = $prev_state['meseta'] ?? $curr_meseta;
-    
+
     $curr_playtime = $client['PlayTimeSeconds'] ?? 0;
     $prev_playtime = $prev_state['playtime'] ?? $curr_playtime;
-    
-    $curr_char_name = $client['Name'] ?? '';
+
     $same_char = !isset($prev_state['char_name']) || $prev_state['char_name'] === $curr_char_name;
     $curr_chal = count_cleared_challenge_stages($client);
     $prev_chal = $same_char ? ($prev_state['chal_cleared'] ?? $curr_chal) : $curr_chal;
-    
+
     $curr_mats = ($client['NumHPMaterialsUsed'] ?? 0) + ($client['NumTPMaterialsUsed'] ?? 0) + ($client['NumPowerMaterialsUsed'] ?? 0) + ($client['NumDefMaterialsUsed'] ?? 0) + ($client['NumMindMaterialsUsed'] ?? 0) + ($client['NumEvadeMaterialsUsed'] ?? 0) + ($client['NumLuckMaterialsUsed'] ?? 0);
     $prev_mats = $prev_state['mats'] ?? $curr_mats;
-    
+
     $current_patrols = [];
     $curr_f = (int)($client['LocationFloor'] ?? -1);
-    
+
     $lobby_id = $client['LobbyID'] ?? null;
     $lobby_episode = ($lobby_id !== null && isset($lobby_episode_map[$lobby_id])) ? $lobby_episode_map[$lobby_id] : null;
     $lobby_difficulty = ($lobby_id !== null && isset($lobby_difficulty_map[$lobby_id])) ? $lobby_difficulty_map[$lobby_id] : 'Normal';
-    
+    $is_game = ($lobby_id !== null) ? !empty($lobby_is_game_map[$lobby_id]) : false;
+    $ep_num = ($is_game && $lobby_episode !== null && preg_match('/(\d)/', (string)$lobby_episode, $em)) ? (int)$em[1] : null;
+
     // Protect against Zero-EXP spikes during loading screens where NewServ briefly reports 0 EXP.
     // If we don't skip this tick, $prev_exp gets saved as 0, and the NEXT tick will show a massive delta!
     if ($current_exp < $prev_exp && $current_exp === 0) {
         continue;
     }
-    
-    // Delayed EXP Sync Memory
+
+    // Delayed EXP Sync Memory (episode- and game-aware so lobbies/non-boss floors never record false arenas)
     $last_boss_arena = $prev_state['last_boss_arena'] ?? null;
     $last_boss_arena_time = $prev_state['last_boss_arena_time'] ?? 0;
-    // Track when a player is in a boss arena for delayed EXP sync detection.
-    // These are the RAW LocationFloor values as reported by newserv /y/clients:
-    //   Ep1: 11=Dragon, 12=De Rol Le, 13=Vol Opt, 14=Dark Falz
-    //   Ep2: 12=Gal Gryphon, 13=Olga Flow, 14=Barba Ray, 15=Gol Dragon
-    //   Ep4: 9=Saint-Milion
-    // Note: Floor IDs overlap across episodes (e.g. 12 = De Rol Le in Ep1, Gal Gryphon in Ep2).
-    // This is acceptable because we only use these for EXP-delta-based kill detection.
-    if (in_array($curr_f, [11, 12, 13, 14, 15, 9])) {
+    $boss_floors_list = ($is_game && $ep_num !== null) ? bounty_boss_arena_floors($ep_num) : [];
+    if ($is_game && !empty($boss_floors_list) && in_array($curr_f, $boss_floors_list, true)) {
         $last_boss_arena = $curr_f;
         $last_boss_arena_time = time();
     }
 
-    // Track the last non-boss floor the player was on.
-    // We strictly check $curr_f > 0 so that town/lobby (floor 0) is ignored, preserving 
-    // the actual preceding dungeon floor if they go back to Pioneer 2/Lab to restock.
-    $boss_floors_list = [9, 11, 12, 13, 14, 15];
+    // Track the last non-boss dungeon floor the player was on inside an active game.
     $pre_boss_floor = $prev_state['pre_boss_floor'] ?? -1;
-    if (!in_array($curr_f, $boss_floors_list) && $curr_f > 0) {
+    if ($is_game && !in_array($curr_f, $boss_floors_list, true) && $curr_f > 0 && $curr_f !== 15) {
         $pre_boss_floor = $curr_f;
     }
 
@@ -258,54 +254,7 @@ foreach ($clients as $client) {
     //  15 | —               | *Gol Dragon*    | —
     // =====================================================================
 
-    // --- DEBUG TELEMETRY: Global Boss Kill Tracking ---
-    $boss_floors = [
-        11 => 'Dragon',           // Ep1 Forest Boss
-        12 => 'De Rol Le / Gal Gryphon', // Ep1 Cave Boss / Ep2 CCA Boss (same floor ID)
-        13 => 'Vol Opt / Olga Flow',     // Ep1 Mine Boss / Ep2 Seabed Boss
-        14 => 'Dark Falz / Barba Ray',   // Ep1 Ruins Boss / Ep2 Temple Boss
-        15 => 'Gol Dragon',              // Ep2 Spaceship Boss
-        9  => 'Saint-Milion / Shambertin / Kondrieu', // Ep4 Meteor Impact Site Boss (all three share floor 9)
-    ];
-    $floor = $curr_f;
-    $prev_floor = (int)($prev_state['floor'] ?? -1);
-    
-    // Fast-Kill Race Condition Fix for Telemetry
-    $fast_kill_boss_name = null;
-    if (in_array($curr_f, [0, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240]) && !isset($boss_floors[$prev_floor])) {
-        // Player is in lobby (or Pioneer 2), but their previous floor wasn't a boss room.
-        // This implies they cleared the boss so fast the cron never saw them in it.
-        if ($prev_floor === 2) $fast_kill_boss_name = 'Dragon';
-        elseif ($prev_floor === 5) $fast_kill_boss_name = 'De Rol Le';
-        elseif ($prev_floor === 7) $fast_kill_boss_name = 'Vol Opt / Olga Flow';
-        elseif ($prev_floor === 10) $fast_kill_boss_name = 'Dark Falz';
-        elseif ($prev_floor === 4) $fast_kill_boss_name = 'Gol Dragon';
-    }
-    
-    $in_boss_arena = isset($boss_floors[$floor]) || isset($boss_floors[$prev_floor]) || (isset($boss_floors[$last_boss_arena]) && (time() - $last_boss_arena_time < 120)) || ($fast_kill_boss_name !== null);
-    if ($in_boss_arena) {
-        $exp_gain = ($current_exp - $prev_exp) >= 10;
-        $loot_gain = (($client['Level'] ?? 1) >= 200) && ($current_item_count > $prev_items);
-        if ($exp_gain || $loot_gain) {
-            // Boss kill detected!
-            $boss_name = $fast_kill_boss_name ?? $boss_floors[$floor] ?? $boss_floors[$prev_floor] ?? $boss_floors[$last_boss_arena] ?? 'Unknown Boss';
-            $debug_log_file = __DIR__ . '/.debug_telemetry.json';
-            $logs = file_exists($debug_log_file) ? json_decode(file_get_contents($debug_log_file), true) : [];
-            
-            // Add new log to the TOP of the array
-            array_unshift($logs, [
-                'time' => time(),
-                'char' => $client['Name'] ?? 'Unknown',
-                'boss' => $boss_name,
-                'exp_delta' => $current_exp - $prev_exp,
-                'loot_delta' => $current_item_count - $prev_items
-            ]);
-            
-            if (count($logs) > 50) $logs = array_slice($logs, 0, 50);
-            file_put_contents($debug_log_file, json_encode($logs));
-            echo "[CRON_COMMUNITY] DEBUG: Boss kill tracked for Acc $accId ($boss_name)\n";
-        }
-    }
+    // Episode-verified boss debug telemetry is recorded by the 5s cron_boss_tracker.php daemon.
 
     // Evaluate progression for each active CE
     foreach ($active_community_events as &$ce) {
@@ -613,7 +562,7 @@ foreach ($clients as $client) {
         }
     }
 
-    $player_states[(string)$accId] = [
+    $player_states[$state_key] = [
         'exp' => $current_exp,
         'items' => $current_item_count,
         'floor' => $curr_f,

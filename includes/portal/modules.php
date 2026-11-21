@@ -255,7 +255,8 @@ function render_portal_panes(array $activeModules, ?string $activeTabId = null, 
         $activeTabId = $first['id'];
     }
 
-    // Extract context variables into local scope for module views
+    // Expose site-wide env/config globals and extract context variables for module views
+    global $EXP_RATE, $DROP_RATE, $MESETA_RATE, $NEWSERV_COMMAND_PREFIX;
     if (!empty($context)) {
         extract($context);
     }
@@ -287,6 +288,7 @@ function render_portal_panes(array $activeModules, ?string $activeTabId = null, 
 function render_portal_modals(array $context = []): void {
     $modalsFile = __DIR__ . '/modules/modals.php';
     if (file_exists($modalsFile)) {
+        global $NEWSERV_COMMAND_PREFIX;
         if (!empty($context)) {
             extract($context);
         }

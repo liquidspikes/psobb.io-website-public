@@ -443,8 +443,18 @@ The overarching mechanical objective is PRE-LOCKED as follows:
 
     $questData = bounty_gemini_json($prompt);
     if (!$questData || !isset($questData['title'], $questData['description'])) {
-        echo "[CRON] Failed to generate Gemini response.\n";
-        return null;
+        if (isset($GLOBALS['BOUNTY_GEMINI_STUB'])) {
+            echo "[CRON] Failed to generate Gemini response.\n";
+            return null;
+        }
+        echo "[CRON] Gemini unavailable; using lore-grounded fallback story.\n";
+        $questData = bounty_fallback_story(
+            $obj,
+            (string) $quest_giver,
+            (string) $setting_id,
+            (int) $mission_episode,
+            (string) $difficulty
+        );
     }
     return [
         'title' => $questData['title'],
@@ -453,6 +463,122 @@ The overarching mechanical objective is PRE-LOCKED as follows:
         'setting_id' => $setting_id,
         'episode' => $mission_episode,
     ];
+}
+
+/**
+ * Returns the ordered list of Gemini models to attempt for bounty story generation.
+ */
+function bounty_gemini_model_candidates(?string $primary = null): array
+{
+    $raw = [$primary, 'gemma-4-26b-a4b-it', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+    $out = [];
+    foreach ($raw as $m) {
+        $m = trim((string) $m);
+        if ($m !== '' && !in_array($m, $out, true)) {
+            $out[] = $m;
+        }
+    }
+    return $out;
+}
+
+/**
+ * Builds the JSON request body tailored to the target Gemini / Gemma model.
+ */
+function bounty_build_gemini_payload(string $prompt, string $model): string
+{
+    $generationConfig = [
+        'responseMimeType' => 'application/json',
+        'temperature' => 1.0,
+    ];
+    if (preg_match('/^(gemma-4|gemini-3)/i', trim($model))) {
+        // Minimize reasoning overhead on Gemma 4 / Gemini 3 models so the 55s cron loop stays fast.
+        $generationConfig['thinkingConfig'] = ['thinkingLevel' => 'MINIMAL'];
+    }
+    return (string) json_encode([
+        'contents' => [['parts' => [['text' => $prompt]]]],
+        'generationConfig' => $generationConfig,
+    ]);
+}
+
+/**
+ * Builds a deterministic PSOBB canon bounty title and description when Gemini quota is exhausted.
+ */
+function bounty_fallback_story(array $obj, string $quest_giver, string $setting_id, int $mission_episode, string $difficulty): array
+{
+    $lore = bounty_lore();
+    $place = trim((string) ($lore['settings'][$setting_id]['name'] ?? 'Ragol'));
+    if ($place === '') {
+        $place = "Episode {$mission_episode}";
+    }
+    $targetFriendly = trim((string) ($obj['selected_target_friendly'] ?? 'the assigned objective'));
+    $client = trim($quest_giver) !== '' ? trim($quest_giver) : "Hunters Guild";
+
+    $title = substr("Guild Posting: {$place} ({$difficulty})", 0, 96);
+    $description = "{$client} filed an urgent Pioneer 2 request tied to {$place} on {$difficulty} difficulty. "
+        . "Report to the field immediately and complete the objective ({$targetFriendly}), then confirm clear at the Guild counter.";
+    return [
+        'title' => $title,
+        'description' => $description,
+    ];
+}
+
+/**
+ * Parses one part text payload (stripping optional markdown fences) into ['title', 'description'], or null.
+ */
+function bounty_decode_story_text(?string $text): ?array
+{
+    if (!is_string($text) || trim($text) === '') {
+        return null;
+    }
+    $cleaned = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($text));
+    $questData = json_decode((string) $cleaned, true);
+    if (!is_array($questData)) {
+        return null;
+    }
+    $title = trim((string) ($questData['title'] ?? ''));
+    $description = trim((string) ($questData['description'] ?? ''));
+    if ($title === '' || $description === '') {
+        return null;
+    }
+    return [
+        'title' => $title,
+        'description' => $description,
+    ];
+}
+
+/**
+ * Parses Gemini / Gemma JSON response text (skipping thinking parts and markdown fences) into an array, or null.
+ */
+function bounty_parse_gemini_response_json(?string $rawResult): ?array
+{
+    if (!$rawResult) {
+        return null;
+    }
+    $jsonRes = json_decode($rawResult, true);
+    $parts = $jsonRes['candidates'][0]['content']['parts'] ?? null;
+    if (!is_array($parts)) {
+        return null;
+    }
+    // Prefer non-thought output parts first (Gemma 4 puts reasoning in parts with "thought": true).
+    foreach ([true, false] as $skipThought) {
+        foreach ($parts as $part) {
+            if (!is_array($part)) {
+                continue;
+            }
+            $isThought = !empty($part['thought']);
+            if ($skipThought && $isThought) {
+                continue;
+            }
+            if (!$skipThought && !$isThought) {
+                continue;
+            }
+            $decoded = bounty_decode_story_text($part['text'] ?? null);
+            if ($decoded !== null) {
+                return $decoded;
+            }
+        }
+    }
+    return null;
 }
 
 /**
@@ -466,33 +592,94 @@ function bounty_gemini_json($prompt)
     if (isset($GLOBALS['BOUNTY_GEMINI_STUB']) && is_callable($GLOBALS['BOUNTY_GEMINI_STUB'])) {
         return ($GLOBALS['BOUNTY_GEMINI_STUB'])($prompt);
     }
-    $base =!empty($_ENV['GEMINI_API_BASE']) ? rtrim($_ENV['GEMINI_API_BASE'], '/') . '/' : "https://generativelanguage.googleapis.com/v1beta/models/";
-    $gemini_url = $base . $GEMINI_MODEL . ":generateContent?key=" . $GEMINI_API_KEY;
-    $payload = json_encode([
-        "contents" => [["parts" => [["text" => $prompt]]]],
-        "generationConfig" => [
-            "responseMimeType" => "application/json",
-            "temperature" => 1.0
-        ]
-    ]);
-    $options = [
-        'http' => [
-            'header'  => "Content-type: application/json\r\n",
-            'method'  => 'POST',
-            'content' => $payload,
-            'timeout' => 15
-        ]
-    ];
-    $result = @file_get_contents($gemini_url, false, stream_context_create($options));
-    if (!$result) {
+    if (empty($GEMINI_API_KEY)) {
         return null;
     }
-    $json_res = json_decode($result, true);
-    if (!isset($json_res['candidates'][0]['content']['parts'][0]['text'])) {
-        return null;
+
+    $makeOptions = static function (string $model) use ($prompt): array {
+        return [
+            'http' => [
+                'header' => "Content-type: application/json\r\n",
+                'method' => 'POST',
+                'content' => bounty_build_gemini_payload((string) $prompt, $model),
+                'timeout' => 20,
+                'ignore_errors' => true,
+            ]
+        ];
+    };
+
+    if (!empty($_ENV['GEMINI_API_BASE'])) {
+        $base = rtrim($_ENV['GEMINI_API_BASE'], '/') . '/';
+        $model = trim((string) ($GEMINI_MODEL ?? '')) ?: 'gemini-2.5-flash';
+        $result = @file_get_contents($base . $model . ":generateContent?key=" . $GEMINI_API_KEY, false, stream_context_create($makeOptions($model)));
+        return bounty_parse_gemini_response_json($result ?: null);
     }
-    $questData = json_decode($json_res['candidates'][0]['content']['parts'][0]['text'], true);
-    return is_array($questData) ? $questData : null;
+
+    $base = "https://generativelanguage.googleapis.com/v1beta/models/";
+    $cooldownFile = __DIR__ . '/../db/.gemini_model_cooldowns.json';
+    $now = time();
+    $cooldowns = [];
+    if (is_readable($cooldownFile)) {
+        $decoded = json_decode((string) @file_get_contents($cooldownFile), true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $k => $until) {
+                if ((int) $until > $now) {
+                    $cooldowns[(string) $k] = (int) $until;
+                }
+            }
+        }
+    }
+
+    $candidates = bounty_gemini_model_candidates($GEMINI_MODEL ?? '');
+    foreach ($candidates as $model) {
+        if (($cooldowns[$model] ?? 0) > $now) {
+            continue;
+        }
+        $url = $base . rawurlencode($model) . ":generateContent?key=" . $GEMINI_API_KEY;
+        $ctx = stream_context_create($makeOptions($model));
+        $attempts = 0;
+        $code = 0;
+        $result = false;
+        while ($attempts < 2) {
+            $attempts++;
+            $http_response_header = [];
+            $result = @file_get_contents($url, false, $ctx);
+            $headers = function_exists('http_get_last_response_headers') ? (http_get_last_response_headers() ?: $http_response_header) : $http_response_header;
+            $statusLine = (string) ($headers[0] ?? '');
+            $code = preg_match('/\s(\d{3})\b/', $statusLine, $m) ? (int) $m[1] : ($result !== false ? 200 : 0);
+            if ($code >= 500 && $code <= 504 && $attempts === 1) {
+                usleep(800000);
+                continue;
+            }
+            break;
+        }
+
+        if ($code === 429) {
+            $ttl = (stripos((string) $result, 'per day') !== false || stripos((string) $result, 'free_tier_requests') !== false) ? 3600 : 900;
+            $cooldowns[$model] = $now + $ttl;
+            @file_put_contents($cooldownFile, json_encode($cooldowns), LOCK_EX);
+            error_log("[BOUNTY] Gemini model {$model} returned HTTP 429; cooling down {$ttl}s and trying fallback.");
+            continue;
+        }
+        if ($code >= 500 && $code <= 504) {
+            error_log("[BOUNTY] Gemini model {$model} returned transient HTTP {$code}; trying fallback without cooldown.");
+            continue;
+        }
+        if ($code >= 400 || !$result) {
+            if ($code >= 400) {
+                $cooldowns[$model] = $now + 300;
+                @file_put_contents($cooldownFile, json_encode($cooldowns), LOCK_EX);
+                error_log("[BOUNTY] Gemini model {$model} returned HTTP {$code}; trying fallback.");
+            }
+            continue;
+        }
+
+        $parsed = bounty_parse_gemini_response_json($result);
+        if ($parsed !== null) {
+            return $parsed;
+        }
+    }
+    return null;
 }
 
 /**

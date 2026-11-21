@@ -1163,7 +1163,8 @@ window.logout = function () {
 
 async function fetchServerStats() {
     try {
-        const response = await fetch('/api/server.php');
+        const apiPrefix = window.location.pathname.includes('/admin/') ? '../api/' : 'api/';
+        const response = await fetch(apiPrefix + 'server.php');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
 
@@ -1172,10 +1173,14 @@ async function fetchServerStats() {
         updateElement('uptime', data.Uptime);
         updateElement('client-count', data.ClientCount);
         updateElement('game-count', data.GameCount);
-        if (data.BBGlobalEXPMultiplier !== undefined) {
+        if (data.EXPDisplay) {
+            updateElement('rate-exp', data.EXPDisplay);
+        } else if (data.BBGlobalEXPMultiplier !== undefined) {
             updateElement('rate-exp', data.BBGlobalEXPMultiplier + 'x');
         }
-        if (data.ServerGlobalDropRateMultiplier !== undefined) {
+        if (data.DropDisplay) {
+            updateElement('rate-drop', data.DropDisplay);
+        } else if (data.ServerGlobalDropRateMultiplier !== undefined) {
             updateElement('rate-drop', data.ServerGlobalDropRateMultiplier + 'x');
         }
 
@@ -1186,7 +1191,8 @@ async function fetchServerStats() {
 
 async function fetchDetailedStats() {
     try {
-        const response = await fetch('/api/summary.php');
+        const apiPrefix = window.location.pathname.includes('/admin/') ? '../api/' : 'api/';
+        const response = await fetch(apiPrefix + 'summary.php');
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
 
@@ -1196,10 +1202,14 @@ async function fetchDetailedStats() {
             updateElement('uptime', data.Server.Uptime);
             updateElement('client-count', data.Server.ClientCount);
             updateElement('game-count', data.Server.GameCount);
-            if (data.Server.BBGlobalEXPMultiplier !== undefined) {
+            if (data.Server.EXPDisplay) {
+                updateElement('rate-exp', data.Server.EXPDisplay);
+            } else if (data.Server.BBGlobalEXPMultiplier !== undefined) {
                 updateElement('rate-exp', data.Server.BBGlobalEXPMultiplier + 'x');
             }
-            if (data.Server.ServerGlobalDropRateMultiplier !== undefined) {
+            if (data.Server.DropDisplay) {
+                updateElement('rate-drop', data.Server.DropDisplay);
+            } else if (data.Server.ServerGlobalDropRateMultiplier !== undefined) {
                 updateElement('rate-drop', data.Server.ServerGlobalDropRateMultiplier + 'x');
             }
         }
@@ -1503,10 +1513,10 @@ window.confirmChangePass = async function () {
 
 // Enhanced to update rates from the new fields in /api/server.php
 async function updateUIRates(data) {
-    const expEl = document.getElementById('rate-exp');
-    const dropEl = document.getElementById('rate-drop');
-    if (expEl && data.EXP) expEl.textContent = parseFloat(data.EXP) + 'x';
-    if (dropEl && data.Drop) dropEl.textContent = parseFloat(data.Drop) + 'x';
+    if (data.EXPDisplay) updateElement('rate-exp', data.EXPDisplay);
+    else if (data.EXP) updateElement('rate-exp', parseFloat(data.EXP) + 'x');
+    if (data.DropDisplay) updateElement('rate-drop', data.DropDisplay);
+    else if (data.Drop) updateElement('rate-drop', parseFloat(data.Drop) + 'x');
 }
 
 // ==========================================================================
@@ -2053,9 +2063,11 @@ function renderActiveBank() {
     const c = window.activeCharData;
     if (!c) return;
 
+    const countEl = document.getElementById('viewer-bank-count');
     const currentBank = window.activeBankIndex === -1 ? c.shared_bank : c.bank;
     if (!currentBank || !currentBank.items) {
         // Show empty state
+        if (countEl) countEl.textContent = '0 items';
         document.getElementById('viewer-bank-meseta').textContent = '0 Meseta';
         for (let i = 0; i < 200; i++) {
             grid.appendChild(createItemSlotElement(null));
@@ -2064,9 +2076,11 @@ function renderActiveBank() {
         return;
     }
 
+    if (countEl) countEl.textContent = `${currentBank.items.length.toLocaleString()} items`;
     document.getElementById('viewer-bank-meseta').textContent = parseInt(currentBank.meseta || 0).toLocaleString() + ' Meseta';
 
-    for (let i = 0; i < 200; i++) {
+    const slotCount = Math.max(200, Math.min(1000, currentBank.items.length));
+    for (let i = 0; i < slotCount; i++) {
         const item = currentBank.items[i] || null;
         grid.appendChild(createItemSlotElement(item));
     }
