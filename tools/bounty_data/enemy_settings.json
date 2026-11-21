@@ -1,0 +1,19 @@
+{
+  "_comment": "Which bounty setting (lore card) each drop source belongs to, by episode. Boxes are listed by area. Used to keep bounty rewards to items that drop in the bounty's area.",
+  "Ep1": {
+    "ep1_forest": ["BOOMA", "GOBOOMA", "GIGOBOOMA", "RAG_RAPPY", "AL_RAPPY", "SAVAGE_WOLF", "BARBAROUS_WOLF", "MOTHMANT", "HILDEBEAR", "HILDEBLUE", "DRAGON", "Box-Forest1", "Box-Forest2"],
+    "ep1_caves": ["EVIL_SHARK", "PAL_SHARK", "GUIL_SHARK", "POISON_LILY", "NAR_LILY", "GRASS_ASSASSIN", "NANO_DRAGON", "POFUILLY_SLIME", "POUILLY_SLIME", "PAN_ARMS", "HIDOOM", "MIGIUM", "DE_ROL_LE", "Box-Cave1", "Box-Cave2", "Box-Cave3"],
+    "ep1_mines": ["GILLCHIC", "DUBCHIC", "CANADINE", "CANADINE_GROUP", "CANANE", "SINOW_BEAT", "SINOW_GOLD", "GARANZ", "VOL_OPT_2", "Box-Mine1", "Box-Mine2"],
+    "ep1_ruins": ["DIMENIAN", "LA_DIMENIAN", "SO_DIMENIAN", "CLAW", "BULCLAW", "DELSABER", "DARK_BELRA", "CHAOS_SORCERER", "DARK_GUNNER", "CHAOS_BRINGER", "DARK_FALZ_2", "DARK_FALZ_3", "Box-Ruins1", "Box-Ruins2", "Box-Ruins3"]
+  },
+  "Ep2": {
+    "ep2_vr_temple": ["RAG_RAPPY", "LOVE_RAPPY", "EGG_RAPPY", "HALLO_RAPPY", "SAINT_RAPPY", "HILDEBEAR", "HILDEBLUE", "MOTHMANT", "SAVAGE_WOLF", "BARBAROUS_WOLF", "POISON_LILY", "NAR_LILY", "GRASS_ASSASSIN", "DIMENIAN", "LA_DIMENIAN", "SO_DIMENIAN", "DELSABER", "DARK_BELRA", "CHAOS_SORCERER", "BARBA_RAY", "BARBA_RAY_JOINT", "Box-VRTempleAlpha", "Box-VRTempleBeta"],
+    "ep2_vr_spaceship": ["GILLCHIC", "DUBCHIC", "GARANZ", "PAN_ARMS", "HIDOOM", "MIGIUM", "DIMENIAN", "LA_DIMENIAN", "SO_DIMENIAN", "DELSABER", "DARK_BELRA", "CHAOS_SORCERER", "GOL_DRAGON", "Box-VRSpaceshipAlpha", "Box-VRSpaceshipBeta"],
+    "ep2_gal_da_val": ["MERILLIA", "MERILTAS", "MERICAROL", "MERICARAND", "MERICUS", "MERIKLE", "UL_GIBBON", "ZOL_GIBBON", "GIBBLES", "GEE", "GI_GUE", "SINOW_BERILL", "SINOW_SPIGELL", "DEL_LILY", "ILL_GILL", "EPSILON", "GAL_GRYPHON", "Box-JungleNorth", "Box-JungleEast", "Box-Mountain", "Box-Seaside"],
+    "ep2_seabed": ["DOLMOLM", "DOLMDARL", "MORFOS", "RECON", "SINOW_ZOA", "SINOW_ZELE", "DELDEPTH", "DELBITER", "OLGA_FLOW_2", "Box-SeabedUpper", "Box-SeabedLower"]
+  },
+  "Ep4": {
+    "ep4_crater": ["SAND_RAPPY_CRATER", "DEL_RAPPY_CRATER", "SATELLITE_LIZARD_CRATER", "YOWIE_CRATER", "ZU_CRATER", "PAZUZU_CRATER", "BOOTA", "ZE_BOOTA", "BA_BOOTA", "DORPHON", "DORPHON_ECLAIR", "ASTARK", "Box-CraterEast", "Box-CraterWest", "Box-CraterSouth", "Box-CraterNorth", "Box-CraterInterior"],
+    "ep4_desert": ["SAND_RAPPY_DESERT", "DEL_RAPPY_DESERT", "SATELLITE_LIZARD_DESERT", "YOWIE_DESERT", "ZU_DESERT", "PAZUZU_DESERT", "GORAN", "PYRO_GORAN", "GORAN_DETONATOR", "MERISSA_A", "MERISSA_AA", "GIRTABLULU", "SAINT_MILION", "SHAMBERTIN", "KONDRIEU", "Box-Desert1", "Box-Desert2", "Box-Desert3"]
+  }
+}

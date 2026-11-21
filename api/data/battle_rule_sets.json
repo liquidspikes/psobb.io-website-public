@@ -1,0 +1,283 @@
+[
+ {
+  "quest_number": 501,
+  "name": "Battle1",
+  "description": "SPACESHIP :10 minutes Fight a duel without changing player levels and parameters.",
+  "rules": {
+   "tech_disks": "allowed",
+   "weapons_armor": "own equipment",
+   "mags": "allowed",
+   "tools": "own items",
+   "respawn": "unlimited revival",
+   "replace_char": 0,
+   "drop_weapon_on_death": 1,
+   "teams": 1,
+   "death_level_up": 3,
+   "meseta": "own Meseta",
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "damage": 5,
+   "slow": 5,
+   "confuse": 5,
+   "freeze": 5
+  },
+  "scores": {
+   "player_damage_given": 0.01,
+   "player_damage_taken": 0.01,
+   "player_kill": 0.0,
+   "death_to_player": 1000.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 2500.0,
+   "per_meseta": 0.0
+  }
+ },
+ {
+  "quest_number": 502,
+  "name": "Battle2",
+  "description": "PALACE:10 minutes All players' levels will revert to Level 1.",
+  "rules": {
+   "tech_disks": "level-limited",
+   "weapons_armor": "start empty, pick up only",
+   "mags": "forbidden",
+   "tools": "start empty, pick up only",
+   "respawn": "unlimited revival",
+   "replace_char": 1,
+   "drop_weapon_on_death": 1,
+   "teams": 0,
+   "death_level_up": 5,
+   "meseta": "start at 0, pick up only",
+   "max_tech_level": 0,
+   "char_level": 0,
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "slow": 5,
+   "confuse": 5,
+   "freeze": 5
+  },
+  "scores": {
+   "player_damage_given": 0.01,
+   "player_damage_taken": 0.01,
+   "player_kill": 0.0,
+   "death_to_player": 1000.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 1000.0,
+   "per_meseta": 0.0
+  }
+ },
+ {
+  "quest_number": 503,
+  "name": "Battle3",
+  "description": "SPACESHIP :10 minutes Warp Battle All players' levels are equal, so use warps to win this battle.",
+  "rules": {
+   "tech_disks": "level-limited",
+   "weapons_armor": "start empty, pick up only",
+   "mags": "forbidden",
+   "tools": "start empty, pick up only",
+   "respawn": "limited lives",
+   "replace_char": 1,
+   "drop_weapon_on_death": 0,
+   "teams": 0,
+   "death_level_up": 3,
+   "meseta": "forbidden",
+   "lives": 10,
+   "max_tech_level": 0,
+   "char_level": 4,
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "slow": 10,
+   "confuse": 10,
+   "freeze": 10
+  },
+  "scores": {
+   "player_damage_given": 0.01,
+   "player_damage_taken": 0.01,
+   "player_kill": 0.0,
+   "death_to_player": 1000.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 2500.0,
+   "per_meseta": 0.0
+  }
+ },
+ {
+  "quest_number": 504,
+  "name": "Battle4",
+  "description": "PALACE:10 minutes Meseta Battle All levels are equal, so use the map to find Meseta.",
+  "rules": {
+   "tech_disks": "level-limited",
+   "weapons_armor": "start empty, pick up only",
+   "mags": "forbidden",
+   "tools": "start empty, pick up only",
+   "respawn": "limited lives",
+   "replace_char": 1,
+   "drop_weapon_on_death": 1,
+   "teams": 0,
+   "death_level_up": 5,
+   "meseta": "start at 0, pick up only",
+   "lives": 10,
+   "max_tech_level": 1,
+   "char_level": 1,
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "damage": 5,
+   "slow": 5,
+   "confuse": 5,
+   "freeze": 5
+  },
+  "scores": {
+   "player_damage_given": 0.0,
+   "player_damage_taken": 0.0,
+   "player_kill": 0.01,
+   "death_to_player": 0.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 0.0,
+   "per_meseta": 10.0
+  }
+ },
+ {
+  "quest_number": 505,
+  "name": "Battle5",
+  "description": "PALACE:10 minutes Meseta battle There are no revivals and no level limits.",
+  "rules": {
+   "tech_disks": "allowed",
+   "weapons_armor": "own equipment",
+   "mags": "forbidden",
+   "tools": "own items",
+   "respawn": "no revival",
+   "replace_char": 0,
+   "drop_weapon_on_death": 1,
+   "teams": 1,
+   "death_level_up": 5,
+   "meseta": "start at 0, pick up only",
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "damage": 5,
+   "slow": 5,
+   "confuse": 5,
+   "freeze": 5
+  },
+  "scores": {
+   "player_damage_given": 0.0,
+   "player_damage_taken": 0.0,
+   "player_kill": 0.0,
+   "death_to_player": 0.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 0.0,
+   "per_meseta": 1.0
+  }
+ },
+ {
+  "quest_number": 506,
+  "name": "Battle6",
+  "description": "SPACESHIP :10 minutes Battle it out and shoot at each other from behind walls.",
+  "rules": {
+   "tech_disks": "level-limited",
+   "weapons_armor": "start empty, pick up only",
+   "mags": "forbidden",
+   "tools": "start empty, pick up only",
+   "respawn": "limited lives",
+   "replace_char": 1,
+   "drop_weapon_on_death": 1,
+   "teams": 1,
+   "death_level_up": 3,
+   "meseta": "start at 0, pick up only",
+   "lives": 10,
+   "max_tech_level": 4,
+   "char_level": 19,
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "damage": 5,
+   "freeze": 5
+  },
+  "scores": {
+   "player_damage_given": 0.01,
+   "player_damage_taken": 0.01,
+   "player_kill": 0.0,
+   "death_to_player": 1000.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 1000.0,
+   "per_meseta": 0.0
+  }
+ },
+ {
+  "quest_number": 507,
+  "name": "Battle7",
+  "description": "SPACESHIP :10 minutes Obstacle Race",
+  "rules": {
+   "tech_disks": "level-limited",
+   "weapons_armor": "start empty, pick up only",
+   "mags": "forbidden",
+   "tools": "start empty, pick up only",
+   "respawn": "limited lives",
+   "replace_char": 1,
+   "drop_weapon_on_death": 1,
+   "teams": 0,
+   "death_level_up": 1,
+   "meseta": "start at 0, pick up only",
+   "lives": 15,
+   "max_tech_level": 0,
+   "char_level": 0,
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 0
+  },
+  "traps": {
+   "slow": 1
+  },
+  "scores": {
+   "player_damage_given": 0.0,
+   "player_damage_taken": 0.0,
+   "player_kill": 0.0,
+   "death_to_player": 1.0,
+   "enemy_kill": 1.0,
+   "death_to_enemy": 1.0,
+   "per_meseta": 1.0
+  }
+ },
+ {
+  "quest_number": 508,
+  "name": "Battle8",
+  "description": "SPACESHIP:10 minutes Battle it out through trap hell.",
+  "rules": {
+   "tech_disks": "level-limited",
+   "weapons_armor": "start empty, pick up only",
+   "mags": "forbidden",
+   "tools": "start empty, pick up only",
+   "respawn": "limited lives",
+   "replace_char": 1,
+   "drop_weapon_on_death": 0,
+   "teams": 0,
+   "death_level_up": 5,
+   "meseta": "forbidden",
+   "lives": 10,
+   "max_tech_level": 0,
+   "char_level": 19,
+   "time_limit_minutes": 10,
+   "forbid_scape_dolls": 1
+  },
+  "traps": {
+   "slow": 10,
+   "confuse": 10,
+   "freeze": 10
+  },
+  "scores": {
+   "player_damage_given": 0.01,
+   "player_damage_taken": 0.01,
+   "player_kill": 0.0,
+   "death_to_player": 1000.0,
+   "enemy_kill": 0.0,
+   "death_to_enemy": 1000.0,
+   "per_meseta": 0.0
+  }
+ }
+]

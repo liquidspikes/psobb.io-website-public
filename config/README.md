@@ -124,6 +124,15 @@ Primary configuration file for public server identity, gameplay multipliers, cli
 
 ---
 
+### `bounties.json`
+Configuration for the staged **Bounty System Rework** (`api/bounty_system.php`, see `api/BOUNTY_SYSTEM.md` and `config/bounties.example.json`).
+
+* **`"enabled"`** *(boolean, default `false`)*: Dark-launch master switch. When `false`, `api/cron_missions.php` keeps the legacy bounty flow untouched.
+* **`"legacy_grace_days"`** *(integer, default `30`)*: When `"enabled"` becomes `true`, unfinished pre-rework `in_progress` bounties (`missions.cadence IS NULL`) receive a one-time `now + 30d` expiry window (without consuming any new Daily/Weekly slots), while completed `ready_to_redeem` rewards remain claimable indefinitely.
+* **Incremental subsystem rollout**: Override `"pools"`, `"earn"`, `"drops"`, `"contracts"`, `"battle"`, or `"challenge"` in `config/bounties.json` (for example setting chances/caps to `0` for subsystems not yet enabled on `newserv`) to stage features one by one.
+
+---
+
 ## 🖥️ Live Administration via Web UI
 
 Administrators do **not** need to manually edit `site.json` or `theme.json`:

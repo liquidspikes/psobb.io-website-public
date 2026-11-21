@@ -36,7 +36,7 @@ try {
     $db = get_db();
 
     // Verify ownership and status
-    $stmt = $db->prepare("SELECT pm.id, pm.character_name, m.reward_item_string 
+    $stmt = $db->prepare("SELECT pm.id, pm.character_name, m.id AS mission_id, m.reward_item_string, m.reward_spec
                           FROM player_missions pm
                           JOIN missions m ON pm.mission_id = m.id
                           WHERE pm.id = :pm_id AND pm.account_id = :accId AND pm.status = 'ready_to_redeem'");
@@ -145,7 +145,25 @@ try {
     if (!function_exists('parse_and_drop_items')) {
         require_once 'functions.php';
     }
-    
+
+    // Bounty System Rework (point 19): attributes, hit, slots and DEF/EVP bonuses roll now, once.
+    // The roll is saved before the drop, so a failed drop retries with the same item.
+    if (!empty($bounty['reward_spec'])) {
+        require_once 'bounty_system.php';
+        $spec = json_decode($bounty['reward_spec'], true);
+        if (is_array($spec) && !empty($spec['items'])) {
+            if (empty($spec['rolled'])) {
+                $spec['rolled'] = bounty_roll_reward_string($spec);
+                $save = $db->prepare("UPDATE missions SET reward_spec = :spec, reward_item_string = :ri WHERE id = :mid");
+                $save->bindValue(':spec', json_encode($spec), SQLITE3_TEXT);
+                $save->bindValue(':ri', $spec['rolled'], SQLITE3_TEXT);
+                $save->bindValue(':mid', (int) $bounty['mission_id'], SQLITE3_INTEGER);
+                $save->execute();
+            }
+            $raw_string = trim(str_ireplace(' and ', ',', $spec['rolled']), ',');
+        }
+    }
+
     $dropResult = parse_and_drop_items($accId, $raw_string, $bounty['character_name']);
     
     if (!$dropResult['success']) {
@@ -164,7 +182,9 @@ try {
     $upd->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
     $upd->execute();
     
-    echo json_encode(["success" => true, "message" => "Reward dispensed in-game!"]);
+    // The rolled reward in words (e.g. "Custom Frame +20def +20evp +4"), for the claim message
+    $reward_text = html_entity_decode(renderRewardString($raw_string), ENT_QUOTES);
+    echo json_encode(["success" => true, "message" => "Reward dispensed in-game!", "reward" => $reward_text]);
 
 } catch (Exception $e) {
     http_response_code(500);

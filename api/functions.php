@@ -189,6 +189,42 @@ function get_boss_episode_by_context($title, $desc, $default_floor, $explicit_ep
     return 1;
 }
 
+/**
+ * Display name of the boss on a floor in an episode, as used by getClearObjective().
+ * Floor 11 shows "Sil Dragon" when the bounty text names it.
+ */
+function boss_display_name($target_floor, $ep, $title = '', $desc = '')
+{
+    $ep = (string) $ep;
+    switch ((int) $target_floor) {
+        case 11:
+            $text = mb_strtolower($title . ' ' . $desc);
+            return text_has_any_term($text, ['sil dragon', 'sil', 'シル']) ? 'Sil Dragon (Forest)' : 'Dragon (Forest)';
+        case 12:
+            return ($ep === '2') ? 'Gal Gryphon (CCA)' : 'De Rol Le (Caves)';
+        case 13:
+            return ($ep === '2') ? 'Olga Flow (Seabed)' : 'Vol Opt (Mines)';
+        case 14:
+            return ($ep === '2') ? 'Barba Ray (Temple)' : 'Dark Falz (Ruins)';
+        case 15:
+            return 'Gol Dragon (Spaceship)';
+        case 9:
+            return 'Saint-Milion (Crater)';
+    }
+    return "Boss at Floor $target_floor";
+}
+
+// ---------------------------------------------------------------------------
+// Weekly objectives of the Bounty System Rework (see api/bounty_system.php)
+// ---------------------------------------------------------------------------
+
+function bounty_episode_floors($episode)
+{
+    if ($episode == 2) return range(1, 11);  // VR Temple, VR Spaceship, CCA, Jungle, Mountain, Seaside, Seabed
+    if ($episode == 4) return range(1, 8);   // Crater routes and interior, Subterranean Desert
+    return range(1, 10);                     // Forest, Caves, Mines, Ruins
+}
+
 if (!function_exists('get_bb_item_name_maps')) {
     /**
      * Loads the canonical PSO BB V4 item table from names-v4.json and builds
@@ -340,33 +376,428 @@ function bounty_boss_arena_floors($episode)
     return [9, 11, 12, 13, 14, 15];
 }
 
-/**
- * Display name of the boss on a floor in an episode, as used by getClearObjective().
- * Floor 11 shows "Sil Dragon" when the bounty text names it.
- */
-function boss_display_name($target_floor, $ep, $title = '', $desc = '')
+function bounty_episode_area_names($episode)
 {
-    $ep = (string) $ep;
-    switch ((int) $target_floor) {
-        case 11:
-            $text = mb_strtolower($title . ' ' . $desc);
-            return text_has_any_term($text, ['sil dragon', 'sil', 'シル']) ? 'Sil Dragon (Forest)' : 'Dragon (Forest)';
-        case 12:
-            return ($ep === '2') ? 'Gal Gryphon (CCA)' : 'De Rol Le (Caves)';
-        case 13:
-            return ($ep === '2') ? 'Olga Flow (Seabed)' : 'Vol Opt (Mines)';
-        case 14:
-            return ($ep === '2') ? 'Barba Ray (Temple)' : 'Dark Falz (Ruins)';
-        case 15:
-            return 'Gol Dragon (Spaceship)';
-        case 9:
-            return 'Saint-Milion (Crater)';
-    }
-    return "Boss at Floor $target_floor";
+    if ($episode == 2) return 'the VR Temple, the VR Spaceship, the Central Control Area, the Jungle, the Mountain, the Seaside and the Seabed';
+    if ($episode == 4) return 'every Crater route, the Crater interior and the Subterranean Desert';
+    return 'the Forest, the Caves, the Mines and the Ruins';
 }
 
-function getClearObjective($type, $target, $title = '', $desc = '')
+/**
+ * Splits a weekly target "N@Difficulty" or "E@Difficulty".
+ */
+function bounty_parse_weekly_target($target)
 {
+    $p = explode('@', (string) $target, 2);
+    return [(int) $p[0], $p[1] ?? 'Normal'];
+}
+
+/**
+ * Human-readable objective for the rework's weekly types (getClearObjective() calls this).
+ */
+function bounty_weekly_objective_text($type, $target)
+{
+    list($n, $diff) = bounty_parse_weekly_target($target);
+    $or_higher = ($diff === 'Ultimate') ? 'on Ultimate' : "on $diff or higher";
+    switch ($type) {
+        case 'AREA_SWEEP':
+            return "Visit every area of Episode $n $or_higher";
+        case 'BOSS_HUNT':
+            return "Defeat $n " . ($n === 1 ? 'boss' : 'bosses') . " $or_higher (a kill by anyone in your game counts)";
+        case 'ENEMY_HUNT':
+            return "Defeat $n " . ($n === 1 ? 'enemy' : 'enemies') . " $or_higher (a kill by anyone in your game counts)";
+        case 'RARE_HUNT':
+            return "Defeat $n " . ($n === 1 ? 'rare enemy' : 'rare enemies') . " $or_higher (a kill by anyone in your game counts)";
+    }
+    return '';
+}
+
+// ---------------------------------------------------------------------------
+// Challenge Mode and Battle Mode bounties of the rework
+// ---------------------------------------------------------------------------
+
+/**
+ * Splits a Challenge target "E:first-last:limit_seconds:pace" ("1:6-6:3000:S").
+ * pace is S, A or B; limit 0 = any time (B).
+ */
+function bounty_parse_challenge_target($target)
+{
+    $p = explode(':', (string) $target);
+    $range = explode('-', $p[1] ?? '1-1');
+    $first = max(1, (int) ($range[0] ?? 1));
+    $last = max($first, (int) ($range[1] ?? $first));
+    $ep = ((int) ($p[0] ?? 1) === 2) ? 2 : 1;
+    return ['episode' => $ep, 'first' => $first, 'last' => $last, 'limit' => max(0, (int) ($p[2] ?? 0)), 'pace' => $p[3] ?? 'B'];
+}
+
+function bounty_challenge_stage_total($episode)
+{
+    return ((int) $episode === 2) ? 5 : 9;
+}
+
+/**
+ * "1 h 05 min", "50 min".
+ */
+function bounty_duration_text($seconds)
+{
+    $m = (int) ceil(max(0, (int) $seconds) / 60);
+    if ($m < 60) {
+        return "$m min";
+    }
+    return intdiv($m, 60) . ' h' . (($m % 60) ? ' ' . sprintf('%02d', $m % 60) . ' min' : '');
+}
+
+function bounty_challenge_objective_text($target)
+{
+    $c = bounty_parse_challenge_target($target);
+    $ep = $c['episode'];
+    $pace = ['S' => 'S pace', 'A' => 'A pace', 'B' => ''][$c['pace']] ?? '';
+    $under = $c['limit'] > 0 ? ' under ' . bounty_duration_text($c['limit']) : '';
+    if ($c['first'] === 1 && $c['last'] >= bounty_challenge_stage_total($ep)) {
+        $rank = ($c['pace'] === 'S') ? 'S rank' : (($c['pace'] === 'A') ? 'A rank or better' : '');
+        return "Complete an Episode $ep Challenge Mode run (Stages 1–{$c['last']})"
+            . ($c['limit'] > 0 ? " with a combined time$under ($rank)" : '');
+    }
+    if ($c['first'] === $c['last']) {
+        return "Clear Episode $ep Challenge Mode Stage {$c['first']}" . ($c['limit'] > 0 ? " in$under ($pace)" : '');
+    }
+    return "Clear Episode $ep Challenge Mode Stages {$c['first']}–{$c['last']}"
+        . ($c['limit'] > 0 ? " with a combined time$under ($pace)" : '');
+}
+
+/**
+ * The eight Battle Mode rule sets (api/data/battle_rule_sets.json), by quest number.
+ */
+function bounty_battle_rule_sets()
+{
+    static $sets = null;
+    if ($sets === null) {
+        $sets = [];
+        $raw = @file_get_contents(__DIR__ . '/data/battle_rule_sets.json');
+        foreach (($raw ? json_decode($raw, true) : []) ?: [] as $b) {
+            $sets[(int) $b['quest_number']] = $b;
+        }
+    }
+    return $sets;
+}
+
+/**
+ * Battle K's name and its rules in a few words, from the rule set in its quest script.
+ *
+ * @return array ['name' => 'Battle 3: Warp Battle', 'rules' => 'Spaceship; everyone at Lv5 ...']
+ */
+function bounty_battle_rule_summary($quest)
+{
+    // In-game titles (BB English quest descriptions)
+    $names = [501 => 'Most Kills Wins: Beginner', 502 => 'Most Kills Wins (Level 1)', 503 => 'Warp Battle',
+              504 => 'Meseta Battle (Level 2)', 505 => 'Meseta Battle (No Revivals)', 506 => 'Most Kills Wins (Level 20)',
+              507 => 'Obstacle Race', 508 => 'Trap Hell'];
+    $q = (int) $quest;
+    $b = bounty_battle_rule_sets()[$q] ?? null;
+    $name = 'Battle ' . ($q - 500) . (isset($names[$q]) ? ': ' . $names[$q] : '');
+    if (!$b) {
+        return ['name' => $name, 'rules' => ''];
+    }
+    $r = $b['rules'];
+    $out = [];
+    $out[] = (stripos($b['description'], 'PALACE') !== false) ? 'Palace' : 'Spaceship';
+    $out[] = !empty($r['replace_char'])
+        ? 'everyone at Lv' . ((int) ($r['char_level'] ?? 0) + 1) . (!empty($r['death_level_up']) ? ' (+' . (int) $r['death_level_up'] . ' per death)' : '')
+        : 'your own level';
+    if (!empty($r['teams'])) {
+        $out[] = 'teams of 2';
+    }
+    $out[] = (($r['weapons_armor'] ?? '') === 'own equipment') ? 'your own gear' : 'start with nothing';
+    if (($r['mags'] ?? '') === 'forbidden') {
+        $out[] = 'no Mags';
+    }
+    if (($r['tech_disks'] ?? '') === 'level-limited') {
+        $out[] = 'techniques up to Lv' . ((int) ($r['max_tech_level'] ?? 0) + 1);
+    }
+    $resp = $r['respawn'] ?? '';
+    $out[] = ($resp === 'limited lives') ? ((int) ($r['lives'] ?? 0)) . ' lives' : (($resp === 'no revival') ? 'no revival' : 'unlimited revivals');
+    if (empty($r['forbid_scape_dolls'])) {
+        $out[] = 'Scape Dolls allowed';
+    }
+    if ((float) ($b['scores']['per_meseta'] ?? 0) > 0 && stripos($b['description'], 'Meseta') !== false) {
+        $out[] = 'scored on Meseta held';
+    } elseif (($r['meseta'] ?? '') === 'forbidden') {
+        $out[] = 'no Meseta';
+    }
+    $traps = $b['traps'] ?? [];
+    if ($traps && max($traps) >= 10) {
+        $out[] = max($traps) . ' of each ' . implode('/', array_keys(array_filter($traps, function ($n) { return $n >= 10; }))) . ' trap';
+    }
+    $out[] = (int) ($r['time_limit_minutes'] ?? 10) . ' min';
+    return ['name' => $name, 'rules' => implode(', ', $out)];
+}
+
+/**
+ * Battle target "quest:wins" ("503:2").
+ */
+function bounty_parse_battle_target($target)
+{
+    $p = explode(':', (string) $target);
+    return [(int) ($p[0] ?? 501), max(1, (int) ($p[1] ?? 1))];
+}
+
+/**
+ * Play-time target "<seconds needed>:<play time when the bounty started>" ("3600:435600").
+ */
+function bounty_parse_play_target($target)
+{
+    $p = explode(':', (string) $target);
+    return [max(60, (int) ($p[0] ?? 3600)), max(0, (int) ($p[1] ?? 0))];
+}
+
+function bounty_play_objective_text($target)
+{
+    list($need) = bounty_parse_play_target($target);
+    $h = intdiv($need, 3600);
+    $m = intdiv($need % 3600, 60);
+    $t = ($h ? $h . ' ' . ($h === 1 ? 'hour' : 'hours') : '') . ($h && $m ? ' ' : '') . ($m ? "$m min" : '');
+    return "Play for $t";
+}
+
+function bounty_battle_objective_text($target)
+{
+    list($q, $n) = bounty_parse_battle_target($target);
+    $s = bounty_battle_rule_summary($q);
+    return "Win $n Battle Mode " . ($n === 1 ? 'match' : 'matches') . " of {$s['name']}" . ($s['rules'] ? " ({$s['rules']})" : '');
+}
+
+// ---------------------------------------------------------------------------
+// Contracts of the rework (api/bounty_contracts.php)
+// ---------------------------------------------------------------------------
+
+/**
+ * A rare creature of the contract hunts, by target ID ("KONDRIEU"): label, newserv names, spawn chance,
+ * episodes (from api/data/bounty_areas.json), or null.
+ */
+function bounty_rare_enemy_info($id)
+{
+    static $data = null;
+    if ($data === null) {
+        $raw = @file_get_contents(__DIR__ . '/data/bounty_areas.json');
+        $data = $raw ? ((json_decode($raw, true) ?: [])['rare_enemies'] ?? []) : [];
+    }
+    return $data[$id] ?? null;
+}
+
+/**
+ * Splits a run contract's target "EP:VARIANT:MINUTES@Difficulty" ("1:timed:150@Very Hard").
+ * VARIANT is diverse, carry or timed; MINUTES only matters for timed.
+ */
+function bounty_parse_run_target($target)
+{
+    list($a, $diff) = array_pad(explode('@', (string) $target, 2), 2, 'Normal');
+    $p = explode(':', $a);
+    $ep = (int) ($p[0] ?? 1);
+    return [
+        'episode' => in_array($ep, [1, 2, 4], true) ? $ep : 1,
+        'variant' => in_array($p[1] ?? '', ['diverse', 'carry', 'timed'], true) ? $p[1] : 'timed',
+        'minutes' => max(0, (int) ($p[2] ?? 0)),
+        'difficulty' => $diff,
+    ];
+}
+
+/**
+ * Splits a hunt contract's target "TARGET:N:EP@Difficulty" ("KONDRIEU:1:4@Ultimate").
+ */
+function bounty_parse_hunt_target($target)
+{
+    list($a, $diff) = array_pad(explode('@', (string) $target, 2), 2, 'Normal');
+    $p = explode(':', $a);
+    $ep = (int) ($p[2] ?? 1);
+    return ['target' => (string) ($p[0] ?? ''), 'count' => max(1, (int) ($p[1] ?? 1)), 'episode' => in_array($ep, [1, 2, 4], true) ? $ep : 1, 'difficulty' => $diff];
+}
+
+/**
+ * The guardians a full run defeats, as the story prompt names them: as people in the episode's
+ * deepest area know them (bounty_episode_setting()). Episode 1's are told without the names its
+ * cards keep hidden (Vol Opt, Dark Falz).
+ */
+function bounty_contract_boss_names($episode)
+{
+    if ($episode == 2) return ['Barba Ray', 'Gol Dragon', 'Gal Gryphon', 'Olga Flow'];
+    if ($episode == 4) return ['Saint-Milion, Shambertin or Kondrieu'];
+    return ['the Dragon beneath the Dome', 'the giant worm of the underground waterway', "the Mines' main computer", 'whatever was let loose at the heart of the ruins'];
+}
+
+function bounty_creature_label($id, $plural = false)
+{
+    $info = bounty_rare_enemy_info($id);
+    $label = $info['label'] ?? ucwords(strtolower(str_replace('_', ' ', (string) $id)));
+    if (!$plural) {
+        return $label;
+    }
+    if (substr($label, -1) === 'y') return substr($label, 0, -1) . 'ies';
+    if (substr($label, -1) === 's') return $label . 'es';
+    return $label . 's';
+}
+
+/**
+ * The carry rule's numbers: [players, levels below the holder].
+ */
+function bounty_contract_carry_rule()
+{
+    $c = function_exists('bounty_config') ? (bounty_config()['contracts']['carry'] ?? []) : [];
+    return [(int) ($c['players'] ?? 3), (int) ($c['levels'] ?? 10)];
+}
+
+/**
+ * Human-readable objective of a contract (getClearObjective() calls this).
+ */
+function bounty_contract_objective_text($type, $target)
+{
+    if ($type === 'RARE_TARGET') {
+        $t = bounty_parse_hunt_target($target);
+        $or = ($t['difficulty'] === 'Ultimate') ? 'on Ultimate' : "on {$t['difficulty']} or higher";
+        $label = bounty_creature_label($t['target']);
+        $what = ($t['count'] === 1) ? (preg_match('/^[AEIOU]/i', $label) ? "an $label" : "a $label") : $t['count'] . ' ' . bounty_creature_label($t['target'], true);
+        return "Defeat $what in Episode {$t['episode']} $or (a kill by anyone in your game counts)";
+    }
+    $t = bounty_parse_run_target($target);
+    $or = ($t['difficulty'] === 'Ultimate') ? 'on Ultimate' : "on {$t['difficulty']} or higher";
+    $nb = count(bounty_boss_arena_floors($t['episode']));
+    $base = "Full Episode {$t['episode']} run in one game $or: every area and " . ($nb === 1 ? 'the boss' : "all $nb bosses");
+    switch ($t['variant']) {
+        case 'diverse':
+            return "$base, with a Hunter, a Ranger and a Force in the game at every boss";
+        case 'carry':
+            list($n, $lv) = bounty_contract_carry_rule();
+            return "$base, carrying $n or more hunters $lv+ levels below you (by the levels you each joined the game at), all there at every boss";
+    }
+    return "$base, within " . bounty_duration_text($t['minutes'] * 60) . " of entering the first area";
+}
+
+/**
+ * Progress line of a contract on the board.
+ */
+function bounty_contract_progress_text($type, $target, array $p)
+{
+    if ($type === 'RARE_TARGET') {
+        $t = bounty_parse_hunt_target($target);
+        return (int) ($p['count'] ?? 0) . " / {$t['count']} " . bounty_creature_label($t['target'], $t['count'] !== 1);
+    }
+    $t = bounty_parse_run_target($target);
+    if (empty($p['lobby'])) {
+        return "Not started: join an Episode {$t['episode']} game";
+    }
+    $nf = count(bounty_episode_floors($t['episode']));
+    $nb = count(bounty_boss_arena_floors($t['episode']));
+    $s = 'This game: ' . count($p['floors'] ?? []) . " / $nf areas, " . count($p['bosses'] ?? []) . " / $nb " . ($nb === 1 ? 'boss' : 'bosses');
+    if (!empty($p['missed'])) {
+        return "$s; a boss fell without the party, so start a new game";
+    }
+    if (!empty($p['late'])) {
+        return "$s; over time, so start a new game";
+    }
+    if ($t['variant'] === 'timed' && !empty($p['started'])) {
+        $s .= ', ' . bounty_duration_text(time() - (int) $p['started']) . ' in';
+    }
+    return $s;
+}
+
+// Objectives whose progress the board shows (kept in player_missions.progress)
+const BOUNTY_PROGRESS_GOALS = ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT', 'CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'PLAY_HOURS', 'EPISODE_RUN', 'RARE_TARGET'];
+
+/**
+ * Progress line for the board, e.g. "4 / 10 areas".
+ */
+function bounty_progress_text($type, $target, $progress_json)
+{
+    $p = json_decode((string) $progress_json, true) ?: [];
+    if ($type === 'EPISODE_RUN' || $type === 'RARE_TARGET') {
+        return bounty_contract_progress_text($type, $target, $p);
+    }
+    if ($type === 'CHALLENGE_RUN') {
+        $c = bounty_parse_challenge_target($target);
+        $best = $p['best'] ?? [];
+        $need = $c['last'] - $c['first'] + 1;
+        $have = 0;
+        $sum = 0;
+        for ($st = $c['first']; $st <= $c['last']; $st++) {
+            if (isset($best[(string) $st])) {
+                $have++;
+                $sum += (int) $best[(string) $st];
+            }
+        }
+        if ($need === 1) {
+            return $have ? 'Best: ' . bounty_duration_text($sum) : 'Not cleared yet';
+        }
+        return "$have / $need stages" . ($have ? ', ' . bounty_duration_text($sum) . ' so far' : '');
+    }
+    if ($type === 'PLAY_HOURS') {
+        list($need) = bounty_parse_play_target($target);
+        $mins = function ($s) {
+            $m = intdiv(max(0, (int) $s), 60);
+            return ($m >= 60) ? intdiv($m, 60) . ' h' . (($m % 60) ? ' ' . sprintf('%02d', $m % 60) . ' min' : '') : "$m min";
+        };
+        return $mins(min($need, (int) ($p['seconds'] ?? 0))) . ' / ' . $mins($need) . ' played';
+    }
+    if ($type === 'BATTLE_RULE_WINS') {
+        list(, $n) = bounty_parse_battle_target($target);
+        return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'win' : 'wins');
+    }
+    list($n) = bounty_parse_weekly_target($target);
+    switch ($type) {
+        case 'AREA_SWEEP':
+            return count($p['visited'] ?? []) . ' / ' . count(bounty_episode_floors($n)) . ' areas';
+        case 'BOSS_HUNT':
+            return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'boss' : 'bosses');
+        case 'ENEMY_HUNT':
+            return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'enemy' : 'enemies');
+        case 'RARE_HUNT':
+            return (int) ($p['count'] ?? 0) . " / $n " . ($n === 1 ? 'rare enemy' : 'rare enemies');
+    }
+    return '';
+}
+
+/**
+ * newserv reports every Challenge stage's record time, cleared or not: ChallengeTimesEp1Online holds
+ * 9 stages and ChallengeTimesEp2Online 5. A cleared stage shows its time in seconds; a stage never
+ * cleared shows 65535, which is how newserv decodes an empty record (0 is treated the same way).
+ */
+function challenge_time_cleared($t)
+{
+    $t = (int) $t;
+    return $t > 0 && $t < 0xFFFF;
+}
+
+/**
+ * How many of the 14 online Challenge stages (Episode 1: 9, Episode 2: 5) the character has cleared.
+ */
+function challenge_stages_cleared(array $client)
+{
+    $n = 0;
+    foreach (array_merge($client['ChallengeTimesEp1Online'] ?? [], $client['ChallengeTimesEp2Online'] ?? []) as $t) {
+        if (challenge_time_cleared($t)) {
+            $n++;
+        }
+    }
+    return $n;
+}
+
+// Daily objectives that happen in an area or at a boss (Uncommon and Rare ones may need a difficulty)
+const BOUNTY_DAILY_PLACE_GOALS = ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR', 'BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS'];
+
+/**
+ * The lowest difficulty a bounty's objective counts on, from its missions.meta (null = any).
+ */
+function bounty_meta_min_difficulty($meta)
+{
+    $m = is_array($meta) ? $meta : (json_decode((string) $meta, true) ?: []);
+    $d = $m['min_difficulty'] ?? null;
+    return in_array($d, ['Hard', 'Very Hard', 'Ultimate'], true) ? $d : null;
+}
+
+function getClearObjective($type, $target, $title = '', $desc = '', $min_difficulty = null)
+{
+    if ($min_difficulty && in_array($type, BOUNTY_DAILY_PLACE_GOALS, true)) {
+        $at = ($min_difficulty === 'Ultimate') ? __('(on Ultimate)') : __('(on %s or higher)', __($min_difficulty));
+        return getClearObjective($type, $target, $title, $desc) . ' ' . $at;
+    }
     switch ($type) {
         case 'MESETA':
             if ($target === 'ANY')
@@ -378,6 +809,8 @@ function getClearObjective($type, $target, $title = '', $desc = '')
             return __('Earn Level Ups (Any Character)');
         case 'MAT_CONSUME':
             return __('Consume Any Materials');
+        case 'PLAY_HOURS':
+            return __(bounty_play_objective_text($target)) . ' ' . __('(counted from when the bounty starts)');
         case 'PLAYTIME':
             if ($target === 'ANY')
                 return __('Accumulate Playtime (Server-wide Tracker)');
@@ -385,7 +818,7 @@ function getClearObjective($type, $target, $title = '', $desc = '')
         case 'CHALLENGE_STAGES':
             if ($target === 'ANY')
                 return __('Clear Any Challenge Mode Stages');
-            return __('Complete %s Challenge Mode stages', htmlspecialchars($target));
+            return __('Clear Challenge Mode stages until %s of the 14 are cleared (each stage counts once)', htmlspecialchars($target));
         case 'ITEM':
             // Legacy items are stored as "ID:Name". Generated base weapons are stored just as "String".
             // If the string is a pure Hex payload, reverse map it back to an English string.
@@ -465,26 +898,9 @@ function getClearObjective($type, $target, $title = '', $desc = '')
                 if (isset($reverse_generic_map[$hex_base])) {
                     $itemName = $reverse_generic_map[$hex_base];
                 } else {
-                    $hexUpper = strtoupper($hex_base);
-                    $bbMaps = get_bb_item_name_maps();
-                    if (isset($bbMaps['hex_to_name'][$hexUpper])) {
-                        $itemName = $bbMaps['hex_to_name'][$hexUpper];
-                    } else {
-                        $map_path = __DIR__ . '/item_map.json';
-                        if (file_exists($map_path)) {
-                            $map = json_decode(file_get_contents($map_path), true);
-                            if (is_array($map)) {
-                                foreach ($map as $nameKey => $hexVal) {
-                                    if (is_numeric((string)$nameKey) || trim((string)$nameKey) === '' || strpos((string)$nameKey, '?') !== false) {
-                                        continue;
-                                    }
-                                    if (strcasecmp((string)$hexVal, $hexUpper) === 0) {
-                                        $itemName = ucwords((string)$nameKey);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                    $resolvedName = resolve_bb_item_display_name($hex_base);
+                    if ($resolvedName !== null) {
+                        $itemName = $resolvedName;
                     }
                 }
             }
@@ -626,6 +1042,22 @@ function getClearObjective($type, $target, $title = '', $desc = '')
             return $has_the
                 ? __('[Ep %s] Defeat the %s in under %s seconds', $ep, htmlspecialchars(__($boss)), htmlspecialchars($time_limit))
                 : __('[Ep %s] Defeat %s in under %s seconds', $ep, htmlspecialchars(__($boss)), htmlspecialchars($time_limit));
+        case 'AREA_SWEEP':
+        case 'BOSS_HUNT':
+        case 'ENEMY_HUNT':
+        case 'RARE_HUNT':
+            return __('[Weekly] %s', htmlspecialchars(__(bounty_weekly_objective_text($type, $target))));
+        case 'CHALLENGE_RUN':
+            return __('[Challenge] %s', htmlspecialchars(__(bounty_challenge_objective_text($target))));
+        case 'EPISODE_RUN':
+        case 'RARE_TARGET':
+            return __('[Contract] %s', htmlspecialchars(__(bounty_contract_objective_text($type, $target))));
+        case 'CONTRACT_SHARE':
+            return __('Your share of a contract another hunter finished with you in the game');
+        case 'BATTLE_RULE_WINS':
+            return __('[Battle] %s', htmlspecialchars(__(bounty_battle_objective_text($target))));
+        case 'PENDING':
+            return __('Waiting for a free slot: the objective and reward are set when it becomes active');
         case 'SPEEDRUN_FLOOR':
             list($target_floor, $time_limit) = explode('_', $target);
             $floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
@@ -638,6 +1070,72 @@ function getClearObjective($type, $target, $title = '', $desc = '')
         default:
             return htmlspecialchars($type) . ": " . htmlspecialchars($target);
     }
+}
+
+/**
+ * Display names for item codes from item_map.json, as [code => lower-case name].
+ *
+ * item_map.json maps names to codes, and some codes have several names, a few of them wrong
+ * ("monomate" => 031200, the Weapons Bronze Badge; "gekko" => 008A00, Sange). A plain
+ * array_flip keeps the last name. This keeps the name that matches newserv's name for the
+ * code when there is one, and uses newserv's name where item_map.json has only a bare part
+ * of it ("barrier" for ASSIST BARRIER). Other names (such as "agito (1975)") are kept.
+ */
+function item_map_display_names()
+{
+    static $rev = null;
+    if ($rev !== null) {
+        return $rev;
+    }
+    $rev = [];
+    $map = json_decode((string) @file_get_contents(__DIR__ . '/item_map.json'), true) ?: [];
+    $v4 = json_decode((string) @file_get_contents(__DIR__ . '/names-v4.json'), true) ?: [];
+    $norm = function ($s) {
+        return preg_replace('/[^a-z0-9]/', '', strtolower(preg_replace('/\s+x1$/i', '', (string) $s)));
+    };
+    $by_code = [];
+    foreach ($map as $name => $code) {
+        $by_code[$code][] = (string) $name;
+    }
+    foreach ($by_code as $code => $names) {
+        $pick = end($names);
+        $real = isset($v4[$code]) ? $norm($v4[$code]) : '';
+        if ($real !== '' && $norm($pick) !== $real) {
+            foreach ($names as $nm) {
+                if ($norm($nm) === $real) {
+                    $pick = $nm;
+                    break;
+                }
+            }
+            $p = $norm($pick);
+            if ($p !== '' && $p !== $real && strlen($real) > strlen($p) && strpos($real, $p) !== false) {
+                $pick = strtolower(preg_replace('/\s+/', ' ', trim($v4[$code])));
+            }
+        }
+        $rev[$code] = preg_replace('/\s+x1$/i', '', $pick);
+    }
+    return $rev;
+}
+
+/**
+ * Resolves a 6-character PSOBB item hex code to a clean display name,
+ * preferring disambiguated item_map names and falling back to names-v4.
+ */
+function resolve_bb_item_display_name(string $hexBase): ?string
+{
+    $hexUpper = strtoupper(trim($hexBase));
+    $reverse_map = item_map_display_names();
+    if (isset($reverse_map[$hexUpper])) {
+        $candidate = preg_replace('/\s+/', ' ', preg_replace('/\s+x1$/i', '', ucwords($reverse_map[$hexUpper])));
+        if ($candidate !== '' && strpos($candidate, '?') === false && !ctype_digit(trim($candidate))) {
+            return $candidate;
+        }
+    }
+    $bbMaps = get_bb_item_name_maps();
+    if (isset($bbMaps['hex_to_name'][$hexUpper])) {
+        return preg_replace('/\s+/', ' ', $bbMaps['hex_to_name'][$hexUpper]);
+    }
+    return null;
 }
 
 /**
@@ -776,6 +1274,7 @@ function renderRewardString($rewardStr)
                 'Celestial Shield' => '010214'
             ];
             $reverse_generic_map = array_flip($generic_item_hex_map);
+
             $decodedDisk = (strpos($base, '0302') === 0) ? decode_pso_tech_disk_hex($firstPart) : null;
 
             if ($decodedDisk !== null) {
@@ -783,25 +1282,9 @@ function renderRewardString($rewardStr)
             } elseif (isset($reverse_generic_map[$base])) {
                 $weaponName = $reverse_generic_map[$base];
             } else {
-                $bbMaps = get_bb_item_name_maps();
-                if (isset($bbMaps['hex_to_name'][$base])) {
-                    $weaponName = $bbMaps['hex_to_name'][$base];
-                } else {
-                    $map_path = __DIR__ . '/item_map.json';
-                    if (file_exists($map_path)) {
-                        $map = json_decode(file_get_contents($map_path), true);
-                        if (is_array($map)) {
-                            foreach ($map as $nameKey => $hexVal) {
-                                if (is_numeric((string)$nameKey) || trim((string)$nameKey) === '' || strpos((string)$nameKey, '?') !== false) {
-                                    continue;
-                                }
-                                if (strcasecmp((string)$hexVal, $base) === 0) {
-                                    $weaponName = ucwords((string)$nameKey);
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                $resolvedName = resolve_bb_item_display_name($base);
+                if ($resolvedName !== null) {
+                    $weaponName = $resolvedName;
                 }
             }
 
@@ -1000,8 +1483,7 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             $baseItemName = trim($matches[2]);
         }
 
-        if ($multiplier > 50)
-            $multiplier = 50; // Cap to prevent server spam
+        // Defer cap until after stackable Photon Drops/Tickets (03100[0-4]) are packed into byte 5.
 
         // Parse Meseta natively into pure hex payload (e.g. "1000 Meseta")
         if (preg_match('/^(\d+)\s*meseta$/i', $baseItemName, $mmatch)) {
@@ -1070,6 +1552,18 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
                     return ["success" => false, "error" => "Unknown or unsupported PSOBB item name: " . $baseItemName];
                 }
             }
+        }
+
+        // Photon Drops, Spheres and Crystals, Secret Tickets and Photon Tickets stack to 99 (tool class
+        // 0x10 on BB): drop one stack (byte 5 = count), not one item per count.
+        if ($multiplier > 1 && preg_match('/^03100[0-4]$/i', trim($baseItemName))) {
+            $stackData = hex2bin(str_pad(strtoupper(trim($baseItemName)), 32, '0'));
+            $stackData[5] = chr(min(99, $multiplier));
+            $baseItemName = strtoupper(bin2hex($stackData));
+            $multiplier = 1;
+        }
+        if ($multiplier > 50) {
+            $multiplier = 50; // Cap non-stacked drops to prevent server spam
         }
 
         // Execute the drop multiple times if necessary
