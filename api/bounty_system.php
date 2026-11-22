@@ -59,9 +59,9 @@ function bounty_default_config()
             ],
             // Drops (point 6): their own 5 active slots; at 10 held (active + waiting) nothing more drops.
             'drop' => ['active' => 5, 'held_max' => 10],
-            // Point 13: Battle Mode gives 3 dailies, Challenge Mode 3 weeklies, earned by playing them.
-            'battle' => ['daily' => ['active' => 3, 'cap' => 3]],
-            'challenge' => ['weekly' => ['active' => 3, 'cap' => 3]],
+            // Point 13: Battle Mode gives 3 dailies, Challenge Mode 3 weeklies per account, earned by playing them.
+            'battle' => ['scope' => 'account', 'daily' => ['active' => 3, 'cap' => 3]],
+            'challenge' => ['scope' => 'account', 'weekly' => ['active' => 3, 'cap' => 3]],
             // Contracts: 3 held (all active, no queue); they never expire and abandoning one is free.
             'contract' => ['held_max' => 3],
         ],
@@ -132,10 +132,10 @@ function bounty_default_config()
             // Photon Drop and Meseta multipliers of the holder's reward.
             'reward_scale' => ['run' => 2.0, 'hunt' => 1.5],
         ],
-        // Challenge Mode bounties (weeklies earned by playing Challenge Mode).
+        // Challenge Mode bounties (weeklies earned per account by playing Challenge Mode).
         'challenge' => [
             // Tier odds: Common, Uncommon, Rare, Ultra Rare, Mythic Rare.
-            'tier_weights' => [45, 30, 17, 6, 2],
+            'tier_weights' => [15, 25, 35, 18, 7],
             // Each stage's S-rank pace in minutes (they add up to the S-rank limit: 7 h and 5 h).
             'stage_minutes' => ['1' => [13, 47, 40, 45, 40, 50, 60, 55, 70], '2' => [65, 55, 45, 85, 50]],
             // Rank limits in hours, from newserv's BB stage scripts (set_cmode_rank_threshold).
@@ -150,13 +150,34 @@ function bounty_default_config()
                 'ultra' => [[2, 3, 'S'], [3, 4, 'A']],
                 'mythic' => [[0, 0, 'S']],
             ],
-            // Photon Drops and Meseta scale with the objective's S-pace minutes over this many.
+            // Photon Drops and Meseta scale monotonically with effort_minutes = stage_minutes * pace_multipliers[pace].
             'reward_minutes' => 50,
+            'full_run_spheres' => ['1' => 2, '2' => 1],
+            'pace_multipliers' => ['B' => 1.0, 'A' => 1.3, 'S' => 1.65],
+            'photon_base' => ['common' => 1, 'uncommon' => 2, 'rare' => 3, 'ultra' => 5, 'mythic' => 10],
+            'photon_per_effort_min' => 0.1,
+            'meseta_base' => ['common' => 2000, 'uncommon' => 4000, 'rare' => 7500, 'ultra' => 15000, 'mythic' => 30000],
+            'meseta_per_effort_min' => 300,
         ],
-        // Battle Mode bounties (dailies earned by playing Battle Mode): win N matches of one rule set.
+        // Battle Mode bounties (dailies earned per account by playing Battle Mode): win N matches of one rule set.
         'battle' => [
             'quests' => [501, 502, 503, 504, 505, 506, 507, 508],
-            'wins' => ['common' => 1, 'uncommon' => 2, 'rare' => 3],
+            'tier_weights' => [15, 25, 35, 18, 7],
+            'wins' => ['common' => 1, 'uncommon' => 2, 'rare' => 3, 'ultra' => 4, 'mythic' => 5],
+            'photon_drops' => [
+                'common' => [2, 3],
+                'uncommon' => [4, 5],
+                'rare' => [7, 9],
+                'ultra' => [12, 15],
+                'mythic' => [18, 22],
+            ],
+            'meseta' => [
+                'common' => [4500, 5500],
+                'uncommon' => [9000, 11000],
+                'rare' => [18000, 22000],
+                'ultra' => [40000, 50000],
+                'mythic' => [80000, 100000],
+            ],
         ],
         // Point 14: these objectives can be rerolled once.
         'reroll_goal_types' => ['MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS'],
@@ -405,19 +426,45 @@ function bounty_recommended_difficulty($level)
 // ---------------------------------------------------------------------------
 
 /**
- * SQL condition (and bindings) selecting this player's rows, per limit_scope.
+ * Effective limit scope for a pool ('account' or 'character').
  */
-function bounty_scope($acc, $char)
+function bounty_pool_scope($pool = null)
 {
-    if ((bounty_config()['limit_scope'] ?? 'character') === 'account') {
+    $cfg = bounty_config();
+    if (($cfg['limit_scope'] ?? 'character') === 'account') {
+        return 'account';
+    }
+    if ($pool !== null && (($cfg['pools'][$pool]['scope'] ?? 'character') === 'account')) {
+        return 'account';
+    }
+    return 'character';
+}
+
+/**
+ * Character label for UI/API output (empty/account-scoped entries display as 'Account Wide').
+ */
+function bounty_display_character_name($charName, $pool = null)
+{
+    if (($pool !== null && bounty_pool_scope($pool) === 'account') || $charName === null || trim((string) $charName) === '') {
+        return 'Account Wide';
+    }
+    return (string) $charName;
+}
+
+/**
+ * SQL condition (and bindings) selecting this player's rows, per limit_scope and pool scope.
+ */
+function bounty_scope($acc, $char, $pool = null)
+{
+    if (bounty_pool_scope($pool) === 'account') {
         return ['pm.account_id = :acc', [':acc' => [(int) $acc, SQLITE3_INTEGER]]];
     }
     return ['pm.account_id = :acc AND pm.character_name = :cname', [':acc' => [(int) $acc, SQLITE3_INTEGER], ':cname' => [(string) $char, SQLITE3_TEXT]]];
 }
 
-function bounty_count($db, $acc, $char, $where, array $binds = [])
+function bounty_count($db, $acc, $char, $where, array $binds = [], $pool = null)
 {
-    list($scope, $sb) = bounty_scope($acc, $char);
+    list($scope, $sb) = bounty_scope($acc, $char, $pool);
     $stmt = $db->prepare("SELECT COUNT(*) FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE $scope AND $where");
     foreach ($sb + $binds as $k => $v) {
         $stmt->bindValue($k, $v[0], $v[1]);
@@ -434,7 +481,7 @@ function bounty_active_count($db, $acc, $char, $pool, $cadence = null)
         $where .= " AND m.cadence = :cad";
         $b[':cad'] = [$cadence, SQLITE3_TEXT];
     }
-    return bounty_count($db, $acc, $char, $where, $b);
+    return bounty_count($db, $acc, $char, $where, $b, $pool);
 }
 
 function bounty_queued_count($db, $acc, $char, $pool, $cadence = null)
@@ -445,7 +492,7 @@ function bounty_queued_count($db, $acc, $char, $pool, $cadence = null)
         $where .= " AND m.cadence = :cad";
         $b[':cad'] = [$cadence, SQLITE3_TEXT];
     }
-    return bounty_count($db, $acc, $char, $where, $b);
+    return bounty_count($db, $acc, $char, $where, $b, $pool);
 }
 
 /**
@@ -463,7 +510,7 @@ function bounty_earned_count($db, $acc, $char, $pool, $cadence, array $sources =
         }
         $where .= " AND m.source IN (" . implode(',', $in) . ")";
     }
-    return bounty_count($db, $acc, $char, $where, $b);
+    return bounty_count($db, $acc, $char, $where, $b, $pool);
 }
 
 // ---------------------------------------------------------------------------
@@ -669,17 +716,19 @@ function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $s
         return null;
     }
     $mid = $db->lastInsertRowID();
+    $stored_char = (bounty_pool_scope($pool) === 'account') ? '' : (string) $char;
     $pm = $db->prepare("INSERT INTO player_missions (account_id, character_name, mission_id, status, period_key, expires_at, earned_at, rerolled, progress)
                         VALUES (:acc, :cname, :mid, 'queued', :pk, :exp, :now, 0, '{}')");
     $pm->bindValue(':acc', (int) $acc, SQLITE3_INTEGER);
-    $pm->bindValue(':cname', (string) $char, SQLITE3_TEXT);
+    $pm->bindValue(':cname', $stored_char, SQLITE3_TEXT);
     $pm->bindValue(':mid', $mid, SQLITE3_INTEGER);
     $pm->bindValue(':pk', $period, $period === null ? SQLITE3_NULL : SQLITE3_TEXT);
     $pm->bindValue(':exp', $expires, $expires === null ? SQLITE3_NULL : SQLITE3_INTEGER);
     $pm->bindValue(':now', $now, SQLITE3_INTEGER);
     $pm->execute();
     $id = $db->lastInsertRowID();
-    echo "[BOUNTY] {$char}: earned " . bounty_tier_label($tier) . " " . bounty_kind_label($pool, $cadence) . " bounty ($source)\n";
+    $display = ($stored_char === '') ? 'Account Wide' : $stored_char;
+    echo "[BOUNTY] {$display}: earned " . bounty_tier_label($tier) . " " . bounty_kind_label($pool, $cadence) . " bounty ($source)\n";
     return $id;
 }
 
@@ -696,7 +745,7 @@ function bounty_try_free_earn($db, $acc, $char, array $client, $cadence, $source
 }
 
 /**
- * Point 13: a Battle (daily) or Challenge (weekly) bounty, earned by playing that mode.
+ * Point 13: a Battle (daily) or Challenge (weekly) bounty, earned per account by playing that mode.
  */
 function bounty_try_mode_earn($db, $acc, $char, array $client, $pool)
 {
@@ -705,8 +754,17 @@ function bounty_try_mode_earn($db, $acc, $char, array $client, $pool)
     if (bounty_earned_count($db, $acc, $char, $pool, $cadence) >= $cap) {
         return null;
     }
-    $tier = ($pool === 'challenge') ? bounty_roll_challenge_tier() : bounty_roll_free_tier();
+    $tier = ($pool === 'challenge') ? bounty_roll_challenge_tier() : bounty_roll_battle_tier();
     return bounty_earn($db, $acc, $char, $client, $pool, $cadence, $tier, $pool);
+}
+
+/**
+ * Battle Mode bounties roll across all five tiers, shifted toward rarer drops.
+ */
+function bounty_roll_battle_tier()
+{
+    $w = bounty_config()['battle']['tier_weights'] ?? [15, 25, 35, 18, 7];
+    return bounty_weighted_pick(array_combine(BOUNTY_TIERS, array_map('floatval', array_pad($w, 5, 0))));
 }
 
 /**
@@ -732,7 +790,7 @@ function bounty_try_drop($db, $acc, $char, array $client, $lobby, $trigger, $wha
         return null;
     }
     $held = function ($pool) use ($db, $acc, $char) {
-        return bounty_count($db, $acc, $char, "m.pool = :pool AND pm.status IN ('queued', 'in_progress', 'rerolling')", [':pool' => [$pool, SQLITE3_TEXT]]);
+        return bounty_count($db, $acc, $char, "m.pool = :pool AND pm.status IN ('queued', 'in_progress', 'rerolling')", [':pool' => [$pool, SQLITE3_TEXT]], $pool);
     };
     $drop_full = $held('drop') >= (int) $cfg['pools']['drop']['held_max']; // holding 10: no more normal drops
     $contract_full = $held('contract') >= (int) ($cfg['pools']['contract']['held_max'] ?? 3);
@@ -1162,7 +1220,7 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
 
     if ($pool === 'battle') {
         $target = bounty_pick_battle_objective($tier);
-        list($quest) = bounty_parse_battle_target($target);
+        list($quest, $wins) = bounty_parse_battle_target($target);
         $rules = bounty_battle_rule_summary($quest);
         $obj['selected_goal'] = 'BATTLE_RULE_WINS';
         $obj['selected_target_id'] = $target;
@@ -1170,6 +1228,11 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         $obj['is_location_goal'] = false;
         list($obj['mission_episode'], $obj['setting_id']) = bounty_pick_hub_setting();
         $obj['location_override'] = "This job is won in sanctioned battle-simulation bouts between hunters, fought in a simulator rather than on Ragol, under these rules: {$rules['name']} ({$rules['rules']}). Do not set it in a field area.";
+        $obj['reward_opts'] = [
+            'ignore_level' => true,
+            'mode_pool' => 'battle',
+            'battle_wins' => $wins,
+        ];
     } elseif ($pool === 'challenge') {
         $ch = bounty_pick_challenge_objective($client, $tier);
         $obj['selected_goal'] = 'CHALLENGE_RUN';
@@ -1183,8 +1246,13 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         $obj['difficulty'] = 'Normal'; // every Challenge stage is played on Normal
         $obj['reward_area'] = bounty_challenge_reward_area($ch['episode'], $ch['first'], $ch['last']);
         $obj['reward_opts'] = [
+            'ignore_level' => true,
+            'mode_pool' => 'challenge',
             'challenge_reserve' => $ch['full'] && $tier === 'mythic',
-            'scale' => max(0.5, min(2.0, $ch['minutes'] / max(1, (int) bounty_config()['challenge']['reward_minutes']))),
+            'challenge_episode' => $ch['episode'],
+            'challenge_minutes' => $ch['minutes'],
+            'challenge_pace' => $ch['pace'],
+            'scale' => max(0.5, $ch['minutes'] / max(1, (int) bounty_config()['challenge']['reward_minutes'])),
         ];
     } elseif ($pool === 'contract') {
         $c = bounty_pick_contract_objective($client, $row, $tier);
@@ -1350,6 +1418,7 @@ function bounty_pick_challenge_objective(array $client, $tier)
         'first' => $first,
         'last' => $last,
         'minutes' => array_sum(array_slice($mins, $first - 1, $last - $first + 1)),
+        'pace' => $pace,
         'full' => $full,
     ];
 }
@@ -1493,23 +1562,78 @@ function bounty_fill($db, array $row, array $client, array $ctx)
 }
 
 /**
+ * Boosts claim-time stat rolls when a Challenge bounty clears faster than its target pace
+ * (either clearing an A/B pace at S-rank speed or beating S-rank pace by >= 10%).
+ *
+ * @return float|null applied speed_factor, or null if unchanged
+ */
+function bounty_apply_challenge_speed_bonus($db, int $pmId, int $missionId, string $goalTarget, ?string $tier = null)
+{
+    $pmStmt = $db->prepare("SELECT progress FROM player_missions WHERE id = :id");
+    $pmStmt->bindValue(':id', $pmId, SQLITE3_INTEGER);
+    $pmRow = $pmStmt->execute()->fetchArray(SQLITE3_ASSOC);
+    $progress = json_decode((string) ($pmRow['progress'] ?? ''), true) ?: [];
+    $best = $progress['best'] ?? [];
+    $c = bounty_parse_challenge_target($goalTarget);
+    if (empty($c['episode']) || $c['first'] < 1 || $c['last'] < $c['first']) {
+        return null;
+    }
+    $actual_secs = 0;
+    for ($st = $c['first']; $st <= $c['last']; $st++) {
+        $s = (int) ($best[(string) $st] ?? 0);
+        if ($s <= 0) {
+            return null;
+        }
+        $actual_secs += $s;
+    }
+    $s_secs = bounty_challenge_pace_seconds($c['episode'], $c['first'], $c['last'], 'S');
+    if ($actual_secs <= 0 || $s_secs <= 0 || $tier === 'common') {
+        return null;
+    }
+    $ratio = $s_secs / $actual_secs;
+    if (!(($c['pace'] !== 'S' && $actual_secs <= $s_secs) || $ratio >= 1.10)) {
+        return null;
+    }
+    $mStmt = $db->prepare("SELECT reward_spec FROM missions WHERE id = :mid");
+    $mStmt->bindValue(':mid', $missionId, SQLITE3_INTEGER);
+    $mRow = $mStmt->execute()->fetchArray(SQLITE3_ASSOC);
+    $spec = json_decode((string) ($mRow['reward_spec'] ?? ''), true);
+    if (!is_array($spec) || !empty($spec['rolled'])) {
+        return null;
+    }
+    $factor = min(1.35, round(max(1.10, $ratio), 2));
+    $spec['speed_factor'] = $factor;
+    $upd = $db->prepare("UPDATE missions SET reward_spec = :spec WHERE id = :mid");
+    $upd->bindValue(':spec', json_encode($spec), SQLITE3_TEXT);
+    $upd->bindValue(':mid', $missionId, SQLITE3_INTEGER);
+    $upd->execute();
+    return $factor;
+}
+
+/**
  * One activation per player per cron pass (each needs a Gemini call): a pending reroll first,
  * then the oldest waiting bounty of any pool with a free slot.
  */
 function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
 {
-    list($scope, $sb) = bounty_scope($acc, $char);
     $base = "SELECT pm.id, pm.mission_id, pm.status, m.tier, m.cadence, m.pool, m.meta, m.reward_item_string, m.reward_spec
-             FROM player_missions pm JOIN missions m ON pm.mission_id = m.id WHERE $scope";
-    $fetch = function ($sql_tail, array $binds = []) use ($db, $base, $sb) {
-        $stmt = $db->prepare("$base $sql_tail");
-        foreach ($sb + $binds as $k => $v) {
+             FROM player_missions pm JOIN missions m ON pm.mission_id = m.id";
+    $fetch = function ($where, array $binds = []) use ($db, $base) {
+        $stmt = $db->prepare("$base WHERE $where");
+        foreach ($binds as $k => $v) {
             $stmt->bindValue($k, $v[0], $v[1]);
         }
         return $stmt->execute()->fetchArray(SQLITE3_ASSOC);
     };
 
-    $row = $fetch("AND pm.status = 'rerolling' ORDER BY pm.id LIMIT 1");
+    if (bounty_pool_scope() === 'account') {
+        $rerollWhere = "pm.account_id = :acc AND pm.status = 'rerolling' ORDER BY pm.id LIMIT 1";
+        $rerollBinds = [':acc' => [(int) $acc, SQLITE3_INTEGER]];
+    } else {
+        $rerollWhere = "pm.account_id = :acc AND (pm.character_name = :cname OR pm.character_name = '' OR m.pool IN ('battle', 'challenge')) AND pm.status = 'rerolling' ORDER BY pm.id LIMIT 1";
+        $rerollBinds = [':acc' => [(int) $acc, SQLITE3_INTEGER], ':cname' => [(string) $char, SQLITE3_TEXT]];
+    }
+    $row = $fetch($rerollWhere, $rerollBinds);
     if ($row) {
         return bounty_fill($db, $row, $client, $ctx);
     }
@@ -1526,13 +1650,14 @@ function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
         if (bounty_active_count($db, $acc, $char, $pool, $cadence) >= (int) $limit) {
             continue;
         }
-        $binds = [':pool' => [$pool, SQLITE3_TEXT], ':now' => [time(), SQLITE3_INTEGER]];
+        list($pscope, $psb) = bounty_scope($acc, $char, $pool);
+        $binds = $psb + [':pool' => [$pool, SQLITE3_TEXT], ':now' => [time(), SQLITE3_INTEGER]];
         $tail = "AND pm.status = 'queued' AND m.pool = :pool AND (pm.expires_at IS NULL OR pm.expires_at > :now)";
         if ($cadence !== null) {
             $tail .= " AND m.cadence = :cad";
             $binds[':cad'] = [$cadence, SQLITE3_TEXT];
         }
-        $row = $fetch("$tail ORDER BY pm.earned_at, pm.id LIMIT 1", $binds);
+        $row = $fetch("$pscope $tail ORDER BY pm.earned_at, pm.id LIMIT 1", $binds);
         if ($row) {
             return bounty_fill($db, $row, $client, $ctx);
         }
@@ -1666,6 +1791,30 @@ function bounty_expiry_text($expires_at)
 }
 
 /**
+ * Account-wide slot and cap usage for pools scoped per account (Battle Mode and Challenge Mode).
+ *
+ * @return array ['battle' => [active, earned, queued], 'challenge' => [active, earned, queued], 'has_any' => bool]
+ */
+function bounty_account_board_summary($db, $acc)
+{
+    $battle = [
+        bounty_active_count($db, $acc, '', 'battle', 'daily'),
+        bounty_earned_count($db, $acc, '', 'battle', 'daily'),
+        bounty_queued_count($db, $acc, '', 'battle', 'daily'),
+    ];
+    $challenge = [
+        bounty_active_count($db, $acc, '', 'challenge', 'weekly'),
+        bounty_earned_count($db, $acc, '', 'challenge', 'weekly'),
+        bounty_queued_count($db, $acc, '', 'challenge', 'weekly'),
+    ];
+    return [
+        'battle' => $battle,
+        'challenge' => $challenge,
+        'has_any' => array_sum($battle) > 0 || array_sum($challenge) > 0,
+    ];
+}
+
+/**
  * Slot and cap usage per character, for the board header.
  *
  * @return array [character_name => ['daily' => [active, queued, earned], 'weekly' => [...],
@@ -1676,7 +1825,7 @@ function bounty_board_summary($db, $acc)
 {
     $out = [];
     $res = $db->prepare("SELECT DISTINCT pm.character_name FROM player_missions pm JOIN missions m ON pm.mission_id = m.id
-                         WHERE pm.account_id = :acc AND m.cadence IS NOT NULL AND pm.character_name IS NOT NULL
+                         WHERE pm.account_id = :acc AND m.cadence IS NOT NULL AND pm.character_name IS NOT NULL AND pm.character_name != ''
                          AND (pm.status IN ('queued', 'in_progress', 'rerolling') OR pm.period_key IN (:d, :w))");
     $res->bindValue(':acc', (int) $acc, SQLITE3_INTEGER);
     $res->bindValue(':d', bounty_period_key('daily'), SQLITE3_TEXT);

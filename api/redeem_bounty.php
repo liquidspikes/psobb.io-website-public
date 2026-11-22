@@ -82,7 +82,7 @@ try {
     $db = get_db();
 
     // Verify ownership and status
-    $stmt = $db->prepare("SELECT pm.id, pm.character_name, m.id AS mission_id, m.reward_item_string, m.reward_spec
+    $stmt = $db->prepare("SELECT pm.id, pm.character_name, m.id AS mission_id, m.pool, m.reward_item_string, m.reward_spec
                           FROM player_missions pm
                           JOIN missions m ON pm.mission_id = m.id
                           WHERE pm.id = :pm_id AND pm.account_id = :accId AND pm.status = 'ready_to_redeem'");
@@ -102,9 +102,11 @@ try {
     }
 
     // 1. Verify online character, spawn status, and active game room
+    $isAccountWide = in_array($bounty['pool'] ?? '', ['battle', 'challenge'], true) || empty($bounty['character_name']);
+    $reqChar = $isAccountWide ? null : (string) $bounty['character_name'];
     $onlineCharacter = newserv_require_online_character(
         (int) $accId,
-        !empty($bounty['character_name']) ? (string) $bounty['character_name'] : null,
+        $reqChar,
         ['require_in_game' => true]
     );
 
@@ -153,7 +155,7 @@ try {
         }
     }
 
-    $dropResult = parse_and_drop_items($accId, $raw_string, $bounty['character_name']);
+    $dropResult = parse_and_drop_items($accId, $raw_string, $onlineCharacter['Name'] ?? $reqChar);
     $droppedAny = !empty($dropResult['dropped']);
 
     if (!$dropResult['success']) {
