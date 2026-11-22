@@ -1,5 +1,10 @@
 <?php
 require_once 'config.php';
+start_secure_session();
+if (empty($_SESSION['user']['is_admin'])) {
+    http_response_code(403);
+    exit("Forbidden\n");
+}
 header('Content-Type: text/plain');
 
 echo "Debug Info:\n";

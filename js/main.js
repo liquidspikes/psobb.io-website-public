@@ -3423,6 +3423,7 @@ window.loadMyBounties = async function () {
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <span style="color:#ffaa00; font-size:0.7rem; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${statusLabel}</span>
+                                ${b.can_reroll ? `<button onclick="window.rerollPortalBounty(${b.player_mission_id})" style="background:rgba(0,220,255,0.1); border:1px solid rgba(0,220,255,0.35); color:#00e5ff; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('↻ Reroll')}</button>` : ''}
                                 ${b.status === 'rerolling' ? '' : `<button onclick="window.abandonBounty(${b.player_mission_id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff6666; font-size:0.65rem; padding:3px 10px; border-radius:4px; cursor:pointer; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${_t('✕ Abandon')}</button>`}
                             </div>
                         </div>
@@ -3433,6 +3434,31 @@ window.loadMyBounties = async function () {
 
     } catch (e) {
         console.error('Failed to load bounties:', e);
+    }
+};
+
+// Reroll a bounty mission once for free
+window.rerollPortalBounty = async function (playerMissionId) {
+    const _t = (typeof window.__ === 'function') ? window.__ : (s => s);
+    if (!confirm(_t('Reroll this bounty once for free? A new objective at the same tier will be generated.'))) return;
+    try {
+        const res = await fetch('/api/reroll_bounty.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.getCSRFToken()
+            },
+            body: JSON.stringify({ player_mission_id: playerMissionId })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            window.loadMyBounties();
+        } else {
+            alert(data.error || _t('Failed to reroll bounty.'));
+        }
+    } catch (e) {
+        alert(_t('Connection error: ') + e.message);
     }
 };
 

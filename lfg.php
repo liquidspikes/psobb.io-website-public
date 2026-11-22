@@ -263,10 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (data.success && data.bounties) {
-                data.bounties.forEach(b => {
+                data.bounties.filter(b => b.status === 'in_progress').forEach(b => {
                     const opt = document.createElement('option');
                     opt.value = b.mission_id;
-                    opt.textContent = `${b.title} (${b.goal_type})`;
+                    opt.textContent = `${b.title} (${b.kind || b.goal_type})`;
                     select.appendChild(opt);
                 });
 

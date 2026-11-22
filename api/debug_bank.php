@@ -7,7 +7,11 @@ start_secure_session();
 
 header('Content-Type: text/plain');
 
-if (empty($_SESSION['user'])) { echo "Not logged in\n"; exit; }
+if (empty($_SESSION['user']['is_admin'])) {
+    http_response_code(403);
+    echo "Forbidden\n";
+    exit;
+}
 $username = strtolower($_SESSION['user']['username'] ?? '');
 
 echo "Username: $username\n\n";

@@ -472,7 +472,8 @@ foreach ($clients as $client) {
             // count cron passes (about 10 s apart), so ten of them finished it in under two minutes.
             // A gap between passes counts for at most a minute, so a pause or a restart adds little.
             $patrol_secs = (int) ($prev_state['patrol'][$m['id']] ?? 0);
-            if (($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
+            $in_ep1_game = !$lobby_info || (!empty($lobby_info['is_game']) && ($lobby_info['episode'] === null || (int)$lobby_info['episode'] === 1));
+            if ($in_ep1_game && ($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
                 $seen = (int) ($prev_state['patrol_seen'][$m['id']] ?? 0);
                 if ($seen > 0) {
                     $patrol_secs += min(60, max(0, time() - $seen));
@@ -484,8 +485,9 @@ foreach ($clients as $client) {
             }
             $current_patrols[$m['id']] = $patrol_secs;
         } elseif ($m['goal_type'] === 'EXPLORATION') {
-            // LocationFloor tracks exactly which area the player is currently occupying
-            if (($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
+            // LocationFloor tracks exactly which area the player is currently occupying (Ep 1 only)
+            $in_ep1_game = !$lobby_info || (!empty($lobby_info['is_game']) && ($lobby_info['episode'] === null || (int)$lobby_info['episode'] === 1));
+            if ($in_ep1_game && ($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'BOSS_ARENA' || $m['goal_type'] === 'MENTOR_BOSS' || $m['goal_type'] === 'HARDCORE_MENTOR' || $m['goal_type'] === 'DIVERSE_PARTY_BOSS') { 
@@ -808,6 +810,8 @@ foreach ($clients as $client) {
             $tracker_key = $stateKey;
             if (isset($floor_clear_events[$tracker_key])) {
                 foreach ($floor_clear_events[$tracker_key] as $fc_evt) {
+                    if (!empty($m['activated_at']) && isset($fc_evt['time']) && (int) $fc_evt['time'] < (int) $m['activated_at']) continue;
+                    if (isset($fc_evt['episode']) && $fc_evt['episode'] !== null && (int) $fc_evt['episode'] !== 1) continue;
                     if ($fc_evt['from_floor'] === $target_floor && in_array($fc_evt['to_floor'], $valid_next)) {
                         if ($fc_evt['time_on_floor'] <= $time_limit) {
                             $completed = true;

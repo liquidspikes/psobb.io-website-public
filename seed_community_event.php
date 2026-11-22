@@ -3,6 +3,10 @@
  * Seeder to launch the next PSOBB Community Event
  * Run via CLI on your host: php seed_community_event.php
  */
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script must be run from the command line.\n");
+}
 require_once __DIR__ . '/api/config.php';
 require_once __DIR__ . '/api/db.php';
 

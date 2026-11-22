@@ -3,6 +3,10 @@
  * PSOBB Sil Dragon & Mission State Repair Utility
  * Run via CLI on your host: php fix_sildragon.php
  */
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script must be run from the command line.\n");
+}
 require_once __DIR__ . '/api/config.php';
 require_once __DIR__ . '/api/db.php';
 require_once __DIR__ . '/api/functions.php';

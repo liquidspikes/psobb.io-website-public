@@ -1,5 +1,9 @@
 <?php
 // Run this script ONCE on the live server to fix any bugged boss missions
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script must be run from the command line.\n");
+}
 require_once 'db.php';
 $db = get_db();
 

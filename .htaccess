@@ -16,11 +16,14 @@ RewriteRule ^db/ - [F,L]
 RewriteRule ^config/ - [F,L]
 RewriteRule ^logs/ - [F,L]
 RewriteRule ^includes/ - [F,L]
+RewriteRule ^scratch/ - [F,L]
+RewriteRule ^tools/ - [F,L]
 
 # Block access to server scripts, logs, and test files (Allow install-deck.sh for Steam Deck users)
 RewriteCond %{REQUEST_URI} !install-deck\.sh$
 RewriteRule \.(sh|bat|cmd|ps1|py|log|jsonl|lock)$ - [F,L]
 RewriteRule ^test_.*\.php$ - [F,L]
+RewriteRule (^|/)(cron_|patch_|repair_|backfill_|migrate_|fix_|seed_|promote_).*\.php$ - [F,L]
 
 
 # 1. Externally redirect /file.php to /file
