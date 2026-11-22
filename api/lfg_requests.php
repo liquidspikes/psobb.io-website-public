@@ -53,43 +53,47 @@ try {
         $res = $stmt->execute();
         
         $listings = [];
-        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-            // Filter out listings whose linked party is no longer active
-            $gid = $row['game_id'] !== null ? (int)$row['game_id'] : null;
-            if ($lobbies !== null && $gid !== null && !in_array($gid, $active_lobby_ids)) {
-                continue;
-            }
+        if ($res) {
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                // Filter out listings whose linked party is no longer active
+                $gid = $row['game_id'] !== null ? (int)$row['game_id'] : null;
+                if ($lobbies !== null && $gid !== null && !in_array($gid, $active_lobby_ids)) {
+                    continue;
+                }
 
-            // Clean up description and name for safety
-            $row['character_name'] = htmlspecialchars($row['character_name']);
-            $row['description'] = htmlspecialchars($row['description']);
-            
-            // Strip mode prefix and extract game_mode dynamically
-            $raw_game_name = trim($row['game_name'] ?? '');
-            $game_mode = 'Normal';
-            if (strlen($raw_game_name) > 0) {
-                $modeChar = strtoupper($raw_game_name[0]);
-                if (in_array($modeChar, ['E', 'B', 'C'])) {
-                    $raw_game_name = trim(substr($raw_game_name, 1));
-                    if ($modeChar === 'B') {
-                        $game_mode = 'Battle';
-                    } elseif ($modeChar === 'C') {
-                        $game_mode = 'Challenge';
-                    } else {
-                        $game_mode = 'Normal';
+                // Clean up description and name for safety
+                $row['character_name'] = htmlspecialchars($row['character_name']);
+                $row['description'] = htmlspecialchars($row['description']);
+                
+                // Strip mode prefix and extract game_mode dynamically
+                $raw_game_name = trim($row['game_name'] ?? '');
+                $game_mode = 'Normal';
+                if (strlen($raw_game_name) > 0) {
+                    $modeChar = strtoupper($raw_game_name[0]);
+                    if (in_array($modeChar, ['E', 'B', 'C'])) {
+                        $raw_game_name = trim(substr($raw_game_name, 1));
+                        if ($modeChar === 'B') {
+                            $game_mode = 'Battle';
+                        } elseif ($modeChar === 'C') {
+                            $game_mode = 'Challenge';
+                        } else {
+                            $game_mode = 'Normal';
+                        }
                     }
                 }
+                $row['game_name'] = htmlspecialchars($raw_game_name);
+                $row['game_mode'] = $game_mode;
+                
+                // Format raw bounty reward details for LFG display
+                if (!empty($row['bounty_reward'])) {
+                    $row['bounty_reward'] = renderRewardString($row['bounty_reward']);
+                }
+                
+                $listings[] = $row;
             }
-            $row['game_name'] = htmlspecialchars($raw_game_name);
-            $row['game_mode'] = $game_mode;
-            
-            // Format raw bounty reward details for LFG display
-            if (!empty($row['bounty_reward'])) {
-                $row['bounty_reward'] = renderRewardString($row['bounty_reward']);
-            }
-            
-            $listings[] = $row;
+            $res->finalize();
         }
+        $stmt->close();
         
         echo json_encode([
             "success" => true,
@@ -189,7 +193,12 @@ try {
             $b_stmt->bindValue(':mid', $bounty_id, SQLITE3_INTEGER);
             $b_stmt->bindValue(':aid', $account_id, SQLITE3_INTEGER);
             $b_res = $b_stmt->execute();
-            if (!$b_res->fetchArray(SQLITE3_ASSOC)) {
+            $b_row = $b_res ? $b_res->fetchArray(SQLITE3_ASSOC) : false;
+            if ($b_res) {
+                $b_res->finalize();
+            }
+            $b_stmt->close();
+            if (!$b_row) {
                 // Not a valid active team bounty for this user
                 $bounty_id = null;
             }
@@ -198,7 +207,11 @@ try {
         // 4. Delete any older LFG requests from the same account to prevent spam
         $del_stmt = $db->prepare("DELETE FROM lfg_requests WHERE account_id = :aid");
         $del_stmt->bindValue(':aid', $account_id, SQLITE3_INTEGER);
-        $del_stmt->execute();
+        $delRes = $del_stmt->execute();
+        if ($delRes) {
+            $delRes->finalize();
+        }
+        $del_stmt->close();
         
         // 5. Insert new LFG Request
         $ins = $db->prepare("

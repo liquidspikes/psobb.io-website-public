@@ -297,7 +297,7 @@ if ($account_id) {
                                     $bolded_desc = '';
                                 }
                                 $bolded_desc = (string) preg_replace_callback(
-                                    '/\b(Gol Dragon|Dark Falz|Olga Flow|Gal Gryphon|De Rol Le|Barba Ray|Vol Opt|Shambertin|Dragon|Pioneer 2)\b/i',
+                                    '/\b(Gol Dragon|Dark Falz|Olga Flow|Gal Gryphon|De Rol Le|Barba Ray|Vol Opt|Shambertin|Dragon|Pioneer 2|Al Rappy|Pal Rappy|Love Rappy|Saint Rappy|Egg Rappy|Hallo Rappy|Del Rappy|Rare Rappies)\b/i',
                                     static fn($m) => '<strong>' . $m[1] . '</strong>',
                                     $bolded_desc
                                 );
@@ -347,6 +347,44 @@ if ($account_id) {
                                                 <div class="hud-badge-pill border-orange">
                                                     <span class="hud-pill-name"><?= __('Shambertin (Ep4)') ?></span>
                                                     <span class="hud-pill-val color-orange">+15 <?= __('Pts') ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="hud-breakdown-section">
+                                            <span class="hud-breakdown-header"><?= __('Difficulty Modifiers') ?></span>
+                                            <div class="hud-breakdown-badges">
+                                                <div class="hud-badge-pill border-cyan">
+                                                    <span class="hud-pill-name"><?= __('Hard') ?></span>
+                                                    <span class="hud-pill-val color-cyan">+2</span>
+                                                </div>
+                                                <div class="hud-badge-pill border-cyan">
+                                                    <span class="hud-pill-name"><?= __('VHard') ?></span>
+                                                    <span class="hud-pill-val color-cyan">+5</span>
+                                                </div>
+                                                <div class="hud-badge-pill border-cyan">
+                                                    <span class="hud-pill-name"><?= __('Ultimate') ?></span>
+                                                    <span class="hud-pill-val color-cyan">+10</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php elseif ($ce['goal_target'] === 'RARE_RAPPIES'): ?>
+                                    <!-- Tailored Objective Breakdown for Rare Rappy Hunt -->
+                                    <div class="hud-objective-breakdown">
+                                        <div class="hud-breakdown-section">
+                                            <span class="hud-breakdown-header"><?= __('Target Rare Rappies') ?></span>
+                                            <div class="hud-breakdown-badges">
+                                                <div class="hud-badge-pill border-orange">
+                                                    <span class="hud-pill-name"><?= __('Al / Pal Rappy (Ep1)') ?></span>
+                                                    <span class="hud-pill-val color-orange">+10 <?= __('Pts') ?></span>
+                                                </div>
+                                                <div class="hud-badge-pill border-orange">
+                                                    <span class="hud-pill-name"><?= __('Love / Seasonal Rappy (Ep2)') ?></span>
+                                                    <span class="hud-pill-val color-orange">+10 <?= __('Pts') ?></span>
+                                                </div>
+                                                <div class="hud-badge-pill border-orange">
+                                                    <span class="hud-pill-name"><?= __('Del Rappy (Ep4)') ?></span>
+                                                    <span class="hud-pill-val color-orange">+10 <?= __('Pts') ?></span>
                                                 </div>
                                             </div>
                                         </div>

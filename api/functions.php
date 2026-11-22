@@ -924,6 +924,12 @@ function getClearObjective($type, $target, $title = '', $desc = '', $min_difficu
             $ft = parse_floor_target($target);
             $loc = pso_floor_display_name($ft['floor'], $ft['episode']);
             return __('[Ep %s] Survive and patrol the %s for 10 minutes', (string) $ft['episode'], htmlspecialchars(__($loc)));
+        case 'ENEMY_KILL':
+            if ($target === 'RARE_RAPPIES')
+                return __('Hunt Rare Rappies Across All Episodes (+10 Pts Base; +2 Hard, +5 VHard, +10 Ult)');
+            if ($target === 'ANY_RARE_ENEMY')
+                return __('Hunt Any Rare Enemy Across All Episodes (+10 Pts Base; +2 Hard, +5 VHard, +10 Ult)');
+            return __('Hunt %s', htmlspecialchars(ucwords(strtolower(str_replace('_', ' ', $target)))));
         case 'BOSS_ARENA':
             if ($target === 'ANY_DRAGON')
                 return __('Defeat Any Dragon Boss (Forest, Sil, or Gol)');

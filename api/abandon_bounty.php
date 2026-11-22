@@ -25,6 +25,7 @@ if (!isset($_SESSION['user'])) {
 $input = json_decode(file_get_contents('php://input'), true);
 $pmId = $input['player_mission_id'] ?? 0;
 $account_id = $_SESSION['user']['account_id'] ?? 0;
+session_write_close();
 
 if (!$pmId || !$account_id) {
     http_response_code(400);
@@ -41,8 +42,13 @@ try {
     $check_stmt->bindValue(':id', $pmId, SQLITE3_INTEGER);
     $check_stmt->bindValue(':accId', $account_id, SQLITE3_INTEGER);
     $check_res = $check_stmt->execute();
-    
-    if (!$check_res->fetchArray(SQLITE3_ASSOC)) {
+    $found = $check_res ? $check_res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($check_res) {
+        $check_res->finalize();
+    }
+    $check_stmt->close();
+
+    if (!$found) {
         http_response_code(400);
         echo json_encode(["error" => "Quest not found, not owned by you, or not active."]);
         exit;
@@ -51,7 +57,11 @@ try {
     // Mark as abandoned
     $upd = $db->prepare("UPDATE player_missions SET status = 'abandoned' WHERE id = :id");
     $upd->bindValue(':id', $pmId, SQLITE3_INTEGER);
-    $upd->execute();
+    $updRes = $upd->execute();
+    if ($updRes) {
+        $updRes->finalize();
+    }
+    $upd->close();
     
     echo json_encode(["success" => true]);
 } catch (Exception $e) {

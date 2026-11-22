@@ -30,16 +30,50 @@ if (!$pm_id) {
 }
 
 $accId = $_SESSION['user']['account_id'];
+// Release PHP's session file lock before making newserv HTTP/SQLite calls.
+session_write_close();
 $lockedRedeeming = false;
 $droppedAny = false;
 $spec = null;
-register_shutdown_function(function () use (&$lockedRedeeming, &$droppedAny, &$db, &$pm_id) {
-    if ($lockedRedeeming && !$droppedAny && isset($db) && $db instanceof SQLite3 && !empty($pm_id)) {
-        try {
-            $rev = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :pm_id AND status = 'redeeming'");
-            $rev->bindValue(':pm_id', (int)$pm_id, SQLITE3_INTEGER);
-            $rev->execute();
-        } catch (Throwable $ignored) {}
+$execMissionStatusUpdate = static function (SQLite3 $conn, string $sql, int $targetPmId): void {
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':pm_id', $targetPmId, SQLITE3_INTEGER);
+    $res = $stmt->execute();
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
+};
+$revertReady = static function () use (&$db, &$pm_id, &$lockedRedeeming, $execMissionStatusUpdate): void {
+    $sql = "UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :pm_id AND status = 'redeeming'";
+    try {
+        if ($db instanceof SQLite3) {
+            $execMissionStatusUpdate($db, $sql, (int)$pm_id);
+            $lockedRedeeming = false;
+            return;
+        }
+    } catch (Throwable $ignored) {}
+    try {
+        $freshDb = get_db(true);
+        $execMissionStatusUpdate($freshDb, $sql, (int)$pm_id);
+        $db = $freshDb;
+        $lockedRedeeming = false;
+    } catch (Throwable $ignored) {}
+};
+$markCompleted = static function () use (&$db, &$pm_id, &$lockedRedeeming, $execMissionStatusUpdate): void {
+    $sql = "UPDATE player_missions SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :pm_id";
+    try {
+        $execMissionStatusUpdate($db, $sql, (int)$pm_id);
+    } catch (Throwable $e) {
+        $freshDb = get_db(true);
+        $execMissionStatusUpdate($freshDb, $sql, (int)$pm_id);
+        $db = $freshDb;
+    }
+    $lockedRedeeming = false;
+};
+register_shutdown_function(function () use (&$lockedRedeeming, &$droppedAny, &$pm_id, $revertReady) {
+    if ($lockedRedeeming && !$droppedAny && !empty($pm_id)) {
+        $revertReady();
     }
 });
 
@@ -56,6 +90,10 @@ try {
     $stmt->bindValue(':accId', $accId, SQLITE3_INTEGER);
     $res = $stmt->execute();
     $bounty = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
 
     if (!$bounty) {
         http_response_code(404);
@@ -77,7 +115,11 @@ try {
     // Atomic reservation: transition status to 'redeeming' to lock out concurrent requests
     $lock = $db->prepare("UPDATE player_missions SET status = 'redeeming' WHERE id = :pm_id AND status = 'ready_to_redeem'");
     $lock->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
-    $lock->execute();
+    $lockRes = $lock->execute();
+    if ($lockRes) {
+        $lockRes->finalize();
+    }
+    $lock->close();
     if ($db->changes() === 0) {
         http_response_code(409);
         echo json_encode(["error" => "Bounty is already being redeemed or has already been completed."]);
@@ -101,7 +143,11 @@ try {
                 $save->bindValue(':spec', json_encode($spec), SQLITE3_TEXT);
                 $save->bindValue(':ri', $spec['rolled'], SQLITE3_TEXT);
                 $save->bindValue(':mid', (int) $bounty['mission_id'], SQLITE3_INTEGER);
-                $save->execute();
+                $saveRes = $save->execute();
+                if ($saveRes) {
+                    $saveRes->finalize();
+                }
+                $save->close();
             }
             $raw_string = trim(str_ireplace(' and ', ',', $spec['rolled']), ',');
         }
@@ -115,10 +161,7 @@ try {
 
         if ($droppedAny && $remaining === '') {
             // All non-empty segments actually dispensed before trailing edge check
-            $upd = $db->prepare("UPDATE player_missions SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :pm_id");
-            $upd->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
-            $upd->execute();
-            $lockedRedeeming = false;
+            $markCompleted();
 
             $reward_text = html_entity_decode(renderRewardString($raw_string), ENT_QUOTES);
             echo json_encode(["success" => true, "message" => "Reward dispensed in-game!", "reward" => $reward_text]);
@@ -130,7 +173,13 @@ try {
             // Persist only undropped items before allowing retry so delivered items cannot duplicate
             $refStmt = $db->prepare("SELECT COUNT(*) AS cnt FROM player_missions WHERE mission_id = :mid");
             $refStmt->bindValue(':mid', (int)$bounty['mission_id'], SQLITE3_INTEGER);
-            $refCount = (int)($refStmt->execute()->fetchArray(SQLITE3_ASSOC)['cnt'] ?? 0);
+            $refRes = $refStmt->execute();
+            $refRow = $refRes ? $refRes->fetchArray(SQLITE3_ASSOC) : false;
+            if ($refRes) {
+                $refRes->finalize();
+            }
+            $refStmt->close();
+            $refCount = (int)($refRow['cnt'] ?? 0);
             if ($refCount <= 1) {
                 if (is_array($spec)) {
                     $spec['rolled'] = $remaining;
@@ -138,22 +187,23 @@ try {
                     $updM->bindValue(':spec', json_encode($spec), SQLITE3_TEXT);
                     $updM->bindValue(':ri', $remaining, SQLITE3_TEXT);
                     $updM->bindValue(':mid', (int)$bounty['mission_id'], SQLITE3_INTEGER);
-                    $updM->execute();
+                    $updMRes = $updM->execute();
                 } else {
                     $updM = $db->prepare("UPDATE missions SET reward_item_string = :ri WHERE id = :mid");
                     $updM->bindValue(':ri', $remaining, SQLITE3_TEXT);
                     $updM->bindValue(':mid', (int)$bounty['mission_id'], SQLITE3_INTEGER);
-                    $updM->execute();
+                    $updMRes = $updM->execute();
                 }
+                if ($updMRes) {
+                    $updMRes->finalize();
+                }
+                $updM->close();
                 $canRevert = true;
             }
         }
 
         if ($canRevert) {
-            $revert = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :pm_id AND status = 'redeeming'");
-            $revert->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
-            $revert->execute();
-            $lockedRedeeming = false;
+            $revertReady();
         }
 
         http_response_code(400);
@@ -162,23 +212,15 @@ try {
     }
 
     // Update status to 'completed'
-    $upd = $db->prepare("UPDATE player_missions SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :pm_id");
-    $upd->bindValue(':pm_id', $pm_id, SQLITE3_INTEGER);
-    $upd->execute();
-    $lockedRedeeming = false;
+    $markCompleted();
 
     // The rolled reward in words (e.g. "Custom Frame +20def +20evp +4"), for the claim message
     $reward_text = html_entity_decode(renderRewardString($raw_string), ENT_QUOTES);
     echo json_encode(["success" => true, "message" => "Reward dispensed in-game!", "reward" => $reward_text]);
 
 } catch (Throwable $e) {
-    if ($lockedRedeeming && !$droppedAny && isset($db) && $db instanceof SQLite3 && !empty($pm_id)) {
-        try {
-            $rev = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :pm_id AND status = 'redeeming'");
-            $rev->bindValue(':pm_id', (int)$pm_id, SQLITE3_INTEGER);
-            $rev->execute();
-            $lockedRedeeming = false;
-        } catch (Throwable $ignored) {}
+    if ($lockedRedeeming && !$droppedAny && !empty($pm_id)) {
+        $revertReady();
     }
     http_response_code(500);
     echo json_encode(["error" => "System error: " . $e->getMessage()]);

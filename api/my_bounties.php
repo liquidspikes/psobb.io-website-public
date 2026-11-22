@@ -65,9 +65,9 @@ try {
             ? ($min_diff === 'Ultimate' ? __('(on Ultimate)') : __('(on %s or higher)', __($min_diff)))
             : null;
         unset($row['reward_spec'], $row['progress'], $row['meta']);
-        // Objectives whose wording needs server data (Challenge paces, Battle rule sets)
-        $row['objective_text'] = in_array($row['goal_type'], ['CHALLENGE_RUN', 'BATTLE_RULE_WINS', 'EPISODE_RUN', 'RARE_TARGET'], true)
-            ? html_entity_decode(strip_tags(getClearObjective($row['goal_type'], $row['goal_target'])), ENT_QUOTES)
+        // Always provide canonical localized objective text so portal dashboard matches missions.php (including Ep 1/2/4 areas)
+        $row['objective_text'] = !empty($row['goal_type'])
+            ? html_entity_decode(strip_tags(getClearObjective($row['goal_type'], $row['goal_target'], $row['title'] ?? '', $row['description'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8')
             : null;
         // Decode reward_item_string hex into readable item name using canonical function
         if (!empty($row['reward_item_string'])) {

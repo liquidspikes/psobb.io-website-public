@@ -466,6 +466,11 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
             {val: 'ALL_BOSSES', text: <?= json_encode(__('Any Boss Across All Episodes (Ultimate Gauntlet)'), JSON_UNESCAPED_UNICODE) ?>}
         ];
 
+        const ceEnemyOptions = [
+            {val: 'RARE_RAPPIES', text: <?= json_encode(__('Rare Rappies Across All Episodes (Al / Pal / Love / Seasonal / Del)'), JSON_UNESCAPED_UNICODE) ?>},
+            {val: 'ANY_RARE_ENEMY', text: <?= json_encode(__('Any Rare Enemy Across All Episodes'), JSON_UNESCAPED_UNICODE) ?>}
+        ];
+
         function updateCEGoalTargetUI() {
             const type = document.getElementById('ce_goal_type_select').value;
             const container = document.getElementById('ce_goal_target_container');
@@ -475,6 +480,12 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                 label.textContent = <?= json_encode(__('Select Target Boss'), JSON_UNESCAPED_UNICODE) ?>;
                 let html = '<select name="goal_target" required style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
                 ceBossOptions.forEach(b => html += `<option value="${b.val}">${b.text}</option>`);
+                html += '</select>';
+                container.innerHTML = html;
+            } else if (type === 'ENEMY_KILL') {
+                label.textContent = <?= json_encode(__('Select Target Enemy'), JSON_UNESCAPED_UNICODE) ?>;
+                let html = '<select name="goal_target" required style="width:100%; padding:8px; background:rgba(0,0,0,0.4); border:1px solid #444; color:#fff;">';
+                ceEnemyOptions.forEach(e => html += `<option value="${e.val}">${e.text}</option>`);
                 html += '</select>';
                 container.innerHTML = html;
             } else if (type === 'EXPLORATION' || type === 'PATROL') {
@@ -661,6 +672,7 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
                         <label><?= __('Participant Goal') ?></label>
                         <select name="goal_type" id="ce_goal_type_select" onchange="updateCEGoalTargetUI()">
                             <option value="BOSS_ARENA" selected><?= __('Defeat Boss (Floor ID)') ?></option>
+                            <option value="ENEMY_KILL"><?= __('Hunt Enemy / Rare Variant') ?></option>
                             <option value="MESETA"><?= __('Meseta Extracted (Total)') ?></option>
                             <option value="ITEM"><?= __('Obtain Item') ?></option>
                             <option value="PATROL"><?= __('Patrol Area 10m (Floor ID)') ?></option>
