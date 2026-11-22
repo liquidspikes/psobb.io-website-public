@@ -175,6 +175,84 @@ if (!function_exists('psobb_extract_safe_context')) {
     }
 }
 
+if (!function_exists('psobb_is_cli_eval_exception')) {
+    /**
+     * Identify ad-hoc CLI one-liner failures (e.g. `php -r`) while preserving real cron script errors.
+     */
+    function psobb_is_cli_eval_exception(string $file = '', string $message = '', string $sapi = PHP_SAPI): bool {
+        if ($sapi !== 'cli') {
+            return false;
+        }
+        $normFile = strtolower(trim($file));
+        if ($normFile === 'command line code' || $normFile === 'standard input code') {
+            return true;
+        }
+        return stripos($message, 'Command line code') !== false || stripos($message, 'Standard input code') !== false;
+    }
+}
+
+if (!function_exists('psobb_is_ignored_api_error')) {
+    /**
+     * Skip routine non-error API lookup responses (such as Discord bot polling an unlinked member).
+     */
+    function psobb_is_ignored_api_error(string $endpoint, string $message, int $status = 200): bool {
+        return $endpoint === 'api/bot_api.php'
+            && $status < 500
+            && strtolower(trim($message)) === 'not linked';
+    }
+}
+
+if (!function_exists('psobb_is_ignored_client_error')) {
+    /**
+     * Identify third-party browser/extension injection errors and benign resize noise.
+     */
+    function psobb_is_ignored_client_error(string $message, string $source = '', string $stack = ''): bool {
+        if (
+            preg_match('/^(?:chrome|moz|safari|edge)-extension:\/\//i', $source) ||
+            preg_match('/(?:chrome|moz|safari|edge)-extension:\/\//i', $stack)
+        ) {
+            return true;
+        }
+        if (stripos($message, 'ResizeObserver loop') !== false) {
+            return true;
+        }
+        if (($message === 'Script error.' || $message === 'Script error') && $source === '' && $stack === '') {
+            return true;
+        }
+        if (preg_match('/\b(?:window\.ethereum|ethereum\.selectedAddress|__firefox__|__crWeb|webkit\.messageHandlers)\b/i', $message . ' ' . $stack)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+if (!function_exists('psobb_is_ignored_exception_record')) {
+    /**
+     * Determine whether a persisted exception log entry is expected noise for dashboard filtering.
+     */
+    function psobb_is_ignored_exception_record(array $rec): bool {
+        $kind = (string)($rec['kind'] ?? '');
+        $endpoint = (string)($rec['endpoint'] ?? '');
+        $message = (string)($rec['message'] ?? '');
+        $status = (int)($rec['http_status'] ?? 0);
+        $sapi = (string)($rec['sapi'] ?? '');
+
+        if (psobb_is_cli_eval_exception((string)($rec['file'] ?? ''), $message, $sapi)) {
+            return true;
+        }
+        if ($kind === 'api_error_response' && psobb_is_ignored_api_error($endpoint, $message, $status)) {
+            return true;
+        }
+        if ($kind === 'client_js_error' || $kind === 'client_promise_rejection') {
+            $extra = is_array($rec['extra'] ?? null) ? $rec['extra'] : [];
+            if (psobb_is_ignored_client_error($message, (string)($extra['source'] ?? ''), (string)($extra['stack'] ?? ''))) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 if (!function_exists('psobb_write_exception_record')) {
     /**
      * Append a single sanitized JSONL exception record with locked size-capped log rotation (10 MB x 3).
@@ -321,7 +399,9 @@ $GLOBALS['__psobb_ob_captured'] = '';
 // Hook A: Global uncaught exception handler (chains existing handlers like api/bot_api.php)
 $__psobb_prev_ex_handler = set_exception_handler(static function (Throwable $e) use (&$__psobb_prev_ex_handler): void {
     $GLOBALS['__psobb_logged_fatal_or_uncaught'] = true;
-    log_player_exception($e, [], 'uncaught_exception', 500);
+    if (!psobb_is_cli_eval_exception($e->getFile(), $e->getMessage())) {
+        log_player_exception($e, [], 'uncaught_exception', 500);
+    }
 
     if (is_callable($__psobb_prev_ex_handler)) {
         $__psobb_prev_ex_handler($e);
@@ -365,7 +445,10 @@ register_shutdown_function(static function (): void {
     $err = error_get_last();
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR];
     if (is_array($err) && in_array($err['type'] ?? 0, $fatalTypes, true)) {
-        if (empty($GLOBALS['__psobb_logged_fatal_or_uncaught'])) {
+        if (
+            empty($GLOBALS['__psobb_logged_fatal_or_uncaught']) &&
+            !psobb_is_cli_eval_exception((string)($err['file'] ?? ''), (string)($err['message'] ?? ''))
+        ) {
             $GLOBALS['__psobb_logged_fatal_or_uncaught'] = true;
             log_player_exception(
                 (string)($err['message'] ?? 'PHP fatal error'),
@@ -439,6 +522,9 @@ register_shutdown_function(static function (): void {
                 $hasSessionAcc = (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user']['account_id']));
                 $lowerErr = strtolower(trim($errMsg));
                 if ($method === 'GET' && $status === 401 && !$hasSessionAcc && in_array($lowerErr, ['not logged in', 'not logged in.', 'unauthorized'], true)) {
+                    return;
+                }
+                if (psobb_is_ignored_api_error($endpoint, $errMsg, $status)) {
                     return;
                 }
                 log_player_exception($errMsg, [], 'api_error_response', $status);

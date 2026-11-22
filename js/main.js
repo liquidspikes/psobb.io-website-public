@@ -16,19 +16,29 @@ function _t(str) {
     const seenKeys = new Set();
     let sentCount = 0;
 
-    function isIgnoredSource(src) {
-        if (!src) return false;
-        return /^(?:chrome|moz|safari|edge)-extension:\/\//i.test(src) || src.indexOf('/api/log_client_error.php') !== -1;
+    function isIgnoredClientError(msgStr, src, stack) {
+        if (src && (/^(?:chrome|moz|safari|edge)-extension:\/\//i.test(src) || src.indexOf('/api/log_client_error.php') !== -1)) {
+            return true;
+        }
+        if (stack && (/(?:chrome|moz|safari|edge)-extension:\/\//i.test(stack) || stack.indexOf('/api/log_client_error.php') !== -1)) {
+            return true;
+        }
+        if (msgStr.indexOf('ResizeObserver loop') !== -1) {
+            return true;
+        }
+        if (/\b(?:window\.ethereum|ethereum\.selectedAddress|__firefox__|__crWeb|webkit\.messageHandlers)\b/i.test(`${msgStr} ${stack}`)) {
+            return true;
+        }
+        return (msgStr === 'Script error.' || msgStr === 'Script error') && !src && !stack;
     }
 
     function sendReport(kind, message, meta) {
         if (sentCount >= 5) return;
         const msgStr = String(message || '').trim().slice(0, 400);
-        if (!msgStr || msgStr.indexOf('ResizeObserver loop') !== -1) return;
+        if (!msgStr) return;
         const src = String((meta && meta.source) || '').slice(0, 240);
         const stack = String((meta && meta.stack) || '').slice(0, 400);
-        if (isIgnoredSource(src) || isIgnoredSource(stack)) return;
-        if ((msgStr === 'Script error.' || msgStr === 'Script error') && !src && !stack) return;
+        if (isIgnoredClientError(msgStr, src, stack)) return;
 
         const key = `${kind}|${msgStr}|${src}|${(meta && meta.line) || 0}`;
         if (seenKeys.has(key)) return;
@@ -1810,16 +1820,31 @@ function renderCharacterProfile() {
     const mesetaEl = document.getElementById('char-meseta-val');
     if (mesetaEl) mesetaEl.textContent = parseInt(c.stats.Meseta || 0).toLocaleString();
 
-    // Animated stat bars
-    const statMaxes = { ATP: 2500, DFP: 1000, MST: 2500, ATA: 300, EVP: 1500, LCK: 200, HP: 2500 };
-    const stats = ['ATP', 'DFP', 'MST', 'ATA', 'EVP', 'LCK', 'HP'];
+    // Animated stat bars (Total (Base) with TP & Class Max highlights)
+    const statMaxes = { ATP: 2000, DFP: 900, MST: 2000, ATA: 280, EVP: 1200, LCK: 100, HP: 2500, TP: 2500 };
+    const stats = ['ATP', 'DFP', 'MST', 'ATA', 'EVP', 'LCK', 'HP', 'TP'];
+    const baseStats = c.base_stats || {};
+    const maxStats = c.max_stats || {};
     stats.forEach(s => {
         const valEl = document.getElementById(`stat-val-${s.toLowerCase()}`);
         const barEl = document.getElementById(`bar-${s.toLowerCase()}`);
-        const val = parseInt(c.stats[s]) || 0;
-        if (valEl) valEl.textContent = val;
+        const totalVal = parseInt(c.stats[s]) || 0;
+        const baseVal = baseStats[s] !== undefined ? (parseInt(baseStats[s]) || 0) : null;
+        const capVal = maxStats[s] !== undefined ? (parseInt(maxStats[s]) || 0) : null;
+        if (valEl) {
+            if (baseVal !== null && s !== 'HP' && s !== 'TP') {
+                const isCapped = capVal > 0 && baseVal >= capVal;
+                const baseColor = isCapped ? '#ffd54f' : '#88a8c0';
+                valEl.innerHTML = `${totalVal} <span style="color:${baseColor}; font-weight:normal;">(${baseVal})</span>`;
+            } else if (baseVal !== null && baseVal !== totalVal) {
+                valEl.innerHTML = `${totalVal} <span style="color:#88a8c0; font-weight:normal;">(${baseVal})</span>`;
+            } else {
+                valEl.textContent = totalVal;
+            }
+        }
         if (barEl) {
-            const pct = Math.min(100, (val / statMaxes[s]) * 100);
+            const denom = (capVal && capVal > 0 && s !== 'ATA') ? Math.max(capVal, totalVal, statMaxes[s] * 0.5) : statMaxes[s];
+            const pct = Math.min(100, (totalVal / (denom || 1)) * 100);
             setTimeout(() => { barEl.style.width = pct + '%'; }, 100);
         }
     });
@@ -1941,28 +1966,16 @@ function renderInventory() {
         if (item) {
             slotBox.setAttribute('data-hex', item.hex);
 
-            // Icon
-            let iconCat = 'tool';
-            if (item.group === 0x00) iconCat = 'weapon';
-            else if (item.group === 0x01) {
-                if (item.type1 === 1) iconCat = 'armor';
-                else if (item.type1 === 2) iconCat = 'shield';
-                else iconCat = 'unit';
-            } else if (item.group === 0x02) iconCat = 'mag';
+            // PSOBB Vector Icon
+            const iconWrap = document.createElement('span');
+            iconWrap.className = 'pd-slot-icon';
+            iconWrap.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px;';
+            iconWrap.appendChild(getItemCategoryIcon(item, 26));
+            slotBox.appendChild(iconWrap);
 
-            const img = document.createElement('img');
-            img.src = `/img/items/${iconCat}.png`;
-            img.onerror = () => { img.src = '/img/favicon.svg'; };
-            slotBox.appendChild(img);
-
-            // Rarity glow
-            const nameLower = (item.stats && item.stats.Name) ? item.stats.Name.toLowerCase() : item.name.toLowerCase();
-            if (nameLower.includes('psycho wand') || nameLower.includes('sealed j-sword') || nameLower.includes('sato')) {
-                slotBox.classList.add('pd-rare-red');
-            } else if (nameLower.includes('spread needle') || nameLower.includes('heaven punisher') || nameLower.includes('diwari')) {
-                slotBox.classList.add('pd-rare-orange');
-            } else if (nameLower.includes('luminous field') || nameLower.includes('stand still') || nameLower.includes('photon')) {
-                slotBox.classList.add('pd-rare-purple');
+            // Table-driven rarity glow
+            if (item.is_rare) {
+                slotBox.classList.add((item.stars >= 11) ? 'pd-rare-red' : 'pd-rare-orange');
             }
 
             // Add to names list (skip MAG — it has its own card)
@@ -2029,7 +2042,7 @@ function renderInventory() {
 
             magCard.innerHTML = `
                 <div class="mag-header">
-                    <div class="mag-icon"><img src="/img/items/mag.png" onerror="this.src='/img/favicon.svg'"></div>
+                    <div class="mag-icon">${getItemCategoryIcon(magItem, 32).outerHTML}</div>
                     <div class="mag-name">${magName}</div>
                     <div class="mag-level">LV ${magLv}</div>
                 </div>
@@ -2079,7 +2092,7 @@ function renderActiveBank() {
     if (countEl) countEl.textContent = `${currentBank.items.length.toLocaleString()} items`;
     document.getElementById('viewer-bank-meseta').textContent = parseInt(currentBank.meseta || 0).toLocaleString() + ' Meseta';
 
-    const slotCount = Math.max(200, Math.min(1000, currentBank.items.length));
+    const slotCount = Math.max(40, Math.min(1000, Math.ceil((currentBank.items.length + 10) / 10) * 10));
     for (let i = 0; i < slotCount; i++) {
         const item = currentBank.items[i] || null;
         grid.appendChild(createItemSlotElement(item));
@@ -2287,70 +2300,216 @@ window.triggerMaterialReset = async function () {
 };
 
 // Helper: item slot element creation
-function getItemCategoryIcon(item) {
+function psoWeaponSvg(kind, base, hi, grip) {
+    switch (kind) {
+        case 0: // Knuckle / Fist
+            return `<path d="M9 12h11c2.5 0 4.5 2 4.5 4.5V20c0 2.5-2 4.5-4.5 4.5h-9c-2 0-3.5-1.5-3.5-3.5v-5.5C7.5 13.5 8 12 9 12z" fill="${base}" stroke="${hi}" stroke-width="1.2"/>
+                    <circle cx="11" cy="14" r="1.4" fill="${hi}"/><circle cx="15" cy="14" r="1.4" fill="${hi}"/>
+                    <circle cx="19" cy="14" r="1.4" fill="${hi}"/><rect x="9" y="19" width="13" height="2.5" rx="1" fill="${grip}"/>`;
+        case 2: // Sword (Greatsword)
+            return `<path d="M25 4l3 3-13.5 13.5-3.8-3.8L25 4z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <path d="M24 6l-10 10" stroke="${hi}" stroke-width="1" opacity="0.8"/>
+                    <path d="M9 14l9 9-2 2-9-9z" fill="${grip}" stroke="${hi}" stroke-width="0.9"/>
+                    <path d="M5 27l5-5" stroke="${grip}" stroke-width="2.6" stroke-linecap="round"/>`;
+        case 3: // Dagger
+            return `<path d="M23 5l1.5 1.5-8 9.5-2.2-2.2L23 5z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M26 11l1.5 1.5-8 9.5-2.2-2.2L26 11z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M9 21l4.5-4.5M12 26l4.5-4.5" stroke="${grip}" stroke-width="2.2" stroke-linecap="round"/>`;
+        case 4: // Partisan (Halberd)
+            return `<line x1="6" y1="26" x2="21" y2="11" stroke="${grip}" stroke-width="2.2" stroke-linecap="round"/>
+                    <path d="M27 5l-2 9-4-1.5-1.5-4z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <line x1="17" y1="9" x2="23" y2="15" stroke="${hi}" stroke-width="1.4" stroke-linecap="round"/>`;
+        case 5: // Slicer
+            return `<path d="M7 18C7 10 14 5 22 6c-3 2.2-4.5 5-4 8.5 3.5.5 6.3-1 8.5-4-1 8-6 15-14 15-3 0-5.5-2.5-5.5-7.5z" fill="${base}" stroke="${hi}" stroke-width="1.2"/>
+                    <circle cx="14" cy="18" r="2.5" fill="${grip}" stroke="${hi}" stroke-width="1"/>`;
+        case 6: // Handgun
+            return `<path d="M6 10h16l2 2v3l-12 .5v2.5H7.5V10z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <path d="M8 15.5h5l-1.5 9.5H7.5z" fill="${grip}" stroke="${hi}" stroke-width="1"/>
+                    <rect x="14" y="11.5" width="7" height="1.6" fill="${hi}"/>`;
+        case 7: // Rifle
+            return `<rect x="4" y="13" width="23" height="3.2" rx="1" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <rect x="13" y="10" width="8" height="2" rx="0.8" fill="${hi}" opacity="0.9"/>
+                    <path d="M6 16.2h6l-1.5 7H5.5zM15 16.2h2.5l-.8 4.5H14z" fill="${grip}"/>`;
+        case 8: // Mechgun
+            return `<path d="M6 9h14v4H10l-1 6H6V9z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M12 15h14v4H16l-1 6h-3V15z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <rect x="14" y="10.2" width="4" height="1.4" fill="${hi}"/>
+                    <rect x="20" y="16.2" width="4" height="1.4" fill="${hi}"/>`;
+        case 9: // Shot
+            return `<path d="M5 10h18l4 2.5v5l-4 2.5H5V10z" fill="${base}" stroke="${hi}" stroke-width="1.2"/>
+                    <line x1="11" y1="12.5" x2="25" y2="12.5" stroke="${hi}" stroke-width="1.2"/>
+                    <line x1="11" y1="15" x2="26" y2="15" stroke="${hi}" stroke-width="1.2"/>
+                    <line x1="11" y1="17.5" x2="25" y2="17.5" stroke="${hi}" stroke-width="1.2"/>
+                    <rect x="7" y="19.5" width="4" height="5" rx="0.8" fill="${grip}"/>`;
+        case 10: // Cane
+        case 11: // Rod
+            return `<line x1="7" y1="26" x2="21" y2="12" stroke="${grip}" stroke-width="2.4" stroke-linecap="round"/>
+                    <circle cx="22.5" cy="9.5" r="4.2" fill="${base}" stroke="${hi}" stroke-width="1.2"/>
+                    <circle cx="22.5" cy="9.5" r="1.6" fill="${hi}"/>`;
+        case 12: // Wand
+            return `<line x1="7" y1="25" x2="19" y2="13" stroke="${grip}" stroke-width="2.2" stroke-linecap="round"/>
+                    <path d="M21 5l2.2 4.5L28 10l-3.8 3.2.8 4.8L21 15.5 17 18l.8-4.8L14 10l4.8-.5z" fill="${base}" stroke="${hi}" stroke-width="1"/>`;
+        case 13: // Claw
+            return `<path d="M7 22l5-5 4 4-5 5z" fill="${grip}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M12 16L22 6l-6 12z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M14 19L27 11l-9 10z" fill="${base}" stroke="${hi}" stroke-width="1"/>`;
+        case 14: // Double Saber
+            return `<path d="M19.5 10l6.5-5.5-4.5 7.5z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <path d="M12.5 22L6 27.5 10.5 20z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <line x1="11" y1="21" x2="21" y2="11" stroke="${grip}" stroke-width="2.8" stroke-linecap="round"/>`;
+        case 15: // Twin Sword
+            return `<path d="M24 5l2 2-13 13-2-2z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M8 5l-2 2 13 13 2-2z" fill="${base}" stroke="${hi}" stroke-width="1"/>
+                    <path d="M7 25l4-4M25 25l-4-4" stroke="${grip}" stroke-width="2.2" stroke-linecap="round"/>`;
+        case 16: // Katana
+            return `<path d="M26 5c-4 6-9.5 11.5-15.5 15.5l-1.5-1.8C14.8 14.5 20.5 9 25 4.2z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <line x1="8" y1="17" x2="13" y2="22" stroke="${grip}" stroke-width="2.2" stroke-linecap="round"/>
+                    <line x1="5.5" y1="26" x2="10.5" y2="21" stroke="${grip}" stroke-width="2" stroke-linecap="round"/>`;
+        case 17: // Launcher
+            return `<path d="M4 11h17l5 2v6l-5 2H4V11z" fill="${base}" stroke="${hi}" stroke-width="1.2"/>
+                    <circle cx="24.5" cy="16" r="2.2" fill="${hi}"/>
+                    <rect x="7" y="21" width="4" height="4.5" fill="${grip}"/><rect x="15" y="21" width="3" height="3.5" fill="${grip}"/>`;
+        case 18: // Card / Talis
+            return `<rect x="7" y="9" width="9" height="14" rx="1.5" transform="rotate(-14 11 16)" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <rect x="14" y="8" width="9" height="14" rx="1.5" transform="rotate(10 18 15)" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <path d="M18.5 12l2 3-2 3-2-3z" fill="${hi}"/>`;
+        case 1: // Saber (default)
+        default:
+            return `<path d="M24 5l3 2.5-14 13.5-2.5-2.5z" fill="${base}" stroke="${hi}" stroke-width="1.1"/>
+                    <line x1="8" y1="17" x2="14" y2="23" stroke="${grip}" stroke-width="2.2" stroke-linecap="round"/>
+                    <line x1="6" y1="26" x2="11" y2="21" stroke="${grip}" stroke-width="2.4" stroke-linecap="round"/>`;
+    }
+}
+
+function psoToolSvg(item) {
+    const t1 = item.type1 || 0;
+    const t2 = item.type2 || 0;
+    if (t1 === 0 || t1 === 1) {
+        // Mate (green) / Fluid (blue) angled medical canister
+        const col = (t1 === 0) ? '#34d399' : '#38bdf8';
+        const hi = (t1 === 0) ? '#bbf7d0' : '#bae6fd';
+        const stripes = Math.min(3, t2 + 1);
+        let stripeSvg = '';
+        for (let i = 0; i < stripes; i++) {
+            stripeSvg += `<line x1="11" y1="${14 + i * 3.2}" x2="21" y2="${14 + i * 3.2}" stroke="${hi}" stroke-width="1.5"/>`;
+        }
+        return `<rect x="12" y="5" width="8" height="3.5" rx="1" fill="${hi}"/>
+                <rect x="9" y="8.5" width="14" height="18" rx="3" fill="${col}" fill-opacity="0.88" stroke="${hi}" stroke-width="1.2"/>
+                ${stripeSvg}`;
+    }
+    if (t1 === 2) {
+        // Tech Disk (element tinted ring)
+        const elemColors = {
+            fire: '#ff6b4a', ice: '#38bdf8', bolt: '#facc15',
+            light: '#fef08a', dark: '#c084fc', support: '#4ade80'
+        };
+        const ring = elemColors[item.tech_element] || '#34d399';
+        return `<circle cx="16" cy="16" r="10.5" fill="#1e293b" stroke="${ring}" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="none" stroke="${ring}" stroke-width="1.5" opacity="0.85"/>
+                <circle cx="16" cy="16" r="2.4" fill="#e2e8f0"/>`;
+    }
+    if (t1 >= 3 && t1 <= 5) {
+        // Sol / Moon / Star Atomizer
+        const col = t1 === 3 ? '#facc15' : (t1 === 4 ? '#fde047' : '#f472b6');
+        return `<rect x="13" y="5" width="6" height="3" rx="1" fill="#e2e8f0"/>
+                <path d="M16 9l7 5v9c0 2.5-3 4-7 4s-7-1.5-7-4v-9z" fill="${col}" fill-opacity="0.88" stroke="#fef9c3" stroke-width="1.1"/>
+                <circle cx="16" cy="18" r="2.5" fill="#fff" opacity="0.7"/>`;
+    }
+    if (t1 === 7) {
+        // Telepipe
+        return `<ellipse cx="16" cy="19" rx="9" ry="4" fill="none" stroke="#38bdf8" stroke-width="2"/>
+                <path d="M11 19V9M21 19V9" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="2 2"/>
+                <ellipse cx="16" cy="9" rx="6" ry="2.5" fill="#38bdf8" fill-opacity="0.4" stroke="#bae6fd" stroke-width="1"/>`;
+    }
+    if (t1 === 9) {
+        // Scape Doll
+        return `<circle cx="16" cy="9.5" r="3.8" fill="#f472b6" stroke="#fbcfe8" stroke-width="1.1"/>
+                <path d="M11 14h10l2 10H9z" fill="#ec4899" fill-opacity="0.88" stroke="#fbcfe8" stroke-width="1.1"/>
+                <circle cx="14.7" cy="9.2" r="0.8" fill="#1e1b4b"/><circle cx="17.3" cy="9.2" r="0.8" fill="#1e1b4b"/>`;
+    }
+    if (t1 === 10) {
+        // Grinder
+        return `<polygon points="16,4 24,9 24,23 16,28 8,23 8,9" fill="#fb923c" fill-opacity="0.88" stroke="#fed7aa" stroke-width="1.2"/>
+                <polygon points="16,8 20,11 20,21 16,24 12,21 12,11" fill="#fde047" opacity="0.45"/>`;
+    }
+    if (t1 === 11) {
+        // Material
+        return `<rect x="10" y="6" width="12" height="20" rx="6" fill="#4ade80" fill-opacity="0.85" stroke="#bbf7d0" stroke-width="1.2"/>
+                <path d="M10 16h12v4c0 3.3-2.7 6-6 6s-6-2.7-6-6z" fill="#facc15" fill-opacity="0.85"/>`;
+    }
+    if (t1 === 15) {
+        // AddSlot
+        return `<rect x="7" y="7" width="18" height="18" rx="3" fill="#0ea5e9" fill-opacity="0.35" stroke="#38bdf8" stroke-width="1.4"/>
+                <path d="M16 11v10M11 16h10" stroke="#bae6fd" stroke-width="2.2" stroke-linecap="round"/>`;
+    }
+    if (t1 === 16) {
+        // Photon Drop / Sphere / Crystal
+        const col = t2 === 1 ? '#fde047' : (t2 === 2 ? '#f472b6' : '#38bdf8');
+        const hi = t2 === 1 ? '#fef9c3' : '#e0f2fe';
+        return `<polygon points="16,4 24,14 20,27 12,27 8,14" fill="${col}" fill-opacity="0.88" stroke="${hi}" stroke-width="1.2"/>
+                <polygon points="16,4 20,14 16,27 12,14" fill="${hi}" opacity="0.35"/>`;
+    }
+    if (t1 === 12 || t1 === 13 || t1 === 14) {
+        // Mag Cell / Enemy Part / Rare Item
+        return `<polygon points="16,5 25,13 21,26 11,26 7,13" fill="#c084fc" fill-opacity="0.85" stroke="#f3e8ff" stroke-width="1.2"/>
+                <circle cx="16" cy="16" r="3" fill="#f0abfc"/>`;
+    }
+    // Generic Tool / Antidote / Badge / Report
+    return `<rect x="11" y="5" width="10" height="3.5" rx="1" fill="#a7f3d0"/>
+            <path d="M10 9h12l2 14c0 2-1.8 3.5-4 3.5H12c-2.2 0-4-1.5-4-3.5z" fill="#34d399" fill-opacity="0.85" stroke="#a7f3d0" stroke-width="1.1"/>`;
+}
+
+function getItemCategoryIcon(item, size = 32) {
     const svgNS = 'http://www.w3.org/2000/svg';
-    const size = 32;
-
-    // Determine category and color
-    let iconCat = 'tool';
-    if (item.group === 0x00) iconCat = 'weapon';
-    else if (item.group === 0x01) {
-        if (item.type1 === 1) iconCat = 'armor';
-        else if (item.type1 === 2) iconCat = 'shield';
-        else iconCat = 'unit';
-    } else if (item.group === 0x02) iconCat = 'mag';
-    else if (item.group === 0x04) iconCat = 'meseta';
-
-    const colors = {
-        weapon: '#ff6b6b',
-        armor: '#4ecdc4',
-        shield: '#45b7d1',
-        unit: '#c084fc',
-        mag: '#fbbf24',
-        tool: '#a3e635',
-        meseta: '#fcd34d'
-    };
-    const color = colors[iconCat] || '#8899aa';
-
     const svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('viewBox', '0 0 32 32');
     svg.setAttribute('width', size);
     svg.setAttribute('height', size);
-    svg.style.filter = `drop-shadow(0 0 3px ${color}44)`;
 
+    const group = item ? item.group : 3;
     let paths = '';
-    switch (iconCat) {
-        case 'weapon': // Sword
-            paths = `<path d="M22 4L26 8L14 20L10 22L12 18Z" fill="${color}" opacity="0.9"/>
-                     <path d="M8 24L12 18L14 20Z" fill="${color}" opacity="0.7"/>
-                     <line x1="6" y1="26" x2="10" y2="22" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`;
-            break;
-        case 'armor': // Chestplate
-            paths = `<path d="M10 8C10 8 13 6 16 6C19 6 22 8 22 8L24 14L22 22L16 26L10 22L8 14Z" fill="${color}" opacity="0.85"/>
-                     <path d="M16 6V16M12 10H20" stroke="${color}" stroke-width="1" opacity="0.4"/>`;
-            break;
-        case 'shield': // Shield
-            paths = `<path d="M16 5L26 10L24 22L16 28L8 22L6 10Z" fill="${color}" opacity="0.85"/>
-                     <path d="M16 10L16 22M11 14H21" stroke="${color}" stroke-width="1.5" opacity="0.3"/>`;
-            break;
-        case 'unit': // Diamond/gem
-            paths = `<path d="M16 6L24 14L16 26L8 14Z" fill="${color}" opacity="0.85"/>
-                     <path d="M10 14H22L16 6Z" fill="${color}" opacity="0.5"/>`;
-            break;
-        case 'mag': // Crescent/orb
-            paths = `<circle cx="16" cy="16" r="8" fill="${color}" opacity="0.85"/>
-                     <circle cx="13" cy="13" r="5" fill="#111" opacity="0.3"/>
-                     <circle cx="18" cy="12" r="2" fill="white" opacity="0.5"/>`;
-            break;
-        case 'tool': // Capsule/flask
-            paths = `<rect x="12" y="6" width="8" height="4" rx="1" fill="${color}" opacity="0.7"/>
-                     <path d="M12 10L10 24C10 26 12 28 16 28C20 28 22 26 22 24L20 10Z" fill="${color}" opacity="0.85"/>`;
-            break;
-        case 'meseta': // Coin
-            paths = `<circle cx="16" cy="16" r="9" fill="${color}" opacity="0.85"/>
-                     <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="bold" fill="#000" opacity="0.5">$</text>`;
-            break;
+
+    if (group === 0x00) {
+        const base = item.is_rare ? '#ff3b5c' : '#ff5c6c';
+        const hi = item.is_rare ? '#fde68a' : '#ffd1d6';
+        const grip = item.is_rare ? '#f59e0b' : '#cbd5e1';
+        paths = psoWeaponSvg(item.weapon_kind ?? 1, base, hi, grip);
+    } else if (group === 0x01) {
+        if (item.type1 === 1) {
+            // Frame / Armor
+            const c = item.is_rare ? '#fb923c' : '#38bdf8';
+            const h = item.is_rare ? '#ffedd5' : '#bae6fd';
+            paths = `<path d="M7 9l5-3h8l5 3 2 6-4 2-1 9H10l-1-9-4-2z" fill="${c}" fill-opacity="0.85" stroke="${h}" stroke-width="1.2"/>
+                     <polygon points="16,11 19,15 16,19 13,15" fill="${h}" opacity="0.85"/>`;
+        } else if (item.type1 === 2) {
+            // Barrier / Shield
+            const c = item.is_rare ? '#fb923c' : '#22d3ee';
+            const h = item.is_rare ? '#ffedd5' : '#a5f3fc';
+            paths = `<path d="M16 4l10 4v8c0 6.5-4.4 10.5-10 12.5C10.4 26.5 6 22.5 6 16V8z" fill="${c}" fill-opacity="0.82" stroke="${h}" stroke-width="1.3"/>
+                     <circle cx="16" cy="15" r="4" fill="none" stroke="${h}" stroke-width="1.4" opacity="0.9"/>`;
+        } else {
+            // Slot Unit
+            const c = item.is_rare ? '#fbbf24' : '#60a5fa';
+            const h = item.is_rare ? '#fef08a' : '#dbeafe';
+            paths = `<rect x="7" y="8" width="18" height="16" rx="2.5" fill="${c}" fill-opacity="0.85" stroke="${h}" stroke-width="1.2"/>
+                     <path d="M10 6v2M14 6v2M18 6v2M22 6v2M10 24v2M14 24v2M18 24v2M22 24v2" stroke="#fcd34d" stroke-width="1.5"/>
+                     <rect x="12" y="13" width="8" height="6" rx="1" fill="${h}" opacity="0.85"/>`;
+        }
+    } else if (group === 0x02) {
+        // MAG floating photon companion
+        const c = (item && item.is_rare) ? '#fb7185' : '#fbbf24';
+        const h = '#fef08a';
+        paths = `<path d="M4 13l6-3v7l-5 2zM28 13l-6-3v7l5 2z" fill="${c}" stroke="${h}" stroke-width="1"/>
+                 <polygon points="16,6 23,13 21,24 11,24 9,13" fill="${c}" stroke="${h}" stroke-width="1.2"/>
+                 <circle cx="16" cy="15.5" r="3.4" fill="#22d3ee" stroke="#ecfeff" stroke-width="1"/>`;
+    } else if (group === 0x04) {
+        // Meseta Crystal (faceted yellow gem)
+        paths = `<polygon points="16,4 24,10 24,22 16,28 8,22 8,10" fill="#facc15" stroke="#fef9c3" stroke-width="1.3"/>
+                 <polygon points="16,4 20,11 20,21 16,28 12,21 12,11" fill="#fef08a" opacity="0.5"/>`;
+    } else {
+        paths = psoToolSvg(item || {});
     }
+
     svg.innerHTML = paths;
     return svg;
 }
@@ -2360,15 +2519,14 @@ function createItemSlotElement(item, label = '') {
     slotEl.className = 'item-slot';
 
     if (item) {
+        slotEl.classList.add('filled');
         slotEl.setAttribute('data-hex', item.hex);
 
-        const nameLower = item.name.toLowerCase();
-        if (nameLower.includes('psycho wand') || nameLower.includes('sealed j-sword') || nameLower.includes('sato')) {
-            slotEl.classList.add('rare-red');
-        } else if (nameLower.includes('spread needle') || nameLower.includes('heaven punisher') || nameLower.includes('diwari')) {
-            slotEl.classList.add('rare-orange');
-        } else if (nameLower.includes('luminous field') || nameLower.includes('stand still') || nameLower.includes('photon')) {
-            slotEl.classList.add('rare-purple');
+        if (item.is_rare) {
+            slotEl.classList.add((item.stars >= 11) ? 'rare-red' : 'rare-orange');
+            const pip = document.createElement('span');
+            pip.className = 'item-slot-rare-pip';
+            slotEl.appendChild(pip);
         }
 
         const iconSvg = getItemCategoryIcon(item);
@@ -2377,9 +2535,31 @@ function createItemSlotElement(item, label = '') {
 
         if (item.equipped) {
             const eqBadge = document.createElement('span');
-            eqBadge.style = 'position:absolute; top:2px; right:2px; background:#00ff88; color:#000; font-size:0.5rem; font-weight:bold; padding:1px 3px; border-radius:2px;';
+            eqBadge.className = 'item-slot-eq-pip';
             eqBadge.textContent = 'E';
             slotEl.appendChild(eqBadge);
+        }
+
+        let badgeText = '';
+        let badgeGold = false;
+        if (item.group === 0x03 && item.type1 === 2 && item.tech_level) {
+            badgeText = `Lv${item.tech_level}`;
+            badgeGold = item.tech_level >= 30;
+        } else if (item.group === 0x03 && item.count > 1) {
+            badgeText = `x${item.count}`;
+        } else if (item.group === 0x00 && item.grind > 0) {
+            badgeText = `+${item.grind}`;
+            badgeGold = true;
+        } else if (item.group === 0x02 && item.mag_stats && item.mag_stats.level !== undefined) {
+            badgeText = `Lv${item.mag_stats.level}`;
+        }
+
+        if (badgeText) {
+            const badge = document.createElement('span');
+            badge.className = 'item-slot-count';
+            if (badgeGold) badge.style.color = '#fde047';
+            badge.textContent = badgeText;
+            slotEl.appendChild(badge);
         }
     }
 
@@ -2480,9 +2660,13 @@ function setupTooltipTriggers() {
                 </div>`;
             }
 
-            // Tool count
-            if (item.group === 0x03 && item.count && item.count > 1) {
-                detailsHtml += `<div class="tooltip-stat-row"><span>Quantity:</span><span class="tooltip-stat-val" style="color:#00ccff;">x${item.count}</span></div>`;
+            // Tool count / Technique Level
+            if (item.group === 0x03) {
+                if (item.type1 === 2 && item.tech_level) {
+                    detailsHtml += `<div class="tooltip-stat-row"><span>Level:</span><span class="tooltip-stat-val" style="color:#66e0ff;">Lv.${item.tech_level}</span></div>`;
+                } else if (item.count && item.count > 1) {
+                    detailsHtml += `<div class="tooltip-stat-row"><span>Quantity:</span><span class="tooltip-stat-val" style="color:#00ccff;">x${item.count}</span></div>`;
+                }
             }
 
             // Legacy stats fallback
@@ -2492,8 +2676,14 @@ function setupTooltipTriggers() {
                 });
             }
 
+            const starCount = parseInt(item.stars, 10) || 0;
+            const starHtml = starCount > 0
+                ? `<div style="color:${item.is_rare ? '#ff9d2e' : '#facc15'}; font-size:0.68rem; letter-spacing:1px; margin-bottom:2px;">${'★'.repeat(Math.min(starCount, 12))}</div>`
+                : '';
+
             tooltip.innerHTML = `
-                <div class="tooltip-title">${item.name}</div>
+                <div class="tooltip-title" style="${item.is_rare ? 'color:#ff7b7b;' : ''}">${item.name}</div>
+                ${starHtml}
                 ${detailsHtml}
             `;
             tooltip.style.display = 'block';
