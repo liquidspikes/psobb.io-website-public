@@ -37,13 +37,17 @@
 
 @import url('pso_assets.css');
 
+html {
+    scrollbar-gutter: stable;
+}
+
 body {
     margin: 0;
     padding: 0;
     background-color: var(--pso-dark);
     color: var(--pso-text);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    overflow-x: hidden;
+    overflow-x: clip;
     background-image: var(--pso-bg-gradient, radial-gradient(circle at top center, #1a0b2e 0%, #050a14 60%, #000000 100%));
     min-height: 100vh;
     position: relative;
@@ -590,13 +594,29 @@ footer {
 .login-container.dashboard-active {
     max-width: 1200px;
     width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
 }
 
 #dashboard {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
     box-sizing: border-box;
+}
+
+.login-container button:focus:not(:focus-visible),
+.login-container .char-slot-tab:focus:not(:focus-visible),
+.login-container .dash-tab-btn:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+
+.login-container button:focus-visible,
+.login-container .char-slot-tab:focus-visible,
+.login-container .dash-tab-btn:focus-visible {
+    outline: 1px solid rgba(0, 255, 255, 0.7);
+    outline-offset: 2px;
 }
 
 .dashboard-content-grid {
@@ -2003,15 +2023,15 @@ input:checked + .slider:before {
 }
 .dashboard-tab-pane {
     display: none;
-    animation: dashboardFadeIn 0.4s ease;
+    animation: dashboardFadeIn 0.18s ease-out;
 }
 .dashboard-tab-pane.active {
     display: block;
 }
 
 @keyframes dashboardFadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* Character Slots Selection */
@@ -2075,16 +2095,84 @@ input:checked + .slider:before {
 }
 .item-slot {
     aspect-ratio: 1;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    background: linear-gradient(155deg, rgba(12, 24, 44, 0.85), rgba(4, 10, 20, 0.92));
+    border: 1px solid rgba(0, 200, 255, 0.22);
+    border-radius: 5px;
+    box-shadow: inset 0 0 8px rgba(0, 140, 220, 0.08);
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
     user-select: none;
+    overflow: hidden;
+}
+
+.item-slot.filled {
+    background: linear-gradient(155deg, rgba(14, 34, 62, 0.92), rgba(6, 15, 30, 0.96));
+    border-color: rgba(0, 220, 255, 0.42);
+    box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.14);
+}
+
+.item-slot.rare-orange {
+    background: linear-gradient(155deg, rgba(56, 30, 8, 0.92), rgba(22, 10, 4, 0.96)) !important;
+    border-color: rgba(255, 165, 40, 0.85) !important;
+    box-shadow: inset 0 0 10px rgba(255, 145, 0, 0.24), 0 0 6px rgba(255, 145, 0, 0.18);
+}
+
+.item-slot.rare-red {
+    background: linear-gradient(155deg, rgba(64, 10, 18, 0.94), rgba(24, 4, 8, 0.97)) !important;
+    border-color: rgba(255, 70, 95, 0.9) !important;
+    box-shadow: inset 0 0 12px rgba(255, 45, 75, 0.28), 0 0 8px rgba(255, 45, 75, 0.24);
+}
+
+.item-slot svg {
+    width: 74%;
+    height: 74%;
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.75));
+}
+
+.item-slot-count {
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #e6fbff;
+    background: rgba(2, 10, 22, 0.86);
+    border: 1px solid rgba(0, 220, 255, 0.35);
+    border-radius: 3px;
+    padding: 1px 3px;
+    pointer-events: none;
+}
+
+.item-slot-rare-pip {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    transform: rotate(45deg);
+    background: #ff425e;
+    box-shadow: 0 0 5px #ff2947;
+    pointer-events: none;
+}
+
+.item-slot-eq-pip {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #00ffaa;
+    text-shadow: 0 0 4px rgba(0, 255, 170, 0.7);
+    pointer-events: none;
 }
 .item-slot:hover {
     border-color: var(--pso-blue);
@@ -2982,14 +3070,42 @@ body.pwa-standalone .logo-text {
 .stat-evp { background: linear-gradient(90deg, #ffaa00, #ffcc44); }
 .stat-lck { background: linear-gradient(90deg, #00bbcc, #33ddee); }
 .stat-hp { background: linear-gradient(90deg, #00ff88, #66ffbb); }
+.stat-tp { background: linear-gradient(90deg, #00b8ff, #66e0ff); }
 .stat-value {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: bold;
     color: #fff;
-    width: 42px;
-    text-align: left;
+    min-width: 82px;
+    width: auto;
+    text-align: right;
+    white-space: nowrap;
     flex-shrink: 0;
+}
+
+.bank-grid-box,
+#guide-modal-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 220, 255, 0.45) rgba(5, 12, 24, 0.5);
+}
+.bank-grid-box::-webkit-scrollbar,
+#guide-modal-content::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.bank-grid-box::-webkit-scrollbar-track,
+#guide-modal-content::-webkit-scrollbar-track {
+    background: rgba(5, 12, 24, 0.55);
+    border-radius: 3px;
+}
+.bank-grid-box::-webkit-scrollbar-thumb,
+#guide-modal-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 220, 255, 0.42);
+    border-radius: 3px;
+}
+.bank-grid-box::-webkit-scrollbar-thumb:hover,
+#guide-modal-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.72);
 }
 
 /* ---- Compact Material Grid ---- */
@@ -3280,7 +3396,8 @@ body.pwa-standalone .logo-text {
 
     /* Ensure all dashboard pane content respects mobile width */
     .dashboard-tab-pane {
-        overflow-x: hidden;
+        overflow-x: clip;
+        overflow-y: visible;
         max-width: 100%;
     }
 
@@ -3510,7 +3627,8 @@ body.pwa-standalone .logo-text {
     [class*="panel"] {
         max-width: 100%;
         box-sizing: border-box;
-        overflow-x: hidden;
+        overflow-x: clip;
+        overflow-y: visible;
     }
     select, input, button, textarea {
         max-width: 100%;

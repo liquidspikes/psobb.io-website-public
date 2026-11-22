@@ -14,7 +14,7 @@ $existing_slots = $existing_slots ?? [0];
                 <div
                     style="border: 1px solid rgba(0, 255, 255, 0.15); background: rgba(0, 10, 20, 0.5); padding: 1.5rem; border-radius: 10px;">
                     <div class="item-grid-title" style="flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
-                        <span>🏦 <?= __('Bank Vault') ?></span>
+                        <span style="display:inline-flex; align-items:center; gap:8px; color:#00ffff;"><i class="fas fa-vault" style="font-size:0.95rem;"></i> <?= __('Bank Vault') ?></span>
                         <span style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                             <span style="font-size:0.85rem; color:#aaa; font-family:'Share Tech Mono', monospace;"
                                 id="viewer-bank-count">0 items</span>

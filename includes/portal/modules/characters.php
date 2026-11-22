@@ -134,6 +134,11 @@ $existing_slots = $existing_slots ?? [0];
                                         <div class="stat-fill stat-hp" id="bar-hp"></div>
                                     </div><span class="stat-value" id="stat-val-hp">--</span>
                                 </div>
+                                <div class="stat-bar-row"><span class="stat-label">TP</span>
+                                    <div class="stat-bar">
+                                        <div class="stat-fill stat-tp" id="bar-tp"></div>
+                                    </div><span class="stat-value" id="stat-val-tp">--</span>
+                                </div>
                             </div>
 
                             <!-- Material Gauges (compact) -->

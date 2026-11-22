@@ -454,7 +454,10 @@ if (file_exists($psocharPath)) {
             }
         }
     }
-    
+
+    require_once __DIR__ . '/psochar_stats.php';
+    finalize_psobb_character_data($character);
+
     echo json_encode([
         'success' => true, 
         'character' => $character, 
