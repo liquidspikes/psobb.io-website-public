@@ -124,9 +124,8 @@ $message = '';
 
 // Fetch live connected players from newserv for dropdowns
 $live_players = [];
-$live_response = @file_get_contents($NEWSERV_API_URL . '/y/clients');
-if ($live_response) {
-    $live_clients = json_decode($live_response, true) ?: [];
+$live_clients = newserv_fetch_clients();
+if ($live_clients !== null) {
     foreach ($live_clients as $lc) {
         if (isset($lc['Account']['AccountID'])) {
             $live_players[] = [
@@ -412,10 +411,11 @@ while ($ce = $tele_res->fetchArray(SQLITE3_ASSOC)) {
         ];
         
         const floorOptions = [
-            {val: '1', text: <?= json_encode(__('Forest 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '2', text: <?= json_encode(__('Forest 2'), JSON_UNESCAPED_UNICODE) ?>},
-            {val: '3', text: <?= json_encode(__('Cave 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '4', text: <?= json_encode(__('Cave 2'), JSON_UNESCAPED_UNICODE) ?>}, {val: '5', text: <?= json_encode(__('Cave 3'), JSON_UNESCAPED_UNICODE) ?>},
-            {val: '6', text: <?= json_encode(__('Mine 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '7', text: <?= json_encode(__('Mine 2'), JSON_UNESCAPED_UNICODE) ?>},
-            {val: '8', text: <?= json_encode(__('Ruins 1'), JSON_UNESCAPED_UNICODE) ?>}, {val: '9', text: <?= json_encode(__('Ruins 2'), JSON_UNESCAPED_UNICODE) ?>}, {val: '10', text: <?= json_encode(__('Ruins 3'), JSON_UNESCAPED_UNICODE) ?>}
+<?php foreach ([1 => PSO_EP1_FLOORS, 2 => PSO_EP2_FLOORS, 4 => PSO_EP4_FLOORS] as $fEp => $fList): ?>
+<?php foreach ($fList as $fId => $fName): ?>
+            {val: <?= json_encode("{$fId}@{$fEp}") ?>, text: <?= json_encode("[Ep {$fEp}] " . __($fName), JSON_UNESCAPED_UNICODE) ?>},
+<?php endforeach; ?>
+<?php endforeach; ?>
         ];
 
         function updateGoalTargetUI() {

@@ -360,78 +360,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // 1. Fetch online clients from newserv to verify status
-    $url = $NEWSERV_API_URL . "/y/clients";
-    $clients_raw = @file_get_contents($url);
-
-    if ($clients_raw === FALSE) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Game server is offline, cannot verify character status.']);
-        exit;
-    }
-
-    $clients = json_decode($clients_raw, true);
-    $onlineCharacter = null;
-
-    if (is_array($clients)) {
-        foreach ($clients as $c) {
-            if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-                $onlineCharacter = $c;
-                break;
-            }
-        }
-    }
-
-    if (!$onlineCharacter) {
-        http_response_code(400);
-        echo json_encode([
-            'error' => 'You must be online in-game to claim rewards.',
-            'offline' => true
-        ]);
-        exit;
-    }
-
-    // Protect against loading screen transitions
-    if (!isset($onlineCharacter['EXP']) || ($onlineCharacter['EXP'] === 0 && ($onlineCharacter['Level'] ?? 1) > 1)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Your character is currently in a loading screen. Please wait until you are fully spawned.']);
-        exit;
-    }
-
-    $lobbyId = $onlineCharacter['LobbyID'] ?? null;
-    if ($lobbyId === null) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Character must be actively logged into a server lobby or game.']);
-        exit;
-    }
-
-    // Fetch lobbies to ensure the player is in an actual game, not just the lobby
-    $lobbies_raw = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-    if ($lobbies_raw === FALSE) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Game server lobbies offline, cannot verify game status.']);
-        exit;
-    }
-
-    $lobbies = json_decode($lobbies_raw, true);
-    $inGame = false;
-
-    if (is_array($lobbies)) {
-        foreach ($lobbies as $l) {
-            if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-                if (!empty($l['IsGame'])) {
-                    $inGame = true;
-                }
-                break;
-            }
-        }
-    }
-
-    if (!$inGame) {
-        http_response_code(400);
-        echo json_encode(['error' => 'You must be actively inside a game (not in a lobby block) to receive the item drop.']);
-        exit;
-    }
+    // 1. Verify online character, spawn status, and active game room
+    $onlineCharacter = newserv_require_online_character((int) $accountId, null, [
+        'offline_error'          => 'Game server is offline, cannot verify character status.',
+        'not_online_error'       => 'You must be online in-game to claim rewards.',
+        'include_offline_flag'   => true,
+        'loading_error'          => 'Your character is currently in a loading screen. Please wait until you are fully spawned.',
+        'require_in_game'        => true,
+        'in_game_required_error' => 'You must be actively inside a game (not in a lobby block) to receive the item drop.',
+    ]);
 
     // Randomly pick one of the 3 weapons
     $chosenWeaponHex = $weapons[array_rand($weapons)];
@@ -440,25 +377,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Format item string
     $statStr = "{$combined_stats['stat_native']}/{$combined_stats['stat_abeast']}/{$combined_stats['stat_machine']}/{$combined_stats['stat_dark']}/{$combined_stats['stat_hit']}";
     $itemString = $chosenWeaponHex . "008000000000000000000000 " . $statStr;
-
-    // Ensure consolidated claim log table exists before locking transaction
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS tekker_claim_log (
-            claim_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id INTEGER NOT NULL,
-            discord_id TEXT,
-            token_ids TEXT NOT NULL,
-            token_count INTEGER NOT NULL,
-            weapon_hex TEXT NOT NULL,
-            weapon_name TEXT NOT NULL,
-            stat_native INTEGER DEFAULT 0,
-            stat_abeast INTEGER DEFAULT 0,
-            stat_machine INTEGER DEFAULT 0,
-            stat_dark INTEGER DEFAULT 0,
-            stat_hit INTEGER DEFAULT 0,
-            claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ");
 
     // Phase 1: Atomically lock all selected tokens BEFORE dropping the item in-game to block concurrent double-spends.
     $db->exec("BEGIN IMMEDIATE;");

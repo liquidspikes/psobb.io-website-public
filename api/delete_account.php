@@ -62,7 +62,7 @@ if (is_numeric($target_account_id)) {
     $hexId = $target_account_id;
 }
 
-$res = run_shell("delete-account $hexId");
+$res = newserv_shell_exec("delete-account $hexId");
 $jsonRes = json_decode($res, true);
 
 if ($jsonRes && isset($jsonRes['result']) && stripos($jsonRes['result'], 'deleted') !== false) {

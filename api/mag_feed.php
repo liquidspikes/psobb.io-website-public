@@ -31,60 +31,13 @@ if ($magItemId <= 0 || $feedItemId <= 0) {
     exit;
 }
 
-// Fetch online clients from newserv
-$url = $NEWSERV_API_URL . "/y/clients";
-$data = @file_get_contents($url);
-
-if ($data === FALSE) {
-    http_response_code(500);
-    echo json_encode(["error" => "Game server is offline."]);
-    exit;
-}
-
-$clients = json_decode($data, true);
-$onlineCharacter = null;
-
-if (is_array($clients)) {
-    foreach ($clients as $c) {
-        if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-            $onlineCharacter = $c;
-            break;
-        }
-    }
-}
-
-if (!$onlineCharacter) {
-    http_response_code(400);
-    echo json_encode(["error" => "Character must be online."]);
-    exit;
-}
-
-// Check if in game
-$lobbyId = $onlineCharacter['LobbyID'] ?? null;
-$inGame = false;
-
-if ($lobbyId !== null) {
-    $lobbiesData = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-    if ($lobbiesData !== FALSE) {
-        $lobbies = json_decode($lobbiesData, true);
-        if (is_array($lobbies)) {
-            foreach ($lobbies as $l) {
-                if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-                    if (!empty($l['IsGame'])) {
-                        $inGame = true;
-                    }
-                    break;
-                }
-            }
-        }
-    }
-}
-
-if (!$inGame) {
-    http_response_code(400);
-    echo json_encode(["error" => "You must be in a game to feed your MAG."]);
-    exit;
-}
+// Verify online character, spawn status, and active game room
+$onlineCharacter = newserv_require_online_character((int) $accountId, null, [
+    'offline_error'          => 'Game server is offline.',
+    'not_online_error'       => 'Character must be online.',
+    'require_in_game'        => true,
+    'in_game_required_error' => 'You must be in a game to feed your MAG.',
+]);
 
 $clientLobbyId = $onlineCharacter['LobbyClientID'] ?? 0;
 

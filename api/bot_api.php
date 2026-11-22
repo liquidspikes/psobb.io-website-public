@@ -85,21 +85,6 @@ $action = $_GET['action'] ?? '';
 // available to all actions, not just 'link'.
 // ============================================================
 
-$CLASS_MAP = [
-    0 => 'HUmar',    1 => 'HUnewearl', 2 => 'HUcast',    3 => 'RAmar',
-    4 => 'RAcast',   5 => 'RAcaseal',  6 => 'FOmarl',    7 => 'FOnewm',
-    8 => 'FOnewearl',9 => 'HUcaseal', 10 => 'FOmar',    11 => 'RAmarl'
-];
-// Section ID index values verified against newserv StaticGameData.cc section_id_to_name[].
-// newserv spells index 1 "Greennill" (double-n), but the rest of the site
-// (get_drops.php, character_viewer.php) and the Discord role use the single-n
-// "Greenill". Normalize to the single-n form here so every endpoint agrees.
-$SECID_MAP = [
-    0 => 'Viridia',   1 => 'Greenill',  2 => 'Skyly',    3 => 'Bluefull',
-    4 => 'Purplenum', 5 => 'Pinkal',    6 => 'Redria',    7 => 'Oran',
-    8 => 'Yellowboze', 9 => 'Whitill'
-];
-
 if ($action === 'link') {
     $username   = $_POST['username'] ?? '';
     $discord_id = $_POST['discord_id'] ?? '';
@@ -124,111 +109,14 @@ if ($action === 'link') {
     exit;
 }
 
-
 if (!function_exists('bot_parse_item_data')) {
     function bot_parse_item_data($bytes) {
-    if (strlen($bytes) < 20) return null;
-    $data1 = substr($bytes, 0, 12);
-    $data2 = substr($bytes, 16, 4);
-    $group = ord($data1[0]);
-    $type1 = ord($data1[1]);
-    $type2 = ord($data1[2]);
-    $hex   = strtoupper(bin2hex($bytes));
-
-    $isSRank = ($group === 0x00) && (($type1 > 0x6F && $type1 < 0x89) || ($type1 > 0xA4 && $type1 < 0xAA));
-
-    if ($group === 0x04) {
-        $primaryId = 0x04000000;
-    } elseif ($group === 0x03 && $type1 === 0x02) {
-        $primaryId = 0x03020000 | (ord($data1[4]) << 8) | $type2;
-    } elseif ($group === 0x02) {
-        $primaryId = 0x02000000 | ($type1 << 16);
-    } elseif ($isSRank) {
-        $primaryId = ($group << 24) | ($type1 << 16);
-    } else {
-        $primaryId = ($group << 24) | ($type1 << 16) | ($type2 << 8);
-    }
-    $lookupKey = strtolower(substr(sprintf('%08X', $primaryId), 0, 6));
-
-    static $codeToName = null;
-    if ($codeToName === null) {
-        $codeToName = [];
-        $mapPath = __DIR__ . '/names-v4.json';
-        if (file_exists($mapPath)) {
-            $map = json_decode(file_get_contents($mapPath), true);
-            if ($map) foreach ($map as $code => $name) $codeToName[strtolower($code)] = $name;
-        }
-    }
-
-    $item = ['hex' => $hex, 'group' => $group, 'type1' => $type1, 'type2' => $type2,
-             'equipped' => false, 'name' => 'Unknown', 'attrs' => []];
-
-    if ($group === 0x00) {
-        $grind = ord($data1[3]);
-        $isUnid = (ord($data1[4]) & 0x80) !== 0;
-        $wName = $codeToName[$lookupKey] ?? $codeToName[strtolower(sprintf('%02X%02X00', $group, $type1))] ?? 'Weapon';
-        $item['name'] = ($isUnid ? '???? ' : '') . ucwords($wName) . ($grind > 0 ? " +{$grind}" : '');
-        $item['grind'] = $grind;
-        if ($isUnid) $item['unidentified'] = true;
-        $attrMap = [1 => 'Native', 2 => 'A.Beast', 3 => 'Machine', 4 => 'Dark', 5 => 'Hit'];
-        for ($a = 0; $a < 3; $a++) {
-            $aType = ord($data1[6 + $a * 2]);
-            $aVal  = ord($data1[7 + $a * 2]);
-            if ($aType > 0 && isset($attrMap[$aType])) {
-                if ($aVal > 127) $aVal -= 256;
-                $item['attrs'][] = ['type' => $attrMap[$aType], 'value' => $aVal];
-            }
-        }
-    } elseif ($group === 0x01) {
-        $aName = $codeToName[$lookupKey] ?? null;
-        $item['name'] = $aName ? ucwords($aName) : match($type1) { 0x01=>'Armor', 0x02=>'Shield', 0x03=>'Unit', default=>'Armor/Shield' };
-        if ($type1 === 0x01) {
-            $item['slots']     = ord($data1[5]);
-            $item['def_bonus'] = unpack('s', substr($data1, 6, 2))[1];
-            $item['evp_bonus'] = unpack('s', substr($data1, 8, 2))[1];
-        } elseif ($type1 === 0x02) {
-            $item['def_bonus'] = unpack('s', substr($data1, 6, 2))[1];
-            $item['evp_bonus'] = unpack('s', substr($data1, 8, 2))[1];
-        } elseif ($type1 === 0x03) {
-            $item['modifier'] = unpack('s', substr($data1, 6, 2))[1];
-        }
-    } elseif ($group === 0x02) {
-        $magName = $codeToName[$lookupKey] ?? 'Mag';
-        $item['name'] = ucwords($magName);
-        $item['mag_stats'] = [
-            'level'   => ord($data1[2]),
-            'pb_flags'=> ord($data1[3]),
-            'def'     => round(unpack('v', substr($data1, 4, 2))[1] / 100, 2),
-            'pow'     => round(unpack('v', substr($data1, 6, 2))[1] / 100, 2),
-            'dex'     => round(unpack('v', substr($data1, 8, 2))[1] / 100, 2),
-            'mind'    => round(unpack('v', substr($data1, 10, 2))[1] / 100, 2),
-            'synchro' => ord($data2[0]),
-            'iq'      => ord($data2[1]),
-        ];
-    } elseif ($group === 0x03) {
-        if ($type1 === 0x02) {
-            $techs = ['Foie','Gifoie','Rafoie','Barta','Gibarta','Rabarta','Zonde','Gizonde',
-                      'Razonde','Grants','Deband','Jellen','Zalure','Shifta','Ryuker','Resta',
-                      'Anti','Reverser','Megid'];
-            $techNum = ord($data1[4]);
-            $techLvl = ord($data1[2]) + 1;
-            $item['name'] = 'Disk: ' . ($techs[$techNum] ?? 'Tech') . " Lv.{$techLvl}";
-        } else {
-            $tName = $codeToName[$lookupKey] ?? 'Tool';
-            $item['name'] = ucwords($tName);
-            $count = ord($data1[5]);
-            $item['count'] = $count > 0 ? $count : 1;
-        }
-    } elseif ($group === 0x04) {
-        $item['name']  = 'Meseta';
-        $item['count'] = unpack('V', $data2)[1];
-    }
-    return $item;
+        return pso_parse_item_data((string)$bytes);
     }
 }
 
 if (!function_exists('bot_parse_psochar')) {
-    function bot_parse_psochar($charData, $slot, $CLASS_MAP, $SECID_MAP) {
+    function bot_parse_psochar($charData, $slot, $CLASS_MAP = PSO_CHAR_CLASSES, $SECID_MAP = PSO_SECTION_IDS) {
     if (!$charData || strlen($charData) < 0x399C) return null;
 
     // --- Inventory (offset 8, size 844) ---
@@ -390,14 +278,11 @@ if ($action === 'get_player') {
 
     // --- Fetch live client list once (used for online overlay) ---
     $live_clients = [];
-    $clients_raw = @file_get_contents($NEWSERV_API_URL . "/y/clients");
-    if ($clients_raw) {
-        $all = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $clients_raw), true);
-        if (is_array($all)) {
-            foreach ($all as $c) {
-                if (isset($c['Account']['AccountID']) && $c['Account']['AccountID'] == $user['account_id']) {
-                    $live_clients[] = $c;
-                }
+    $all = newserv_fetch_clients();
+    if ($all !== null) {
+        foreach ($all as $c) {
+            if (isset($c['Account']['AccountID']) && $c['Account']['AccountID'] == $user['account_id']) {
+                $live_clients[] = $c;
             }
         }
     }
@@ -432,7 +317,7 @@ if ($action === 'get_player') {
         }
 
         $charData = @file_get_contents($path);
-        $parsed   = bot_parse_psochar($charData, $slot, $CLASS_MAP, $SECID_MAP);
+        $parsed   = bot_parse_psochar($charData, $slot);
         if (!$parsed) {
             $characters[] = ['slot' => $slot, 'exists' => false, 'error' => 'parse_failed'];
             continue;
@@ -572,13 +457,8 @@ if ($action === 'get_player') {
 // Used by the bot for role-sync without needing to query per-user
 // ----------------------------------------------------------------
 if ($action === 'get_online_players') {
-    $clients_raw = @file_get_contents($NEWSERV_API_URL . "/y/clients");
-    if (!$clients_raw) {
-        echo json_encode([]);
-        exit;
-    }
-    $all = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $clients_raw), true);
-    if (!is_array($all)) {
+    $all = newserv_fetch_clients();
+    if ($all === null) {
         echo json_encode([]);
         exit;
     }
@@ -691,16 +571,10 @@ if ($action === 'get_online_players') {
     // party-voice-room feature. Joins /y/lobbies (IsGame) -> ClientIDs ->
     // /y/clients, and resolves each player's linked discord_id from the users
     // table so the bot can build private channels and @mention party members.
-    $lobbies_raw = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-    $clients_raw = @file_get_contents($NEWSERV_API_URL . "/y/clients");
-    if ($lobbies_raw === false || $clients_raw === false) {
+    $lobbies = newserv_fetch_lobbies();
+    $clients = newserv_fetch_clients();
+    if ($lobbies === null || $clients === null) {
         echo json_encode(["success" => false, "error" => "Game server API offline", "parties" => []]);
-        exit;
-    }
-    $lobbies = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $lobbies_raw), true);
-    $clients = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $clients_raw), true);
-    if (!is_array($lobbies) || !is_array($clients)) {
-        echo json_encode(["success" => false, "error" => "Invalid server response", "parties" => []]);
         exit;
     }
 

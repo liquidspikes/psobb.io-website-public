@@ -317,7 +317,7 @@ while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
 
     $charName = trim((string) ($row['character_name'] ?? ''));
     $holders = (int) ($row['holder_count'] ?? 1);
-    $floor = in_array($goalType, $floorGoals, true) ? (int) explode('_', $newTarget)[0] : $ctx['floor'];
+    $floor = in_array($goalType, $floorGoals, true) ? parse_floor_target($newTarget)['floor'] : $ctx['floor'];
 
     if ($charName !== '' && $holders === 1) {
         $prompt = bounty_build_prompt($sid, $giver, [

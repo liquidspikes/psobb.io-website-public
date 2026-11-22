@@ -104,11 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const preselectedBountyId = <?= isset($_GET['bounty_id']) ? (int)$_GET['bounty_id'] : 'null' ?>;
     const myAccountId = <?= (int)($_SESSION['user']['account_id'] ?? 0) ?>;
 
-    // 1. Get CSRF utility
-    function getCSRFToken() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
-    }
+    const getCSRFToken = window.getCSRFToken;
 
     // Live player character state (updated dynamically)
     let myActiveChar = null;
@@ -148,17 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 6000);
     }
 
-    /**
-     * Formats character classes into HU / RA / FO archetype codes
-     */
-    function getArchetype(charClass) {
-        if (!charClass) return '';
-        const upper = charClass.toUpperCase();
-        if (upper.startsWith('HU')) return 'HU';
-        if (upper.startsWith('RA')) return 'RA';
-        if (upper.startsWith('FO')) return 'FO';
-        return '';
-    }
+    const getArchetype = window.psoGetArchetype;
 
     /**
      * Checks server to see if player's character is online
@@ -689,39 +675,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Helper to format SQLite datetime strings into friendly "X min ago"
-     */
-    function formatTimeAgo(dbTimeStr) {
-        // SQLite CURRENT_TIMESTAMP is in UTC. Let's calculate difference
-        // We replace space with 'T' and add 'Z' for standardized UTC parse
-        const utcStr = dbTimeStr.replace(' ', 'T') + 'Z';
-        const postTime = new Date(utcStr);
-        const now = new Date();
-        
-        const diffMs = now.getTime() - postTime.getTime();
-        const diffMins = Math.max(1, Math.floor(diffMs / 60000));
-
-        if (diffMins < 60) {
-            return `${diffMins}m ago`;
-        } else {
-            const diffHours = Math.floor(diffMins / 60);
-            return `${diffHours}h ago`;
-        }
-    }
-
-    /**
-     * Helper to escape HTML to prevent XSS
-     */
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
+    const formatTimeAgo = window.psoFormatTimeAgo;
+    const escapeHtml = window.escapeHtml;
 });
 </script>
 

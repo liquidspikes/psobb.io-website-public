@@ -124,16 +124,37 @@ function bounty_pick_boss($level, $current_floor)
 }
 
 /**
- * The Episode I setting for an Episode I field floor (Forest 1 ... Ruins 3).
+ * The setting ID for a field floor in Episode 1, 2, or 4.
  */
-function bounty_setting_for_ep1_floor($floor)
+function bounty_setting_for_floor($episode, $floor)
 {
+    $ep = (int) $episode;
     $floor = (int) $floor;
+    if ($ep === 2) {
+        if ($floor >= 1 && $floor <= 2) return 'ep2_vr_temple';
+        if ($floor >= 3 && $floor <= 4) return 'ep2_vr_spaceship';
+        if ($floor >= 5 && $floor <= 9) return 'ep2_gal_da_val';
+        if ($floor >= 10 && $floor <= 11) return 'ep2_seabed';
+        return 'ep2_lab';
+    }
+    if ($ep === 4) {
+        if ($floor >= 1 && $floor <= 5) return 'ep4_crater';
+        if ($floor >= 6 && $floor <= 8) return 'ep4_desert';
+        return 'ep4_pioneer2';
+    }
     if ($floor >= 1 && $floor <= 2) return 'ep1_forest';
     if ($floor >= 3 && $floor <= 5) return 'ep1_caves';
     if ($floor >= 6 && $floor <= 7) return 'ep1_mines';
     if ($floor >= 8 && $floor <= 10) return 'ep1_ruins';
     return 'ep1_pioneer2';
+}
+
+/**
+ * The Episode I setting for an Episode I field floor (Forest 1 ... Ruins 3).
+ */
+function bounty_setting_for_ep1_floor($floor)
+{
+    return bounty_setting_for_floor(1, $floor);
 }
 
 /**
@@ -341,12 +362,15 @@ function bounty_lore_setting_for_objective($goal_type, $goal_target = '', $title
     }
 
     if (in_array($goal_type, ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR'], true)) {
-        $floor = (int) explode('_', $goal_target)[0];
+        $ft = parse_floor_target($goal_target);
+        $ep = $ft['episode'];
+        $floor = $ft['floor'];
+        $validFloors = pso_episode_floor_map($ep);
         return [
-            'episode' => 1,
-            'setting_id' => bounty_setting_for_ep1_floor($floor),
+            'episode' => $ep,
+            'setting_id' => bounty_setting_for_floor($ep, $floor),
             'is_location_goal' => true,
-            'floor' => ($floor >= 1 && $floor <= 10) ? $floor : null,
+            'floor' => isset($validFloors[$floor]) ? $floor : null,
             'location_override' => null,
         ];
     }
@@ -531,18 +555,45 @@ function bounty_goal_meaning($goal, $target = null)
 }
 
 /**
- * In-world wording for the Episode I field areas, so the story never needs menu labels
- * such as "Cave 2".
+ * In-world wording for field areas across Episodes 1, 2, and 4, so the story never needs menu
+ * labels such as "Cave 2" or "Seabed Lower".
  */
-function bounty_floor_phrase($floor)
+function bounty_floor_phrase($floor, $episode = 1)
 {
-    $p = [
-        1 => 'the outer Forest', 2 => 'the inner Forest near the Central Dome',
-        3 => 'the upper Caves', 4 => 'the middle Caves', 5 => 'the deepest Caves',
-        6 => 'the upper Mines', 7 => 'the lower Mines',
-        8 => 'the upper Ruins', 9 => 'the middle Ruins', 10 => 'the deepest Ruins',
+    $phrases = [
+        1 => [
+            1 => 'the outer Forest', 2 => 'the inner Forest near the Central Dome',
+            3 => 'the upper Caves', 4 => 'the middle Caves', 5 => 'the deepest Caves',
+            6 => 'the upper Mines', 7 => 'the lower Mines',
+            8 => 'the upper Ruins', 9 => 'the middle Ruins', 10 => 'the deepest Ruins',
+        ],
+        2 => [
+            1 => 'the outer halls of the VR Temple', 2 => 'the inner sanctum of the VR Temple',
+            3 => 'the forward decks of the VR Spaceship', 4 => 'the deeper decks of the VR Spaceship',
+            5 => 'the Central Control Area on Gal Da Val Island',
+            6 => 'the northern jungle of Gal Da Val Island', 7 => 'the eastern jungle of Gal Da Val Island',
+            8 => 'the high mountain pass on Gal Da Val Island', 9 => 'the seaside cliffs of Gal Da Val Island',
+            10 => 'the upper levels of the Seabed facility', 11 => 'the abyssal lower decks of the Seabed',
+        ],
+        4 => [
+            1 => 'the eastern Crater rim', 2 => 'the western Crater rim',
+            3 => 'the southern Crater rim', 4 => 'the northern Crater rim',
+            5 => 'the Crater Interior impact zone',
+            6 => 'the outer Subterranean Desert', 7 => 'the middle Subterranean Desert caverns',
+            8 => 'the deepest ruins of the Subterranean Desert',
+        ],
     ];
-    return $p[(int) $floor] ?? '';
+    return $phrases[(int) $episode][(int) $floor] ?? '';
+}
+
+function bounty_episode_from_setting_id($lore, $setting_id): int
+{
+    if (!empty($lore['settings'][$setting_id]['episode'])) {
+        return (int) $lore['settings'][$setting_id]['episode'];
+    }
+    if (strpos((string) $setting_id, 'ep2_') === 0) return 2;
+    if (strpos((string) $setting_id, 'ep4_') === 0) return 4;
+    return 1;
 }
 
 /**
@@ -582,7 +633,7 @@ function bounty_clean_recent_titles($recent_titles)
  * @param array|null $giver      from bounty_pick_giver(), or null when Hex gives the job
  * @param array      $job        hunter_name, level, class, completed_line, goal, objective,
  *                               difficulty, is_location_goal, quest_giver, hex_twist, recent_titles,
- *                               floor (Ep1 field floor for EXPLORATION/PATROL/SPEEDRUN_FLOOR),
+ *                               floor (field floor ID for EXPLORATION/PATROL/SPEEDRUN_FLOOR),
  *                               target (the raw goal_target, e.g. a technique name), and optionally
  *                               extra_lines (more job lines) and location_override (replaces the
  *                               where-to-go line)
@@ -592,6 +643,8 @@ function bounty_build_prompt($setting_id, $giver, array $job)
 {
     $lore = bounty_lore();
     $setting_name = $lore['settings'][$setting_id]['name'] ?? $setting_id;
+    $epForFloor = bounty_episode_from_setting_id($lore, $setting_id);
+    $floorPhrase = !empty($job['floor']) ? bounty_floor_phrase($job['floor'], $epForFloor) : '';
     $clean_recent = bounty_clean_recent_titles($job['recent_titles'] ?? 'None');
     if (!empty($job['location_override'])) {
         $location_instruction = $job['location_override'];
@@ -607,7 +660,7 @@ function bounty_build_prompt($setting_id, $giver, array $job)
     $prompt .= "
 THE JOB (the server has fixed the mechanics; do not change them):
 - Objective category: {$job['goal']}
-- Objective: {$job['objective']}" . (bounty_goal_meaning($job['goal'], $job['target'] ?? null) !== '' ? "\n- What it asks of the hunter: " . bounty_goal_meaning($job['goal'], $job['target'] ?? null) : '') . (!empty($job['floor']) && bounty_floor_phrase($job['floor']) !== '' ? "\n- In the story, call the place " . bounty_floor_phrase($job['floor']) . "." : '') . "
+- Objective: {$job['objective']}" . (bounty_goal_meaning($job['goal'], $job['target'] ?? null) !== '' ? "\n- What it asks of the hunter: " . bounty_goal_meaning($job['goal'], $job['target'] ?? null) : '') . ($floorPhrase !== '' ? "\n- In the story, call the place " . $floorPhrase . "." : '') . "
 - Difficulty: {$job['difficulty']} (the hunter is Level {$job['level']}). For a fight, let the danger match it; for an objective with no fight, let it set how much is at stake for the client." . (empty($job['extra_lines']) ? '' : "\n- " . implode("\n- ", (array) $job['extra_lines'])) . "
 - {$location_instruction}
 - The client is " . preg_replace_callback('/^(A|An|The) /', fn($m) => strtolower($m[0]), $job['quest_giver']) . ". Tell it from their side, in their voice.{$job['hex_twist']}
@@ -671,7 +724,8 @@ function bounty_build_admin_mission_prompt($setting_id, $giver, array $spec, $us
     $reward = trim((string) ($spec['reward'] ?? ''));
     $recent = bounty_clean_recent_titles($spec['recent_titles'] ?? 'None');
     $meaning = bounty_goal_meaning($goal, $target);
-    $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor']) : '';
+    $epForFloor = bounty_episode_from_setting_id($lore, $setting_id);
+    $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor'], $epForFloor) : '';
     $clientName = $giver['name'] ?? "a Hunter's Guild client";
 
     if ($lore && isset($lore['settings'][$setting_id])) {
@@ -726,7 +780,8 @@ function bounty_build_community_event_prompt($setting_id, $giver, array $spec, $
     $reward = trim((string) ($spec['reward'] ?? ''));
     $recent = trim((string) ($spec['recent_titles'] ?? 'None'));
     $meaning = bounty_goal_meaning($goal, $target);
-    $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor']) : '';
+    $epForFloor = bounty_episode_from_setting_id($lore, $setting_id);
+    $floorPhrase = !empty($spec['floor']) ? bounty_floor_phrase($spec['floor'], $epForFloor) : '';
     $clientName = $giver['name'] ?? "the Hunter's Guild command desk";
 
     if ($lore && isset($lore['settings'][$setting_id])) {

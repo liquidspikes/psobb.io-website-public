@@ -58,75 +58,8 @@ try {
         }
     }
 
-    // 1. Fetch online clients from newserv to verify level
-    $url = $NEWSERV_API_URL . "/y/clients";
-    $data = @file_get_contents($url);
-
-    if ($data === FALSE) {
-        http_response_code(500);
-        echo json_encode(["error" => "Game server is offline, cannot verify character."]);
-        exit;
-    }
-
-    $clients = json_decode($data, true);
-    $onlineCharacter = null;
-
-    if (is_array($clients)) {
-        foreach ($clients as $c) {
-            if (isset($c['Account']) && $c['Account']['AccountID'] == $accId) {
-                $onlineCharacter = $c;
-                break;
-            }
-        }
-    }
-
-    if (!$onlineCharacter) {
-        http_response_code(400);
-        echo json_encode(["error" => "Character must be online to claim rewards."]);
-        exit;
-    }
-
-    // Protect against loading screen transitions
-    if (!isset($onlineCharacter['EXP']) || ($onlineCharacter['EXP'] === 0 && ($onlineCharacter['Level'] ?? 1) > 1)) {
-        http_response_code(400);
-        echo json_encode(["error" => "Your character is currently in a loading screen. Please wait until you are fully spawned to claim."]);
-        exit;
-    }
-
-    $lobbyId = $onlineCharacter['LobbyID'] ?? null;
-    if ($lobbyId === null) {
-        http_response_code(400);
-        echo json_encode(["error" => "Character must be actively logged into a server lobby or game."]);
-        exit;
-    }
-
-    // 1.5 Fetch lobbies to ensure the player is in an actual game, not just the lobby
-    $lobbiesData = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-    if ($lobbiesData === FALSE) {
-        http_response_code(500);
-        echo json_encode(["error" => "Game server lobbies offline, cannot verify game status."]);
-        exit;
-    }
-
-    $lobbies = json_decode($lobbiesData, true);
-    $inGame = false;
-
-    if (is_array($lobbies)) {
-        foreach ($lobbies as $l) {
-            if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-                if (!empty($l['IsGame'])) {
-                    $inGame = true;
-                }
-                break;
-            }
-        }
-    }
-
-    if (!$inGame) {
-        http_response_code(400);
-        echo json_encode(["error" => "You must be actively inside a game (not in a lobby) to claim a reward."]);
-        exit;
-    }
+    // 1. Verify online character, spawn status, and active game room
+    $onlineCharacter = newserv_require_online_character((int) $accId, null, ['require_in_game' => true]);
 
     $raw_reward = $event['reward_item_string'];
     $num_drops = 1;
@@ -137,11 +70,7 @@ try {
             require_once 'reward_tables.php';
         }
         $charLevel = intval($onlineCharacter['Level'] ?? 1);
-        $charClass = $onlineCharacter['CharClass'] ?? $onlineCharacter['Class'] ?? 'HUmar';
-        if (is_numeric($charClass)) {
-            $class_map = [0 => 'HUmar', 1 => 'HUnewearl', 2 => 'HUcast', 3 => 'RAmar', 4 => 'RAcast', 5 => 'RAcaseal', 6 => 'FOmarl', 7 => 'FOnewm', 8 => 'FOnewearl', 9 => 'HUcaseal', 10 => 'FOmar', 11 => 'RAmarl'];
-            $charClass = $class_map[intval($charClass)] ?? 'HUmar';
-        }
+        $charClass = pso_resolve_class_name($onlineCharacter['CharClass'] ?? $onlineCharacter['Class'] ?? 'HUmar');
         
         $num_drops = 1 + floor($contribution / 50);
         if ($num_drops > 10) {

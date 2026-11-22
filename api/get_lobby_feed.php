@@ -24,25 +24,13 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
 $accountId = (int)$_SESSION['user']['account_id'];
 
 // 1. Find our client and their lobby
-$clientsData = @file_get_contents($NEWSERV_API_URL . '/y/clients');
-if ($clientsData === false) {
+$clients = newserv_fetch_clients();
+if ($clients === null) {
     echo json_encode(["online" => false, "error" => "Server offline"]);
     exit;
 }
 
-$clients = json_decode($clientsData, true);
-if (!is_array($clients)) {
-    echo json_encode(["online" => false, "error" => "Invalid server response"]);
-    exit;
-}
-
-$myClient = null;
-foreach ($clients as $c) {
-    if (isset($c['Account']['AccountID']) && (int)$c['Account']['AccountID'] === $accountId) {
-        $myClient = $c;
-        break;
-    }
-}
+$myClient = newserv_find_online_client($clients, $accountId);
 
 if (!$myClient) {
     echo json_encode([
@@ -66,16 +54,13 @@ if ($lobbyId === null) {
 }
 
 // 2. Fetch lobby details
-$lobbiesData = @file_get_contents($NEWSERV_API_URL . '/y/lobbies');
+$lobbies = newserv_fetch_lobbies();
 $lobbyInfo = null;
-if ($lobbiesData !== false) {
-    $lobbies = json_decode($lobbiesData, true);
-    if (is_array($lobbies)) {
-        foreach ($lobbies as $l) {
-            if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-                $lobbyInfo = $l;
-                break;
-            }
+if ($lobbies !== null) {
+    foreach ($lobbies as $l) {
+        if (isset($l['ID']) && $l['ID'] === $lobbyId) {
+            $lobbyInfo = $l;
+            break;
         }
     }
 }

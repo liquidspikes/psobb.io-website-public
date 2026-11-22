@@ -52,31 +52,18 @@ $script_start = time();
 // Loop for up to 55 seconds to fit within a standard 1-minute crontab resolution
 while (time() - $script_start < 55) {
     // 1. Fetch live clients and lobbies
-    $url = $NEWSERV_API_URL . "/y/clients";
-    $data = @file_get_contents($url);
-    if (!$data) {
+    $clients = newserv_fetch_clients();
+    if ($clients === null) {
         echo "[CRON] Failed to connect to newserv API\n";
         exit;
     }
 
-    // PSO character names may contain Shift-JIS private-use bytes (custom symbols like hearts,
-    // stars, etc.) that are not valid UTF-8. Strip only those invalid bytes so json_decode
-    // succeeds. Standard Unicode — including Japanese Hiragana, Katakana, and CJK — is valid
-    // UTF-8 and passes through iconv unchanged.
-    $data = iconv('UTF-8', 'UTF-8//IGNORE', $data);
-    $clients = json_decode($data, true);
-
-    if (!is_array($clients) || empty($clients)) {
+    if (empty($clients)) {
         sleep(10);
         continue;
     }
 
-    $lobbies_url = $NEWSERV_API_URL . "/y/lobbies";
-    $lobbies_data = @file_get_contents($lobbies_url);
-    $lobbies = [];
-    if ($lobbies_data) {
-        $lobbies = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $lobbies_data), true) ?: [];
-    }
+    $lobbies = newserv_fetch_lobbies() ?: [];
     $lobby_episode_map = [];
     foreach ($lobbies as $l) {
         if (isset($l['ID']) && isset($l['Episode'])) {
@@ -471,9 +458,13 @@ foreach ($clients as $client) {
             // "Survive and patrol the area for 10 minutes": seconds actually spent on the floor. It used to
             // count cron passes (about 10 s apart), so ten of them finished it in under two minutes.
             // A gap between passes counts for at most a minute, so a pause or a restart adds little.
+            $ft = parse_floor_target($m['goal_target']);
+            $target_ep = $ft['episode'];
             $patrol_secs = (int) ($prev_state['patrol'][$m['id']] ?? 0);
-            $in_ep1_game = !$lobby_info || (!empty($lobby_info['is_game']) && ($lobby_info['episode'] === null || (int)$lobby_info['episode'] === 1));
-            if ($in_ep1_game && ($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
+            $in_ep_game = ($target_ep === 1)
+                ? (!$lobby_info || (!empty($lobby_info['is_game']) && ($lobby_info['episode'] === null || (int)$lobby_info['episode'] === 1)))
+                : ($lobby_info && !empty($lobby_info['is_game']) && (int)($lobby_info['episode'] ?? 0) === $target_ep);
+            if ($in_ep_game && ($client['LocationFloor'] ?? -1) === $ft['floor']) {
                 $seen = (int) ($prev_state['patrol_seen'][$m['id']] ?? 0);
                 if ($seen > 0) {
                     $patrol_secs += min(60, max(0, time() - $seen));
@@ -485,9 +476,12 @@ foreach ($clients as $client) {
             }
             $current_patrols[$m['id']] = $patrol_secs;
         } elseif ($m['goal_type'] === 'EXPLORATION') {
-            // LocationFloor tracks exactly which area the player is currently occupying (Ep 1 only)
-            $in_ep1_game = !$lobby_info || (!empty($lobby_info['is_game']) && ($lobby_info['episode'] === null || (int)$lobby_info['episode'] === 1));
-            if ($in_ep1_game && ($client['LocationFloor'] ?? -1) === (int)$m['goal_target']) {
+            $ft = parse_floor_target($m['goal_target']);
+            $target_ep = $ft['episode'];
+            $in_ep_game = ($target_ep === 1)
+                ? (!$lobby_info || (!empty($lobby_info['is_game']) && ($lobby_info['episode'] === null || (int)$lobby_info['episode'] === 1)))
+                : ($lobby_info && !empty($lobby_info['is_game']) && (int)($lobby_info['episode'] ?? 0) === $target_ep);
+            if ($in_ep_game && ($client['LocationFloor'] ?? -1) === $ft['floor']) {
                 $completed = true;
             }
         } elseif ($m['goal_type'] === 'BOSS_ARENA' || $m['goal_type'] === 'MENTOR_BOSS' || $m['goal_type'] === 'HARDCORE_MENTOR' || $m['goal_type'] === 'DIVERSE_PARTY_BOSS') { 
@@ -592,23 +586,10 @@ foreach ($clients as $client) {
                         if (!function_exists('get_reward_item')) {
                             require_once 'reward_tables.php';
                         }
-                        // Fallback class_map for numeric IDs. In practice, newserv always
-                        // returns CharClass as a string (verified in StaticGameData.cc:294).
-                        // NOTE: Newserv's internal class ID ordering differs from standard PSO client
-                        // ordering (e.g. newserv ID 3=RAmar, not HUcaseal), but this map is only
-                        // used as a fallback when the API returns null/0, defaulting to HUmar.
-                        $class_map = [0 => 'HUmar', 1 => 'HUnewearl', 2 => 'HUcast', 3 => 'RAmar', 4 => 'RAcast', 5 => 'RAcaseal', 6 => 'FOmarl', 7 => 'FOnewm', 8 => 'FOnewearl', 9 => 'HUcaseal', 10 => 'FOmar', 11 => 'RAmarl'];
                         foreach ($mentees as $mentee) {
                             $m_acc = $mentee['Account']['AccountID'] ?? 0;   // Nested: Account.AccountID (Account.cc:263)
                             $m_char = $mentee['Name'] ?? 'Unknown';          // Decoded character name (HTTPServer.cc:180)
-                            // Resolve class: newserv /y/clients uses 'CharClass' (always a string),
-                            // but we also check 'Class' for /y/summary compatibility.
-                            $m_class_raw = $mentee['CharClass'] ?? $mentee['Class'] ?? 0;
-                            if (is_string($m_class_raw) && !is_numeric($m_class_raw)) {
-                                $m_class_str = $m_class_raw; // Already a string like 'HUmar' — use directly
-                            } else {
-                                $m_class_str = $class_map[(int)$m_class_raw] ?? 'HUmar'; // Numeric fallback
-                            }
+                            $m_class_str = pso_resolve_class_name($mentee['CharClass'] ?? $mentee['Class'] ?? 0);
                             $m_lvl = $mentee['Level'] ?? 1;
                             // Randomly pick a reward category so mentees get varied loot
                             $reward_category = ['Weapon', 'Armor', 'Shield'][array_rand(['Weapon', 'Armor', 'Shield'])];
@@ -667,20 +648,9 @@ foreach ($clients as $client) {
                     if ($my_lobby !== -1) {
                         foreach ($clients as $other_client) {
                             if (($other_client['LobbyID'] ?? -2) === $my_lobby) {
-                                $c_class = $other_client['CharClass'] ?? $other_client['Class'] ?? 0;
-                                // String path (always taken with newserv /y/clients — CharClass is a string)
-                                if (is_string($c_class) && !is_numeric($c_class)) {
-                                    if (strpos($c_class, 'HU') === 0) $party_classes['HU'] = true;
-                                    elseif (strpos($c_class, 'RA') === 0) $party_classes['RA'] = true;
-                                    elseif (strpos($c_class, 'FO') === 0) $party_classes['FO'] = true;
-                                } else {
-                                    // Numeric fallback — uses newserv class IDs (StaticGameData.cc:294)
-                                    // HU: 0=HUmar, 1=HUnewearl, 2=HUcast, 9=HUcaseal
-                                    // RA: 3=RAmar, 4=RAcast, 5=RAcaseal, 11=RAmarl
-                                    // FO: 6=FOmarl, 7=FOnewm, 8=FOnewearl, 10=FOmar
-                                    if (in_array($c_class, [0, 1, 2, 9])) $party_classes['HU'] = true;
-                                    elseif (in_array($c_class, [3, 4, 5, 11])) $party_classes['RA'] = true;
-                                    elseif (in_array($c_class, [6, 7, 8, 10])) $party_classes['FO'] = true;
+                                $role = pso_class_archetype($other_client['CharClass'] ?? $other_client['Class'] ?? 0);
+                                if ($role !== null) {
+                                    $party_classes[$role] = true;
                                 }
                             }
                         }
@@ -692,9 +662,6 @@ foreach ($clients as $client) {
                         if (!function_exists('get_reward_item')) {
                             require_once 'reward_tables.php';
                         }
-                        
-                        // Fallback class_map (see HARDCORE_MENTOR comments above for details)
-                        $class_map = [0 => 'HUmar', 1 => 'HUnewearl', 2 => 'HUcast', 3 => 'RAmar', 4 => 'RAcast', 5 => 'RAcaseal', 6 => 'FOmarl', 7 => 'FOnewm', 8 => 'FOnewearl', 9 => 'HUcaseal', 10 => 'FOmar', 11 => 'RAmarl'];
                         
                         // Collect all OTHER party members (exclude the bounty owner from rewards)
                         $party_members = [];
@@ -708,13 +675,7 @@ foreach ($clients as $client) {
                         foreach ($party_members as $member) {
                             $m_acc = $member['Account']['AccountID'] ?? 0;   // Nested: Account.AccountID
                             $m_char = $member['Name'] ?? 'Unknown';          // Decoded character name
-                            // Resolve class string (see HARDCORE_MENTOR comments for full explanation)
-                            $m_class_raw = $member['CharClass'] ?? $member['Class'] ?? 0;
-                            if (is_string($m_class_raw) && !is_numeric($m_class_raw)) {
-                                $m_class_str = $m_class_raw; // String from newserv — use directly
-                            } else {
-                                $m_class_str = $class_map[(int)$m_class_raw] ?? 'HUmar'; // Numeric fallback
-                            }
+                            $m_class_str = pso_resolve_class_name($member['CharClass'] ?? $member['Class'] ?? 0);
                             $m_lvl = $member['Level'] ?? 1;
                             $reward_category = ['Weapon', 'Armor', 'Shield'][array_rand(['Weapon', 'Armor', 'Shield'])];
                             $member_reward = get_reward_item($m_lvl, $m_class_str, $reward_category);
@@ -793,25 +754,23 @@ foreach ($clients as $client) {
             }
         } elseif ($m['goal_type'] === 'SPEEDRUN_FLOOR') {
             // ── High-frequency tracker for floor clear speedruns ──
-            list($target_floor, $time_limit) = explode('_', $m['goal_target']);
-            $target_floor = (int)$target_floor;
-            $time_limit = (int)$time_limit;
+            $ft = parse_floor_target($m['goal_target']);
+            $target_floor = $ft['floor'];
+            $target_ep = $ft['episode'];
+            $time_limit = (int) ($ft['time_limit'] ?? 0);
 
-            $valid_next = [$target_floor + 1];
-            if ($target_floor === 2) { $valid_next = [3, 11, 14]; }
-            elseif ($target_floor === 4) { $valid_next = [5, 11, 15]; }
-            elseif ($target_floor === 5) { $valid_next = [6, 7, 8, 9, 12]; }
-            elseif ($target_floor === 7) { $valid_next = [8, 13]; }
-            elseif ($target_floor === 8) { $valid_next = [9, 12]; }
-            elseif ($target_floor === 9) { $valid_next = [10, 12]; }
-            elseif ($target_floor === 10) { $valid_next = [11, 14]; }
-            elseif ($target_floor === 11) { $valid_next = [12, 13]; }
+            $valid_next = pso_speedrun_valid_next_floors($target_ep, $target_floor);
 
             $tracker_key = $stateKey;
             if (isset($floor_clear_events[$tracker_key])) {
                 foreach ($floor_clear_events[$tracker_key] as $fc_evt) {
                     if (!empty($m['activated_at']) && isset($fc_evt['time']) && (int) $fc_evt['time'] < (int) $m['activated_at']) continue;
-                    if (isset($fc_evt['episode']) && $fc_evt['episode'] !== null && (int) $fc_evt['episode'] !== 1) continue;
+                    $evt_ep = isset($fc_evt['episode']) && $fc_evt['episode'] !== null ? (int) $fc_evt['episode'] : null;
+                    if ($target_ep === 1) {
+                        if ($evt_ep !== null && $evt_ep !== 1) continue;
+                    } else {
+                        if ($evt_ep !== $target_ep) continue;
+                    }
                     if ($fc_evt['from_floor'] === $target_floor && in_array($fc_evt['to_floor'], $valid_next)) {
                         if ($fc_evt['time_on_floor'] <= $time_limit) {
                             $completed = true;

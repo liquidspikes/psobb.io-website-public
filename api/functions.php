@@ -126,6 +126,45 @@ function make_boss_target($floor, $episode = null, $time_limit = null)
 }
 
 /**
+ * Splits a floor goal_target (EXPLORATION, PATROL, SPEEDRUN_FLOOR) into its parts.
+ * Accepts legacy bare Ep1 strings ("5", "7_900") as well as episode-qualified ("5@2", "6@4_900").
+ *
+ * @return array ['floor' => int, 'episode' => int, 'time_limit' => int|null]
+ */
+function parse_floor_target($target): array
+{
+    $out = ['floor' => 0, 'episode' => 1, 'time_limit' => null];
+    if (preg_match('/^\s*(\d+)(?:@([124]))?(?:_(\d+))?\s*$/', (string) $target, $mm)) {
+        $out['floor'] = (int) $mm[1];
+        if (isset($mm[2]) && $mm[2] !== '') {
+            $out['episode'] = (int) $mm[2];
+        }
+        if (isset($mm[3]) && $mm[3] !== '') {
+            $out['time_limit'] = (int) $mm[3];
+        }
+    } else {
+        $parts = explode('_', (string) $target, 2);
+        $out['floor'] = (int) $parts[0];
+        if (isset($parts[1]) && is_numeric($parts[1])) {
+            $out['time_limit'] = (int) $parts[1];
+        }
+    }
+    return $out;
+}
+
+/**
+ * Builds a floor goal_target string ("5@2", "6@4_900").
+ */
+function make_floor_target($floor, $episode = 1, $time_limit = null): string
+{
+    $s = ((int) $floor) . '@' . ((int) $episode);
+    if ($time_limit !== null) {
+        $s .= '_' . (int) $time_limit;
+    }
+    return $s;
+}
+
+/**
  * True if $text contains any of $terms. ASCII terms must match as whole words (so "gal"
  * does not match "legal" and "ray" does not match "betrayal"); other terms (Japanese)
  * match as substrings.
@@ -305,27 +344,7 @@ if (!function_exists('decode_pso_tech_disk_hex')) {
         if (strpos($hex, '0302') !== 0 || strlen($hex) < 10 || !ctype_xdigit(substr($hex, 0, 10))) {
             return null;
         }
-        static $techNames = [
-            0x00 => 'Foie',
-            0x01 => 'Gifoie',
-            0x02 => 'Rafoie',
-            0x03 => 'Barta',
-            0x04 => 'Gibarta',
-            0x05 => 'Rabarta',
-            0x06 => 'Zonde',
-            0x07 => 'Gizonde',
-            0x08 => 'Razonde',
-            0x09 => 'Grants',
-            0x0A => 'Deband',
-            0x0B => 'Jellen',
-            0x0C => 'Zalure',
-            0x0D => 'Shifta',
-            0x0E => 'Ryuker',
-            0x0F => 'Resta',
-            0x10 => 'Anti',
-            0x11 => 'Reverser',
-            0x12 => 'Megid',
-        ];
+        $techNames = PSO_TECHNIQUES;
 
         $byte2 = hexdec(substr($hex, 4, 2));
         $byte4 = hexdec(substr($hex, 8, 2));
@@ -340,29 +359,6 @@ if (!function_exists('decode_pso_tech_disk_hex')) {
     }
 }
 
-if (!function_exists('count_cleared_challenge_stages')) {
-    /**
-     * Count cleared online Challenge Mode stages (Ep1 1C1-1C9 + Ep2 2C1-2C5 = 14 max)
-     * from a newserv /y/clients entry. newserv always emits 9 + 5 fixed array slots
-     * where 0xFFFF (65535) denotes an uncleared stage and 1..65534 is a valid clear time.
-     */
-    function count_cleared_challenge_stages(array $client): int
-    {
-        $times = array_merge(
-            $client['ChallengeTimesEp1Online'] ?? [],
-            $client['ChallengeTimesEp2Online'] ?? []
-        );
-        $cleared = 0;
-        foreach ($times as $t) {
-            $val = (int)$t;
-            if ($val > 0 && $val < 65535) {
-                $cleared++;
-            }
-        }
-        return $cleared;
-    }
-}
-
 /**
  * Boss arena floors by episode (as api/cron_boss_tracker.php reads them). Floor numbers repeat
  * across episodes: 9 is Ruins 2 in Episode 1 and the Seaside in Episode 2, 11 the lower Seabed in
@@ -370,10 +366,7 @@ if (!function_exists('count_cleared_challenge_stages')) {
  */
 function bounty_boss_arena_floors($episode)
 {
-    if ($episode == 1) return [11, 12, 13, 14];  // Dragon, De Rol Le, Vol Opt, Dark Falz
-    if ($episode == 2) return [12, 13, 14, 15];  // Gal Gryphon, Olga Flow, Barba Ray, Gol Dragon
-    if ($episode == 4) return [9];               // Saint-Milion / Shambertin / Kondrieu
-    return [9, 11, 12, 13, 14, 15];
+    return pso_boss_arena_floors($episode, false);
 }
 
 function bounty_episode_area_names($episode)
@@ -924,14 +917,13 @@ function getClearObjective($type, $target, $title = '', $desc = '', $min_difficu
         case 'MAT_LUCK':
             return __('Consume a total of %s Luck Materials', htmlspecialchars($target));
         case 'EXPLORATION':
-            // Maps integer Floor IDs returned by the game client memory map to friendly Names
-            $floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
-            $loc = $floors[$target] ?? "Floor $target";
-            return __('[Ep 1] Explore the %s', htmlspecialchars(__($loc)));
+            $ft = parse_floor_target($target);
+            $loc = pso_floor_display_name($ft['floor'], $ft['episode']);
+            return __('[Ep %s] Explore the %s', (string) $ft['episode'], htmlspecialchars(__($loc)));
         case 'PATROL':
-            $floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
-            $loc = $floors[$target] ?? "Floor $target";
-            return __('[Ep 1] Survive and patrol the %s for 10 minutes', htmlspecialchars(__($loc)));
+            $ft = parse_floor_target($target);
+            $loc = pso_floor_display_name($ft['floor'], $ft['episode']);
+            return __('[Ep %s] Survive and patrol the %s for 10 minutes', (string) $ft['episode'], htmlspecialchars(__($loc)));
         case 'BOSS_ARENA':
             if ($target === 'ANY_DRAGON')
                 return __('Defeat Any Dragon Boss (Forest, Sil, or Gol)');
@@ -1059,14 +1051,14 @@ function getClearObjective($type, $target, $title = '', $desc = '', $min_difficu
         case 'PENDING':
             return __('Waiting for a free slot: the objective and reward are set when it becomes active');
         case 'SPEEDRUN_FLOOR':
-            list($target_floor, $time_limit) = explode('_', $target);
-            $floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
-            $loc = $floors[$target_floor] ?? "Floor $target_floor";
+            $ft = parse_floor_target($target);
+            $loc = pso_floor_display_name($ft['floor'], $ft['episode']);
+            $time_limit = (int) ($ft['time_limit'] ?? 0);
             $mins = floor($time_limit / 60);
             $secs = $time_limit % 60;
             if ($secs == 0)
-                return __('[Ep 1] Clear %s in under %s minutes', htmlspecialchars(__($loc)), $mins);
-            return __('[Ep 1] Clear %s in under %s minutes and %s seconds', htmlspecialchars(__($loc)), $mins, $secs);
+                return __('[Ep %s] Clear %s in under %s minutes', (string) $ft['episode'], htmlspecialchars(__($loc)), $mins);
+            return __('[Ep %s] Clear %s in under %s minutes and %s seconds', (string) $ft['episode'], htmlspecialchars(__($loc)), $mins, $secs);
         default:
             return htmlspecialchars($type) . ": " . htmlspecialchars($target);
     }
@@ -1359,7 +1351,7 @@ if (!function_exists('buildHexPayload')) {
             $is_unit = ($data[0] === "\x01" && $data[1] === "\x03");
             $is_mag = ($data[0] === "\x02");
             $base_id = strtoupper(substr($hex, 0, 6));
-            $is_unsealable = in_array($base_id, ['003300', '00AB00', '01034D', '01034F'], true);
+            $is_unsealable = in_array($base_id, PSO_UNSEALABLE_ITEMS, true);
 
             if ($is_weapon) {
                 $max_idx = $is_unsealable ? 10 : 12;
@@ -1444,22 +1436,11 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
     // NewServ parses numeric identifiers as both Hex and Decimal simultaneously, causing collisions.
     // BB Usernames are alphanumeric, bypassing this flaw.
     $targetIdent = $accountId;
-    $clients_raw = @file_get_contents($NEWSERV_API_URL . "/y/clients");
-    if ($clients_raw !== FALSE) {
-        $clients = json_decode($clients_raw, true);
-        if (is_array($clients)) {
-            foreach ($clients as $c) {
-                if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-                    // Enforce strict character matching if a character name was provided
-                    if ($characterName !== null && isset($c['Name']) && $c['Name'] !== $characterName) {
-                        continue;
-                    }
-                    if (!empty($c['Account']['BBLicenses']) && is_array($c['Account']['BBLicenses'])) {
-                        $targetIdent = $c['Account']['BBLicenses'][0]['UserName'];
-                    }
-                    break;
-                }
-            }
+    $clients = newserv_fetch_clients();
+    if ($clients !== null) {
+        $matched = newserv_find_online_client($clients, (int) $accountId, $characterName);
+        if ($matched !== null) {
+            $targetIdent = newserv_resolve_target_ident($matched, $accountId);
         }
     }
 
@@ -1512,27 +1493,7 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
                 $techName = strtolower($dmatch[1]);
                 $techLevel = isset($dmatch[2]) ? max(0, min(29, intval($dmatch[2]) - 1)) : 0; // 0-indexed in memory
 
-                $techMap = [
-                    'foie' => 0x00,
-                    'gifoie' => 0x01,
-                    'rafoie' => 0x02,
-                    'barta' => 0x03,
-                    'gibarta' => 0x04,
-                    'rabarta' => 0x05,
-                    'zonde' => 0x06,
-                    'gizonde' => 0x07,
-                    'razonde' => 0x08,
-                    'grants' => 0x09,
-                    'deband' => 0x0A,
-                    'jellen' => 0x0B,
-                    'zalure' => 0x0C,
-                    'shifta' => 0x0D,
-                    'ryuker' => 0x0E,
-                    'resta' => 0x0F,
-                    'anti' => 0x10,
-                    'reverser' => 0x11,
-                    'megid' => 0x12
-                ];
+                $techMap = pso_tech_map_lower();
 
                 if (isset($techMap[$techName]) && (isset($dmatch[2]) || $techName === 'ryuker' || $techName === 'reverser')) {
                     if ($techName === 'ryuker' || $techName === 'reverser') {

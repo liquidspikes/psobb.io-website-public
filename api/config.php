@@ -20,6 +20,7 @@
  */
 
 require_once __DIR__ . '/exception_logger.php';
+require_once __DIR__ . '/pso_constants.php';
 
 /**
  * Parses a .env file and loads its contents into $_ENV, $_SERVER, and getenv().
@@ -187,14 +188,6 @@ if (!function_exists('get_site_config')) {
             ],
         ];
         $merged = $defaults;
-        if (!empty($SITE_CONFIG)) {
-            $merged = array_merge($defaults, $SITE_CONFIG);
-            if (isset($SITE_CONFIG['portal_modules']) && is_array($SITE_CONFIG['portal_modules'])) {
-                $merged['portal_modules'] = array_merge($defaults['portal_modules'], $SITE_CONFIG['portal_modules']);
-            }
-            $cached = $merged;
-            return $cached;
-        }
         if (file_exists($cfgPath)) {
             $json = json_decode(@file_get_contents($cfgPath), true);
             if (is_array($json)) {
@@ -202,14 +195,14 @@ if (!function_exists('get_site_config')) {
                 if (isset($json['portal_modules']) && is_array($json['portal_modules'])) {
                     $merged['portal_modules'] = array_merge($defaults['portal_modules'], $json['portal_modules']);
                 }
-                $cached = $merged;
-                return $cached;
             }
         }
-        $cached = $defaults;
+        $cached = $merged;
+        $GLOBALS['SITE_CONFIG'] = $cached;
         return $cached;
     }
 }
+$SITE_CONFIG = get_site_config();
 
 if (!function_exists('get_portal_module_visibility')) {
     /**
@@ -428,9 +421,10 @@ if (!function_exists('get_server_rates')) {
         }
 
         // 3. Fallbacks (.env overrides config/site.json) if neither NewServ API nor config.json provided rates
-        $fallbackExp    = !empty($_ENV['EXP_RATE']) ? $_ENV['EXP_RATE'] : ($SITE_CONFIG['exp_rate'] ?? '1x');
-        $fallbackDrop   = !empty($_ENV['DROP_RATE']) ? $_ENV['DROP_RATE'] : ($SITE_CONFIG['drop_rate'] ?? '1x');
-        $fallbackMeseta = !empty($_ENV['MESETA_RATE']) ? $_ENV['MESETA_RATE'] : ($SITE_CONFIG['meseta_rate'] ?? '1x');
+        $siteCfg = get_site_config();
+        $fallbackExp    = !empty($_ENV['EXP_RATE']) ? $_ENV['EXP_RATE'] : ($siteCfg['exp_rate'] ?? '1x');
+        $fallbackDrop   = !empty($_ENV['DROP_RATE']) ? $_ENV['DROP_RATE'] : ($siteCfg['drop_rate'] ?? '1x');
+        $fallbackMeseta = !empty($_ENV['MESETA_RATE']) ? $_ENV['MESETA_RATE'] : ($siteCfg['meseta_rate'] ?? '1x');
 
         $rates = [
             'exp'        => format_rate_multiplier($expMult, $fallbackExp),
@@ -470,11 +464,25 @@ if (!function_exists('get_meseta_rate')) {
     }
 }
 
-// Dynamically bind global rate variables from live NewServ
-$SERVER_RATES = get_server_rates();
-$EXP_RATE     = $SERVER_RATES['exp'];
-$DROP_RATE    = $SERVER_RATES['drop'];
-$MESETA_RATE  = $SERVER_RATES['meseta'];
+// Dynamically bind global rate variables (skip eager HTTP probe in CLI context)
+if (PHP_SAPI === 'cli') {
+    $EXP_RATE    = format_rate_multiplier(!empty($_ENV['EXP_RATE']) ? $_ENV['EXP_RATE'] : null, $SITE_CONFIG['exp_rate'] ?? '1x');
+    $DROP_RATE   = format_rate_multiplier(!empty($_ENV['DROP_RATE']) ? $_ENV['DROP_RATE'] : null, $SITE_CONFIG['drop_rate'] ?? '1x');
+    $MESETA_RATE = format_rate_multiplier(!empty($_ENV['MESETA_RATE']) ? $_ENV['MESETA_RATE'] : null, $SITE_CONFIG['meseta_rate'] ?? '1x');
+    $SERVER_RATES = [
+        'exp'        => $EXP_RATE,
+        'drop'       => $DROP_RATE,
+        'meseta'     => $MESETA_RATE,
+        'raw_exp'    => parse_rate_number($EXP_RATE, 1.0),
+        'raw_drop'   => parse_rate_number($DROP_RATE, 1.0),
+        'updated_at' => time(),
+    ];
+} else {
+    $SERVER_RATES = get_server_rates();
+    $EXP_RATE     = $SERVER_RATES['exp'];
+    $DROP_RATE    = $SERVER_RATES['drop'];
+    $MESETA_RATE  = $SERVER_RATES['meseta'];
+}
 
 
 if (!function_exists('is_feature_enabled')) {
@@ -532,15 +540,6 @@ if (!function_exists('get_discord_server')) {
             return $DISCORD_INVITE_URL;
         }
         return 'https://discord.gg/28s84HJXha';
-    }
-}
-
-if (!function_exists('get_discord_invite_url')) {
-    /**
-     * Alias for get_discord_server()
-     */
-    function get_discord_invite_url(): string {
-        return get_discord_server();
     }
 }
 
@@ -659,8 +658,7 @@ class SQLiteSessionHandler implements SessionHandlerInterface {
         // so unfinalized SELECT cursors on get_db() never trigger SQLITE_BUSY_SNAPSHOT
         // during session_write_close().
         get_db();
-        $path = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/../db/website.db'));
-        $this->db = new SQLite3($path);
+        $this->db = new SQLite3(get_db_path());
         $this->db->enableExceptions(true);
         $this->db->busyTimeout(30000);
         $this->db->exec("PRAGMA synchronous = NORMAL;");
@@ -895,43 +893,13 @@ if (!function_exists('newserv_shell_exec')) {
 }
 
 /**
- * Executes a command via NewServ's shell-exec API endpoint.
- *
- * @param string $cmd The command to execute.
- * @return string|false Raw response from NewServ or false on failure.
- */
-if (!function_exists('run_shell_command')) {
-    function run_shell_command(string $cmd) {
-        return newserv_shell_exec($cmd);
-    }
-}
-
-/**
- * Standard alias for run_shell_command / newserv_shell_exec.
- */
-if (!function_exists('run_shell')) {
-    function run_shell(string $cmd) {
-        return newserv_shell_exec($cmd);
-    }
-}
-
-/**
- * Admin alias for run_shell_command.
- */
-if (!function_exists('run_shell_admin')) {
-    function run_shell_admin(string $cmd) {
-        return newserv_shell_exec($cmd);
-    }
-}
-
-/**
  * Executes a command via NewServ's shell-exec and decodes the JSON response result.
  *
  * @param string $cmd The command to execute.
  * @return mixed|null Parsed 'result' field, or null on error.
  */
-if (!function_exists('run_shell_command_json')) {
-    function run_shell_command_json(string $cmd) {
+if (!function_exists('newserv_shell_exec_json')) {
+    function newserv_shell_exec_json(string $cmd) {
         $result = newserv_shell_exec($cmd);
         if ($result === false) return null;
         $json = json_decode($result, true);
@@ -973,42 +941,7 @@ if (!function_exists('resolve_player_file')) {
     }
 }
 
-if (!function_exists('decode_psochar_name')) {
-    /**
-     * Decodes a PSOBB character name from raw .psochar binary data (offset 0x3C8 / 968, 32 bytes),
-     * matching NewServ's pstring<TextEncoding::UTF16_ALWAYS_MARKED, 0x10>::decode():
-     *   - Scans 2 bytes at a time up to the first UTF-16LE NUL code unit (\x00\x00).
-     *   - Converts UTF-16LE -> UTF-8.
-     *   - Strips any 2-byte "\t<lang>" prefix (E/J/B/T/K/etc.) while preserving "\tC" color codes.
-     */
-    function decode_psochar_name(string $charData, bool $trim = true): string {
-        if (strlen($charData) < 0x3C8 + 0x20) {
-            return '';
-        }
-        $raw = substr($charData, 0x3C8, 0x20);
-        $byteLen = 0x20;
-        for ($z = 0; $z < 0x20; $z += 2) {
-            if ($raw[$z] === "\x00" && $raw[$z + 1] === "\x00") {
-                $byteLen = $z;
-                break;
-            }
-        }
-        if ($byteLen === 0) {
-            return '';
-        }
-        $slice = substr($raw, 0, $byteLen);
-        $utf8 = function_exists('mb_convert_encoding')
-            ? mb_convert_encoding($slice, 'UTF-8', 'UTF-16LE')
-            : @iconv('UTF-16LE', 'UTF-8//IGNORE', $slice);
-        if (!is_string($utf8) || $utf8 === '') {
-            return '';
-        }
-        if (strlen($utf8) >= 2 && $utf8[0] === "\t" && $utf8[1] !== 'C' && ord($utf8[1]) < 0x80) {
-            $utf8 = substr($utf8, 2);
-        }
-        return $trim ? trim($utf8, " \r\n\0\x0B") : $utf8;
-    }
-}
+require_once __DIR__ . '/newserv_client.php';
 
 // Load Localization
 require_once __DIR__ . '/lang.php';

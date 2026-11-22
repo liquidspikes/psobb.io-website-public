@@ -14,26 +14,14 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
 $accountId = $_SESSION['user']['account_id'];
 
 // 1. Fetch online clients from newserv
-$url = $NEWSERV_API_URL . "/y/clients";
-$data = @file_get_contents($url);
-
-if ($data === FALSE) {
+$clients = newserv_fetch_clients();
+if ($clients === null) {
     http_response_code(500);
     echo json_encode(["error" => __("Game server is offline, cannot fetch character data.")]);
     exit;
 }
 
-$clients = json_decode($data, true);
-$onlineCharacter = null;
-
-if (is_array($clients)) {
-    foreach ($clients as $c) {
-        if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-            $onlineCharacter = $c;
-            break;
-        }
-    }
-}
+$onlineCharacter = newserv_find_online_client($clients, (int) $accountId);
 
 if (!$onlineCharacter) {
     // Return early with a message requiring them to log in
@@ -44,25 +32,8 @@ if (!$onlineCharacter) {
     exit;
 }
 
-$lobbyId = $onlineCharacter['LobbyID'] ?? null;
-$inGame = false;
-
-if ($lobbyId !== null) {
-    $lobbiesData = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-    if ($lobbiesData !== FALSE) {
-        $lobbies = json_decode($lobbiesData, true);
-        if (is_array($lobbies)) {
-            foreach ($lobbies as $l) {
-                if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-                    if (!empty($l['IsGame'])) {
-                        $inGame = true;
-                    }
-                    break;
-                }
-            }
-        }
-    }
-}
+$lobbies = newserv_fetch_lobbies();
+$inGame = ($lobbies !== null) && newserv_is_client_in_game($onlineCharacter, $lobbies, (int) $accountId);
 
 $level = $onlineCharacter['Level'] ?? 1;
 $name = $onlineCharacter['Name'] ?? 'Unknown';

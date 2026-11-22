@@ -47,36 +47,15 @@ if ($targetBankIndex < -1 || $targetBankIndex > 126) {
     exit;
 }
 
-// 3. Fetch online clients from newserv
-$clientsUrl = $NEWSERV_API_URL . '/y/clients';
-$clientsResponse = @file_get_contents($clientsUrl);
-
-if ($clientsResponse === FALSE) {
-    http_response_code(502);
-    echo json_encode(['error' => 'Failed to connect to the game server. Please try again later.', 'success' => false]);
-    exit;
-}
-
-$clientsData = json_decode($clientsResponse, true);
-if (!is_array($clientsData)) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Invalid server response', 'success' => false]);
-    exit;
-}
-
-$foundClient = null;
-foreach ($clientsData as $client) {
-    if (isset($client['Account']) && $client['Account']['AccountID'] == $accountId) {
-        $foundClient = $client;
-        break;
-    }
-}
-
-if (!$foundClient) {
-    http_response_code(403);
-    echo json_encode(['error' => 'The selected character is not currently online or does not belong to you', 'success' => false]);
-    exit;
-}
+// 3. Verify character is online via newserv
+$foundClient = newserv_require_online_character((int) $accountId, null, [
+    'include_success_false' => true,
+    'offline_http_code'     => 502,
+    'offline_error'         => 'Failed to connect to the game server. Please try again later.',
+    'not_online_http_code'  => 403,
+    'not_online_error'      => 'The selected character is not currently online or does not belong to you',
+    'check_loading'         => false,
+]);
 
 if ($targetBankIndex >= 0 && $targetBankIndex !== (int)($foundClient['BBCharacterIndex'] ?? -2)) {
     $username = strtolower(trim($_SESSION['user']['username'] ?? ($foundClient['Account']['BBLicenses'][0]['UserName'] ?? '')));
@@ -105,7 +84,7 @@ $accountIdHex = dechex($accountId);
 
 // 5. Execute the bank swap
 $bankCmd = 'on ' . $accountIdHex . ' cc $bank ' . $cmdIndex;
-$bankResult = run_shell_command($bankCmd);
+$bankResult = newserv_shell_exec($bankCmd);
 
 if ($bankResult === false) {
     http_response_code(500);
@@ -115,7 +94,7 @@ if ($bankResult === false) {
 
 // 7. Save the character file
 $saveCmd = 'on ' . $accountIdHex . ' cc $save';
-run_shell_command($saveCmd);
+newserv_shell_exec($saveCmd);
 
 echo json_encode([
     'success' => true,

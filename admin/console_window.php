@@ -13,6 +13,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= __('Server Console') ?> - <?= htmlspecialchars(get_server_name()) ?></title>
     <meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?? '' ?>">
+    <script src="../js/pso_utils.js?v=<?php echo time(); ?>"></script>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap">
     <style>
@@ -118,28 +119,12 @@ async function runConsole(e) {
 }
 
 async function execCommand(cmd) {
-    const out = document.getElementById('console-out');
-    out.textContent += `\n> ${cmd}`;
-    out.scrollTop = out.scrollHeight;
-
-    try {
-        const res = await fetch('../api/admin_exec.php', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''},
-            body: JSON.stringify({command: cmd})
-        });
-        const data = await res.json();
-        
-        if (data.result) {
-            out.textContent += `\n${data.result}\n`;
-        } else if (data.error) {
-            out.textContent += "\n" + <?= json_encode(__('Error: '), JSON_UNESCAPED_UNICODE) ?> + data.error + "\n";
-        }
-    } catch (e) {
-        out.textContent += "\n" + <?= json_encode(__('Connection Failed: '), JSON_UNESCAPED_UNICODE) ?> + e + "\n";
-    }
-    out.scrollTop = out.scrollHeight;
+    return window.psoExecAdminCommand(cmd, document.getElementById('console-out'), '../api/admin_exec.php', {
+        trailingNewline: true,
+        errorPrefix: <?= json_encode(__('Error: '), JSON_UNESCAPED_UNICODE) ?>,
+        connFailed: <?= json_encode(__('Connection Failed: '), JSON_UNESCAPED_UNICODE) ?>,
+        includeErrorInCatch: true
+    });
 }
 
 const cmdInput = document.getElementById('console-cmd');

@@ -23,18 +23,15 @@ $newservStatus = false;
 $newservLiveConfig = [];
 $newservTelemetryReady = false;
 try {
-    $ctx = stream_context_create(['http' => ['timeout' => 1.5]]);
-    $res = @file_get_contents($NEWSERV_API_URL . '/y/summary', false, $ctx);
-    if ($res !== false) {
+    $summary = newserv_fetch_summary(1.5);
+    if ($summary !== null) {
         $newservStatus = true;
-        $cfgRaw = @file_get_contents($NEWSERV_API_URL . '/y/config', false, $ctx);
-        $decodedCfg = $cfgRaw !== false ? json_decode($cfgRaw, true) : null;
+        $decodedCfg = newserv_http_get_json('/y/config', 1.5);
         if (is_array($decodedCfg)) {
             $newservLiveConfig = $decodedCfg;
         }
-        $cliRaw = @file_get_contents($NEWSERV_API_URL . '/y/clients', false, $ctx);
-        $decodedCli = $cliRaw !== false ? json_decode($cliRaw, true) : null;
-        if (is_array($decodedCli) && !empty($decodedCli)) {
+        $decodedCli = newserv_fetch_clients(1.5);
+        if (!empty($decodedCli)) {
             $sampleCli = $decodedCli[0];
             $newservTelemetryReady = array_key_exists('KillCounts', $sampleCli) && array_key_exists('ChallengeClearCount', $sampleCli);
         }
@@ -1546,16 +1543,6 @@ function collectCrewData() {
     });
     initialCrew = list;
     return list;
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }
 
 // Add crew member button

@@ -30,16 +30,12 @@ try {
 
     if ($method === 'GET') {
         // Fetch active game IDs from the game server to verify party existence
-        $lobbies_url = $NEWSERV_API_URL . "/y/lobbies";
-        $lobbies_json = @file_get_contents($lobbies_url);
+        $lobbies = newserv_fetch_lobbies();
         $active_lobby_ids = [];
-        if ($lobbies_json !== false) {
-            $lobbies = json_decode($lobbies_json, true);
-            if (is_array($lobbies)) {
-                foreach ($lobbies as $l) {
-                    if (!empty($l['IsGame']) && isset($l['ID'])) {
-                        $active_lobby_ids[] = (int)$l['ID'];
-                    }
+        if ($lobbies !== null) {
+            foreach ($lobbies as $l) {
+                if (!empty($l['IsGame']) && isset($l['ID'])) {
+                    $active_lobby_ids[] = (int)$l['ID'];
                 }
             }
         }
@@ -60,7 +56,7 @@ try {
         while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
             // Filter out listings whose linked party is no longer active
             $gid = $row['game_id'] !== null ? (int)$row['game_id'] : null;
-            if ($lobbies_json !== false && $gid !== null && !in_array($gid, $active_lobby_ids)) {
+            if ($lobbies !== null && $gid !== null && !in_array($gid, $active_lobby_ids)) {
                 continue;
             }
 

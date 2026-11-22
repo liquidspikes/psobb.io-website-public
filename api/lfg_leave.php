@@ -84,7 +84,7 @@ try {
     // This utilizes newserv's native $exit handler, which cleanly manages character saves,
     // quest exits, and lobby transitions for all client versions and game states.
     $shell_cmd = "on C-{$client_id_hex} cc \$exit";
-    $shell_res = run_shell_command($shell_cmd);
+    $shell_res = newserv_shell_exec($shell_cmd);
     
     if ($shell_res === false) {
         http_response_code(502);

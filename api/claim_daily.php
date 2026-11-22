@@ -14,79 +14,17 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
 }
 $accountId = $_SESSION['user']['account_id'];
 
-// 1. Check if the player is currently online
-$url = $NEWSERV_API_URL . "/y/clients";
-$data = @file_get_contents($url);
-
-if ($data === FALSE) {
-    http_response_code(500);
-    echo json_encode(["error" => "Game server is offline."]);
-    exit;
-}
-
-$clients = json_decode($data, true);
-$onlineClient = null;
-
-if (is_array($clients)) {
-    foreach ($clients as $c) {
-        if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-            $onlineClient = $c;
-            break;
-        }
-    }
-}
-
-if (!$onlineClient) {
-    http_response_code(400);
-    echo json_encode(["error" => "You must be logged into the game to claim daily rewards."]);
-    exit;
-}
-
-// Protect against loading screen transitions
-if (!isset($onlineClient['EXP']) || ($onlineClient['EXP'] === 0 && ($onlineClient['Level'] ?? 1) > 1)) {
-    http_response_code(400);
-    echo json_encode(["error" => "Your character is currently in a loading screen. Please wait until you are fully spawned to claim."]);
-    exit;
-}
-
-// 2. Check if they're in a game (not just lobby)
-$lobbyId = $onlineClient['LobbyID'] ?? null;
-$inGame = false;
-if ($lobbyId) {
-    $lobbyUrl = $NEWSERV_API_URL . "/y/lobbies";
-    $lobbyData = @file_get_contents($lobbyUrl);
-    if ($lobbyData !== FALSE) {
-        $lobbies = json_decode($lobbyData, true);
-        if (is_array($lobbies)) {
-            foreach ($lobbies as $lobby) {
-                if (isset($lobby['ID']) && $lobby['ID'] == $lobbyId && isset($lobby['IsGame']) && $lobby['IsGame']) {
-                    $inGame = true;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-if (!$inGame) {
-    http_response_code(400);
-    echo json_encode(["error" => "You must be in a game (not lobby) to claim daily rewards."]);
-    exit;
-}
+// 1-2. Verify player is online, spawned, and actively in a game room
+$onlineClient = newserv_require_online_character((int) $accountId, null, [
+    'offline_error'          => 'Game server is offline.',
+    'not_online_error'       => 'You must be logged into the game to claim daily rewards.',
+    'require_in_game'        => true,
+    'in_game_required_error' => 'You must be in a game (not lobby) to claim daily rewards.',
+]);
 
 // 3. Check if already claimed today
 $db = get_db();
 $today = date('Y-m-d');
-
-// Create daily_rewards table if not exists
-$db->exec("CREATE TABLE IF NOT EXISTS daily_rewards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    account_id INTEGER NOT NULL,
-    claim_date TEXT NOT NULL,
-    item_string TEXT NOT NULL,
-    claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(account_id, claim_date)
-)");
 
 $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM daily_rewards WHERE account_id = :aid AND claim_date = :date");
 $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);

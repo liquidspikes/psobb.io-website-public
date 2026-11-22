@@ -1180,6 +1180,31 @@ check(bounty_boss_arena_floors(1) === [11, 12, 13, 14] && bounty_boss_arena_floo
 check(!in_array(9, bounty_boss_arena_floors(1)) && !in_array(9, bounty_boss_arena_floors(2)) && !in_array(11, bounty_boss_arena_floors(2)), 'Ruins 2, the Seaside and the lower Seabed are not boss arenas');
 check(!array_intersect(bounty_boss_arena_floors(1), bounty_episode_floors(1)) && !array_intersect(bounty_boss_arena_floors(2), bounty_episode_floors(2)) && !array_intersect(bounty_boss_arena_floors(4), bounty_episode_floors(4)), 'no field floor is also a boss arena in its episode');
 
+// Multi-episode daily floor objectives (EXPLORATION, PATROL, SPEEDRUN_FLOOR across Ep1/Ep2/Ep4)
+$ftLegacy = parse_floor_target('7');
+$ftLegacySr = parse_floor_target('7_900');
+$ftEp2 = parse_floor_target('5@2');
+$ftEp4Sr = parse_floor_target('7@4_1200');
+check($ftLegacy['episode'] === 1 && $ftLegacy['floor'] === 7 && $ftLegacySr['time_limit'] === 900, 'parse_floor_target preserves bare Ep1 legacy targets');
+check($ftEp2['episode'] === 2 && $ftEp2['floor'] === 5 && $ftEp4Sr['episode'] === 4 && $ftEp4Sr['floor'] === 7 && $ftEp4Sr['time_limit'] === 1200, 'parse_floor_target parses Ep2/Ep4 qualified floor targets');
+check(strpos(strip_tags(getClearObjective('EXPLORATION', '5@2')), '[Ep 2] Explore the Central Control Area') === 0, 'getClearObjective renders Ep2 EXPLORATION');
+check(strpos(strip_tags(getClearObjective('PATROL', '6@4')), '[Ep 4] Survive and patrol the Subterranean Desert 1 for 10 minutes') === 0, 'getClearObjective renders Ep4 PATROL');
+check(strpos(strip_tags(getClearObjective('SPEEDRUN_FLOOR', '11@2_900')), '[Ep 2] Clear Seabed Lower in under 15 minutes') === 0, 'getClearObjective renders Ep2 SPEEDRUN_FLOOR');
+check(in_array(12, pso_speedrun_valid_next_floors(2, 5), true) && in_array(13, pso_speedrun_valid_next_floors(2, 11), true), 'Ep2 speedrun transitions map CCA->Gal Gryphon and Seabed Lower->Olga Flow');
+check(in_array(5, pso_speedrun_valid_next_floors(4, 1), true) && in_array(9, pso_speedrun_valid_next_floors(4, 8), true), 'Ep4 speedrun transitions map Crater rim->Interior and Desert 3->Saint-Milion');
+$epSeenFloor = ['EXPLORATION' => [], 'SPEEDRUN_FLOOR' => []];
+$settingSeenFloor = [];
+for ($i = 0; $i < 240; $i++) {
+    foreach (['EXPLORATION' => ['only' => ['EXPLORATION']], 'SPEEDRUN_FLOOR' => ['only' => ['SPEEDRUN_FLOOR']]] as $fg => $fopts) {
+        $picked = bounty_pick_objective($at(60), 0, [], $fopts);
+        $epSeenFloor[$fg][$picked['mission_episode']] = true;
+        $settingSeenFloor[$picked['setting_id']] = true;
+    }
+}
+check(isset($epSeenFloor['EXPLORATION'][1], $epSeenFloor['EXPLORATION'][2], $epSeenFloor['EXPLORATION'][4]), 'daily EXPLORATION picks across Episodes 1, 2, and 4');
+check(isset($epSeenFloor['SPEEDRUN_FLOOR'][1], $epSeenFloor['SPEEDRUN_FLOOR'][2], $epSeenFloor['SPEEDRUN_FLOOR'][4]), 'daily SPEEDRUN_FLOOR picks across Episodes 1, 2, and 4');
+check(isset($settingSeenFloor['ep2_seabed'], $settingSeenFloor['ep4_desert']), 'daily floor objectives bind Ep2 and Ep4 lore/reward settings');
+
 // ---------------------------------------------------------------------------
 // Pre-rework 30-day legacy grace + unsealable weapon attribute limits
 // ---------------------------------------------------------------------------

@@ -25,16 +25,6 @@ if (empty($token)) {
 } else {
     try {
         $db = get_db();
-        $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id INTEGER NOT NULL,
-            username TEXT NOT NULL,
-            new_email TEXT NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            confirmed_at INTEGER DEFAULT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at INTEGER NOT NULL
-        )");
 
         $stmt = $db->prepare("SELECT * FROM email_confirmations WHERE token = :t");
         $stmt->bindValue(':t', $token, SQLITE3_TEXT);

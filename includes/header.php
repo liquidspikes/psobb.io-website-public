@@ -37,6 +37,7 @@ start_secure_session();
             return (fallback !== undefined) ? fallback : str;
         };
     </script>
+    <script src="/js/pso_utils.js?v=<?php echo time(); ?>"></script>
     <script src="/js/main.js?v=<?php echo time(); ?>" defer></script>
     <script>
         if ('serviceWorker' in navigator) {

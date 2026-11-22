@@ -73,10 +73,10 @@ try {
 
     // 3. Update Password in Newserv
     // Delete old license (admin force)
-    run_shell("delete-license $hexId BB $username");
+    newserv_shell_exec("delete-license $hexId BB $username");
 
     // Add new license
-    $res = run_shell("add-license $hexId BB $username $password");
+    $res = newserv_shell_exec("add-license $hexId BB $username $password");
     $json = json_decode($res, true);
 
     // 4. Cleanup and Respond

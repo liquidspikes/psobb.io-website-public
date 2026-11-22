@@ -759,50 +759,6 @@ if ($account_id) {
                 }, 1000);
             }
 
-            function createFireworks() {
-                const overlay = document.getElementById('drop-animation-overlay');
-                const colors = ['#ff4444', '#33b5e5', '#00C851', '#ffaa00', '#aa66cc', '#ffffff'];
-
-                for (let b = 0; b < 6; b++) {
-                    setTimeout(() => {
-                        const centerX = window.innerWidth / 2 + (Math.random() - 0.5) * 600;
-                        const centerY = window.innerHeight / 2 + (Math.random() - 0.5) * 500 - 150;
-
-                        for (let i = 0; i < 80; i++) {
-                            const particle = document.createElement('div');
-                            particle.style.position = 'absolute';
-                            particle.style.left = centerX + 'px';
-                            particle.style.top = centerY + 'px';
-                            particle.style.width = (Math.random() * 8 + 4) + 'px';
-                            particle.style.height = particle.style.width;
-                            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                            particle.style.borderRadius = '50%';
-                            particle.style.pointerEvents = 'none';
-                            particle.style.zIndex = '9998';
-                            particle.style.boxShadow = `0 0 15px ${particle.style.backgroundColor}, 0 0 30px ${particle.style.backgroundColor}`;
-
-                            overlay.appendChild(particle);
-
-                            const angle = Math.random() * Math.PI * 2;
-                            const velocity = 100 + Math.random() * 300;
-                            const tx = Math.cos(angle) * velocity;
-                            const ty = Math.sin(angle) * velocity;
-
-                            particle.animate([
-                                { transform: 'translate(0,0) scale(1)', opacity: 1 },
-                                { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
-                            ], {
-                                duration: 1000 + Math.random() * 800,
-                                easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-                                fill: 'forwards'
-                            });
-
-                            setTimeout(() => { if (particle.parentNode) particle.remove(); }, 2000);
-                        }
-                    }, b * 300);
-                }
-            }
-            
             async function rerollBounty(pmId, btnEl) {
                 if (!confirm("<?= __('Reroll this bounty? It keeps its tier and reward and gets a new objective the next time this character is online. Each bounty can be rerolled once.') ?>")) return;
                 btnEl.disabled = true;

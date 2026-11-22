@@ -34,70 +34,22 @@ if (!$input || !isset($input['slot'])) {
 $slot = clamp((int)$input['slot'], 0, 3);
 $targetSlotNum = $slot + 1; // 1-based character slot for newserv command
 
-// 3. Check online state via newserv
-$clientsUrl = $NEWSERV_API_URL . '/y/clients';
-$clientsResponse = @file_get_contents($clientsUrl);
-
-if ($clientsResponse === FALSE) {
-    http_response_code(502);
-    echo json_encode(['error' => 'Failed to connect to the game server. Please try again later.', 'success' => false]);
-    exit;
-}
-
-$clientsData = json_decode($clientsResponse, true);
-if (!is_array($clientsData)) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Invalid server response', 'success' => false]);
-    exit;
-}
-
-$isOnline = false;
-foreach ($clientsData as $client) {
-    if (isset($client['Account']['AccountID']) && (int)$client['Account']['AccountID'] === $accountId) {
-        $isOnline = true;
-        break;
-    }
-}
-
-if (!$isOnline) {
-    http_response_code(400);
-    echo json_encode(['error' => 'You must be logged into a character in-game to switch characters instantly.', 'success' => false]);
-    exit;
-}
-
-// 4. Double check if player is in a game room vs lobby block
-$lobbiesUrl = $NEWSERV_API_URL . '/y/lobbies';
-$lobbiesResponse = @file_get_contents($lobbiesUrl);
-$inGame = false;
-
-if ($lobbiesResponse !== FALSE) {
-    $lobbiesData = json_decode($lobbiesResponse, true);
-    if (is_array($lobbiesData)) {
-        foreach ($lobbiesData as $lobby) {
-            if (!empty($lobby['IsGame']) && $lobby['IsGame'] == true) {
-                if (isset($lobby['Clients']) && is_array($lobby['Clients'])) {
-                    foreach ($lobby['Clients'] as $lobbyClient) {
-                        if ($lobbyClient !== null && isset($lobbyClient['Account']['AccountID']) && (int)$lobbyClient['Account']['AccountID'] === $accountId) {
-                            $inGame = true;
-                            break 2;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-if ($inGame) {
-    http_response_code(403);
-    echo json_encode(['error' => 'You cannot switch characters while actively inside a game. Please return to the lobby first!', 'success' => false]);
-    exit;
-}
+// 3-4. Verify player is online in lobby block (not inside an active game)
+newserv_require_online_character((int) $accountId, null, [
+    'include_success_false'   => true,
+    'offline_http_code'       => 502,
+    'offline_error'           => 'Failed to connect to the game server. Please try again later.',
+    'not_online_http_code'    => 400,
+    'not_online_error'        => 'You must be logged into a character in-game to switch characters instantly.',
+    'check_loading'           => false,
+    'forbid_in_game'          => true,
+    'in_game_forbidden_error' => 'You cannot switch characters while actively inside a game. Please return to the lobby first!',
+]);
 
 // 5. Execute the switch character command
 $accountIdHex = dechex($accountId);
 $switchCmd = 'on ' . $accountIdHex . ' cc $switchchar ' . $targetSlotNum;
-$result = run_shell_command($switchCmd);
+$result = newserv_shell_exec($switchCmd);
 
 if ($result === false) {
     http_response_code(502);

@@ -100,19 +100,7 @@ try {
         exit;
     }
 
-    // 4. Ensure email_confirmations table exists
-    $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER NOT NULL,
-        username TEXT NOT NULL,
-        new_email TEXT NOT NULL,
-        token TEXT UNIQUE NOT NULL,
-        confirmed_at INTEGER DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        expires_at INTEGER NOT NULL
-    )");
-
-    // 5. Generate Secure Confirmation Token
+    // 4. Generate Secure Confirmation Token
     $token = bin2hex(random_bytes(32));
     $expiresAt = time() + 86400; // 24 hours
 

@@ -40,8 +40,14 @@
  * and quests by tools/bounty_data/build.py.
  */
 
-const BOUNTY_SECTION_IDS = ['viridia', 'greenill', 'skyly', 'bluefull', 'purplenum', 'pinkal', 'redria', 'oran', 'yellowboze', 'whitill'];
-const BOUNTY_CHAR_CLASSES = ['HUmar', 'HUnewearl', 'HUcast', 'RAmar', 'RAcast', 'RAcaseal', 'FOmarl', 'FOnewm', 'FOnewearl', 'HUcaseal', 'FOmar', 'RAmarl'];
+require_once __DIR__ . '/pso_constants.php';
+
+if (!defined('BOUNTY_SECTION_IDS')) {
+    define('BOUNTY_SECTION_IDS', PSO_SECTION_IDS_LOWER);
+}
+if (!defined('BOUNTY_CHAR_CLASSES')) {
+    define('BOUNTY_CHAR_CLASSES', PSO_CHAR_CLASSES);
+}
 const BOUNTY_ATTRS = ['native', 'abeast', 'machine', 'dark'];
 const BOUNTY_PHOTON_DROP = '031000';
 const BOUNTY_PHOTON_SPHERE = '031001';
@@ -854,7 +860,7 @@ function bounty_photon_parts(array $spec)
 function bounty_enforce_unsealable_weapon_attr_limit($baseCode, array $stats, $hit)
 {
     $base6 = strtoupper(substr(trim((string) $baseCode), 0, 6));
-    if ((int) $hit > 0 && in_array($base6, ['003300', '00AB00'], true)) {
+    if ((int) $hit > 0 && in_array($base6, PSO_UNSEALABLE_WEAPONS, true)) {
         $kept = 0;
         foreach ($stats as $idx => $val) {
             if ((int) $val > 0) {

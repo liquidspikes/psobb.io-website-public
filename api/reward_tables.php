@@ -1,19 +1,9 @@
 <?php
+require_once __DIR__ . '/pso_constants.php';
+
 // Hex string builders for NewServ $item drops
 function build_pso_weapon($base_hex, $special_name = '', $untekked = false, $native = 0, $abeast = 0, $machine = 0, $dark = 0, $hit = 0) {
-    $special_map = [
-        'draw' => 1, 'drain' => 2, 'fill' => 3, 'gush' => 4,
-        'heart' => 5, 'mind' => 6, 'soul' => 7, 'geist' => 8,
-        'masters' => 9, 'lords' => 10, 'kings' => 11,
-        'charge' => 12, 'spirit' => 13, 'berserk' => 14,
-        'ice' => 15, 'frost' => 16, 'freeze' => 17, 'blizzard' => 18,
-        'bind' => 19, 'hold' => 20, 'seize' => 21, 'arrest' => 22,
-        'heat' => 23, 'fire' => 24, 'flame' => 25, 'burning' => 26,
-        'shock' => 27, 'thunder' => 28, 'storm' => 29, 'tempest' => 30,
-        'dim' => 31, 'shadow' => 32, 'dark' => 33, 'hell' => 34,
-        'panic' => 35, 'riot' => 36, 'havoc' => 37, 'chaos' => 38,
-        'devil\'s' => 39, 'demon\'s' => 40
-    ];
+    $special_map = pso_weapon_special_map_lower();
     $hex = str_pad(explode(' ', $base_hex)[0], 32, "0");
     $data = hex2bin($hex);
     $special_val = 0;
@@ -27,7 +17,7 @@ function build_pso_weapon($base_hex, $special_name = '', $untekked = false, $nat
     
     // Add stats (Native=1, ABeast=2, Machine=3, Dark=4, Hit=5)
     $base_id = strtoupper(substr($hex, 0, 6));
-    $is_unsealable = in_array($base_id, ['003300', '00AB00'], true);
+    $is_unsealable = in_array($base_id, PSO_UNSEALABLE_WEAPONS, true);
     $max_idx = $is_unsealable ? 10 : 12;
     $idx = 6;
     if ($native > 0 && $idx < $max_idx) { $data[$idx] = chr(1); $data[$idx+1] = chr($native); $idx += 2; }
@@ -77,7 +67,7 @@ function build_pso_armor($base_hex_or_name, $slots = 0, $def = 0, $evp = 0) {
         $data[7] = chr(($def >> 8) & 0xFF);
         $data[8] = chr($evp & 0xFF);
         $data[9] = chr(($evp >> 8) & 0xFF);
-        if (in_array($base_id, ['01034D', '01034F'], true)) {
+        if (in_array($base_id, PSO_UNSEALABLE_UNITS, true)) {
             $data[10] = "\x80";
             $data[11] = "\x00";
         }
@@ -755,11 +745,11 @@ function get_common_reward_item($level_milestone, $charClass, $category, $option
     // For PSO items, common item types max out at tier 6.
     $item_tier = min(6, $tier);
 
-    $specials = ['Draw', 'Drain', 'Fill', 'Gush', 'Heart', 'Mind', 'Soul', 'Geist', 'Masters', 'Lords', 'Kings', 'Charge', 'Spirit', 'Berserk', 'Ice', 'Frost', 'Freeze', 'Blizzard', 'Bind', 'Hold', 'Seize', 'Arrest', 'Heat', 'Fire', 'Flame', 'Burning', 'Shock', 'Thunder', 'Storm', 'Tempest', 'Dim', 'Shadow', 'Dark', 'Hell', 'Panic', 'Riot', 'Havoc', 'Chaos', 'Devil\'s', 'Demon\'s'];
+    $specials = array_values(PSO_WEAPON_SPECIALS);
     
     // Group classes
-    $isHunter = in_array($charClass, ['HUmar', 'HUnewearl', 'HUcast', 'HUcaseal']);
-    $isRanger = in_array($charClass, ['RAmar', 'RAmarl', 'RAcast', 'RAcaseal']);
+    $isHunter = in_array($charClass, PSO_HUNTER_CLASSES, true);
+    $isRanger = in_array($charClass, PSO_RANGER_CLASSES, true);
     $isForce = !$isHunter && !$isRanger;
     
     if ($category === 'Weapon') {

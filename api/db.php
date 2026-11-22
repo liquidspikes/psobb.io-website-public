@@ -10,48 +10,15 @@ error_reporting(0);
 ini_set('display_errors', 0);
 
 require_once __DIR__ . '/exception_logger.php';
+require_once __DIR__ . '/pso_constants.php';
 
-if (!function_exists('decode_psochar_name')) {
-    /**
-     * Decodes a PSOBB character name from raw .psochar binary data (offset 0x3C8 / 968, 32 bytes),
-     * matching NewServ's pstring<TextEncoding::UTF16_ALWAYS_MARKED, 0x10>::decode():
-     *   - Scans 2 bytes at a time up to the first UTF-16LE NUL code unit (\x00\x00).
-     *   - Converts UTF-16LE -> UTF-8.
-     *   - Strips any 2-byte "\t<lang>" prefix (E/J/B/T/K/etc.) while preserving "\tC" color codes.
-     */
-    function decode_psochar_name(string $charData, bool $trim = true): string {
-        if (strlen($charData) < 0x3C8 + 0x20) {
-            return '';
-        }
-        $raw = substr($charData, 0x3C8, 0x20);
-        $byteLen = 0x20;
-        for ($z = 0; $z < 0x20; $z += 2) {
-            if ($raw[$z] === "\x00" && $raw[$z + 1] === "\x00") {
-                $byteLen = $z;
-                break;
-            }
-        }
-        if ($byteLen === 0) {
-            return '';
-        }
-        $slice = substr($raw, 0, $byteLen);
-        $utf8 = function_exists('mb_convert_encoding')
-            ? mb_convert_encoding($slice, 'UTF-8', 'UTF-16LE')
-            : @iconv('UTF-16LE', 'UTF-8//IGNORE', $slice);
-        if (!is_string($utf8) || $utf8 === '') {
-            return '';
-        }
-        if (strlen($utf8) >= 2 && $utf8[0] === "\t" && $utf8[1] !== 'C' && ord($utf8[1]) < 0x80) {
-            $utf8 = substr($utf8, 2);
-        }
-        return $trim ? trim($utf8, " \r\n\0\x0B") : $utf8;
-    }
+if (!defined('PSO_DB_SCHEMA_VERSION')) {
+    define('PSO_DB_SCHEMA_VERSION', 1);
 }
 
 /**
  * Retrieves a singleton-like SQLite3 database connection.
- * Automatically runs required schema migrations (e.g., adding missing columns or tables) 
- * to ensure the database is up-to-date with the current application version.
+ * Runs run_db_migrations() only when PRAGMA user_version is behind PSO_DB_SCHEMA_VERSION.
  *
  * @throws Exception If the database file cannot be opened or created.
  * @return SQLite3 The established SQLite3 database connection.
@@ -61,7 +28,7 @@ function get_db(bool $reset = false)
     static $dbInstance = null;
     static $cachedPath = null;
 
-    $path = !empty($_ENV['DB_PATH']) ? $_ENV['DB_PATH'] : (getenv('DB_PATH') ?: (__DIR__ . '/../db/website.db'));
+    $path = get_db_path();
     if ($dbInstance !== null && !$reset && $cachedPath === $path) {
         return $dbInstance;
     }
@@ -84,6 +51,27 @@ function get_db(bool $reset = false)
         $db->exec("PRAGMA temp_store = MEMORY;");
         $db->exec("PRAGMA cache_size = -8000;");  // 8MB page cache
 
+        $currentVer = (int) $db->querySingle('PRAGMA user_version');
+        if ($currentVer < PSO_DB_SCHEMA_VERSION) {
+            run_db_migrations($db);
+            $db->exec('PRAGMA user_version = ' . (int) PSO_DB_SCHEMA_VERSION . ';');
+        }
+
+        // Enable FK enforcement after any schema migrations
+        $db->exec("PRAGMA foreign_keys = ON;");
+
+        $dbInstance = $db;
+        return $dbInstance;
+    } catch (Exception $e) {
+        throw $e;
+    }
+}
+
+/**
+ * Ensure all tables, columns, indexes, and one-time data fixes exist in SQLite.
+ */
+function run_db_migrations(SQLite3 $db): void
+{
         // Ensure foundational tables exist before running column migrations
         $db->exec("
             CREATE TABLE IF NOT EXISTS users (
@@ -131,15 +119,6 @@ function get_db(bool $reset = false)
                 UNIQUE(account_id, character_name, character_index, level_milestone)
             );
 
-            CREATE TABLE IF NOT EXISTS daily_rewards (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL,
-                claim_date TEXT NOT NULL,
-                item_string TEXT NOT NULL,
-                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(account_id, claim_date)
-            );
-
             CREATE TABLE IF NOT EXISTS streak_claims (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_id INTEGER NOT NULL,
@@ -156,8 +135,17 @@ function get_db(bool $reset = false)
                 stat_machine INTEGER NOT NULL,
                 stat_dark INTEGER NOT NULL,
                 stat_hit INTEGER NOT NULL,
-                hint_attribute TEXT NOT NULL,
-                is_active INTEGER NOT NULL DEFAULT 1
+                hint_attribute TEXT NOT NULL DEFAULT '',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                base_native INTEGER DEFAULT 0,
+                base_abeast INTEGER DEFAULT 0,
+                base_machine INTEGER DEFAULT 0,
+                base_dark INTEGER DEFAULT 0,
+                base_hit INTEGER DEFAULT 0,
+                spawn_time DATETIME,
+                despawn_time DATETIME,
+                guesses_since_shift INTEGER DEFAULT 0,
+                second_zero_discovered INTEGER DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS tekker_player_state (
@@ -165,6 +153,9 @@ function get_db(bool $reset = false)
                 drop_id TEXT NOT NULL,
                 attempts_used INTEGER NOT NULL,
                 max_attempts INTEGER NOT NULL,
+                lifetime_attempts INTEGER DEFAULT 0,
+                attempts_remaining INTEGER,
+                last_guess_at TEXT,
                 PRIMARY KEY (user_id, drop_id)
             );
 
@@ -199,78 +190,97 @@ function get_db(bool $reset = false)
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS tekker_claim_log (
+                claim_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                discord_id TEXT,
+                token_ids TEXT NOT NULL,
+                token_count INTEGER NOT NULL,
+                weapon_hex TEXT NOT NULL,
+                weapon_name TEXT NOT NULL,
+                stat_native INTEGER DEFAULT 0,
+                stat_abeast INTEGER DEFAULT 0,
+                stat_machine INTEGER DEFAULT 0,
+                stat_dark INTEGER DEFAULT 0,
+                stat_hit INTEGER DEFAULT 0,
+                claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
         ");
 
-        // --- Auto-migration for 'users' table ---
-        // Ensure discord_id column exists
-        $result = $db->query("PRAGMA table_info(users)");
-        $hasDiscordId = false;
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'discord_id') {
-                $hasDiscordId = true;
-                break;
+        // Column migrations for tekker_active_drops & tekker_player_state (existing DBs)
+        $tadCols = [];
+        $tadRes = $db->query("PRAGMA table_info(tekker_active_drops)");
+        if ($tadRes) {
+            while ($c = $tadRes->fetchArray(SQLITE3_ASSOC)) {
+                $tadCols[] = $c['name'];
+            }
+            $tadRes->finalize();
+        }
+        $tadExtra = [
+            'base_native' => 'INTEGER DEFAULT 0',
+            'base_abeast' => 'INTEGER DEFAULT 0',
+            'base_machine' => 'INTEGER DEFAULT 0',
+            'base_dark' => 'INTEGER DEFAULT 0',
+            'base_hit' => 'INTEGER DEFAULT 0',
+            'spawn_time' => 'DATETIME',
+            'despawn_time' => 'DATETIME',
+            'guesses_since_shift' => 'INTEGER DEFAULT 0',
+            'second_zero_discovered' => 'INTEGER DEFAULT 0',
+        ];
+        foreach ($tadExtra as $colName => $colDef) {
+            if (!in_array($colName, $tadCols, true)) {
+                @$db->exec("ALTER TABLE tekker_active_drops ADD COLUMN {$colName} {$colDef}");
             }
         }
-        $result->finalize();
-        if (!$hasDiscordId) {
-            $db->exec("ALTER TABLE users ADD COLUMN discord_id TEXT");
-            $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id IS NOT NULL");
+        $db->exec("UPDATE tekker_active_drops SET is_active = 0 WHERE is_active = 1 AND (drop_id IS NULL OR trim(drop_id) = '')");
+
+        $tpsCols = [];
+        $tpsRes = $db->query("PRAGMA table_info(tekker_player_state)");
+        if ($tpsRes) {
+            while ($c = $tpsRes->fetchArray(SQLITE3_ASSOC)) {
+                $tpsCols[] = $c['name'];
+            }
+            $tpsRes->finalize();
+        }
+        $tpsExtra = [
+            'lifetime_attempts' => 'INTEGER DEFAULT 0',
+            'attempts_remaining' => 'INTEGER',
+            'last_guess_at' => 'TEXT',
+        ];
+        foreach ($tpsExtra as $colName => $colDef) {
+            if (!in_array($colName, $tpsCols, true)) {
+                @$db->exec("ALTER TABLE tekker_player_state ADD COLUMN {$colName} {$colDef}");
+            }
         }
 
-        // Ensure language column exists
-        $hasLanguage = false;
-        $result = $db->query("PRAGMA table_info(users)");
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'language') {
-                $hasLanguage = true;
-                break;
+        // --- Auto-migration for 'users' table (single PRAGMA pass) ---
+        $userCols = [];
+        $uRes = $db->query("PRAGMA table_info(users)");
+        if ($uRes) {
+            while ($row = $uRes->fetchArray(SQLITE3_ASSOC)) {
+                $userCols[$row['name']] = true;
             }
+            $uRes->finalize();
         }
-        $result->finalize();
-        if (!$hasLanguage) {
+        if (empty($userCols['discord_id'])) {
+            $db->exec("ALTER TABLE users ADD COLUMN discord_id TEXT");
+        }
+        $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord ON users(discord_id) WHERE discord_id IS NOT NULL");
+        if (empty($userCols['language'])) {
             $db->exec("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'");
         }
-
-        // Ensure display_name column exists (leaderboard alias)
-        $hasDisplayName = false;
-        $result = $db->query("PRAGMA table_info(users)");
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'display_name') {
-                $hasDisplayName = true;
-                break;
-            }
-        }
-        $result->finalize();
-        if (!$hasDisplayName) {
+        if (empty($userCols['display_name'])) {
             $db->exec("ALTER TABLE users ADD COLUMN display_name TEXT");
         }
-
-        // Ensure receive_system_mail column exists (QoL notification setting)
-        $hasReceiveSystemMail = false;
-        $result = $db->query("PRAGMA table_info(users)");
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'receive_system_mail') {
-                $hasReceiveSystemMail = true;
-                break;
-            }
-        }
-        $result->finalize();
-        if (!$hasReceiveSystemMail) {
+        if (empty($userCols['receive_system_mail'])) {
             $db->exec("ALTER TABLE users ADD COLUMN receive_system_mail INTEGER DEFAULT 1");
         }
-
-        // Ensure receive_discord_streak_msg column exists (QoL Discord DM streak alert setting)
-        $hasReceiveDiscordStreakMsg = false;
-        $result = $db->query("PRAGMA table_info(users)");
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            if ($row['name'] === 'receive_discord_streak_msg') {
-                $hasReceiveDiscordStreakMsg = true;
-                break;
-            }
-        }
-        $result->finalize();
-        if (!$hasReceiveDiscordStreakMsg) {
+        if (empty($userCols['receive_discord_streak_msg'])) {
             $db->exec("ALTER TABLE users ADD COLUMN receive_discord_streak_msg INTEGER DEFAULT 1");
+        }
+        if (empty($userCols['is_admin'])) {
+            $db->exec("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0");
         }
 
         // Ensure email, created_at, and expires_at exist in password_resets
@@ -755,16 +765,6 @@ function get_db(bool $reset = false)
                 @$db->exec("ROLLBACK;");
             }
         }
-
-        // Enable FK enforcement only after all schema migrations are done
-        $db->exec("PRAGMA foreign_keys = ON;");
-
-        $dbInstance = $db;
-        return $dbInstance;
-
-    } catch (Exception $e) {
-        throw $e;
-    }
 }
 
 /**

@@ -383,17 +383,15 @@ td { padding: .75rem 1rem; font-size: .875rem; color: #d1d5db; vertical-align: m
 </main>
 
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-
 function api(action, body = null) {
     return fetch(`/api/admin_special_delivery.php?action=${action}`, {
         method: body ? 'POST' : 'GET',
-        headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json' },
+        headers: { 'X-CSRF-TOKEN': window.getCSRFToken(), 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
     }).then(r => r.json());
 }
 
-function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+const esc = window.escapeHtml;
 function fmt(dt) {
     if (!dt) return '<span style="color:#4b5563">—</span>';
     return new Date(dt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });

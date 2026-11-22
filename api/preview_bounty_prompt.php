@@ -41,7 +41,6 @@ if ($level >= 80) $difficulty = 'Ultimate';
 elseif ($level >= 40) $difficulty = 'Very Hard';
 elseif ($level >= 20) $difficulty = 'Hard';
 
-$floors = [1 => 'Forest 1', 2 => 'Forest 2', 3 => 'Cave 1', 4 => 'Cave 2', 5 => 'Cave 3', 6 => 'Mine 1', 7 => 'Mine 2', 8 => 'Ruins 1', 9 => 'Ruins 2', 10 => 'Ruins 3'];
 $boss_goals = ['BOSS_ARENA', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'SPEEDRUN_BOSS'];
 $floor_goals = ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR'];
 $setting_id = $o['setting'] ?? null;
@@ -64,13 +63,22 @@ if (in_array($goal, $boss_goals)) {
         $friendly = $bn;
     }
 } elseif (in_array($goal, $floor_goals)) {
-    $floor = isset($o['floor']) ? (int) $o['floor'] : array_rand($floors);
-    $setting_id = bounty_setting_for_ep1_floor($floor);
-    $target_id = (string) $floor;
+    $ep = $setting_id ? bounty_episode_from_setting_id($lore, $setting_id) : [1, 2, 4][array_rand([1, 2, 4])];
+    $floors = pso_episode_floor_map($ep);
+    if (isset($o['floor'])) {
+        $floor = (int) $o['floor'];
+    } elseif ($setting_id && !empty($lore['settings'][$setting_id]['floors'])) {
+        $cand = array_values(array_intersect($lore['settings'][$setting_id]['floors'], array_keys($floors)));
+        $floor = $cand ? $cand[array_rand($cand)] : array_rand($floors);
+    } else {
+        $floor = array_rand($floors);
+    }
+    $setting_id = bounty_setting_for_floor($ep, $floor);
+    $target_id = make_floor_target($floor, $ep);
     $friendly = $floors[$floor] ?? "Floor $floor";
     if ($goal === 'SPEEDRUN_FLOOR') {
         $tl = mt_rand(600, 1800);
-        $target_id = $floor . '_' . $tl;
+        $target_id = make_floor_target($floor, $ep, $tl);
         $friendly .= " in under " . floor($tl / 60) . " minutes and " . ($tl % 60) . " seconds";
     }
 } else {

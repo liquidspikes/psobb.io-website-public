@@ -124,12 +124,24 @@ if (is_array($lore)) {
         ['BOSS_ARENA', 'ALL_BOSSES', 4, 'ep4_desert'],
         ['BOSS_ARENA', 'ANY_DRAGON', 2, 'ep2_vr_spaceship'],
         ['EXPLORATION', '5', 1, 'ep1_caves'],
+        ['EXPLORATION', '5@1', 1, 'ep1_caves'],
+        ['PATROL', '2@2', 2, 'ep2_vr_temple'],
+        ['EXPLORATION', '4@2', 2, 'ep2_vr_spaceship'],
+        ['PATROL', '7@2', 2, 'ep2_gal_da_val'],
+        ['SPEEDRUN_FLOOR', '11@2_900', 2, 'ep2_seabed'],
+        ['EXPLORATION', '3@4', 4, 'ep4_crater'],
+        ['SPEEDRUN_FLOOR', '7@4_1200', 4, 'ep4_desert'],
         ['SPEEDRUN_FLOOR', '7_300', 1, 'ep1_mines'],
     ];
     foreach ($objCases as [$gt, $gta, $expEp, $expSid]) {
         $res = bounty_lore_setting_for_objective($gt, $gta, 'Operation Example', 'Lore-grounded description', 7);
         check($res['episode'] === $expEp && $res['setting_id'] === $expSid, "objective ($gt, $gta) -> ep$expEp / $expSid (got ep{$res['episode']} / {$res['setting_id']})");
     }
+
+    check(
+        bounty_floor_phrase(11, 2) !== '' && bounty_floor_phrase(7, 4) !== '' && bounty_floor_phrase(4, 1) !== '',
+        'bounty_floor_phrase resolves in-world area names for Ep1, Ep2, and Ep4'
+    );
 
     $hubA = bounty_lore_setting_for_objective('LEVEL_UP', 'ANY', 'Fleet Mobilisation', 'Train together', 42);
     $hubB = bounty_lore_setting_for_objective('LEVEL_UP', 'ANY', 'Fleet Mobilisation', 'Train together', 42);

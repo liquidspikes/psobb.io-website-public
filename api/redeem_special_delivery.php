@@ -82,6 +82,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Verify online, spawned, and actively inside a game before reserving
+    $onlineCharacter = newserv_require_online_character($accountId, null, [
+        'require_in_game'      => true,
+        'include_offline_flag' => true,
+        'offline_http_code'    => 503,
+    ]);
+
     // Atomic reservation: set status = 'redeeming' to lock out concurrent requests
     $lock = $db->prepare("UPDATE special_deliveries SET status = 'redeeming' WHERE id = :id AND recipient_id = :uid AND status = 'pending'");
     $lock->bindValue(':id',  $id,        SQLITE3_INTEGER);
@@ -93,14 +100,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Attempt to deliver via newserv (player must be in-game)
-    $result = parse_and_drop_items($accountId, $delivery['item_string']);
+    // Attempt to deliver via newserv (revert cleanly + preserve partial remainder on failure)
+    $revertPending = function (?string $remaining = null) use ($db, $id): void {
+        if ($remaining !== null && $remaining !== '') {
+            $rev = $db->prepare("UPDATE special_deliveries SET status = 'pending', item_string = :rem WHERE id = :id AND status = 'redeeming'");
+            $rev->bindValue(':rem', $remaining, SQLITE3_TEXT);
+        } else {
+            $rev = $db->prepare("UPDATE special_deliveries SET status = 'pending' WHERE id = :id AND status = 'redeeming'");
+        }
+        $rev->bindValue(':id', $id, SQLITE3_INTEGER);
+        $rev->execute();
+    };
+
+    try {
+        $result = parse_and_drop_items($accountId, $delivery['item_string'], $onlineCharacter['Name'] ?? null);
+    } catch (Throwable $e) {
+        $revertPending();
+        http_response_code(500);
+        echo json_encode(['error' => 'Unexpected error while dropping delivery. Please try again.']);
+        exit;
+    }
 
     if (!$result['success']) {
-        // Revert status to pending on failure so player can retry
-        $revert = $db->prepare("UPDATE special_deliveries SET status = 'pending' WHERE id = :id");
-        $revert->bindValue(':id', $id, SQLITE3_INTEGER);
-        $revert->execute();
+        $revertPending($result['remaining'] ?? null);
 
         $errMsg = $result['error'] ?? 'Unknown error';
 
