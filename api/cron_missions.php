@@ -42,6 +42,7 @@ if ($rm_res) {
     while ($row = $rm_res->fetchArray(SQLITE3_ASSOC)) {
         $recent_missions[] = $row['title'];
     }
+    $rm_res->finalize();
 }
 $recent_missions_str = empty($recent_missions) ? "None" : implode(", ", $recent_missions);
 
@@ -241,7 +242,12 @@ foreach ($clients as $client) {
     // Fetch user language preference (must be before milestone notifications)
     $lang_stmt = $db->prepare("SELECT language FROM users WHERE account_id = :acc");
     $lang_stmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
-    $lang_res = $lang_stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    $lang_q = $lang_stmt->execute();
+    $lang_res = $lang_q ? $lang_q->fetchArray(SQLITE3_ASSOC) : false;
+    if ($lang_q) {
+        $lang_q->finalize();
+    }
+    $lang_stmt->close();
     $user_lang = $lang_res ? $lang_res['language'] : 'en';
 
     // Feature: Automatic Milestone Unlock Notifications
@@ -278,14 +284,26 @@ foreach ($clients as $client) {
         $stmt_daily = $db->prepare("SELECT COUNT(*) FROM daily_rewards WHERE account_id = :aid AND claim_date = :date");
         $stmt_daily->bindValue(':aid', $accId, SQLITE3_INTEGER);
         $stmt_daily->bindValue(':date', $today, SQLITE3_TEXT);
-        $has_claimed_daily = $stmt_daily->execute()->fetchArray(SQLITE3_NUM)[0] > 0;
+        $daily_q = $stmt_daily->execute();
+        $daily_row = $daily_q ? $daily_q->fetchArray(SQLITE3_NUM) : false;
+        if ($daily_q) {
+            $daily_q->finalize();
+        }
+        $stmt_daily->close();
+        $has_claimed_daily = ($daily_row[0] ?? 0) > 0;
 
         // 2. Check for unclaimed level milestones
         $max_milestones = floor($curr_level / 5);
         $stmt_ms = $db->prepare("SELECT COUNT(*) FROM rewards_claimed WHERE account_id = :aid AND character_name = :cname");
         $stmt_ms->bindValue(':aid', $accId, SQLITE3_INTEGER);
         $stmt_ms->bindValue(':cname', $charName, SQLITE3_TEXT);
-        $claimed_milestones = $stmt_ms->execute()->fetchArray(SQLITE3_NUM)[0];
+        $ms_q = $stmt_ms->execute();
+        $ms_row = $ms_q ? $ms_q->fetchArray(SQLITE3_NUM) : false;
+        if ($ms_q) {
+            $ms_q->finalize();
+        }
+        $stmt_ms->close();
+        $claimed_milestones = $ms_row[0] ?? 0;
         $has_unclaimed_ms = $max_milestones > $claimed_milestones;
 
         if (!$has_claimed_daily || $has_unclaimed_ms) {
@@ -329,6 +347,14 @@ foreach ($clients as $client) {
     $stmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
     $stmt->bindValue(':cname', $charName, SQLITE3_TEXT);
     $res = $stmt->execute();
+    $active_missions = [];
+    if ($res) {
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $active_missions[] = $row;
+        }
+        $res->finalize();
+    }
+    $stmt->close();
     
     $has_active_missions = false; 
     $active_mission_count = 0;
@@ -338,7 +364,7 @@ foreach ($clients as $client) {
     $current_patrol_seen = [];
     $active_mission_types = [];
 
-    while ($m = $res->fetchArray(SQLITE3_ASSOC)) {
+    foreach ($active_missions as $m) {
         $has_active_missions = true;
         $active_mission_count++;
         $active_mission_types[] = $m['goal_type'];

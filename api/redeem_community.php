@@ -24,6 +24,51 @@ if (!$event_id) {
 }
 
 $accId = $_SESSION['user']['account_id'];
+session_write_close();
+$lockedRedeeming = false;
+$droppedAny = false;
+
+$execCommunityClaimUpdate = static function (SQLite3 $conn, int $targetClaimedState, int $targetEventId, int $targetAccId, ?int $expectedState = null): int {
+    $sql = "UPDATE community_event_participants SET reward_claimed = :state WHERE event_id = :eid AND account_id = :accId";
+    if ($expectedState !== null) {
+        $sql .= " AND reward_claimed = :expected";
+    }
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':state', $targetClaimedState, SQLITE3_INTEGER);
+    $stmt->bindValue(':eid', $targetEventId, SQLITE3_INTEGER);
+    $stmt->bindValue(':accId', $targetAccId, SQLITE3_INTEGER);
+    if ($expectedState !== null) {
+        $stmt->bindValue(':expected', $expectedState, SQLITE3_INTEGER);
+    }
+    $res = $stmt->execute();
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
+    return $conn->changes();
+};
+
+$revertClaim = static function () use (&$db, &$event_id, &$accId, &$lockedRedeeming, $execCommunityClaimUpdate): void {
+    try {
+        if ($db instanceof SQLite3) {
+            $execCommunityClaimUpdate($db, 0, (int)$event_id, (int)$accId, 2);
+            $lockedRedeeming = false;
+            return;
+        }
+    } catch (Throwable $ignored) {}
+    try {
+        $freshDb = get_db(true);
+        $execCommunityClaimUpdate($freshDb, 0, (int)$event_id, (int)$accId, 2);
+        $db = $freshDb;
+        $lockedRedeeming = false;
+    } catch (Throwable $ignored) {}
+};
+
+register_shutdown_function(function () use (&$lockedRedeeming, &$droppedAny, &$event_id, &$accId, $revertClaim) {
+    if ($lockedRedeeming && !$droppedAny && !empty($event_id) && !empty($accId)) {
+        $revertClaim();
+    }
+});
 
 try {
     require_once 'db.php';
@@ -38,6 +83,10 @@ try {
     $stmt->bindValue(':accId', $accId, SQLITE3_INTEGER);
     $res = $stmt->execute();
     $event = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
 
     if (!$event) {
         http_response_code(404);
@@ -51,12 +100,16 @@ try {
     $top3_res = $top3_stmt->execute();
     
     $is_top_3 = false;
-    while ($row = $top3_res->fetchArray(SQLITE3_ASSOC)) {
-        if ($row['account_id'] == $accId) {
-            $is_top_3 = true;
-            break;
+    if ($top3_res) {
+        while ($row = $top3_res->fetchArray(SQLITE3_ASSOC)) {
+            if ($row['account_id'] == $accId) {
+                $is_top_3 = true;
+                break;
+            }
         }
+        $top3_res->finalize();
     }
+    $top3_stmt->close();
 
     // 1. Verify online character, spawn status, and active game room
     $onlineCharacter = newserv_require_online_character((int) $accId, null, ['require_in_game' => true]);
@@ -119,39 +172,40 @@ try {
     $raw_string .= ',' . $meseta_reward . ' Meseta';
     
     // Atomic reservation: set reward_claimed = 2 (in-progress) to lock out concurrent requests
-    $lock = $db->prepare("UPDATE community_event_participants SET reward_claimed = 2 WHERE event_id = :eid AND account_id = :accId AND reward_claimed = 0");
-    $lock->bindValue(':eid', $event_id, SQLITE3_INTEGER);
-    $lock->bindValue(':accId', $accId, SQLITE3_INTEGER);
-    $lock->execute();
-    if ($db->changes() === 0) {
+    if ($execCommunityClaimUpdate($db, 2, (int)$event_id, (int)$accId, 0) === 0) {
         http_response_code(409);
         echo json_encode(["error" => "Community reward is already being redeemed or has already been claimed."]);
         exit;
     }
+    $lockedRedeeming = true;
 
     if (!function_exists('parse_and_drop_items')) {
         require_once 'functions.php';
     }
     
     $dropResult = parse_and_drop_items($accId, $raw_string);
+    $droppedAny = !empty($dropResult['dropped']);
     
     if (!$dropResult['success']) {
-        // Revert reservation so player can retry
-        $revert = $db->prepare("UPDATE community_event_participants SET reward_claimed = 0 WHERE event_id = :eid AND account_id = :accId");
-        $revert->bindValue(':eid', $event_id, SQLITE3_INTEGER);
-        $revert->bindValue(':accId', $accId, SQLITE3_INTEGER);
-        $revert->execute();
+        // Revert reservation only if nothing dropped yet so partial/delivered drops cannot duplicate
+        if (!$droppedAny) {
+            $revertClaim();
+        }
 
         http_response_code(400);
         echo json_encode(["error" => $dropResult['error']]);
         exit;
     }
     
-    // Mark claimed (1 = fully redeemed)
-    $upd = $db->prepare("UPDATE community_event_participants SET reward_claimed = 1 WHERE event_id = :eid AND account_id = :accId");
-    $upd->bindValue(':eid', $event_id, SQLITE3_INTEGER);
-    $upd->bindValue(':accId', $accId, SQLITE3_INTEGER);
-    $upd->execute();
+    // Mark claimed (1 = fully redeemed); retry with fresh handle if snapshot/lock issue occurs post-drop
+    try {
+        $execCommunityClaimUpdate($db, 1, (int)$event_id, (int)$accId);
+    } catch (Throwable $e) {
+        $freshDb = get_db(true);
+        $execCommunityClaimUpdate($freshDb, 1, (int)$event_id, (int)$accId);
+        $db = $freshDb;
+    }
+    $lockedRedeeming = false;
     
     // Construct a rich success message confirming the exact quantity of random rares and Meseta dispensed
     if (stripos($raw_reward, '3x Random Rare Drops') !== false || stripos($raw_reward, '3_RANDOM_RARE_FIT_FOR_LEVEL') !== false) {
@@ -161,7 +215,10 @@ try {
     }
     echo json_encode(["success" => true, "message" => $msg]);
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
+    if ($lockedRedeeming && !$droppedAny && !empty($event_id) && !empty($accId)) {
+        $revertClaim();
+    }
     http_response_code(500);
     echo json_encode(["error" => "System error: " . $e->getMessage()]);
 }

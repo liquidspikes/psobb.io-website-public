@@ -37,6 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt->bindValue(':uid', $accountId, SQLITE3_INTEGER);
     $res = $stmt->execute();
     $userRow = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
     $discordId = $userRow ? preg_replace('/[\r\n\t ]/', '', trim($userRow['discord_id'] ?? '')) : null;
 
     if (empty($discordId)) {
@@ -58,17 +62,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $res = $stmt->execute();
 
     $tokens = [];
-    while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-        $tokens[] = [
-            'token_id'     => preg_replace('/[\r\n\t ]/', '', trim($row['token_id'])),
-            'stat_native'  => (int)$row['stat_native'],
-            'stat_abeast'  => (int)$row['stat_abeast'],
-            'stat_machine' => (int)$row['stat_machine'],
-            'stat_dark'    => (int)$row['stat_dark'],
-            'stat_hit'     => (int)$row['stat_hit'],
-            'created_at'   => $row['created_at'],
-        ];
+    if ($res) {
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $tokens[] = [
+                'token_id'     => preg_replace('/[\r\n\t ]/', '', trim($row['token_id'])),
+                'stat_native'  => (int)$row['stat_native'],
+                'stat_abeast'  => (int)$row['stat_abeast'],
+                'stat_machine' => (int)$row['stat_machine'],
+                'stat_dark'    => (int)$row['stat_dark'],
+                'stat_hit'     => (int)$row['stat_hit'],
+                'created_at'   => $row['created_at'],
+            ];
+        }
+        $res->finalize();
     }
+    $stmt->close();
 
     echo json_encode([
         'linked' => true,
@@ -87,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check custom headers, JSON input, or standard POST for CSRF token
     $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $input['csrf_token'] ?? $_POST['csrf_token'] ?? '';
     verify_csrf_token($csrfToken);
+    session_write_close();
 
     $tokenIds = $input['token_ids'] ?? [];
     if (empty($tokenIds) && !empty($input['token_id'])) {
@@ -252,6 +261,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindValue(':uid', $accountId, SQLITE3_INTEGER);
     $res = $stmt->execute();
     $userRow = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
     $discordId = $userRow ? preg_replace('/[\r\n\t ]/', '', trim($userRow['discord_id'] ?? '')) : null;
 
     if (empty($discordId)) {
@@ -276,6 +289,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bindValue(':discordId', $discordId, SQLITE3_TEXT);
         $res = $stmt->execute();
         $tokenRow = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+        if ($res) {
+            $res->finalize();
+        }
+        $stmt->close();
 
         if (!$tokenRow) {
             http_response_code(404);

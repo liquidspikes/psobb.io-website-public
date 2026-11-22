@@ -15,6 +15,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['account_id'])) {
     exit;
 }
 $accountId = $_SESSION['user']['account_id'];
+session_write_close();
 
 // Get POST data
 $input = json_decode(file_get_contents('php://input'), true);
@@ -88,13 +89,17 @@ try {
     $needsReset = false;
     $needsRename = false;
     $claimedRows = [];
-    while ($row = $checkRes->fetchArray(SQLITE3_ASSOC)) {
-        $claimedRows[] = $row;
-        // Only treat as a slot recreation reset when the slot now holds a genuinely new Lv1-4 character
-        if ((int)$row['level_milestone'] > (int)$level && (int)$level < 5) {
-            $needsReset = true;
+    if ($checkRes) {
+        while ($row = $checkRes->fetchArray(SQLITE3_ASSOC)) {
+            $claimedRows[] = $row;
+            // Only treat as a slot recreation reset when the slot now holds a genuinely new Lv1-4 character
+            if ((int)$row['level_milestone'] > (int)$level && (int)$level < 5) {
+                $needsReset = true;
+            }
         }
+        $checkRes->finalize();
     }
+    $checkStmt->close();
     
     if (!$needsReset && !empty($claimedRows)) {
         // If the name is different, but level did not decrease, it's a rename
@@ -108,14 +113,22 @@ try {
         $delStmt = $db->prepare("DELETE FROM rewards_claimed WHERE account_id = :aid AND character_index = :cidx");
         $delStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
         $delStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
-        $delStmt->execute();
+        $delRes = $delStmt->execute();
+        if ($delRes) {
+            $delRes->finalize();
+        }
+        $delStmt->close();
     } elseif ($needsRename) {
         // Character was renamed — update database records to the new name to preserve them
         $updStmt = $db->prepare("UPDATE rewards_claimed SET character_name = :newName WHERE account_id = :aid AND character_index = :cidx");
         $updStmt->bindValue(':newName', $name, SQLITE3_TEXT);
         $updStmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);
         $updStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
-        $updStmt->execute();
+        $updRes = $updStmt->execute();
+        if ($updRes) {
+            $updRes->finalize();
+        }
+        $updStmt->close();
     }
     
     // 2. Check if already claimed and acquire atomic UNIQUE reservation before dropping
@@ -125,7 +138,12 @@ try {
     $stmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
     $stmt->bindValue(':lvl', $milestone, SQLITE3_INTEGER);
     $res = $stmt->execute();
-    if ($res->fetchArray()) {
+    $alreadyClaimed = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
+    if ($alreadyClaimed) {
         http_response_code(400);
         echo json_encode(["error" => "Reward previously claimed for this level milestone on this character."]);
         exit;
@@ -138,7 +156,11 @@ try {
         $lockStmt->bindValue(':cidx', $charIndex, SQLITE3_INTEGER);
         $lockStmt->bindValue(':lvl', $milestone, SQLITE3_INTEGER);
         $lockStmt->bindValue(':cat', $category, SQLITE3_TEXT);
-        $lockStmt->execute();
+        $lockRes = $lockStmt->execute();
+        if ($lockRes) {
+            $lockRes->finalize();
+        }
+        $lockStmt->close();
         $claimId = (int)$db->lastInsertRowID();
     } catch (Exception $e) {
         http_response_code(409);
@@ -405,12 +427,20 @@ try {
             if (empty($droppedItems)) {
                 $delStmt = $db->prepare("DELETE FROM rewards_claimed WHERE id = :id");
                 $delStmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
-                $delStmt->execute();
+                $delRes = $delStmt->execute();
+                if ($delRes) {
+                    $delRes->finalize();
+                }
+                $delStmt->close();
             } else {
                 $partialStmt = $db->prepare("UPDATE rewards_claimed SET item_string = :item WHERE id = :id");
                 $partialStmt->bindValue(':item', implode(", ", $droppedItems), SQLITE3_TEXT);
                 $partialStmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
-                $partialStmt->execute();
+                $partialRes = $partialStmt->execute();
+                if ($partialRes) {
+                    $partialRes->finalize();
+                }
+                $partialStmt->close();
             }
             http_response_code(400);
             echo json_encode(["error" => $dropResult['error']]);
@@ -428,10 +458,23 @@ try {
     $finalDisplayString = implode(" + ", $displayNames);   // readable for UI
 
     // 5. Finalize claim record with delivered item hex and flush character state on newserv
-    $stmt = $db->prepare("UPDATE rewards_claimed SET item_string = :item WHERE id = :id");
-    $stmt->bindValue(':item', $finalItemString, SQLITE3_TEXT);
-    $stmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
-    $stmt->execute();
+    $execFinalizeClaim = static function (SQLite3 $conn) use ($finalItemString, $claimId): void {
+        $stmt = $conn->prepare("UPDATE rewards_claimed SET item_string = :item WHERE id = :id");
+        $stmt->bindValue(':item', $finalItemString, SQLITE3_TEXT);
+        $stmt->bindValue(':id', $claimId, SQLITE3_INTEGER);
+        $updRes = $stmt->execute();
+        if ($updRes) {
+            $updRes->finalize();
+        }
+        $stmt->close();
+    };
+    try {
+        $execFinalizeClaim($db);
+    } catch (Throwable $e) {
+        $freshDb = get_db(true);
+        $execFinalizeClaim($freshDb);
+        $db = $freshDb;
+    }
 
     $saveIdent = !empty($onlineCharacter['Account']['BBLicenses'][0]['UserName'])
         ? $onlineCharacter['Account']['BBLicenses'][0]['UserName']

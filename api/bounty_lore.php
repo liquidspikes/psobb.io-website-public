@@ -310,6 +310,25 @@ function bounty_lore_setting_for_objective($goal_type, $goal_target = '', $title
         ],
     ];
 
+    if ($goal_type === 'ENEMY_KILL') {
+        if ($goal_target === 'RARE_RAPPIES') {
+            return [
+                'episode' => 1,
+                'setting_id' => ($lore && isset($lore['settings']['ep1_forest'])) ? 'ep1_forest' : bounty_episode_setting(1),
+                'is_location_goal' => true,
+                'floor' => null,
+                'location_override' => 'Unusual seasonal flocks of Rare Rappies—Al Rappy and Pal Rappy in Ragol\'s Forest, Love Rappy and seasonal variants in the Pioneer 2 Lab VR Temple, and Del Rappy across the Crater and Subterranean Desert—are being tracked across all episodes.',
+            ];
+        }
+        return [
+            'episode' => 1,
+            'setting_id' => ($lore && isset($lore['settings']['ep1_forest'])) ? 'ep1_forest' : bounty_episode_setting(1),
+            'is_location_goal' => true,
+            'floor' => null,
+            'location_override' => 'Hunters are tracking high-value rare enemies and seasonal anomalies across every surveyed region of Ragol and the Lab simulators.',
+        ];
+    }
+
     $bossGoals = ['BOSS_ARENA', 'SPEEDRUN_BOSS', 'MENTOR_BOSS', 'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS'];
     if (in_array($goal_type, $bossGoals, true)) {
         if (isset($multiBoss[$goal_target])) {

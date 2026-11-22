@@ -3158,21 +3158,50 @@ function describeBountyObjective(goalType, goalTarget) {
     // Boss targets are "<floor>" or, since the lore-grounded generator, "<floor>@<episode>":
     // Episodes 1 and 2 share floors 12-14 (see parse_boss_target() in api/functions.php).
     const ep2BossFloorMap = { '12': 'Gal Gryphon', '13': 'Olga Flow', '14': 'Barba Ray' };
+    const bossInfoFor = (t) => {
+        const m = String(t).match(/^\s*(\d+)(?:@([124]))?\s*$/);
+        if (!m) return { ep: '', name: bossFloorMap[t] || `Boss (Floor ${t})` };
+        const ep = m[2] || (m[1] === '15' ? '2' : m[1] === '9' ? '4' : '');
+        const name = (ep === '2' && ep2BossFloorMap[m[1]])
+            ? ep2BossFloorMap[m[1]]
+            : (bossFloorMap[m[1]] || `Boss (Floor ${m[1]})`);
+        return { ep, name };
+    };
     const bossNameFor = (t) => {
-        const m = String(t).match(/^(\d+)(?:@(\d))?$/);
-        if (!m) return bossFloorMap[t] || `Boss (Floor ${t})`;
-        if (m[2] === '2' && ep2BossFloorMap[m[1]]) return ep2BossFloorMap[m[1]];
-        return bossFloorMap[m[1]] || `Boss (Floor ${m[1]})`;
+        const info = bossInfoFor(t);
+        return info.ep ? `[Ep ${info.ep}] ${info.name}` : info.name;
     };
 
-    // Floor ID -> Area Name mapping for PATROL/EXPLORATION
-    const areaFloorMap = {
-        '0': 'Pioneer 2', '1': 'Forest 1', '2': 'Forest 2',
-        '3': 'Cave 1', '4': 'Cave 2', '5': 'Cave 3',
-        '6': 'Mine 1', '7': 'Mine 2', '8': 'Ruins 1',
-        '9': 'Ruins 2', '10': 'Ruins 3',
-        '11': 'Dragon Arena', '12': 'De Rol Le Arena',
-        '13': 'Vol Opt Arena', '14': 'Dark Falz Arena'
+    // Episode-aware Floor ID -> Area Name mapping matching api/pso_constants.php
+    const episodeFloorMap = {
+        '1': {
+            '0': 'Pioneer 2', '1': 'Forest 1', '2': 'Forest 2',
+            '3': 'Cave 1', '4': 'Cave 2', '5': 'Cave 3',
+            '6': 'Mine 1', '7': 'Mine 2', '8': 'Ruins 1',
+            '9': 'Ruins 2', '10': 'Ruins 3',
+            '11': 'Dragon Arena', '12': 'De Rol Le Arena',
+            '13': 'Vol Opt Arena', '14': 'Dark Falz Arena'
+        },
+        '2': {
+            '0': 'Lab', '1': 'VR Temple Alpha', '2': 'VR Temple Beta',
+            '3': 'VR Spaceship Alpha', '4': 'VR Spaceship Beta',
+            '5': 'Central Control Area', '6': 'Jungle North',
+            '7': 'Jungle East', '8': 'Mountain', '9': 'Seaside',
+            '10': 'Seabed Upper', '11': 'Seabed Lower'
+        },
+        '4': {
+            '0': 'Pioneer 2', '1': 'Crater East', '2': 'Crater West',
+            '3': 'Crater South', '4': 'Crater North', '5': 'Crater Interior',
+            '6': 'Subterranean Desert 1', '7': 'Subterranean Desert 2',
+            '8': 'Subterranean Desert 3'
+        }
+    };
+    const areaInfoFor = (raw) => {
+        const m = String(raw).match(/^\s*(\d+)(?:@([124]))?\s*$/);
+        if (!m) return { ep: '1', name: episodeFloorMap['1'][String(raw)] || `Area ${raw}` };
+        const ep = m[2] || '1';
+        const epMap = episodeFloorMap[ep] || episodeFloorMap['1'];
+        return { ep, name: epMap[m[1]] || `Floor ${m[1]}` };
     };
 
     switch (goalType) {
@@ -3189,27 +3218,35 @@ function describeBountyObjective(goalType, goalTarget) {
         case 'MENTOR_BOSS':
         case 'HARDCORE_MENTOR':
         case 'DIVERSE_PARTY_BOSS': {
-            const bossName = bossNameFor(target);
+            const info = bossInfoFor(target);
             const prefix = goalType === 'MENTOR_BOSS' ? 'Mentor a rookie and defeat '
                 : goalType === 'HARDCORE_MENTOR' ? 'Carry 3+ rookies and defeat '
                     : goalType === 'DIVERSE_PARTY_BOSS' ? 'Defeat with a diverse party: '
                         : 'Defeat ';
-            return prefix + bossName;
+            return (info.ep ? `[Ep ${info.ep}] ` : '') + prefix + info.name;
         }
         case 'SPEEDRUN_BOSS': {
-            const parts = target.split('_');
-            const bossName = bossNameFor(parts[0]);
-            const timeLimit = parts[1] ? ` in under ${Math.floor(parts[1] / 60)}m ${parts[1] % 60}s` : '';
-            return `Speedrun ${bossName}${timeLimit}`;
+            const parts = String(target).split('_');
+            const info = bossInfoFor(parts[0]);
+            const secs = parts[1] ? parseInt(parts[1], 10) : 0;
+            const timeLimit = parts[1] ? ` in under ${Math.floor(secs / 60)}m ${secs % 60}s` : '';
+            return `${info.ep ? `[Ep ${info.ep}] ` : ''}Speedrun ${info.name}${timeLimit}`;
         }
         case 'SPEEDRUN_FLOOR': {
-            const parts = target.split('_');
-            const areaName = areaFloorMap[parts[0]] || `Area ${parts[0]}`;
-            const timeLimit = parts[1] ? ` in under ${Math.floor(parts[1] / 60)}m ${parts[1] % 60}s` : '';
-            return `Speedrun ${areaName}${timeLimit}`;
+            const parts = String(target).split('_');
+            const a = areaInfoFor(parts[0]);
+            const secs = parts[1] ? parseInt(parts[1], 10) : 0;
+            const timeLimit = parts[1] ? ` in under ${Math.floor(secs / 60)}m ${secs % 60}s` : '';
+            return `[Ep ${a.ep}] Clear ${a.name}${timeLimit}`;
         }
-        case 'PATROL': return `Patrol ${areaFloorMap[target] || 'Area ' + target} for 10 minutes`;
-        case 'EXPLORATION': return `Explore ${areaFloorMap[target] || 'Area ' + target}`;
+        case 'PATROL': {
+            const a = areaInfoFor(target);
+            return `[Ep ${a.ep}] Survive and patrol the ${a.name} for 10 minutes`;
+        }
+        case 'EXPLORATION': {
+            const a = areaInfoFor(target);
+            return `[Ep ${a.ep}] Explore the ${a.name}`;
+        }
         case 'ITEM': return `Obtain the target item`;
         case 'TECHNIQUE': return `Learn technique: ${target}`;
         case 'BATTLE_WINS': return `Win ${target} Battle Mode match${parseInt(target) !== 1 ? 'es' : ''}`;
@@ -3344,12 +3381,14 @@ window.loadMyBounties = async function () {
                 claimSection.style.display = 'block';
                 claimList.innerHTML += completed.map(b => {
                     const rewardStr = b.reward_decoded || b.reward_item_string || _t('Mystery Reward');
+                    const objText = b.objective_text || describeBountyObjective(b.goal_type, b.goal_target);
                     return `
                     <div style="border: 1px solid rgba(0,255,136,0.4); background: rgba(0,255,136,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                             <div style="flex:1; min-width:0;">
-                                <span style="color:#00ff88; font-weight:bold; font-family:'Share Tech Mono',monospace;">✅ ${b.title}</span>
-                                <div style="color:rgba(255,255,255,0.5); font-size:0.75rem; margin-top:4px;">${b.character_name || 'Unknown'} · ${b.goal_type}</div>
+                                <span style="color:#00ff88; font-weight:bold; font-family:'Share Tech Mono',monospace;">✅ ${escapeHtml(b.title)}</span>
+                                ${b.description ? `<p style="color:rgba(224,240,255,0.78); font-size:0.75rem; line-height:1.45; margin:4px 0 0 0;">${escapeHtml(b.description)}</p>` : ''}
+                                <div style="color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:4px;">${escapeHtml(b.character_name || 'Unknown')} · ${escapeHtml(objText)}</div>
                                 <div style="color:#fbbf24; font-size:0.75rem; margin-top:4px; font-family:'Share Tech Mono',monospace;">🎁 ${rewardStr}</div>
                             </div>
                             <a href="missions.php" class="dl-btn" style="text-decoration:none; border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15); font-size:0.8rem; padding:6px 14px; white-space:nowrap;">${_t('Claim →')}</a>
@@ -3367,17 +3406,21 @@ window.loadMyBounties = async function () {
                 activeSection.style.display = 'block';
                 activeList.innerHTML = inProgress.map(b => {
                     const reward = b.reward_decoded || b.reward_item_string || (b.status === 'queued' ? _t('Chosen when it starts, from the area it sends you to') : '');
-                    const objective = b.status === 'rerolling' ? _t('Rerolling: a new objective arrives the next time this character is online')
-                        : (b.objective_text ? `[${({ BATTLE_RULE_WINS: 'Battle', EPISODE_RUN: 'Contract', RARE_TARGET: 'Contract' })[b.goal_type] || 'Challenge'}] ${b.objective_text.replace(/^\[(Battle|Challenge|Contract)\] /, '')}` : describeBountyObjective(b.goal_type, b.goal_target)) + (b.min_difficulty_text ? ` ${b.min_difficulty_text}` : '') + (b.progress_text ? ` (${b.progress_text})` : '');
+                    const rawObjective = b.status === 'rerolling' ? _t('Rerolling: a new objective arrives the next time this character is online')
+                        : (b.objective_text || describeBountyObjective(b.goal_type, b.goal_target))
+                            + (b.min_difficulty_text ? ` ${b.min_difficulty_text}` : '')
+                            + (b.progress_text ? ` (${b.progress_text})` : '');
+                    const objective = escapeHtml(rawObjective);
                     const statusLabel = b.status === 'queued' ? _t('UP NEXT') : b.status === 'rerolling' ? _t('REROLLING') : _t('IN PROGRESS');
                     return `
                     <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,10,20,0.4); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                             <div style="flex:1; min-width:0;">
-                                <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${b.title || _t('Bounty waiting for a free slot')}</span>
+                                <span style="color:#00ffff; font-weight:bold; font-family:'Share Tech Mono',monospace;">${escapeHtml(b.title || _t('Bounty waiting for a free slot'))}</span>
                                 ${bountyTags(b)}
+                                ${b.description && b.status !== 'rerolling' && b.status !== 'queued' ? `<p style="color:rgba(224,240,255,0.78); font-size:0.75rem; line-height:1.45; margin:6px 0 0 0;">${escapeHtml(b.description)}</p>` : ''}
                                 <div style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:6px;">📋 <strong>${_t('Objective:')}</strong> ${objective}</div>
-                                <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${b.character_name || 'Unknown'}</div>
+                                <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${escapeHtml(b.character_name || 'Unknown')}</div>
                                 ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}${b.stats_hidden ? ` <span style="color:rgba(255,255,255,0.4);">(${_t('stats roll on claim')})</span>` : ''}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">

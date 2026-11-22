@@ -36,14 +36,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $res = $stmt->execute();
 
     $items = [];
-    while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-        $items[] = [
-            'id'         => (int)$row['id'],
-            'item_name'  => $row['item_name'],
-            'admin_note' => $row['admin_note'],
-            'created_at' => $row['created_at'],
-        ];
+    if ($res) {
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $items[] = [
+                'id'         => (int)$row['id'],
+                'item_name'  => $row['item_name'],
+                'admin_note' => $row['admin_note'],
+                'created_at' => $row['created_at'],
+            ];
+        }
+        $res->finalize();
     }
+    $stmt->close();
 
     echo json_encode(['count' => count($items), 'items' => $items]);
     exit;
@@ -54,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // ----------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf_token($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+    session_write_close();
 
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = (int)($input['id'] ?? 0);
@@ -74,7 +79,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindValue(':id',  $id,        SQLITE3_INTEGER);
     $stmt->bindValue(':uid', $accountId, SQLITE3_INTEGER);
     $res = $stmt->execute();
-    $delivery = $res->fetchArray(SQLITE3_ASSOC);
+    $delivery = $res ? $res->fetchArray(SQLITE3_ASSOC) : false;
+    if ($res) {
+        $res->finalize();
+    }
+    $stmt->close();
 
     if (!$delivery) {
         http_response_code(404);
@@ -93,7 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lock = $db->prepare("UPDATE special_deliveries SET status = 'redeeming' WHERE id = :id AND recipient_id = :uid AND status = 'pending'");
     $lock->bindValue(':id',  $id,        SQLITE3_INTEGER);
     $lock->bindValue(':uid', $accountId, SQLITE3_INTEGER);
-    $lock->execute();
+    $lockRes = $lock->execute();
+    if ($lockRes) {
+        $lockRes->finalize();
+    }
+    $lock->close();
     if ($db->changes() === 0) {
         http_response_code(409);
         echo json_encode(['error' => 'Delivery is already being redeemed or has already been claimed.']);
@@ -101,15 +114,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Attempt to deliver via newserv (revert cleanly + preserve partial remainder on failure)
-    $revertPending = function (?string $remaining = null) use ($db, $id): void {
+    $execRevert = static function (SQLite3 $conn, ?string $remaining) use ($id): void {
         if ($remaining !== null && $remaining !== '') {
-            $rev = $db->prepare("UPDATE special_deliveries SET status = 'pending', item_string = :rem WHERE id = :id AND status = 'redeeming'");
+            $rev = $conn->prepare("UPDATE special_deliveries SET status = 'pending', item_string = :rem WHERE id = :id AND status = 'redeeming'");
             $rev->bindValue(':rem', $remaining, SQLITE3_TEXT);
         } else {
-            $rev = $db->prepare("UPDATE special_deliveries SET status = 'pending' WHERE id = :id AND status = 'redeeming'");
+            $rev = $conn->prepare("UPDATE special_deliveries SET status = 'pending' WHERE id = :id AND status = 'redeeming'");
         }
         $rev->bindValue(':id', $id, SQLITE3_INTEGER);
-        $rev->execute();
+        $revRes = $rev->execute();
+        if ($revRes) {
+            $revRes->finalize();
+        }
+        $rev->close();
+    };
+    $revertPending = function (?string $remaining = null) use (&$db, $execRevert): void {
+        try {
+            $execRevert($db, $remaining);
+        } catch (Throwable $e) {
+            $freshDb = get_db(true);
+            $execRevert($freshDb, $remaining);
+            $db = $freshDb;
+        }
     };
 
     try {
@@ -121,8 +147,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $droppedAny = !empty($result['dropped']);
+    $remaining = trim((string)($result['remaining'] ?? ''));
+
     if (!$result['success']) {
-        $revertPending($result['remaining'] ?? null);
+        if (!$droppedAny || $remaining !== '') {
+            $revertPending($droppedAny ? $remaining : null);
+        }
 
         $errMsg = $result['error'] ?? 'Unknown error';
 
@@ -140,13 +171,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Mark as redeemed
-    $upd = $db->prepare("
-        UPDATE special_deliveries
-        SET status = 'redeemed', redeemed_at = CURRENT_TIMESTAMP
-        WHERE id = :id
-    ");
-    $upd->bindValue(':id', $id, SQLITE3_INTEGER);
-    $upd->execute();
+    $execMarkRedeemed = static function (SQLite3 $conn) use ($id): void {
+        $upd = $conn->prepare("
+            UPDATE special_deliveries
+            SET status = 'redeemed', redeemed_at = CURRENT_TIMESTAMP
+            WHERE id = :id
+        ");
+        $upd->bindValue(':id', $id, SQLITE3_INTEGER);
+        $updRes = $upd->execute();
+        if ($updRes) {
+            $updRes->finalize();
+        }
+        $upd->close();
+    };
+    try {
+        $execMarkRedeemed($db);
+    } catch (Throwable $e) {
+        $freshDb = get_db(true);
+        $execMarkRedeemed($freshDb);
+        $db = $freshDb;
+    }
 
     echo json_encode([
         'success'   => true,
