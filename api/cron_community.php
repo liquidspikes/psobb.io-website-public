@@ -3,6 +3,17 @@
  * Dedicated cron daemon for processing Global Server Community Events tracking and AI Milestones.
  * Runs independently of cron_missions to ensure AI API latency does not bottleneck player telemetry.
  */
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This script must be run from the command line.\n");
+}
+
+$community_lock_fp = fopen(__DIR__ . '/../db/.cron_community.lock', 'c');
+if ($community_lock_fp && !flock($community_lock_fp, LOCK_EX | LOCK_NB)) {
+    echo "[CRON_COMMUNITY] Another instance is running. Exiting.\n";
+    exit;
+}
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
