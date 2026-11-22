@@ -80,8 +80,8 @@ try {
         );
         // Add rendered reward string (decode hex to item names)
         $row['reward_display'] = renderRewardString($row['reward_item_string']);
-        // Identify team bounties
-        $row['is_team'] = in_array($row['goal_type'], ['HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS']);
+        // Identify team bounties and contracts
+        $row['is_team'] = in_array($row['goal_type'], ['HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS'], true) || (($row['pool'] ?? '') === 'contract');
         // Strip internal fields — no raw hex for players
         unset($row['reward_item_string']);
         unset($row['goal_type']);

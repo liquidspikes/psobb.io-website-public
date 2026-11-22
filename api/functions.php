@@ -1463,14 +1463,21 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
         }
     }
 
-    $items = explode(',', $itemString);
+    $segments = array_values(array_filter(array_map('trim', explode(',', (string)$itemString)), fn($s) => $s !== ''));
     $droppedPayloads = [];
+    $buildRemaining = function (int $segIdx, int $doneInSeg = 0, int $totalInSeg = 1, string $segBase = '') use ($segments): string {
+        $rem = [];
+        if ($doneInSeg > 0 && $doneInSeg < $totalInSeg && $segBase !== '') {
+            $left = $totalInSeg - $doneInSeg;
+            $rem[] = ($left > 1) ? "{$segBase} x{$left}" : $segBase;
+            $rem = array_merge($rem, array_slice($segments, $segIdx + 1));
+        } else {
+            $rem = array_slice($segments, $segIdx);
+        }
+        return implode(', ', $rem);
+    };
 
-    foreach ($items as $rawItem) {
-        $rawItem = trim($rawItem);
-        if (empty($rawItem))
-            continue;
-
+    foreach ($segments as $segIdx => $rawItem) {
         $multiplier = 1;
         $baseItemName = $rawItem;
 
@@ -1482,6 +1489,7 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             $multiplier = intval($matches[1]);
             $baseItemName = trim($matches[2]);
         }
+        $origBaseName = $baseItemName;
 
         // Defer cap until after stackable Photon Drops/Tickets (03100[0-4]) are packed into byte 5.
 
@@ -1549,18 +1557,29 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
                 if (isset($bbMaps['name_to_hex'][$searchName])) {
                     $baseItemName = $bbMaps['name_to_hex'][$searchName];
                 } else {
-                    return ["success" => false, "error" => "Unknown or unsupported PSOBB item name: " . $baseItemName];
+                    return [
+                        "success" => false,
+                        "error" => "Unknown or unsupported PSOBB item name: " . $baseItemName,
+                        "dropped" => $droppedPayloads,
+                        "remaining" => $buildRemaining($segIdx),
+                    ];
                 }
             }
         }
 
-        // Photon Drops, Spheres and Crystals, Secret Tickets and Photon Tickets stack to 99 (tool class
-        // 0x10 on BB): drop one stack (byte 5 = count), not one item per count.
-        if ($multiplier > 1 && preg_match('/^03100[0-4]$/i', trim($baseItemName))) {
-            $stackData = hex2bin(str_pad(strtoupper(trim($baseItemName)), 32, '0'));
-            $stackData[5] = chr(min(99, $multiplier));
-            $baseItemName = strtoupper(bin2hex($stackData));
-            $multiplier = 1;
+        // Stackable BB consumables/tools (type1 0x00, 0x01, 0x03..0x09 -> 10; 0x0A..0x15 -> 99)
+        // drop as a single stack (byte 5 = count) rather than spamming separate floor boxes.
+        if ($multiplier > 1 && preg_match('/^03([0-9a-f]{2})[0-9a-f]{2}$/i', trim($baseItemName), $tm)) {
+            $toolT1 = hexdec($tm[1]);
+            if ($toolT1 !== 0x02 && $toolT1 <= 0x15) {
+                $maxToolStack = ($toolT1 <= 0x09) ? 10 : 99;
+                if ($multiplier <= $maxToolStack) {
+                    $stackData = hex2bin(str_pad(strtoupper(trim($baseItemName)), 32, '0'));
+                    $stackData[5] = chr($multiplier);
+                    $baseItemName = strtoupper(bin2hex($stackData));
+                    $multiplier = 1;
+                }
+            }
         }
         if ($multiplier > 50) {
             $multiplier = 50; // Cap non-stacked drops to prevent server spam
@@ -1571,7 +1590,12 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             $finalPayload = buildHexPayload($baseItemName);
             if (stripos($finalPayload, 'ES ') !== 0) {
                 if (!ctype_xdigit($finalPayload) || strlen($finalPayload) !== 32) {
-                    return ["success" => false, "error" => "Blocked malformed item payload: " . $finalPayload];
+                    return [
+                        "success" => false,
+                        "error" => "Blocked malformed item payload: " . $finalPayload,
+                        "dropped" => $droppedPayloads,
+                        "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                    ];
                 }
                 $b0 = hexdec(substr($finalPayload, 0, 2));
                 $b1 = hexdec(substr($finalPayload, 2, 2));
@@ -1582,36 +1606,66 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
                     // Mags encode level in byte 2 (02<magIndex><level>), while names-v4.json indexes byte 2 as 00
                     $magBase6 = sprintf('02%02X00', $b1);
                     if (!isset($bbMaps['hex_to_name'][$magBase6])) {
-                        return ["success" => false, "error" => "Blocked invalid PSOBB Mag code: " . $magBase6];
+                        return [
+                            "success" => false,
+                            "error" => "Blocked invalid PSOBB Mag code: " . $magBase6,
+                            "dropped" => $droppedPayloads,
+                            "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                        ];
                     }
                 } elseif ($b0 === 0x03 && $b1 === 0x02) {
                     $diskLvl = hexdec(substr($finalPayload, 4, 2));
                     $diskTech = hexdec(substr($finalPayload, 8, 2));
                     if ($diskLvl > 29 || $diskTech > 18) {
-                        return ["success" => false, "error" => "Blocked invalid Tech Disk payload: " . $finalPayload];
+                        return [
+                            "success" => false,
+                            "error" => "Blocked invalid Tech Disk payload: " . $finalPayload,
+                            "dropped" => $droppedPayloads,
+                            "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                        ];
                     }
                 } elseif ($b0 === 0x00 && (($b1 >= 0x70 && $b1 <= 0x88) || ($b1 >= 0xA5 && $b1 <= 0xA9))) {
                     // Valid S-Rank weapon payload
                 } elseif (!isset($bbMaps['hex_to_name'][$base6])) {
-                    return ["success" => false, "error" => "Blocked invalid PSOBB item code: " . $base6];
+                    return [
+                        "success" => false,
+                        "error" => "Blocked invalid PSOBB item code: " . $base6,
+                        "dropped" => $droppedPayloads,
+                        "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                    ];
                 }
             }
             $cmd = "on " . $targetIdent . " cc {$NEWSERV_COMMAND_PREFIX}item " . $finalPayload;
 
             $execRes = newserv_shell_exec($cmd);
             if ($execRes === false) {
-                return ["success" => false, "error" => "Failed to connect to game server API."];
+                return [
+                    "success" => false,
+                    "error" => "Failed to connect to game server API.",
+                    "dropped" => $droppedPayloads,
+                    "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                ];
             }
 
             $execData = json_decode($execRes, true);
             if (isset($execData['Error']) && $execData['Error']) {
                 $serverMsg = $execData['Message'] ?? "Unknown server error.";
-                return ["success" => false, "error" => "Game server rejected the drop: " . $serverMsg];
+                return [
+                    "success" => false,
+                    "error" => "Game server rejected the drop: " . $serverMsg,
+                    "dropped" => $droppedPayloads,
+                    "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                ];
             }
             if (isset($execData['result'])) {
                 $resStr = strtolower($execData['result']);
                 if (strpos($resStr, 'error') !== false || strpos($resStr, 'not found') !== false || strpos($resStr, 'failed') !== false) {
-                    return ["success" => false, "error" => "Could not drop item: " . $execData['result']];
+                    return [
+                        "success" => false,
+                        "error" => "Could not drop item: " . $execData['result'],
+                        "dropped" => $droppedPayloads,
+                        "remaining" => $buildRemaining($segIdx, $i, $multiplier, $origBaseName),
+                    ];
                 }
             }
 

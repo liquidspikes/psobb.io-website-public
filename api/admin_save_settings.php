@@ -124,11 +124,19 @@ $newConfig = [
 ];
 
 $cfgPath = __DIR__ . '/../config/site.json';
-$dir = dirname($cfgPath);
-if (!is_dir($dir)) {
-    @mkdir($dir, 0755, true);
+$cmpOld = is_array($currentConfig) ? $currentConfig : [];
+$cmpNew = $newConfig;
+unset($cmpOld['updated_at'], $cmpNew['updated_at']);
+if (is_file($cfgPath) && $cmpOld == $cmpNew) {
+    $saved = true;
+    $newConfig['updated_at'] = $currentConfig['updated_at'] ?? $newConfig['updated_at'];
+} else {
+    $dir = dirname($cfgPath);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $saved = @file_put_contents($cfgPath, json_encode($newConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
-$saved = @file_put_contents($cfgPath, json_encode($newConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
 // Persist optional gitignored Bounty System Rework runtime overrides
 $bountySaveError = false;

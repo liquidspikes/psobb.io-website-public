@@ -181,7 +181,14 @@ try {
                 WHERE pm.mission_id = :mid 
                   AND pm.account_id = :aid 
                   AND pm.status = 'in_progress'
-                  AND m.goal_type IN ('HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS')
+                  AND (
+                      m.goal_type IN (
+                          'HARDCORE_MENTOR', 'DIVERSE_PARTY_BOSS', 'MENTOR_BOSS',
+                          'BATTLE_WINS', 'CHALLENGE_STAGES', 'BATTLE_RULE_WINS', 'CHALLENGE_RUN',
+                          'EPISODE_RUN', 'RARE_TARGET'
+                      )
+                      OR m.pool IN ('contract', 'battle', 'challenge')
+                  )
             ");
             $b_stmt->bindValue(':mid', $bounty_id, SQLITE3_INTEGER);
             $b_stmt->bindValue(':aid', $account_id, SQLITE3_INTEGER);

@@ -501,11 +501,18 @@ if ($action === 'get_player') {
     $stmt->bindValue(':acc', $user['account_id'], SQLITE3_INTEGER);
     $login_days = $stmt->execute()->fetchArray(SQLITE3_ASSOC)['login_days'] ?? 0;
 
+    $stmt = $db->prepare("SELECT COUNT(*) as completed_bounties FROM player_missions WHERE account_id = :acc AND status = 'completed'");
+    $stmt->bindValue(':acc', $user['account_id'], SQLITE3_INTEGER);
+    $completed_bounties = $stmt->execute()->fetchArray(SQLITE3_ASSOC)['completed_bounties'] ?? 0;
+
     $stmt = $db->prepare("SELECT m.title, m.description, m.goal_type, m.goal_target, pm.status, pm.character_name,
                                  m.tier, m.cadence, m.pool, m.meta, pm.expires_at, pm.progress
                           FROM player_missions pm
                           JOIN missions m ON pm.mission_id = m.id
-                          WHERE pm.account_id = :acc");
+                          WHERE pm.account_id = :acc
+                            AND pm.status IN ('queued', 'in_progress', 'rerolling', 'ready_to_redeem')
+                          ORDER BY pm.id DESC
+                          LIMIT 50");
     $stmt->bindValue(':acc', $user['account_id'], SQLITE3_INTEGER);
     $mRes = $stmt->execute();
     $missions = [];
@@ -528,8 +535,9 @@ if ($action === 'get_player') {
         'shared_bank'      => $shared_bank,
         'characters'       => $characters,
         'website_stats'    => [
-            'total_login_days' => (int)$login_days,
-            'missions'         => $missions,
+            'total_login_days'   => (int)$login_days,
+            'completed_bounties' => (int)$completed_bounties,
+            'missions'           => $missions,
         ],
     ]);
 } elseif ($action === 'get_events') {
