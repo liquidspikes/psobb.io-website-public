@@ -44,15 +44,13 @@ function dechex_4byte_le($val) {
 
 try {
     // 1. Fetch `/y/summary` to verify user is online and extract client details
-    $summary_url = $NEWSERV_API_URL . "/y/summary";
-    $summary_json = @file_get_contents($summary_url);
-    if ($summary_json === false) {
+    $summary = newserv_fetch_summary();
+    if ($summary === null) {
         http_response_code(502);
         echo json_encode(["error" => __("Game server API is currently offline.")]);
         exit;
     }
     
-    $summary = json_decode($summary_json, true);
     $active_client = null;
     if (isset($summary['Clients']) && is_array($summary['Clients'])) {
         foreach ($summary['Clients'] as $client) {
@@ -75,22 +73,18 @@ try {
     $char_version = trim($active_client['Version'] ?? 'BB_V4');
 
     // 2. Fetch `/y/lobbies` to read the game's level restrictions
-    $lobbies_url = $NEWSERV_API_URL . "/y/lobbies";
-    $lobbies_json = @file_get_contents($lobbies_url);
-    if ($lobbies_json === false) {
+    $lobbies = newserv_fetch_lobbies();
+    if ($lobbies === null) {
         http_response_code(502);
         echo json_encode(["error" => __("Failed to fetch lobby registry from server.")]);
         exit;
     }
     
-    $lobbies = json_decode($lobbies_json, true);
     $target_lobby = null;
-    if (is_array($lobbies)) {
-        foreach ($lobbies as $lobby) {
-            if (isset($lobby['ID']) && (int)$lobby['ID'] === $lobby_id) {
-                $target_lobby = $lobby;
-                break;
-            }
+    foreach ($lobbies as $lobby) {
+        if (isset($lobby['ID']) && (int)$lobby['ID'] === $lobby_id) {
+            $target_lobby = $lobby;
+            break;
         }
     }
     
@@ -163,23 +157,23 @@ try {
         $flags_need_revert = true;
         register_shutdown_function(function() use ($account_id_hex, $old_flags_hex, &$flags_need_revert) {
             if ($flags_need_revert) {
-                run_shell_command("update-account {$account_id_hex} flags={$old_flags_hex}");
+                newserv_shell_exec("update-account {$account_id_hex} flags={$old_flags_hex}");
             }
         });
         
         // Elevate account flags
-        run_shell_command("update-account {$account_id_hex} flags={$temp_flags_hex}");
+        newserv_shell_exec("update-account {$account_id_hex} flags={$temp_flags_hex}");
     }
     
     try {
         // 6. Send command to shell-exec API
         // Use the hex client ID to match channel names (C-{:X} format in newserv)
         $shell_cmd = "on C-{$client_id_hex} ss {$packet_hex}";
-        $shell_res = run_shell_command($shell_cmd);
+        $shell_res = newserv_shell_exec($shell_cmd);
     } finally {
         // Always revert flags immediately, then mark revert as done so shutdown function skips it
         if ($has_fetched_flags) {
-            $revert_result = run_shell_command("update-account {$account_id_hex} flags={$old_flags_hex}");
+            $revert_result = newserv_shell_exec("update-account {$account_id_hex} flags={$old_flags_hex}");
             if ($revert_result !== false) {
                 $flags_need_revert = false;
             }

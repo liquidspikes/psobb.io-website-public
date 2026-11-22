@@ -13,6 +13,7 @@
  * The code inside each function is the cron's original code, moved here unchanged except
  * where noted.
  */
+require_once __DIR__ . '/pso_constants.php';
 require_once __DIR__ . '/bounty_lore.php';
 
 /**
@@ -29,26 +30,14 @@ require_once __DIR__ . '/bounty_lore.php';
 function bounty_pick_objective(array $client, $curr_f, array $active_mission_types, array $opts = [])
 {
     // Maps
-    $class_map = [
-        0 => 'HUmar', 1 => 'HUnewearl', 2 => 'HUcast', 3 => 'RAmar', 
-        4 => 'RAcast', 5 => 'RAcaseal', 6 => 'FOmarl', 7 => 'FOnewm', 
-        8 => 'FOnewearl', 9 => 'HUcaseal', 10 => 'FOmar', 11 => 'RAmarl'
-    ];
+    $class_map = PSO_CHAR_CLASSES;
 
     $level = $client['Level'] ?? 1;
-    
-    if (!empty($client['CharClass'])) {
-        $class_str = $client['CharClass'];
-        $class_id = array_search($class_str, $class_map);
-        if ($class_id === false) $class_id = 0;
-    } else if (!empty($client['Class']) && is_string($client['Class']) && !is_numeric($client['Class'])) {
-        $class_str = $client['Class'];
-        $class_id = array_search($class_str, $class_map);
-        if ($class_id === false) $class_id = 0;
-    } else {
-        $class_raw_id = $client['Class'] ?? 0;
-        $class_id = is_numeric($class_raw_id) ? (int)$class_raw_id : 0;
-        $class_str = $class_map[$class_id] ?? 'Unknown';
+    $class_raw = $client['CharClass'] ?? $client['Class'] ?? 0;
+    $class_str = pso_resolve_class_name($class_raw, 'Unknown');
+    $class_id = array_search($class_str, $class_map, true);
+    if ($class_id === false) {
+        $class_id = is_numeric($class_raw) ? (int) $class_raw : 0;
     }
     
     $class = $class_str;
@@ -168,14 +157,16 @@ function bounty_pick_objective(array $client, $curr_f, array $active_mission_typ
             break;
         case 'EXPLORATION':
         case 'PATROL':
-            $floors = [1=>'Forest 1',2=>'Forest 2',3=>'Cave 1',4=>'Cave 2',5=>'Cave 3',6=>'Mine 1',7=>'Mine 2',8=>'Ruins 1',9=>'Ruins 2',10=>'Ruins 3'];
-            if (isset($floors[$curr_f])) {
+            $ep = [1, 2, 4][array_rand([1, 2, 4])];
+            $floors = pso_episode_floor_map($ep);
+            if (isset($floors[$curr_f]) && count($floors) > 1) {
                 unset($floors[$curr_f]);
             }
-            $selected_target_id = array_rand($floors);
-            $selected_target_friendly = $floors[$selected_target_id];
-            $mission_episode = 1;
-            $setting_id = bounty_setting_for_ep1_floor($selected_target_id);
+            $rand_floor = array_rand($floors);
+            $selected_target_id = make_floor_target($rand_floor, $ep);
+            $selected_target_friendly = $floors[$rand_floor];
+            $mission_episode = $ep;
+            $setting_id = bounty_setting_for_floor($ep, $rand_floor);
             break;
         case 'BOSS_ARENA':
         case 'MENTOR_BOSS':
@@ -199,16 +190,17 @@ function bounty_pick_objective(array $client, $curr_f, array $active_mission_typ
             $setting_id = $boss_setting;
             break;
         case 'SPEEDRUN_FLOOR':
-            $floors = [1=>'Forest 1',2=>'Forest 2',3=>'Cave 1',4=>'Cave 2',5=>'Cave 3',6=>'Mine 1',7=>'Mine 2',8=>'Ruins 1',9=>'Ruins 2',10=>'Ruins 3'];
-            if (isset($floors[$curr_f])) {
+            $ep = [1, 2, 4][array_rand([1, 2, 4])];
+            $floors = pso_episode_floor_map($ep);
+            if (isset($floors[$curr_f]) && count($floors) > 1) {
                 unset($floors[$curr_f]);
             }
             $rand_floor = array_rand($floors);
             $time_limit = mt_rand(600, 1800); // 10 to 30 minutes
-            $selected_target_id = $rand_floor . '_' . $time_limit;
+            $selected_target_id = make_floor_target($rand_floor, $ep, $time_limit);
             $selected_target_friendly = $floors[$rand_floor] . " in under " . floor($time_limit/60) . " minutes and " . ($time_limit%60) . " seconds";
-            $mission_episode = 1;
-            $setting_id = bounty_setting_for_ep1_floor($rand_floor);
+            $mission_episode = $ep;
+            $setting_id = bounty_setting_for_floor($ep, $rand_floor);
             break;
         case 'TECHNIQUE':
             $techs = [];
@@ -408,7 +400,7 @@ function bounty_write_story(array $client, array $obj, array $ctx)
             'quest_giver' => $quest_giver,
             'hex_twist' => $hex_twist,
             'recent_titles' => $recent_missions_str,
-            'floor' => in_array($selected_goal, ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR']) ? (int) $selected_target_id : null,
+            'floor' => in_array($selected_goal, ['EXPLORATION', 'PATROL', 'SPEEDRUN_FLOOR']) ? parse_floor_target($selected_target_id)['floor'] : null,
             'target' => $selected_target_id,
             'extra_lines' => $extra_lines,
             'location_override' => $location_override,
@@ -756,7 +748,7 @@ function bounty_legacy_reward(array $obj, $quest_giver)
         if ($category === 'Weapon') {
             $stats = [0, 0, 0, 0]; // [Native, A.Beast, Machine, Dark]
             $base_weapon_id = strtoupper(substr(trim($base_reward), 0, 6));
-            $is_unsealable_weapon = in_array($base_weapon_id, ['003300', '00AB00'], true);
+            $is_unsealable_weapon = in_array($base_weapon_id, PSO_UNSEALABLE_WEAPONS, true);
             // Unsealable weapons store their kill counter in attribute slot 3 (bytes 10..11), so max total attributes is 2 (vs 3 for normal weapons).
             // Challenge Mode weapons get guaranteed hit%, reducing available non-hit attribute slots by 1.
             $maxNonHitStats = ($is_unsealable_weapon ? 2 : 3) - ($is_challenge ? 1 : 0);

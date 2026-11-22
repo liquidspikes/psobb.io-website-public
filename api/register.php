@@ -64,7 +64,7 @@ if ($res->fetchArray()) {
 }
 
 // 1. Create Account Container
-$res = run_shell('add-account flags=NONE');
+$res = newserv_shell_exec('add-account flags=NONE');
 $json = json_decode($res, true);
 
 if (!$json || !isset($json['result']) || !preg_match('/Account ([0-9A-Fa-f]+) added/i', $json['result'], $m)) {
@@ -77,12 +77,12 @@ $accountIdHex = $m[1];
 $accountIdInt = hexdec($accountIdHex);
 
 // 2. Add License
-$res2 = run_shell("add-license $accountIdHex BB $username $password");
+$res2 = newserv_shell_exec("add-license $accountIdHex BB $username $password");
 $json2 = json_decode($res2, true);
 
 if (!$json2 || !isset($json2['result']) || stripos($json2['result'], 'updated') === false) {
     // Failure (likely duplicate username on server side, unhandled by DB check logic?)
-    run_shell("delete-account $accountIdHex");
+    newserv_shell_exec("delete-account $accountIdHex");
     
     $errMsg = 'Registration failed (Username check).';
     if (isset($json2['error'])) $errMsg = $json2['error'];
@@ -103,7 +103,7 @@ try {
     $stmt->execute();
 } catch (Exception $e) {
     // Rollback: delete account we just created
-    run_shell("delete-account $accountIdHex");
+    newserv_shell_exec("delete-account $accountIdHex");
     http_response_code(500);
     echo json_encode(['error' => 'Database error during registration.']);
     exit;

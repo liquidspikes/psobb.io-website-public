@@ -35,26 +35,12 @@ if (file_exists($state_cache_file)) {
 echo "[CRON_COMMUNITY] Starting execution...\n";
 
 // Fetch live game state
-$options = [
-    'http' => [
-        'header' => "Content-type: application/json\r\n",
-        'method' => 'GET'
-    ]
-];
-$context = stream_context_create($options);
-$response = @file_get_contents($NEWSERV_API_URL . '/y/clients', false, $context);
-
-if (!$response) {
+$clients = newserv_fetch_clients(10.0);
+if ($clients === null) {
     die("[CRON_COMMUNITY] Failed to fetch clients from NewServ API.\n");
 }
 
-$clients = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $response), true) ?: [];
-
-$lobbies_response = @file_get_contents($NEWSERV_API_URL . '/y/lobbies', false, $context);
-$lobbies = [];
-if ($lobbies_response) {
-    $lobbies = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $lobbies_response), true) ?: [];
-}
+$lobbies = newserv_fetch_lobbies(10.0) ?: [];
 $lobby_episode_map = [];
 $lobby_difficulty_map = [];
 $lobby_is_game_map = [];
@@ -205,7 +191,7 @@ foreach ($clients as $client) {
     $prev_playtime = $prev_state['playtime'] ?? $curr_playtime;
 
     $same_char = !isset($prev_state['char_name']) || $prev_state['char_name'] === $curr_char_name;
-    $curr_chal = count_cleared_challenge_stages($client);
+    $curr_chal = challenge_stages_cleared($client);
     $prev_chal = $same_char ? ($prev_state['chal_cleared'] ?? $curr_chal) : $curr_chal;
 
     $curr_mats = ($client['NumHPMaterialsUsed'] ?? 0) + ($client['NumTPMaterialsUsed'] ?? 0) + ($client['NumPowerMaterialsUsed'] ?? 0) + ($client['NumDefMaterialsUsed'] ?? 0) + ($client['NumMindMaterialsUsed'] ?? 0) + ($client['NumEvadeMaterialsUsed'] ?? 0) + ($client['NumLuckMaterialsUsed'] ?? 0);
@@ -545,7 +531,11 @@ foreach ($clients as $client) {
                 }
             }
         } elseif ($ce['goal_type'] === 'PATROL') {
-            if (($client['LocationFloor'] ?? -1) === (int)$ce['goal_target']) {
+            $ft = parse_floor_target($ce['goal_target']);
+            $epMatches = ($ft['episode'] === 1)
+                ? ($lobby_id === null || ($is_game && ($ep_num === null || $ep_num === 1)))
+                : ($is_game && $ep_num === $ft['episode']);
+            if ($epMatches && ($client['LocationFloor'] ?? -1) === $ft['floor']) {
                 $patrol_progress = ($prev_state['patrol']['CE_'.$ce['id']] ?? 0) + 1;
                 $current_patrols['CE_'.$ce['id']] = $patrol_progress;
                 if ($patrol_progress >= 10) {

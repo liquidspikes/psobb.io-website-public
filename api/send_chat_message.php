@@ -48,44 +48,21 @@ if (mb_strlen($messageText) > 64) {
 }
 
 // 3. Verify character is online via NewServ
-$clientsUrl = $NEWSERV_API_URL . '/y/clients';
-$clientsResponse = @file_get_contents($clientsUrl);
-
-if ($clientsResponse === FALSE) {
-    http_response_code(502);
-    echo json_encode(["success" => false, "error" => "Failed to reach the game server to verify player status."]);
-    exit;
-}
-
-$clientsData = json_decode($clientsResponse, true);
-if (!is_array($clientsData)) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "error" => "Invalid response from the game server."]);
-    exit;
-}
-
-$foundClient = null;
-foreach ($clientsData as $client) {
-    if (isset($client['Account']['AccountID']) && (int)$client['Account']['AccountID'] === $accountId) {
-        if (isset($client['Name']) && $client['Name'] === $characterName) {
-            $foundClient = $client;
-            break;
-        }
-    }
-}
-
-if (!$foundClient) {
-    http_response_code(403);
-    echo json_encode(["success" => false, "error" => "The character " . htmlspecialchars($characterName) . " is not currently online. Please log in-game first!"]);
-    exit;
-}
+$foundClient = newserv_require_online_character((int) $accountId, $characterName, [
+    'include_success_false' => true,
+    'offline_http_code'     => 502,
+    'offline_error'         => 'Failed to reach the game server to verify player status.',
+    'not_online_http_code'  => 403,
+    'not_online_error'      => 'The character ' . htmlspecialchars($characterName) . ' is not currently online. Please log in-game first!',
+    'check_loading'         => false,
+]);
 
 // 4. Send command to NewServ shell-exec
 // newserv: on <hex_account_id> c <message>
 $accountIdHex = dechex($accountId);
 $chatCmd = 'on ' . $accountIdHex . ' c ' . $messageText;
 
-$execRes = run_shell_command($chatCmd);
+$execRes = newserv_shell_exec($chatCmd);
 
 if ($execRes === false) {
     http_response_code(502);

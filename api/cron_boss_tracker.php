@@ -34,13 +34,7 @@ if (!flock($lock_file, LOCK_EX | LOCK_NB)) {
  */
 function tracker_boss_floors($episode, $is_game = true)
 {
-    if (!$is_game || $episode === null) return [];
-    switch ((int) $episode) {
-        case 1: return [11, 12, 13, 14];  // Dragon, De Rol Le, Vol Opt, Dark Falz
-        case 2: return [12, 13, 14, 15];  // Gal Gryphon, Olga Flow, Barba Ray, Gol Dragon
-        case 4: return [9];               // Saint-Milion / Shambertin / Kondrieu
-    }
-    return [];
+    return $is_game ? pso_boss_arena_floors($episode, true) : [];
 }
 
 /**
@@ -108,21 +102,15 @@ $script_start = time();
 
 // Run for up to 55 seconds (fits within 1-minute crontab)
 while (time() - $script_start < 55) {
-    $data = @file_get_contents($NEWSERV_API_URL . "/y/clients");
-    if (!$data) {
-        sleep(5);
-        continue;
-    }
-
-    $clients = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', $data), true);
-    if (!is_array($clients) || empty($clients)) {
+    $clients = newserv_fetch_clients();
+    if (empty($clients)) {
         sleep(5);
         continue;
     }
 
     // Each room's episode, so a floor number is read as the right area
-    $lobbies = json_decode(iconv('UTF-8', 'UTF-8//IGNORE', (string) @file_get_contents($NEWSERV_API_URL . "/y/lobbies")), true);
-    if (is_array($lobbies)) {
+    $lobbies = newserv_fetch_lobbies();
+    if ($lobbies !== null) {
         $rooms = [];
         foreach ($lobbies as $l) {
             if (!isset($l['ID'])) continue;

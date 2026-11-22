@@ -106,11 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    window.getCSRFToken = function () {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? (meta.getAttribute('content') || '').replace(/[\r\n\t ]/g, '') : '';
-    };
-
     fetchServerStats();
 
     // Refresh stats every 30 seconds
@@ -547,9 +542,6 @@ window.claimDelivery = async function(id) {
     }
 };
 
-function escHtml(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 // ---- End Special Item Delivery -----------------------------------------------
 
 window.saveDisplayName = async function () {
@@ -1331,17 +1323,6 @@ function renderGameList(games) {
         `;
         list.appendChild(row);
     });
-}
-
-
-function escapeHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, '&#039;');
 }
 
 // Star stream removed for stability
@@ -2878,8 +2859,8 @@ window.loadLfgFeed = async function () {
         }
 
         container.innerHTML = listings.map(l => {
-            const arch = _lfgGetArchetype(l.class);
-            const timeAgo = _lfgTimeAgo(l.created_at);
+            const arch = window.psoGetArchetype(l.class);
+            const timeAgo = window.psoFormatTimeAgo(l.created_at);
 
             // Seeking badges
             let seekHtml = '';
@@ -2901,7 +2882,7 @@ window.loadLfgFeed = async function () {
                     for (let i = 0; i < game.MaxClients; i++) {
                         const cc = game.ClientClasses[i];
                         if (cc) {
-                            const sa = _lfgGetArchetype(cc);
+                            const sa = window.psoGetArchetype(cc);
                             slots.push(`<span style="color:${sa === 'HU' ? '#ff6666' : sa === 'RA' ? '#66ccff' : '#88ff88'}; font-size:0.65rem; font-family:'Share Tech Mono',monospace;">${sa}</span>`);
                         } else {
                             slots.push(`<span style="color:#555; font-size:0.65rem;">--</span>`);
@@ -2910,7 +2891,7 @@ window.loadLfgFeed = async function () {
                     gameHtml = `
                         <div style="background:rgba(0,255,255,0.03); border:1px solid rgba(0,255,255,0.12); border-radius:6px; padding:8px 10px; margin-top:8px; font-size:0.75rem;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="color:#00ffc8; font-family:'Share Tech Mono',monospace;"><i class="fas fa-gamepad"></i> ${_lfgEsc(game.Name)}</span>
+                                <span style="color:#00ffc8; font-family:'Share Tech Mono',monospace;"><i class="fas fa-gamepad"></i> ${escapeHtml(game.Name)}</span>
                                 <span style="color:#aaa;">${game.Players}/${game.MaxClients}</span>
                             </div>
                             <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
@@ -2930,7 +2911,7 @@ window.loadLfgFeed = async function () {
             let bountyHtml = '';
             if (l.bounty_id && l.bounty_title) {
                 bountyHtml = `<div style="font-size:0.7rem; color:#ffaa00; margin-top:6px; padding:4px 8px; background:rgba(255,170,0,0.05); border:1px solid rgba(255,170,0,0.15); border-radius:4px;">
-                    <i class="fas fa-crosshairs"></i> Bounty: ${_lfgEsc(l.bounty_title)} ${l.bounty_reward ? `· <span style="color:#fbbf24;">${_lfgEsc(l.bounty_reward)}</span>` : ''}
+                    <i class="fas fa-crosshairs"></i> Bounty: ${escapeHtml(l.bounty_title)} ${l.bounty_reward ? `· <span style="color:#fbbf24;">${escapeHtml(l.bounty_reward)}</span>` : ''}
                 </div>`;
             }
 
@@ -2938,7 +2919,7 @@ window.loadLfgFeed = async function () {
             <div style="border:1px solid rgba(255,170,0,0.2); background:rgba(0,10,20,0.5); border-radius:8px; padding:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="color:#ffaa00; font-weight:bold; font-family:'Share Tech Mono',monospace;">${_lfgEsc(l.character_name)}</span>
+                        <span style="color:#ffaa00; font-weight:bold; font-family:'Share Tech Mono',monospace;">${escapeHtml(l.character_name)}</span>
                         <span style="font-size:0.7rem; color:#aaa;">Lv.${l.level}</span>
                         <span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:0.6rem; font-weight:bold; font-family:'Share Tech Mono',monospace; border:1px solid; ${arch === 'HU' ? 'color:#ff6666; border-color:#ff4444; background:rgba(255,68,68,0.15);' :
                     arch === 'RA' ? 'color:#66ccff; border-color:#33b5e5; background:rgba(51,181,229,0.15);' :
@@ -2947,7 +2928,7 @@ window.loadLfgFeed = async function () {
                     </div>
                     <span style="font-size:0.65rem; color:#888;"><i class="far fa-clock"></i> ${timeAgo}</span>
                 </div>
-                <p style="color:rgba(255,255,255,0.9); font-size:0.85rem; margin:0 0 6px; font-style:italic; padding:6px 10px; background:rgba(0,0,0,0.25); border-radius:4px; border-left:2px solid #ffaa00;">"${_lfgEsc(l.description)}"</p>
+                <p style="color:rgba(255,255,255,0.9); font-size:0.85rem; margin:0 0 6px; font-style:italic; padding:6px 10px; background:rgba(0,0,0,0.25); border-radius:4px; border-left:2px solid #ffaa00;">"${escapeHtml(l.description)}"</p>
                 ${seekHtml ? `<div style="margin-top:6px;"><span style="font-size:0.6rem; color:#888; margin-right:4px;">SEEKING:</span>${seekHtml}</div>` : ''}
                 ${bountyHtml}
                 ${gameHtml}
@@ -2960,28 +2941,6 @@ window.loadLfgFeed = async function () {
         </div>`;
     }
 };
-
-function _lfgGetArchetype(charClass) {
-    if (!charClass) return '';
-    const u = charClass.toUpperCase();
-    if (u.startsWith('HU')) return 'HU';
-    if (u.startsWith('RA')) return 'RA';
-    if (u.startsWith('FO')) return 'FO';
-    return '';
-}
-
-function _lfgTimeAgo(dbTimeStr) {
-    if (!dbTimeStr) return '';
-    const utcStr = dbTimeStr.replace(' ', 'T') + 'Z';
-    const diffMs = Date.now() - new Date(utcStr).getTime();
-    const mins = Math.max(1, Math.floor(diffMs / 60000));
-    return mins < 60 ? `${mins}m ago` : `${Math.floor(mins / 60)}h ago`;
-}
-
-function _lfgEsc(text) {
-    if (!text) return '';
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 // ---- Live Lobby Feed for Chat Console ----
 window._lobbyFeedInterval = null;
@@ -3642,6 +3601,8 @@ function renderMilestones(milestones, inGame) {
     });
 }
 
+window.initClaimModalCategoryButtons = initClaimModalCategoryButtons;
+
 function initClaimModalCategoryButtons() {
     const claimBtns = document.querySelectorAll('.claim-category-btn');
     if (claimBtns.length === 0) return;
@@ -3754,50 +3715,6 @@ function initClaimModalCategoryButtons() {
     });
 }
 
-function createFireworks() {
-    const overlay = document.getElementById('drop-animation-overlay');
-    const colors = ['#ff4444', '#33b5e5', '#00C851', '#ffaa00', '#aa66cc', '#ffffff'];
-
-    for (let b = 0; b < 6; b++) {
-        setTimeout(() => {
-            const centerX = window.innerWidth / 2 + (Math.random() - 0.5) * 600;
-            const centerY = window.innerHeight / 2 + (Math.random() - 0.5) * 500 - 150;
-
-            for (let i = 0; i < 80; i++) {
-                const particle = document.createElement('div');
-                particle.style.position = 'absolute';
-                particle.style.left = centerX + 'px';
-                particle.style.top = centerY + 'px';
-                particle.style.width = (Math.random() * 8 + 4) + 'px';
-                particle.style.height = particle.style.width;
-                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                particle.style.borderRadius = '50%';
-                particle.style.pointerEvents = 'none';
-                particle.style.zIndex = '9998';
-                particle.style.boxShadow = `0 0 15px ${particle.style.backgroundColor}, 0 0 30px ${particle.style.backgroundColor}`;
-
-                overlay.appendChild(particle);
-
-                const angle = Math.random() * Math.PI * 2;
-                const velocity = 100 + Math.random() * 300;
-                const tx = Math.cos(angle) * velocity;
-                const ty = Math.sin(angle) * velocity;
-
-                particle.animate([
-                    { transform: 'translate(0,0) scale(1)', opacity: 1 },
-                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
-                ], {
-                    duration: 1000 + Math.random() * 800,
-                    easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-                    fill: 'forwards'
-                });
-
-                setTimeout(() => { if (particle.parentNode) particle.remove(); }, 2000);
-            }
-        }, b * 300);
-    }
-}
-
 // Daily Streak Calendar claims
 window.loadStreak = function () {
     // Non-linear fill calculation based on evenly spaced milestone segments
@@ -3824,6 +3741,11 @@ window.loadStreak = function () {
         })
         .then(data => {
             if (data.error) return;
+
+            const streakSection = document.getElementById('streak-section');
+            if (streakSection) streakSection.style.display = 'block';
+            const dailySection = document.getElementById('daily-reward-section');
+            if (dailySection) dailySection.style.display = 'block';
 
             document.getElementById('streak-count').textContent = data.streak;
 

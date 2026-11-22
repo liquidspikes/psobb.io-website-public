@@ -46,31 +46,14 @@ if (empty($username)) {
 }
 
 // Check online state via NewServ
-$clientsUrl = $NEWSERV_API_URL . '/y/clients';
-$clientsResponse = @file_get_contents($clientsUrl);
-$isOnline = false;
-$onlineCharName = '';
-$onlineSlot = null;
-$targetIdent = $username;
-
-if ($clientsResponse !== FALSE) {
-    $clientsData = json_decode($clientsResponse, true);
-    if (is_array($clientsData)) {
-        foreach ($clientsData as $c) {
-            if (isset($c['Account']['AccountID']) && (int)$c['Account']['AccountID'] === $accountId) {
-                $isOnline = true;
-                $onlineCharName = $c['Name'] ?? '';
-                if (isset($c['BBCharacterIndex']) && is_numeric($c['BBCharacterIndex'])) {
-                    $onlineSlot = (int)$c['BBCharacterIndex'];
-                }
-                if (!empty($c['Account']['BBLicenses'][0]['UserName'])) {
-                    $targetIdent = $c['Account']['BBLicenses'][0]['UserName'];
-                }
-                break;
-            }
-        }
-    }
-}
+$clientsData = newserv_fetch_clients();
+$onlineClient = ($clientsData !== null) ? newserv_find_online_client($clientsData, (int) $accountId) : null;
+$isOnline = ($onlineClient !== null);
+$onlineCharName = $isOnline ? ($onlineClient['Name'] ?? '') : '';
+$onlineSlot = ($isOnline && isset($onlineClient['BBCharacterIndex']) && is_numeric($onlineClient['BBCharacterIndex']))
+    ? (int) $onlineClient['BBCharacterIndex']
+    : null;
+$targetIdent = $isOnline ? newserv_resolve_target_ident($onlineClient, $username) : $username;
 
 // Path to players folder
 $playersDir = get_newserv_players_dir();
@@ -111,27 +94,8 @@ if ($isOnline) {
     }
 
     // 2. Double check if player is in an active game room vs lobby block
-    $lobbiesUrl = $NEWSERV_API_URL . '/y/lobbies';
-    $lobbiesResponse = @file_get_contents($lobbiesUrl);
-    $inGame = false;
-    
-    if ($lobbiesResponse !== FALSE) {
-        $lobbiesData = json_decode($lobbiesResponse, true);
-        if (is_array($lobbiesData)) {
-            foreach ($lobbiesData as $lobby) {
-                if (!empty($lobby['IsGame']) && $lobby['IsGame'] == true) {
-                    if (isset($lobby['Clients']) && is_array($lobby['Clients'])) {
-                        foreach ($lobby['Clients'] as $lobbyClient) {
-                            if ($lobbyClient !== null && isset($lobbyClient['Account']['AccountID']) && (int)$lobbyClient['Account']['AccountID'] === $accountId) {
-                                $inGame = true;
-                                break 2;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    $lobbiesData = newserv_fetch_lobbies();
+    $inGame = ($lobbiesData !== null) && newserv_is_client_in_game($onlineClient, $lobbiesData, (int) $accountId);
     
     if ($inGame) {
         http_response_code(403);
@@ -144,8 +108,8 @@ if ($isOnline) {
     $resetCmd = 'on ' . $targetIdent . ' cc ' . $cmdPrefix . 'edit material reset every';
     $saveCmd = 'on ' . $targetIdent . ' cc ' . $cmdPrefix . 'save';
 
-    $res1 = run_shell_command($resetCmd);
-    $res2 = run_shell_command($saveCmd);
+    $res1 = newserv_shell_exec($resetCmd);
+    $res2 = newserv_shell_exec($saveCmd);
 
     $checkShellOk = static function ($rawRes): bool {
         if ($rawRes === false || $rawRes === '') {

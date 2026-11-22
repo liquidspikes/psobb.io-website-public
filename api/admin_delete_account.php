@@ -36,7 +36,7 @@ $shell_result = null;
 if ($target_account_id) {
     // Convert ID to Hex String
     $hexId = is_numeric($target_account_id) ? sprintf('%08X', $target_account_id) : $target_account_id;
-    $res = run_shell_admin("delete-account $hexId");
+    $res = newserv_shell_exec("delete-account $hexId");
     $jsonRes = json_decode($res, true);
     $shell_result = $jsonRes['result'] ?? ($jsonRes['error'] ?? 'Unknown response');
     
@@ -65,7 +65,7 @@ if ($target_account_id) {
     
     if ($target_account_id) {
         $hexId = is_numeric($target_account_id) ? sprintf('%08X', $target_account_id) : $target_account_id;
-        $res = run_shell_admin("delete-account $hexId");
+        $res = newserv_shell_exec("delete-account $hexId");
         $jsonRes = json_decode($res, true);
         $shell_result = $jsonRes['result'] ?? ($jsonRes['error'] ?? 'Unknown response');
         if ($jsonRes && isset($jsonRes['result']) && stripos($jsonRes['result'], 'deleted') !== false) {

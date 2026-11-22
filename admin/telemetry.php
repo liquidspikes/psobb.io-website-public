@@ -12,19 +12,8 @@ if (!function_exists('telemetry_floor_name')) {
             return $floor === 15 ? 'Visual Lobby' : "Lobby (Floor {$floor})";
         }
         if ($ep === 2) {
-            $map = [
+            $map = PSO_EP2_FLOORS + [
                 0  => 'Lab (Pioneer 2)',
-                1  => 'VR Temple Alpha',
-                2  => 'VR Temple Beta',
-                3  => 'VR Spaceship Alpha',
-                4  => 'VR Spaceship Beta',
-                5  => 'Central Control Area',
-                6  => 'Jungle North',
-                7  => 'Jungle East',
-                8  => 'Mountain',
-                9  => 'Seaside',
-                10 => 'Seabed Upper',
-                11 => 'Seabed Lower',
                 12 => 'Gal Gryphon',
                 13 => 'Olga Flow',
                 14 => 'Barba Ray',
@@ -35,34 +24,16 @@ if (!function_exists('telemetry_floor_name')) {
             return $map[$floor] ?? "Ep2 Floor {$floor}";
         }
         if ($ep === 4) {
-            $map = [
+            $map = PSO_EP4_FLOORS + [
                 0  => 'Pioneer 2',
-                1  => 'Crater East',
-                2  => 'Crater West',
-                3  => 'Crater South',
-                4  => 'Crater North',
-                5  => 'Crater Interior',
-                6  => 'Subterranean Desert 1',
-                7  => 'Subterranean Desert 2',
-                8  => 'Subterranean Desert 3',
                 9  => 'Meteor Impact Site (Boss)',
                 10 => 'Test Map',
                 15 => 'Lobby (Transition)',
             ];
             return $map[$floor] ?? "Ep4 Floor {$floor}";
         }
-        $map = [
+        $map = PSO_EP1_FLOORS + [
             0  => 'Pioneer 2',
-            1  => 'Forest 1',
-            2  => 'Forest 2',
-            3  => 'Cave 1',
-            4  => 'Cave 2',
-            5  => 'Cave 3',
-            6  => 'Mine 1',
-            7  => 'Mine 2',
-            8  => 'Ruins 1',
-            9  => 'Ruins 2',
-            10 => 'Ruins 3',
             11 => 'Dragon',
             12 => 'De Rol Le',
             13 => 'Vol Opt',
@@ -119,45 +90,27 @@ $page_title = __('Live Telemetry Debug') . ' - ' . get_server_name();
 include '../includes/header.php';
 
 // Fetch Live Game State (/y/clients + /y/lobbies)
-$context = stream_context_create([
-    'http' => [
-        'header'  => "Content-type: application/json\r\n",
-        'method'  => 'GET',
-        'timeout' => 2.0,
-    ]
-]);
+$clients = newserv_fetch_clients(2.0) ?? [];
 
-$clients_raw = @file_get_contents($NEWSERV_API_URL . '/y/clients', false, $context);
-$clients = [];
-if ($clients_raw !== false && $clients_raw !== '') {
-    $decoded_clients = json_decode((string)iconv('UTF-8', 'UTF-8//IGNORE', $clients_raw), true);
-    if (is_array($decoded_clients)) {
-        $clients = $decoded_clients;
-    }
-}
-
-$lobbies_raw = @file_get_contents($NEWSERV_API_URL . '/y/lobbies', false, $context);
+$decoded_lobbies = newserv_fetch_lobbies(2.0);
 $lobbyMap = [];
-if ($lobbies_raw !== false && $lobbies_raw !== '') {
-    $decoded_lobbies = json_decode((string)iconv('UTF-8', 'UTF-8//IGNORE', $lobbies_raw), true);
-    if (is_array($decoded_lobbies)) {
-        foreach ($decoded_lobbies as $lobby) {
-            if (!isset($lobby['ID'])) {
-                continue;
-            }
-            $isGame = !empty($lobby['IsGame']);
-            $ep = null;
-            if ($isGame && isset($lobby['Episode']) && preg_match('/(\d)/', (string)$lobby['Episode'], $m)) {
-                $ep = (int)$m[1];
-            }
-            $lobbyMap[(string)$lobby['ID']] = [
-                'name'       => trim((string)($lobby['Name'] ?? '')),
-                'is_game'    => $isGame,
-                'difficulty' => trim((string)($lobby['Difficulty'] ?? '')),
-                'mode'       => trim((string)($lobby['Mode'] ?? '')),
-                'episode'    => $ep,
-            ];
+if ($decoded_lobbies !== null) {
+    foreach ($decoded_lobbies as $lobby) {
+        if (!isset($lobby['ID'])) {
+            continue;
         }
+        $isGame = !empty($lobby['IsGame']);
+        $ep = null;
+        if ($isGame && isset($lobby['Episode']) && preg_match('/(\d)/', (string)$lobby['Episode'], $m)) {
+            $ep = (int)$m[1];
+        }
+        $lobbyMap[(string)$lobby['ID']] = [
+            'name'       => trim((string)($lobby['Name'] ?? '')),
+            'is_game'    => $isGame,
+            'difficulty' => trim((string)($lobby['Difficulty'] ?? '')),
+            'mode'       => trim((string)($lobby['Mode'] ?? '')),
+            'episode'    => $ep,
+        ];
     }
 }
 

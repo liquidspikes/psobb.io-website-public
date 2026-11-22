@@ -25,21 +25,8 @@ $accountId = $_SESSION['user']['account_id'];
 // 2. Fetch Live Game Server Status
 // We query the NewServ binary directly. If the player is currently online in-game,
 // the dashboard will render "Online: Yes".
-$url = $NEWSERV_API_URL . "/y/clients";
-$data = @file_get_contents($url);
-$isOnline = false;
-
-if ($data !== FALSE) {
-    $clients = json_decode($data, true);
-    if (is_array($clients)) {
-        foreach ($clients as $c) {
-            if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-                $isOnline = true;
-                break;
-            }
-        }
-    }
-}
+$clients = newserv_fetch_clients();
+$isOnline = ($clients !== null) && (newserv_find_online_client($clients, (int) $accountId) !== null);
 
 $db = get_db();
 $today = date('Y-m-d');
@@ -119,18 +106,7 @@ foreach ($milestones as $m) {
     }
 }
 
-// 7. Daily Flat Reward Processing
-// In addition to milestone streaks, we offer a flat daily check-in reward.
-// (e.g. 1 Photon Drop per day)
-$db->exec("CREATE TABLE IF NOT EXISTS daily_rewards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    account_id INTEGER NOT NULL,
-    claim_date TEXT NOT NULL,
-    item_string TEXT NOT NULL,
-    claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(account_id, claim_date)
-)");
-
+// 7. Daily Flat Reward Check
 // Check if they already pressed the "Claim Daily" button today
 $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM daily_rewards WHERE account_id = :aid AND claim_date = :date");
 $stmt->bindValue(':aid', $accountId, SQLITE3_INTEGER);

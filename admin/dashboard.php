@@ -339,28 +339,10 @@ async function runConsole(e) {
 }
 
 async function execCommand(cmd) {
-    const out = document.getElementById('console-out');
-    out.textContent += `\n> ${cmd}...`;
-    out.scrollTop = out.scrollHeight;
-
-    try {
-        const res = await fetch('/api/admin_exec.php', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': window.getCSRFToken()},
-            body: JSON.stringify({command: cmd})
-        });
-        const data = await res.json();
-        
-        if (data.result) {
-            out.textContent += `\n${data.result}`;
-        } else if (data.error) {
-            out.textContent += `\nError: ${data.error}`;
-        }
-    } catch (e) {
-        out.textContent += '\n' + '<?= addslashes(__("Connection Failed")) ?>';
-    }
-    out.scrollTop = out.scrollHeight;
+    return window.psoExecAdminCommand(cmd, document.getElementById('console-out'), '/api/admin_exec.php', {
+        promptSuffix: '...',
+        connFailed: '<?= addslashes(__("Connection Failed")) ?>'
+    });
 }
 
 function logConsole(text) {

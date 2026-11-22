@@ -4,7 +4,7 @@ $page_title = __('Drop Chart - PSOBB Private Server');
 $current_page = 'drops';
 include 'includes/header.php';
 
-$section_ids = ["Viridia", "Greenill", "Skyly", "Bluefull", "Purplenum", "Pinkal", "Redria", "Oran", "Yellowboze", "Whitill"];
+$section_ids = PSO_SECTION_IDS;
 ?>
 
 <link rel="stylesheet" href="/css/drops.css?v=<?php echo time(); ?>">

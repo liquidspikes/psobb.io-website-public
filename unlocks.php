@@ -691,6 +691,6 @@ include 'includes/header.php';
         }
     </style>
 
-    <script src="js/unlocks.js?v=<?php echo time(); ?>"></script>
+    <script src="js/unlocks.js?v=<?php echo time(); ?>" defer></script>
 
 <?php include 'includes/footer.php'; ?>

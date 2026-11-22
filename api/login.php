@@ -130,17 +130,6 @@ try {
         $legacyEmail = $isLegacyEmail ? $dbEmail : '';
 
         // Check for pending unconfirmed email request
-        $db->exec("CREATE TABLE IF NOT EXISTS email_confirmations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id INTEGER NOT NULL,
-            username TEXT NOT NULL,
-            new_email TEXT NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            confirmed_at INTEGER DEFAULT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at INTEGER NOT NULL
-        )");
-
         $pendStmt = $db->prepare("SELECT new_email FROM email_confirmations WHERE account_id = :aid AND confirmed_at IS NULL AND expires_at > :now ORDER BY id DESC LIMIT 1");
         $pendStmt->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
         $pendStmt->bindValue(':now', time(), SQLITE3_INTEGER);

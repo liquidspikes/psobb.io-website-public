@@ -35,70 +35,16 @@ if (!in_array($milestone, $validMilestones)) {
 }
 
 // --------------------------------------------------------------------------
-// 2. Game Client Validation
+// 2-3. Game Client & In-Game Room Validation
 // --------------------------------------------------------------------------
-// We must pull live client state. Dropping an item while a player is offline
-// or sitting on the ship lobby will result in the item vanishing into the void.
-$url = $NEWSERV_API_URL . "/y/clients";
-$data = @file_get_contents($url);
-
-if ($data === FALSE) {
-    http_response_code(500);
-    echo json_encode(["error" => "Game server is offline."]);
-    exit;
-}
-
-$clients = json_decode($data, true);
-$onlineClient = null;
-
-if (is_array($clients)) {
-    foreach ($clients as $c) {
-        if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-            $onlineClient = $c;
-            break;
-        }
-    }
-}
-
-if (!$onlineClient) {
-    http_response_code(400);
-    echo json_encode(["error" => "You must be logged into the game to claim streak rewards."]);
-    exit;
-}
-
-// Protect against loading screen transitions
-if (!isset($onlineClient['EXP']) || ($onlineClient['EXP'] === 0 && ($onlineClient['Level'] ?? 1) > 1)) {
-    http_response_code(400);
-    echo json_encode(["error" => "Your character is currently in a loading screen. Please wait until you are fully spawned to claim."]);
-    exit;
-}
-
-// 3. Lobby vs. In-Game Verification
-// Cross-reference the client's `LobbyID` with the Live Lobbies API to ensure `IsGame` is true.
-$lobbyId = $onlineClient['LobbyID'] ?? null;
-$inGame = false;
-if ($lobbyId) {
-    $lobbyUrl = $NEWSERV_API_URL . "/y/lobbies";
-    $lobbyData = @file_get_contents($lobbyUrl);
-    if ($lobbyData !== FALSE) {
-        $lobbies = json_decode($lobbyData, true);
-        if (is_array($lobbies)) {
-            foreach ($lobbies as $lobby) {
-                if (isset($lobby['ID']) && $lobby['ID'] == $lobbyId && isset($lobby['IsGame']) && $lobby['IsGame']) {
-                    $inGame = true;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-// Reject if they are sitting at the Pioneer 2 front desk without a game spawned
-if (!$inGame) {
-    http_response_code(400);
-    echo json_encode(["error" => "You must be in a game (not lobby) to claim streak rewards."]);
-    exit;
-}
+// Dropping an item while a player is offline or sitting on the ship lobby will
+// result in the item vanishing into the void.
+$onlineClient = newserv_require_online_character((int) $accountId, null, [
+    'offline_error'          => 'Game server is offline.',
+    'not_online_error'       => 'You must be logged into the game to claim streak rewards.',
+    'require_in_game'        => true,
+    'in_game_required_error' => 'You must be in a game (not lobby) to claim streak rewards.',
+]);
 
 // --------------------------------------------------------------------------
 // 4. Server-Side Streak Verification

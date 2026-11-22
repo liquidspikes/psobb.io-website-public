@@ -63,82 +63,12 @@ try {
         exit;
     }
 
-    // 1. Fetch online clients from newserv to verify level
-    $url = $NEWSERV_API_URL . "/y/clients";
-    $data = @file_get_contents($url);
-
-    if ($data === FALSE) {
-        http_response_code(500);
-        echo json_encode(["error" => "Game server is offline, cannot verify character."]);
-        exit;
-    }
-
-    $clients = json_decode($data, true);
-    $onlineCharacter = null;
-
-    if (is_array($clients)) {
-        foreach ($clients as $c) {
-            if (isset($c['Account']) && $c['Account']['AccountID'] == $accId) {
-                if (!empty($bounty['character_name']) && isset($c['Name']) && $c['Name'] !== $bounty['character_name']) {
-                    continue; // Wrong character
-                }
-                $onlineCharacter = $c;
-                break;
-            }
-        }
-    }
-
-    if (!$onlineCharacter) {
-        http_response_code(400);
-        $err_msg = "Character must be online to claim rewards.";
-        if (!empty($bounty['character_name'])) {
-            $err_msg = "You must be logged in as " . $bounty['character_name'] . " to claim this reward!";
-        }
-        echo json_encode(["error" => $err_msg]);
-        exit;
-    }
-
-    // Protect against loading screen transitions
-    if (!isset($onlineCharacter['EXP']) || ($onlineCharacter['EXP'] === 0 && ($onlineCharacter['Level'] ?? 1) > 1)) {
-        http_response_code(400);
-        echo json_encode(["error" => "Your character is currently in a loading screen. Please wait until you are fully spawned to claim."]);
-        exit;
-    }
-
-    $lobbyId = $onlineCharacter['LobbyID'] ?? null;
-    if ($lobbyId === null) {
-        http_response_code(400);
-        echo json_encode(["error" => "Character must be actively logged into a server lobby or game."]);
-        exit;
-    }
-
-    // 1.5 Fetch lobbies to ensure the player is in an actual game, not just the lobby
-    $lobbiesData = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-    if ($lobbiesData === FALSE) {
-        http_response_code(500);
-        echo json_encode(["error" => "Game server lobbies offline, cannot verify game status."]);
-        exit;
-    }
-
-    $lobbies = json_decode($lobbiesData, true);
-    $inGame = false;
-
-    if (is_array($lobbies)) {
-        foreach ($lobbies as $l) {
-            if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-                if (!empty($l['IsGame'])) {
-                    $inGame = true;
-                }
-                break;
-            }
-        }
-    }
-
-    if (!$inGame) {
-        http_response_code(400);
-        echo json_encode(["error" => "You must be actively inside a game (not in a lobby) to claim a reward."]);
-        exit;
-    }
+    // 1. Verify online character, spawn status, and active game room
+    $onlineCharacter = newserv_require_online_character(
+        (int) $accId,
+        !empty($bounty['character_name']) ? (string) $bounty['character_name'] : null,
+        ['require_in_game' => true]
+    );
 
     // Try to drop the items at their feet!
     // We split compound AI strings like "Saber, Monomate and 300 Meseta" into isolated payloads

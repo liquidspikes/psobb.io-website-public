@@ -24,25 +24,20 @@ if (empty($_SESSION['user'])) {
 
 try {
     // 1. Fetch `/y/lobbies`
-    $lobbies_url = $NEWSERV_API_URL . "/y/lobbies";
-    $lobbies_json = @file_get_contents($lobbies_url);
-    if ($lobbies_json === false) {
+    $lobbies = newserv_fetch_lobbies();
+    if ($lobbies === null) {
         http_response_code(502);
         echo json_encode(["error" => "Game server lobbies API is offline."]);
         exit;
     }
     
     // 2. Fetch `/y/summary` (to resolve Client classes)
-    $summary_url = $NEWSERV_API_URL . "/y/summary";
-    $summary_json = @file_get_contents($summary_url);
-    if ($summary_json === false) {
+    $summary = newserv_fetch_summary();
+    if ($summary === null) {
         http_response_code(502);
         echo json_encode(["error" => "Game server summary API is offline."]);
         exit;
     }
-
-    $lobbies = json_decode($lobbies_json, true);
-    $summary = json_decode($summary_json, true);
 
     // Build client registry index by Client ID for fast lookups
     $client_registry = [];

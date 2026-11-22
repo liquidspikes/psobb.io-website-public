@@ -31,7 +31,7 @@ if (!$cmd) {
 // Execute
 // Logic to prevent running potentially destructive commands indiscriminately?
 // Admin is trusted.
-$res = run_shell_admin($cmd);
+$res = newserv_shell_exec($cmd);
 
 if ($res === false) {
     http_response_code(502);

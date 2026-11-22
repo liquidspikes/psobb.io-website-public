@@ -67,9 +67,9 @@ if (!$target_id) {
 $hexId = is_numeric($target_id) ? sprintf('%08X', $target_id) : $target_id;
 
 // 3. Update Password (Delete old license, add new)
-run_shell("delete-license $hexId BB $username");
+newserv_shell_exec("delete-license $hexId BB $username");
 
-$res = run_shell("add-license $hexId BB $username $new_password");
+$res = newserv_shell_exec("add-license $hexId BB $username $new_password");
 $json = json_decode($res, true);
 
 if ($json && isset($json['result']) && stripos($json['result'], 'updated') !== false) {

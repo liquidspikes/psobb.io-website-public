@@ -11,7 +11,7 @@ if (empty($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
 }
 
 // Execute 'show-slots' to get players
-$output = run_shell_command_json("show-slots");
+$output = newserv_shell_exec_json("show-slots");
 
 if ($output === null) {
     echo json_encode(['error' => 'Failed to retrieve player list']);

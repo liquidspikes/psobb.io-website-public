@@ -34,68 +34,8 @@ if (!in_array($category, $validCategories)) {
     exit;
 }
 
-// 1. Fetch online clients from newserv to verify level
-$url = $NEWSERV_API_URL . "/y/clients";
-$data = @file_get_contents($url);
-
-if ($data === FALSE) {
-    http_response_code(500);
-    echo json_encode(["error" => "Game server is offline, cannot verify character."]);
-    exit;
-}
-
-$clients = json_decode($data, true);
-$onlineCharacter = null;
-
-if (is_array($clients)) {
-    foreach ($clients as $c) {
-        if (isset($c['Account']) && $c['Account']['AccountID'] == $accountId) {
-            $onlineCharacter = $c;
-            break;
-        }
-    }
-}
-
-if (!$onlineCharacter) {
-    http_response_code(400);
-    echo json_encode(["error" => "Character must be online to claim rewards."]);
-    exit;
-}
-
-$lobbyId = $onlineCharacter['LobbyID'] ?? null;
-if ($lobbyId === null) {
-    http_response_code(400);
-    echo json_encode(["error" => "Character must be actively logged into a server lobby or game."]);
-    exit;
-}
-
-// 1.5 Fetch lobbies to ensure the player is in an actual game, not just the lobby
-$lobbiesData = @file_get_contents($NEWSERV_API_URL . "/y/lobbies");
-if ($lobbiesData === FALSE) {
-    http_response_code(500);
-    echo json_encode(["error" => "Game server lobbies offline, cannot verify game status."]);
-    exit;
-}
-
-$lobbies = json_decode($lobbiesData, true);
-$inGame = false;
-
-if (is_array($lobbies)) {
-    foreach ($lobbies as $l) {
-        if (isset($l['ID']) && $l['ID'] === $lobbyId) {
-            if (!empty($l['IsGame'])) {
-                $inGame = true;
-            }
-            break;
-        }
-    }
-}
-
-if (!$inGame) {
-    http_response_code(400);
-    echo json_encode(["error" => "You must be actively inside a game (not in a lobby) to claim a reward."]);
-    exit;
-}
+// 1. Verify online character, spawn status, and active game room
+$onlineCharacter = newserv_require_online_character((int) $accountId, null, ['require_in_game' => true]);
 
 $level = $onlineCharacter['Level'] ?? 1;
 $name = $onlineCharacter['Name'] ?? 'Unknown';
@@ -299,11 +239,11 @@ try {
             $dex = rand(0, 100);
             $mind = rand(0, 100);
             
-            $isHunter = in_array($charClass, ['HUmar', 'HUnewearl', 'HUcast', 'HUcaseal']);
-            $isRanger = in_array($charClass, ['RAmar', 'RAmarl', 'RAcast', 'RAcaseal']);
+            $isHunter = in_array($charClass, PSO_HUNTER_CLASSES, true);
+            $isRanger = in_array($charClass, PSO_RANGER_CLASSES, true);
             $isForce = !$isHunter && !$isRanger;
             
-            $isCast = in_array($charClass, ['HUcast', 'HUcaseal', 'RAcast', 'RAcaseal']);
+            $isCast = in_array($charClass, PSO_CAST_CLASSES, true);
             $isCastMindLocked = ($isCast && rand(1, 10) === 1); // 10% rare chance for CAST 0 MIND lock
             
             // 25% chance to roll a highly optimized class-archetype biased stat roll ("god-roll").

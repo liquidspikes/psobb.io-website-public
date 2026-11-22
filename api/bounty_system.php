@@ -525,7 +525,7 @@ function bounty_roll_drop_tier($lobby)
 
 function bounty_random_class()
 {
-    $classes = ['HUmar', 'HUnewearl', 'HUcast', 'HUcaseal', 'RAmar', 'RAmarl', 'RAcast', 'RAcaseal', 'FOmar', 'FOmarl', 'FOnewm', 'FOnewearl'];
+    $classes = PSO_CHAR_CLASSES;
     return $classes[array_rand($classes)];
 }
 
