@@ -141,6 +141,19 @@ const mockResponse = {
             reward_decoded: '10000 Meseta',
             status: 'ready_to_redeem',
         },
+        {
+            player_mission_id: 31328,
+            title: 'Account Challenge',
+            description: 'Shared account challenge run',
+            goal_type: 'CHALLENGE_RUN',
+            goal_target: '1:1-1:780:S',
+            objective_text: 'Clear Episode 1 Challenge Mode Stage 1 in under 13m (S pace)',
+            character_name: '',
+            reward_decoded: '031000 x5, 7500 Meseta',
+            status: 'in_progress',
+            tier_label: 'Rare',
+            kind: 'Challenge Mode · Weekly',
+        },
     ],
 };
 
@@ -208,6 +221,10 @@ assert.ok(
     assert.ok(
         claimHtml.includes('Claimable lore line &lt;tag&gt;') && claimHtml.includes('[Ep 2] Explore the Central Control Area'),
         'claimable card renders escaped description and readable objective'
+    );
+    assert.ok(
+        activeHtml.includes('Character: Account Wide') && activeHtml.includes('Clear Episode 1 Challenge Mode Stage 1'),
+        'account-wide Challenge card renders Account Wide instead of Unknown when character_name is empty'
     );
     console.log('NODE PORTAL BOUNTY DISPLAY TESTS PASSED');
 })().catch((err) => {

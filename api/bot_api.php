@@ -403,6 +403,7 @@ if ($action === 'get_player') {
     $missions = [];
     while ($m = $mRes->fetchArray(SQLITE3_ASSOC)) {
         $m['friendly_objective'] = getClearObjective($m['goal_type'], $m['goal_target'], $m['title'], $m['description'], bounty_meta_min_difficulty($m['meta'] ?? null));
+        $m['character_name'] = bounty_display_character_name($m['character_name'] ?? null, $m['pool'] ?? null);
         // Bounty System Rework fields (null on bounties from before the rework)
         $m['tier_label'] = $m['tier'] ? bounty_tier_label($m['tier']) : null;
         $m['kind'] = $m['cadence'] ? bounty_kind_label($m['pool'], $m['cadence']) : null;

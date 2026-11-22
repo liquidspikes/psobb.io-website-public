@@ -11,11 +11,11 @@ The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` 
 | Daily | 3 | Being logged in (10% chance a minute), plus one for each daily finished | 5 earned per day |
 | Weekly | 3 | Being logged in (3% chance a minute), plus one for each weekly finished | 10 earned per week |
 | Drop | 5, their own | Boss kills (5–18% chance by difficulty) and rare-enemy kills (10–30%) | At most 10 held (active + waiting); after that nothing drops |
-| Battle Mode | 3 dailies | Playing Battle Mode (25% chance a minute), Normal/Solo play (10% chance a minute), plus one on completion | 3 per day |
-| Challenge Mode | 3 weeklies, any tier | Playing Challenge Mode (25% chance a minute), Normal/Solo play (3% chance a minute), plus one on completion | 3 per week |
+| Battle Mode | 3 dailies (per account) | Playing Battle Mode (25% chance a minute), Normal/Solo play (10% chance a minute), plus one on completion | 3 per day per account |
+| Challenge Mode | 3 weeklies (per account), any tier | Playing Challenge Mode (25% chance a minute), Normal/Solo play (3% chance a minute), plus one on completion | 3 per week per account |
 | Contract | 3, their own (no waiting) | A quarter of Ultra Rare and Mythic Rare drops | 3 held; with 3 held, such a drop stays a normal weekly drop. Never expire |
 
-- Slots and caps are per character by default. Set `"limit_scope": "account"` to share them across an account's characters.
+- Standard, drop, and contract slots/caps are per character by default (`"limit_scope": "account"` shares all pools across an account). **Battle Mode and Challenge Mode (`pools.battle.scope`, `pools.challenge.scope`) are per account by default**, so any character on the account shares those slots, advances progress, and can claim rewards.
 - A bounty earned while its slots are full waits under **Up next** on the bounty board. When a slot of its kind frees up, the oldest waiting bounty starts. The objective and the story are written at that point, so they are set against the hunter's level and stats on the day it starts.
 - The caps count every bounty earned in the period, whatever happened to it afterwards. Abandoning bounties therefore cannot be used to earn more.
 - Resets come at `reset.daily_hour` (default midnight). The weekly reset comes on `reset.weekly_day` (1 = Monday). Both use the server's time zone, or `reset.timezone`.
@@ -33,7 +33,7 @@ The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` 
 
 Uncommon to Mythic Rare bounties can also pay an **exchange token** (below).
 
-- Free bounties are Common 60%, Uncommon 30% and Rare 10%. Challenge bounties are Common 45%, Uncommon 30%, Rare 17%, Ultra Rare 6% and Mythic Rare 2%. The drop odds depend on difficulty; see `drops.tier_weights`.
+- Free bounties are Common 60%, Uncommon 30% and Rare 10%. **Battle and Challenge bounties both use `[15, 25, 35, 18, 7]` across Common / Uncommon / Rare / Ultra Rare / Mythic Rare** (60% Rare or higher), ignore character level (drawing from the full `str <= 200` item pool with full level-200 stat caps), and **always pay Photon Drops (100%)**. The drop odds depend on difficulty; see `drops.tier_weights`.
 - Ultra and Mythic drops are weeklies. A Rare drop is a weekly half the time. The rest are dailies.
 - Nothing drops in Battle or Challenge Mode games.
 - **The reward is chosen when the bounty starts**, because it comes from the area the objective sends the hunter to. Waiting bounties show "Chosen when it starts". A reroll keeps the reward.
@@ -101,7 +101,8 @@ A pool smaller than 6 items widens: first to lower strength classes, then to the
 | Chance of a Photon Sphere | none | none | none | 5% | 15% |
 
 - The number of Drops falls to half at level 1, and Challenge bounties scale it with their stages' length (×0.5 to ×2). Drops come as one stack of at most 99.
-- A bounty pays at most one Photon Sphere (worth 99 Photon Drops at Gallon's Shop).
+- **Battle Mode and Challenge Mode always pay Photon Drops (`100%`)**, unaffected by character level: Battle Mode scales cleanly across tiers (`2–3` up to `18–22` PDs for 1–5 wins), while Challenge Mode scales monotonically with `stage_minutes × pace_multiplier` (`B = 1.0`, `A = 1.3`, `S = 1.65`).
+- Full Challenge Mode runs (`Mythic Rare`) always guarantee **2 Photon Spheres** for Episode 1 (`Stages 1–9`, plus `79` PDs) and **1 Photon Sphere** for Episode 2 (`Stages 1–5`, plus `60` PDs); other bounties pay at most one Photon Sphere (worth 99 Photon Drops at Gallon's Shop).
 
 **Exchange tokens.** Exchange-only items stay with their exchanges. Bounties pay what the exchanges take instead, on top of the reward:
 
@@ -168,12 +169,12 @@ Bounties started before this update keep their old reward and roll it with `roll
   Ultra Rare and Mythic Rare weeklies are hunts only (bosses, enemies, rare enemies): visiting every area, or a few levels that take minutes at a low level, is too light for them.
 
   Each counts only in Normal-mode or Solo games at that difficulty or higher. Weeklies never require Ultimate, except Mythic Rare ones. Progress is saved in `player_missions.progress` and shown on the board, for example "4 / 10 areas".
-- **Battle Mode** bounties (`BATTLE_RULE_WINS`, target `quest:wins`, e.g. `503:2`) ask for 1–3 wins (Common, Uncommon, Rare) under one of the eight rule sets, named on the board with its rules:
+- **Battle Mode** bounties (`BATTLE_RULE_WINS`, target `quest:wins`, e.g. `503:2`) share 3 daily slots per account and ask for 1–5 wins (`Common` 1, `Uncommon` 2, `Rare` 3, `Ultra Rare` 4, `Mythic Rare` 5) under one of the eight rule sets, named on the board with its rules:
 
   > Win 2 Battle Mode matches of Battle 3: Warp Battle (Spaceship, everyone at Lv5 (+3 per death), start with nothing, no Mags, techniques up to Lv1, 10 lives, no Meseta, 10 of each slow/confuse/freeze trap, 10 min)
 
-  The rules come from the battle quests' own scripts (`api/data/battle_rule_sets.json`). Blue Burst reports battle records when the player leaves the game, so a win is credited to the battle quest (501–508) the character was last seen in.
-- **Challenge Mode** bounties (`CHALLENGE_RUN`, target `episode:first-last:limit_seconds:pace`) name stages and a pace:
+  The rules come from the battle quests' own scripts (`api/data/battle_rule_sets.json`). Blue Burst reports battle records when the player leaves the game, so a win is credited to the battle quest (501–508) the character was last seen in. Both Battle Mode and Challenge Mode bounties ignore character level, always reward Photon Drops (`100%`), and scale rewards monotonically with wins/duration/rank pace.
+- **Challenge Mode** bounties (`CHALLENGE_RUN`, target `episode:first-last:limit_seconds:pace`) share 3 weekly slots per account and name stages and a pace:
 
   | Tier | Objective | Example |
   |---|---|---|

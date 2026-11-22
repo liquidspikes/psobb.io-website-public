@@ -3388,7 +3388,7 @@ window.loadMyBounties = async function () {
                             <div style="flex:1; min-width:0;">
                                 <span style="color:#00ff88; font-weight:bold; font-family:'Share Tech Mono',monospace;">✅ ${escapeHtml(b.title)}</span>
                                 ${b.description ? `<p style="color:rgba(224,240,255,0.78); font-size:0.75rem; line-height:1.45; margin:4px 0 0 0;">${escapeHtml(b.description)}</p>` : ''}
-                                <div style="color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:4px;">${escapeHtml(b.character_name || 'Unknown')} · ${escapeHtml(objText)}</div>
+                                <div style="color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:4px;">${escapeHtml(b.character_name || _t('Account Wide'))} · ${escapeHtml(objText)}</div>
                                 <div style="color:#fbbf24; font-size:0.75rem; margin-top:4px; font-family:'Share Tech Mono',monospace;">🎁 ${rewardStr}</div>
                             </div>
                             <a href="missions.php" class="dl-btn" style="text-decoration:none; border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15); font-size:0.8rem; padding:6px 14px; white-space:nowrap;">${_t('Claim →')}</a>
@@ -3420,7 +3420,7 @@ window.loadMyBounties = async function () {
                                 ${bountyTags(b)}
                                 ${b.description && b.status !== 'rerolling' && b.status !== 'queued' ? `<p style="color:rgba(224,240,255,0.78); font-size:0.75rem; line-height:1.45; margin:6px 0 0 0;">${escapeHtml(b.description)}</p>` : ''}
                                 <div style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:6px;">📋 <strong>${_t('Objective:')}</strong> ${objective}</div>
-                                <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${escapeHtml(b.character_name || 'Unknown')}</div>
+                                <div style="color:rgba(255,255,255,0.3); font-size:0.65rem; margin-top:4px;">${_t('Character:')} ${escapeHtml(b.character_name || _t('Account Wide'))}</div>
                                 ${reward ? `<div style="color:#fbbf24; font-size:0.75rem; margin-top:6px; font-family:'Share Tech Mono',monospace;">🎁 ${reward}${b.stats_hidden ? ` <span style="color:rgba(255,255,255,0.4);">(${_t('stats roll on claim')})</span>` : ''}</div>` : ''}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">

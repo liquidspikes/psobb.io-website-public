@@ -68,11 +68,24 @@ function tick($db, $client, $lobby = null, $kills = null, $completed = [])
 {
     ob_start();
     bounty_tick_for_client($db, $client, [
-        'account_id' => 9001, 'char_name' => $client['Name'], 'user_lang' => 'en', 'curr_f' => (int) $client['LocationFloor'],
+        'account_id' => (int) ($client['Account']['AccountID'] ?? 9001), 'char_name' => $client['Name'], 'user_lang' => 'en', 'curr_f' => (int) $client['LocationFloor'],
         'lobby' => $lobby, 'lobby_map' => [], 'kills' => $kills ?? no_kills(), 'completed' => $completed,
         'active_types' => [], 'recent_titles' => 'None',
     ]);
     ob_end_clean();
+}
+function acc_rows($db, $acc, $where = '1')
+{
+    $s = $db->prepare("SELECT pm.*, m.tier, m.cadence, m.pool, m.source, m.goal_type, m.goal_target, m.reward_item_string, m.reward_spec, m.title
+                       FROM player_missions pm JOIN missions m ON pm.mission_id = m.id
+                       WHERE pm.account_id = :a AND $where ORDER BY pm.id");
+    $s->bindValue(':a', (int) $acc, SQLITE3_INTEGER);
+    $r = $s->execute();
+    $out = [];
+    while ($row = $r->fetchArray(SQLITE3_ASSOC)) {
+        $out[] = $row;
+    }
+    return $out;
 }
 function rows($db, $char, $where = '1')
 {
@@ -223,7 +236,7 @@ check($solo['mythic'] > 0 && $alone['mythic'] > $solo['mythic'] * 1.2, 'Mythic w
 check(bounty_roll_drop_tier(['is_game' => true, 'difficulty' => 'Ultimate', 'mode' => 'Challenge', 'players' => 1]) === null, 'no drop tier in Challenge Mode');
 
 // ---------------------------------------------------------------------------
-// 4. Battle (3 dailies) and Challenge (3 weeklies)
+// 4. Battle (3 dailies per account) and Challenge (3 weeklies per account)
 // ---------------------------------------------------------------------------
 bounty_config(['earn' => ['battle_chance' => 100, 'challenge_chance' => 100]]);
 // newserv shows a stage never cleared as 65535
@@ -233,9 +246,10 @@ for ($i = 0; $i < 8; $i++) {
 }
 check(bounty_earned_count($db, 9001, 'Ember', 'battle', 'daily') === 3, 'Battle Mode earns 3 dailies');
 check(bounty_active_count($db, 9001, 'Ember', 'battle', 'daily') === 3, 'all 3 Battle bounties active');
-foreach (rows($db, 'Ember', "m.pool = 'battle'") as $r) {
+foreach (acc_rows($db, 9001, "m.pool = 'battle'") as $r) {
+    check($r['character_name'] === '', "Battle bounty #{$r['id']} is stored account-wide (empty character_name)");
     list($q, $w) = bounty_parse_battle_target($r['goal_target']);
-    check($r['goal_type'] === 'BATTLE_RULE_WINS' && $q >= 501 && $q <= 508 && $w >= 1 && $w <= 3, "Battle bounty names a rule set and wins ({$r['goal_target']})");
+    check($r['goal_type'] === 'BATTLE_RULE_WINS' && $q >= 501 && $q <= 508 && $w >= 1 && $w <= 5, "Battle bounty names a rule set and 1-5 wins ({$r['goal_target']})");
     check(strpos(getClearObjective($r['goal_type'], $r['goal_target']), 'Battle ' . ($q - 500) . ':') !== false, 'Battle objective names the rule set');
 }
 $chal = ['is_game' => true, 'episode' => 1, 'difficulty' => 'Normal', 'mode' => 'Challenge', 'players' => 2];
@@ -243,31 +257,42 @@ for ($i = 0; $i < 8; $i++) {
     tick($db, $e, $chal);
 }
 check(bounty_earned_count($db, 9001, 'Ember', 'challenge', 'weekly') === 3, 'Challenge Mode earns 3 weeklies');
-foreach (rows($db, 'Ember', "m.pool = 'challenge'") as $r) {
+foreach (acc_rows($db, 9001, "m.pool = 'challenge'") as $r) {
+    check($r['character_name'] === '', "Challenge bounty #{$r['id']} is stored account-wide (empty character_name)");
     $ct = bounty_parse_challenge_target($r['goal_target']);
     check($r['goal_type'] === 'CHALLENGE_RUN' && $r['cadence'] === 'weekly', "Challenge bounty is a weekly stage objective ({$r['goal_target']})");
     if ($r['status'] === 'in_progress' && !($ct['first'] === 1 && $ct['last'] === bounty_challenge_stage_total($ct['episode']))) {
         check($ct['first'] <= (($ct['episode'] === 1) ? 3 : 1), 'Challenge stage starts within reach (highest cleared + 1)');
     }
 }
+// Second character on the same account shares Battle & Challenge caps and board summary
+$eAlt = client('EmberAlt', 1);
+tick($db, $eAlt, $battle);
+tick($db, $eAlt, $chal);
+check(bounty_earned_count($db, 9001, 'EmberAlt', 'battle', 'daily') === 3 && bounty_active_count($db, 9001, 'EmberAlt', 'battle', 'daily') === 3, 'second character shares Battle daily cap and slots');
+check(bounty_earned_count($db, 9001, 'EmberAlt', 'challenge', 'weekly') === 3 && bounty_active_count($db, 9001, 'EmberAlt', 'challenge', 'weekly') === 3, 'second character shares Challenge weekly cap and slots');
+$accSum = bounty_account_board_summary($db, 9001);
+$charSum = bounty_board_summary($db, 9001);
+check($accSum['has_any'] && $accSum['battle'] === [3, 3, 0] && $accSum['challenge'] === [3, 3, 0] && !isset($charSum['']), 'account board summary tracks Battle/Challenge and excludes empty character key from per-character summary');
 
-// Normal/Solo play also earns Battle (daily) and Challenge (weekly) bounties within pool caps
+// Normal/Solo play also earns Battle (daily) and Challenge (weekly) bounties within pool caps (fresh accounts)
+$db->exec("INSERT INTO users (username, email, account_id, language) VALUES ('t11', 't11@x', 9011, 'en'), ('t12', 't12@x', 9012, 'en')");
 bounty_config(['earn' => ['battle_chance' => 0, 'challenge_chance' => 0, 'normal_battle_chance' => 100, 'normal_challenge_chance' => 100]]);
-$fern = client('Fern', 80, ['ChallengeTimesEp1Online' => [900, 65535, 65535, 65535, 65535, 65535, 65535, 65535, 65535], 'ChallengeTimesEp2Online' => array_fill(0, 5, 65535)]);
+$fern = client('Fern', 80, ['Account' => ['AccountID' => 9011], 'ChallengeTimesEp1Online' => [900, 65535, 65535, 65535, 65535, 65535, 65535, 65535, 65535], 'ChallengeTimesEp2Online' => array_fill(0, 5, 65535)]);
 tick($db, $fern, null);
-check(bounty_earned_count($db, 9001, 'Fern', 'battle', 'daily') === 0 && bounty_earned_count($db, 9001, 'Fern', 'challenge', 'weekly') === 0, 'lobby idling does not roll Battle/Challenge normal-play bounties');
+check(bounty_earned_count($db, 9011, 'Fern', 'battle', 'daily') === 0 && bounty_earned_count($db, 9011, 'Fern', 'challenge', 'weekly') === 0, 'lobby idling does not roll Battle/Challenge normal-play bounties');
 $normal_room = ['is_game' => true, 'episode' => 1, 'difficulty' => 'Ultimate', 'mode' => 'Normal', 'players' => 2];
 for ($i = 0; $i < 6; $i++) {
     tick($db, $fern, $normal_room);
 }
-check(bounty_earned_count($db, 9001, 'Fern', 'battle', 'daily') === 3, 'Normal play earns up to 3 Battle dailies');
-check(bounty_earned_count($db, 9001, 'Fern', 'challenge', 'weekly') === 3, 'Normal play earns up to 3 Challenge weeklies');
-$flint = client('Flint', 80);
+check(bounty_earned_count($db, 9011, 'Fern', 'battle', 'daily') === 3, 'Normal play earns up to 3 Battle dailies per account');
+check(bounty_earned_count($db, 9011, 'Fern', 'challenge', 'weekly') === 3, 'Normal play earns up to 3 Challenge weeklies per account');
+$flint = client('Flint', 80, ['Account' => ['AccountID' => 9012]]);
 ob_start();
-bounty_try_mode_earn($db, 9001, 'Flint', $flint, 'battle');
+bounty_try_mode_earn($db, 9012, 'Flint', $flint, 'battle');
 ob_end_clean();
 tick($db, $flint, null, null, [['pool' => 'battle', 'cadence' => 'daily']]);
-check(bounty_earned_count($db, 9001, 'Flint', 'battle', 'daily') === 2, 'completing a Battle bounty earns another within cap');
+check(bounty_earned_count($db, 9012, 'Flint', 'battle', 'daily') === 2, 'completing a Battle bounty earns another within cap');
 bounty_config($quiet);
 
 // ---------------------------------------------------------------------------
@@ -654,6 +679,10 @@ for ($i = 0; $i < 40; $i++) {
     check(bounty_is_challenge_reserved($items[$code], $rc), "full-run reward $code is one of the rarest drops");
     check(in_array("Ep$ep", $items[$code]['drop_episodes'], true), "full-run reward $code drops in Episode $ep");
     $rolled = bounty_roll_reward_string($spec);
+    $wantSpheres = ($ep === 1) ? 2 : 1;
+    check(($spec['photon']['spheres'] ?? 0) === $wantSpheres, "Episode $ep full Challenge run guarantees $wantSpheres Photon Sphere(s)");
+    $wantSphereToken = ($wantSpheres > 1) ? BOUNTY_PHOTON_SPHERE . " x$wantSpheres" : BOUNTY_PHOTON_SPHERE;
+    check(strpos($rolled, $wantSphereToken) !== false && ($ep === 1 || strpos($rolled, BOUNTY_PHOTON_SPHERE . ' x') === false), "full Challenge run formats Episode $ep Photon Sphere count cleanly");
     if (preg_match('/ (\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)/', $rolled, $mm)) {
         $attrs = array_values(array_filter(array_map('intval', array_slice($mm, 1, 4))));
         // Unsealable weapons (003300/00AB00) cap at 2 total attributes including Hit (slot 3 stores kills).
@@ -723,6 +752,83 @@ $kk['battle_wins'] = ['quest' => 501, 'wins' => 1];
 check(!bounty_evaluate_weekly($db, wrow($db, $bid), client('Gale'), null, $kk, []), 'a Battle 1 win does not count for Battle 3');
 $kk['battle_wins'] = ['quest' => 503, 'wins' => 1];
 check(bounty_evaluate_weekly($db, wrow($db, $bid), client('Gale'), null, $kk, []), 'two Battle 3 wins: done');
+
+// Account-wide Battle/Challenge reward mechanics:
+// 100% Photon Drops, level-independence at Lv 1 vs Lv 200, monotonic time/pace scaling, speed bonus
+$lowHunter = ['Level' => 1, 'CharClass' => 'HUmar', 'SectionID' => 'Skyly'];
+$maxHunter = ['Level' => 200, 'CharClass' => 'HUmar', 'SectionID' => 'Skyly'];
+foreach (BOUNTY_TIERS as $t) {
+    $poolLow = bounty_reward_pool($t, ['section' => bounty_section_index('Skyly'), 'class' => 0, 'level' => 1, 'area' => bounty_reward_area('ep1_forest', 1), 'ignore_level' => true])['items'];
+    $poolHigh = bounty_reward_pool($t, ['section' => bounty_section_index('Skyly'), 'class' => 0, 'level' => 200, 'area' => bounty_reward_area('ep1_forest', 1), 'ignore_level' => true])['items'];
+    if (in_array($t, ['rare', 'ultra', 'mythic'], true)) {
+        check(array_keys($poolLow) === array_keys($poolHigh), "level-independent $t pool matches at Lv 1 and Lv 200");
+    }
+    $bspec = bounty_build_reward_spec_v2($t, $lowHunter, bounty_reward_area('ep1_pioneer2', 1), ['ignore_level' => true, 'mode_pool' => 'battle', 'battle_wins' => 1]);
+    $cspec = bounty_build_reward_spec_v2($t, $lowHunter, bounty_challenge_reward_area(1, 6, 6), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 50, 'challenge_pace' => 'S']);
+    check((int) $bspec['level'] === 200 && (int) $cspec['level'] === 200, "$t mode specs lock level to 200 for full claim stat caps");
+    check(($bspec['photon']['drops'] ?? 0) >= 1 && ($cspec['photon']['drops'] ?? 0) >= 1, "$t Battle and Challenge always include Photon Drops");
+}
+$missingPd = 0;
+for ($i = 0; $i < 200; $i++) {
+    $t = BOUNTY_TIERS[$i % 5];
+    $h = ['Level' => 1 + ($i * 19) % 200, 'CharClass' => BOUNTY_CHAR_CLASSES[$i % 12], 'SectionID' => 'Viridia'];
+    $bs = bounty_build_reward_spec_v2($t, $h, bounty_reward_area('ep1_pioneer2', 1), ['ignore_level' => true, 'mode_pool' => 'battle']);
+    $cs = bounty_build_reward_spec_v2($t, $h, bounty_challenge_reward_area(1, 1, 1), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 13, 'challenge_pace' => 'B']);
+    if (($bs['photon']['drops'] ?? 0) < 1 || ($cs['photon']['drops'] ?? 0) < 1) {
+        $missingPd++;
+    }
+}
+check($missingPd === 0, 'Battle and Challenge rewards pay >= 1 Photon Drop in 200/200 specs');
+
+$c1B = bounty_build_reward_spec_v2('common', $lowHunter, bounty_challenge_reward_area(1, 1, 1), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 13, 'challenge_pace' => 'B']);
+$c6B = bounty_build_reward_spec_v2('common', $lowHunter, bounty_challenge_reward_area(1, 6, 6), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 50, 'challenge_pace' => 'B']);
+$c4Ep2B = bounty_build_reward_spec_v2('common', $lowHunter, bounty_challenge_reward_area(2, 4, 4), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 85, 'challenge_pace' => 'B']);
+check($c1B['photon']['drops'] < $c6B['photon']['drops'] && $c6B['photon']['drops'] < $c4Ep2B['photon']['drops'], 'Challenge Photon Drops increase with stage length (Ep1 C1 < Ep1 C6 < Ep2 C4)');
+check($c1B['meseta'] < $c6B['meseta'] && $c6B['meseta'] < $c4Ep2B['meseta'], 'Challenge Meseta increases with stage length (Ep1 C1 < Ep1 C6 < Ep2 C4)');
+
+$uEp1Short = bounty_build_reward_spec_v2('ultra', $lowHunter, bounty_challenge_reward_area(1, 1, 2), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 60, 'challenge_pace' => 'S']);
+$uEp2Long = bounty_build_reward_spec_v2('ultra', $lowHunter, bounty_challenge_reward_area(2, 1, 3), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 165, 'challenge_pace' => 'S']);
+check($uEp1Short['photon']['drops'] < $uEp2Long['photon']['drops'] && $uEp1Short['meseta'] < $uEp2Long['meseta'], 'longer Ultra Challenge course strictly out-rewards shorter Ultra course');
+
+$mEp2Full = bounty_build_reward_spec_v2('mythic', $lowHunter, bounty_challenge_reward_area(2, 1, 5), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_reserve' => true, 'challenge_minutes' => 300, 'challenge_pace' => 'S']);
+$mEp1Full = bounty_build_reward_spec_v2('mythic', $lowHunter, bounty_challenge_reward_area(1, 1, 9), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_reserve' => true, 'challenge_minutes' => 420, 'challenge_pace' => 'S']);
+check($mEp2Full['photon']['drops'] < $mEp1Full['photon']['drops'] && $mEp2Full['meseta'] < $mEp1Full['meseta'], 'Ep1 7h full run strictly out-rewards Ep2 5h full run');
+check(($mEp2Full['photon']['spheres'] ?? 0) === 1 && ($mEp1Full['photon']['spheres'] ?? 0) === 2 && $mEp2Full['photon']['value'] < $mEp1Full['photon']['value'], 'full Challenge runs guarantee 1 Photon Sphere for Ep2 and 2 for Ep1');
+$dispEp1 = html_entity_decode(strip_tags(renderRewardString(bounty_reward_display($mEp1Full))), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$dispEp2 = html_entity_decode(strip_tags(renderRewardString(bounty_reward_display($mEp2Full))), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+check(strpos($dispEp1, 'Photon Sphere x2') !== false && strpos($dispEp2, 'Photon Sphere') !== false && strpos($dispEp2, 'Photon Sphere x') === false, 'full Challenge display renders Photon Sphere x2 for Ep1 and single Photon Sphere for Ep2');
+
+$pB = bounty_build_reward_spec_v2('rare', $lowHunter, bounty_challenge_reward_area(1, 6, 6), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 50, 'challenge_pace' => 'B']);
+$pA = bounty_build_reward_spec_v2('rare', $lowHunter, bounty_challenge_reward_area(1, 6, 6), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 50, 'challenge_pace' => 'A']);
+$pS = bounty_build_reward_spec_v2('rare', $lowHunter, bounty_challenge_reward_area(1, 6, 6), ['ignore_level' => true, 'mode_pool' => 'challenge', 'challenge_minutes' => 50, 'challenge_pace' => 'S']);
+check($pB['photon']['drops'] < $pA['photon']['drops'] && $pA['photon']['drops'] < $pS['photon']['drops'], 'Challenge Photon Drops rise strictly with pace (B < A < S)');
+check($pB['meseta'] < $pA['meseta'] && $pA['meseta'] < $pS['meseta'], 'Challenge Meseta rises strictly with pace (B < A < S)');
+
+$prevBtPd = 0;
+$prevBtMes = 0;
+foreach (BOUNTY_TIERS as $btTier) {
+    $bs = bounty_build_reward_spec_v2($btTier, $lowHunter, bounty_reward_area('ep1_pioneer2', 1), ['ignore_level' => true, 'mode_pool' => 'battle']);
+    check($bs['photon']['drops'] > $prevBtPd && $bs['meseta'] > $prevBtMes, "Battle $btTier rewards strictly exceed lower win tier ({$bs['photon']['drops']} PDs, {$bs['meseta']} Meseta)");
+    $prevBtPd = $bs['photon']['drops'];
+    $prevBtMes = $bs['meseta'];
+}
+
+$sPaceC6 = bounty_challenge_pace_seconds(1, 6, 6, 'S');
+$fastId = weekly_row($db, 'Gale', 'CHALLENGE_RUN', '1:6-6:' . bounty_challenge_pace_seconds(1, 6, 6, 'A') . ':A');
+$fastMid = (int) $db->querySingle("SELECT mission_id FROM player_missions WHERE id = $fastId");
+$baseSpec = [
+    'version' => 2, 'tier' => 'rare', 'level' => 200,
+    'items' => [['base' => '000500', 'cat' => 'Weapon', 'profile' => 'rare', 'attributes' => ['native' => 1, 'abeast' => 0, 'machine' => 0, 'dark' => 0]]],
+    'photon' => ['spheres' => 0, 'drops' => 10, 'value' => 10], 'meseta' => 15000,
+];
+$db->exec("UPDATE missions SET reward_spec = '" . $db->escapeString(json_encode($baseSpec)) . "' WHERE id = $fastMid");
+$fastKills = no_kills();
+$fastKills['challenge_clears'] = [[1, 6, (int) round($sPaceC6 * 0.8)]];
+check(bounty_evaluate_weekly($db, wrow($db, $fastId), client('Gale'), null, $fastKills, []), 'fast Challenge clear completes bounty');
+$sf = bounty_apply_challenge_speed_bonus($db, $fastId, $fastMid, '1:6-6:' . bounty_challenge_pace_seconds(1, 6, 6, 'A') . ':A', 'rare');
+check($sf !== null && $sf >= 1.20 && $sf <= 1.35, 'S-pace completion applies speed_factor bonus (' . var_export($sf, true) . ')');
+$savedSpec = json_decode((string) $db->querySingle("SELECT reward_spec FROM missions WHERE id = $fastMid"), true);
+check(!empty($savedSpec['speed_factor']) && (float) $savedSpec['speed_factor'] === (float) $sf, 'speed_factor persisted into missions.reward_spec');
 
 // Bounties from before this update (no spec version) still roll, within the same limits
 $legacy = ['tier' => 'mythic', 'difficulty' => 'Ultimate', 'items' => [['base' => '000500', 'cat' => 'Weapon', 'profile' => 'mythic']], 'meseta' => 1000];
@@ -1269,7 +1375,7 @@ foreach (['003300', '00AB00'] as $uCode) {
 check($unsealableViolations === 0, 'unsealable weapons (003300/00AB00) never exceed 2 total attributes including Hit');
 
 @unlink($tmp_db);
-foreach ([9001, 9002, 9003, 9004] as $acc) {
+foreach ([9001, 9002, 9003, 9004, 9011, 9012] as $acc) {
     @unlink(__DIR__ . '/../db/.bounty_' . $acc); // board refresh markers for the test accounts
 }
 @unlink("$tmp_db-wal");

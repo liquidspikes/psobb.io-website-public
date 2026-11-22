@@ -343,7 +343,7 @@ foreach ($clients as $client) {
                           JOIN missions m ON pm.mission_id = m.id 
                           JOIN users u ON pm.account_id = u.account_id
                           WHERE pm.account_id = :acc AND pm.status = 'in_progress'
-                          AND (pm.character_name = :cname OR pm.character_name IS NULL OR pm.character_name = '')");
+                          AND (pm.character_name = :cname OR pm.character_name IS NULL OR pm.character_name = '' OR m.pool IN ('battle', 'challenge'))");
     $stmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
     $stmt->bindValue(':cname', $charName, SQLITE3_TEXT);
     $res = $stmt->execute();
@@ -829,14 +829,20 @@ foreach ($clients as $client) {
 
         // 5. Completion Handling
         if ($completed) {
+            $upd = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :id AND status = 'in_progress'");
+            $upd->bindValue(':id', $m['id'], SQLITE3_INTEGER);
+            $upd->execute();
+            if ($db->changes() === 0) {
+                continue;
+            }
+            if ($m['goal_type'] === 'CHALLENGE_RUN') {
+                bounty_apply_challenge_speed_bonus($db, (int) $m['id'], (int) $m['mission_id'], (string) $m['goal_target'], $m['tier'] ?? null);
+            }
+
             $completed_any = true;
             $last_completed_type = $m['goal_type'];
             $completed_this_pass[] = $m;
             echo "[CRON] Account $accId completed mission " . $m['mission_id'] . "\n";
-            
-            $upd = $db->prepare("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = :id");
-            $upd->bindValue(':id', $m['id'], SQLITE3_INTEGER);
-            $upd->execute();
 
             // Touch marker file to notify the web portal of the change (lightweight polling)
             @touch(__DIR__ . '/../db/.bounty_' . $accId);

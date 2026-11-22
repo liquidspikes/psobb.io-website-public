@@ -409,9 +409,10 @@ function bounty_pool_candidates($tier, array $ctx, array $relax = [])
     $rc = bounty_reward_cfg();
     $sec = (int) $ctx['section'];
     $class = ($tier === 'rare') ? $ctx['class'] : null; // Ultra and Mythic may be for any class
-    $level = max(1, min(200, (int) $ctx['level']));
+    $ignore_level = !empty($ctx['ignore_level']);
+    $level = $ignore_level ? 200 : max(1, min(200, (int) $ctx['level']));
     $delta_tier = ['contract_run' => 'mythic', 'creature' => $ctx['creature_tier'] ?? 'ultra'][$tier] ?? $tier;
-    $target = min(200, $level + (int) ($rc['level_delta'][$delta_tier] ?? 0));
+    $target = $ignore_level ? 200 : min(200, $level + (int) ($rc['level_delta'][$delta_tier] ?? 0));
     $tband = bounty_strength_band($target);
     $ra = (int) ($relax['area'] ?? 0);
     $rs = (int) ($relax['strength'] ?? 0);
@@ -483,13 +484,13 @@ function bounty_pool_candidates($tier, array $ctx, array $relax = [])
                 continue;
             }
         }
-        // Strength class (the reserve is the reserve at any level)
+        // Strength class (the reserve is the reserve at any level; battle/challenge ignore level bounds)
         if ($tier !== 'challenge_reserve' && $rs < 2) {
             $str = bounty_item_strength($it, $class);
             if ($str > 200 || $str > $target) {
                 continue;
             }
-            if ($rs === 0 && bounty_strength_band($str) < $tband - 1) {
+            if (!$ignore_level && $rs === 0 && bounty_strength_band($str) < $tband - 1) {
                 continue;
             }
         }
@@ -602,13 +603,17 @@ function bounty_round5($v)
  *
  * @return array [[native, abeast, machine, dark], hit]
  */
-function bounty_roll_weapon_stats($profile, $level, array $attributes, array $episode_attributes = null)
+function bounty_roll_weapon_stats($profile, $level, array $attributes, array $episode_attributes = null, $speed_factor = 1.0)
 {
     $rc = bounty_reward_cfg();
     $p = $rc['stat_rolls'][$profile] ?? $rc['stat_rolls']['rare'];
     $lf = (($p['level_scaled'] ?? true) === false) ? 1.0 : bounty_level_factor($level);
+    $sf = max(1.0, (float) $speed_factor);
     $cap = min((int) $rc['max_attribute'], bounty_round5($p['attr_cap'] * $lf));
     $floor = isset($p['attr_floor']) ? (int) $p['attr_floor'] : max(5, bounty_round5($cap * 0.4));
+    if ($sf > 1.0 && $floor > 0) {
+        $floor = max($floor, bounty_round5($floor * $sf));
+    }
     $floor = min($floor, $cap);
     $n = min(2, mt_rand((int) $p['attrs'][0], (int) $p['attrs'][1]));
     $stats = array_fill_keys(BOUNTY_ATTRS, 0);
@@ -635,8 +640,16 @@ function bounty_roll_weapon_stats($profile, $level, array $attributes, array $ep
     }
     $hit = 0;
     $hcap = min((int) $rc['max_hit'], bounty_round5($p['hit_cap'] * $lf));
-    if ($hcap >= 5 && mt_rand(1, 100) <= (int) $p['hit_chance']) {
-        $hfloor = min($hcap, max(5, (int) ($p['hit_floor'] ?? 5)));
+    $hit_chance = (int) $p['hit_chance'];
+    if ($sf > 1.0 && $hit_chance > 0) {
+        $hit_chance = min(100, (int) round($hit_chance * $sf));
+    }
+    if ($hcap >= 5 && mt_rand(1, 100) <= $hit_chance) {
+        $hfloor = max(5, (int) ($p['hit_floor'] ?? 5));
+        if ($sf > 1.0) {
+            $hfloor = max($hfloor, bounty_round5($hfloor * $sf));
+        }
+        $hfloor = min($hcap, $hfloor);
         $hit = mt_rand((int) ($hfloor / 5), (int) ($hcap / 5)) * 5;
     }
     return [array_values($stats), $hit];
@@ -663,15 +676,17 @@ function bounty_weighted_float_pick(array $weights)
  *
  * @return array [def, evp, slots]
  */
-function bounty_roll_armor_stats($profile, $level, $cat, $def_range, $evp_range)
+function bounty_roll_armor_stats($profile, $level, $cat, $def_range, $evp_range, $speed_factor = 1.0)
 {
     $rc = bounty_reward_cfg();
     $p = $rc['stat_rolls'][$profile] ?? $rc['stat_rolls']['rare'];
     $lf = (($p['level_scaled'] ?? true) === false) ? 1.0 : bounty_level_factor($level);
+    $sf = max(1.0, (float) $speed_factor);
+    $min_ratio = min(1.0, 0.5 * $sf);
     $dmax = (int) floor(max(0, (int) $def_range) * $p['bonus'] * $lf);
     $emax = (int) floor(max(0, (int) $evp_range) * $p['bonus'] * $lf);
-    $def = ($dmax > 0) ? mt_rand((int) ceil($dmax / 2), $dmax) : 0;
-    $evp = ($emax > 0) ? mt_rand((int) ceil($emax / 2), $emax) : 0;
+    $def = ($dmax > 0) ? mt_rand((int) ceil($dmax * $min_ratio), $dmax) : 0;
+    $evp = ($emax > 0) ? mt_rand((int) ceil($emax * $min_ratio), $emax) : 0;
     $slots = ($cat === 'Armor') ? mt_rand((int) $p['slots'][0], (int) $p['slots'][1]) : 0;
     return [$def, $evp, $slots];
 }
@@ -683,20 +698,42 @@ function bounty_roll_armor_stats($profile, $level, $cat, $def_range, $evp_range)
 /**
  * Photon Drops and a Photon Sphere, each by its own roll: a stack of Photon Drops (up to 99) some of
  * the time, and, on Ultra Rare and Mythic Rare bounties, a Photon Sphere (never more than one) rarely.
+ * Mythic Rare full Challenge Mode runs (`challenge_reserve`) guarantee 2 Photon Spheres for Episode 1
+ * and 1 Photon Sphere for Episode 2.
  *
  * @param float $scale extra multiplier on the number of Drops (Challenge Mode: the stages' length)
- * @return array ['value' => total in Photon Drops (a Sphere = 99), 'spheres' => 0|1, 'drops' => n]
+ * @param array $opts  mode pool options ('mode_pool', 'challenge_minutes', 'challenge_pace', 'challenge_reserve', 'challenge_episode')
+ * @return array ['value' => total in Photon Drops (a Sphere = 99), 'spheres' => int, 'drops' => n]
  */
-function bounty_photon_reward($tier, $level, $scale = 1.0)
+function bounty_photon_reward($tier, $level, $scale = 1.0, array $opts = [])
 {
     $p = bounty_reward_cfg()['photon'];
+    $mode_pool = $opts['mode_pool'] ?? null;
     $drops = 0;
-    if (mt_rand(1, 10000) <= (int) round(100 * (float) ($p['drop_chance'][$tier] ?? 0))) {
+    if ($mode_pool === 'battle') {
+        $range = bounty_config()['battle']['photon_drops'][$tier] ?? [2, 3];
+        $drops = max(1, min(99, mt_rand((int) $range[0], (int) $range[1])));
+    } elseif ($mode_pool === 'challenge') {
+        $ch_cfg = bounty_config()['challenge'];
+        $mins = max(1.0, (float) ($opts['challenge_minutes'] ?? $ch_cfg['reward_minutes'] ?? 50));
+        $pace = (string) ($opts['challenge_pace'] ?? 'B');
+        $pace_mult = (float) ($ch_cfg['pace_multipliers'][$pace] ?? 1.0);
+        $effort = $mins * $pace_mult;
+        $base_pd = (float) ($ch_cfg['photon_base'][$tier] ?? 1);
+        $per_min = (float) ($ch_cfg['photon_per_effort_min'] ?? 0.1);
+        $drops = max(1, min(99, (int) round($base_pd + $effort * $per_min)));
+    } elseif (mt_rand(1, 10000) <= (int) round(100 * (float) ($p['drop_chance'][$tier] ?? 0))) {
         $range = $p['drops'][$tier] ?? [1, 1];
         $v = mt_rand((int) $range[0], (int) $range[1]) * (0.5 + 0.5 * max(1, min(200, (int) $level)) / 200) * $scale;
         $drops = max(1, min(99, (int) round($v)));
     }
-    $spheres = (mt_rand(1, 10000) <= (int) round(100 * (float) ($p['sphere_chance'][$tier] ?? 0))) ? 1 : 0;
+    if (!empty($opts['challenge_reserve'])) {
+        $ep_key = (string) ((int) ($opts['challenge_episode'] ?? 2));
+        $full_spheres = bounty_config()['challenge']['full_run_spheres'] ?? ['1' => 2, '2' => 1];
+        $spheres = max(1, (int) ($full_spheres[$ep_key] ?? 1));
+    } else {
+        $spheres = (mt_rand(1, 10000) <= (int) round(100 * (float) ($p['sphere_chance'][$tier] ?? 0))) ? 1 : 0;
+    }
     return ['value' => $spheres * 99 + $drops, 'spheres' => $spheres, 'drops' => $drops];
 }
 
@@ -718,10 +755,17 @@ function bounty_photon_reward($tier, $level, $scale = 1.0)
 function bounty_build_reward_spec_v2($tier, array $client, array $area, array $opts = [])
 {
     $cfg = bounty_config();
-    $level = max(1, min(200, (int) ($client['Level'] ?? 1)));
+    $ignore_level = !empty($opts['ignore_level']);
+    $level = $ignore_level ? 200 : max(1, min(200, (int) ($client['Level'] ?? 1)));
     $class_name = (string) ($client['CharClass'] ?? 'HUmar');
     $class = bounty_class_index($class_name);
-    $ctx = ['section' => bounty_section_index($client['SectionID'] ?? 'Viridia'), 'class' => $class ?? 0, 'level' => $level, 'area' => $area];
+    $ctx = [
+        'section' => bounty_section_index($client['SectionID'] ?? 'Viridia'),
+        'class' => $class ?? 0,
+        'level' => $level,
+        'area' => $area,
+        'ignore_level' => $ignore_level,
+    ];
     $items = [];
     $pool_note = null;
     $ep_attrs = bounty_area_data()['settings'][['1' => 'ep1_pioneer2', '2' => 'ep2_lab', '4' => 'ep4_pioneer2'][(string) ($area['episodes'][0] ?? 1)] ?? 'ep1_pioneer2']['attributes'] ?? null;
@@ -820,9 +864,27 @@ function bounty_build_reward_spec_v2($tier, array $client, array $area, array $o
     }
 
     $scale = (float) ($opts['scale'] ?? 1.0);
-    $photon = bounty_photon_reward($tier, $level, $scale);
-    $base = (int) ($cfg['rewards']['meseta'][$tier] ?? 1000);
-    $meseta = (int) (round($base * (1 + $level / 50) * $scale * mt_rand(50, 150) / 100 / 100) * 100);
+    if (!empty($opts['challenge_reserve']) && empty($opts['challenge_episode'])) {
+        $opts['challenge_episode'] = (int) ($area['episodes'][0] ?? 2);
+    }
+    $photon = bounty_photon_reward($tier, $level, $scale, $opts);
+    $mode_pool = $opts['mode_pool'] ?? null;
+    if ($mode_pool === 'battle') {
+        $mrange = $cfg['battle']['meseta'][$tier] ?? [4500, 5500];
+        $meseta = (int) (round(mt_rand((int) $mrange[0], (int) $mrange[1]) / 500) * 500);
+    } elseif ($mode_pool === 'challenge') {
+        $ch_cfg = $cfg['challenge'];
+        $mins = max(1.0, (float) ($opts['challenge_minutes'] ?? $ch_cfg['reward_minutes'] ?? 50));
+        $pace = (string) ($opts['challenge_pace'] ?? 'B');
+        $pace_mult = (float) ($ch_cfg['pace_multipliers'][$pace] ?? 1.0);
+        $effort = $mins * $pace_mult;
+        $mbase = (float) ($ch_cfg['meseta_base'][$tier] ?? 2000);
+        $mper = (float) ($ch_cfg['meseta_per_effort_min'] ?? 300);
+        $meseta = (int) (round(($mbase + $effort * $mper) / 500) * 500);
+    } else {
+        $base = (int) ($cfg['rewards']['meseta'][$tier] ?? 1000);
+        $meseta = (int) (round($base * (1 + $level / 50) * $scale * mt_rand(50, 150) / 100 / 100) * 100);
+    }
     return [
         'version' => 2,
         'tier' => $tier,
@@ -844,7 +906,7 @@ function bounty_photon_parts(array $spec)
     $ph = $spec['photon'] ?? null;
     if ($ph) {
         if (!empty($ph['spheres'])) {
-            $parts[] = BOUNTY_PHOTON_SPHERE;
+            $parts[] = BOUNTY_PHOTON_SPHERE . ($ph['spheres'] > 1 ? ' x' . (int) $ph['spheres'] : '');
         }
         if (!empty($ph['drops'])) {
             $parts[] = BOUNTY_PHOTON_DROP . ($ph['drops'] > 1 ? ' x' . (int) $ph['drops'] : '');
@@ -880,18 +942,19 @@ function bounty_enforce_unsealable_weapon_attr_limit($baseCode, array $stats, $h
 function bounty_roll_reward_string_v2(array $spec)
 {
     $level = (int) ($spec['level'] ?? 100);
+    $speed_factor = (float) ($spec['speed_factor'] ?? 1.0);
     $parts = [];
     foreach ($spec['items'] as $it) {
         $s = $it['base'];
         $profile = $it['profile'] ?? null;
         if ($profile && $it['cat'] === 'Weapon') {
-            list($stats, $hit) = bounty_roll_weapon_stats($profile, $level, $it['attributes'] ?? [], $it['episode_attributes'] ?? null);
+            list($stats, $hit) = bounty_roll_weapon_stats($profile, $level, $it['attributes'] ?? [], $it['episode_attributes'] ?? null, $speed_factor);
             $stats = bounty_enforce_unsealable_weapon_attr_limit($s, $stats, $hit);
             if (array_sum($stats) > 0 || $hit > 0) {
                 $s .= ' ' . implode('/', $stats) . ($hit > 0 ? "/$hit" : '');
             }
         } elseif ($profile && ($it['cat'] === 'Armor' || $it['cat'] === 'Shield')) {
-            list($def, $evp, $slots) = bounty_roll_armor_stats($profile, $level, $it['cat'], $it['def_range'] ?? 0, $it['evp_range'] ?? 0);
+            list($def, $evp, $slots) = bounty_roll_armor_stats($profile, $level, $it['cat'], $it['def_range'] ?? 0, $it['evp_range'] ?? 0, $speed_factor);
             if ($def > 0) $s .= " +{$def}def";
             if ($evp > 0) $s .= " +{$evp}evp";
             if ($slots > 0) $s .= " +{$slots}";

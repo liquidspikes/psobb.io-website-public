@@ -52,12 +52,14 @@
             "held_max": 10
         },
         "battle": {
+            "scope": "account",
             "daily": {
                 "active": 3,
                 "cap": 3
             }
         },
         "challenge": {
+            "scope": "account",
             "weekly": {
                 "active": 3,
                 "cap": 3
@@ -111,12 +113,16 @@
         "rare_weekly_chance": 50
     },
     "challenge": {
+        "full_run_spheres": {
+            "1": 2,
+            "2": 1
+        },
         "tier_weights": [
-            45,
-            30,
-            17,
-            6,
-            2
+            15,
+            25,
+            35,
+            18,
+            7
         ],
         "rank_hours": {
             "1": {
@@ -150,10 +156,19 @@
         }
     },
     "battle": {
+        "tier_weights": [
+            15,
+            25,
+            35,
+            18,
+            7
+        ],
         "wins": {
             "common": 1,
             "uncommon": 2,
-            "rare": 3
+            "rare": 3,
+            "ultra": 4,
+            "mythic": 5
         }
     },
     "reward_engine": {

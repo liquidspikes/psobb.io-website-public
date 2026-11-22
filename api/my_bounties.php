@@ -51,6 +51,7 @@ try {
     
     $bounties = [];
     while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+        $row['character_name'] = bounty_display_character_name($row['character_name'] ?? null, $row['pool'] ?? null);
         // Bounty System Rework fields (null/empty on bounties from before the rework)
         $row['tier_label'] = $row['tier'] ? bounty_tier_label($row['tier']) : null;
         $row['kind'] = $row['cadence'] ? bounty_kind_label($row['pool'], $row['cadence']) : null;

@@ -140,9 +140,11 @@ while ($row = $ab_res->fetchArray(SQLITE3_ASSOC)) {
 // 2b. Bounty System Rework: your slots, and bounties waiting for a free slot ("Up next")
 // -------------------------------------------------------------------------
 $bounty_board = [];
+$bounty_account_board = [];
 $up_next = [];
 if ($account_id && $bounty_rework) {
     $bounty_board = bounty_board_summary($db, $account_id);
+    $bounty_account_board = bounty_account_board_summary($db, $account_id);
     $un = $db->prepare("SELECT pm.id as pm_id, pm.character_name, pm.status, pm.expires_at, m.tier, m.cadence, m.pool, m.reward_item_string, m.reward_spec
                         FROM player_missions pm JOIN missions m ON pm.mission_id = m.id
                         WHERE pm.account_id = :accId AND pm.status = 'queued'
@@ -556,7 +558,7 @@ if ($account_id) {
                                     <h4 class="voucher-title"><?= htmlspecialchars($r['title']) ?></h4>
                                     <p class="voucher-desc"><?= htmlspecialchars($r['description']) ?></p>
                                     <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 4px; display: inline-block;">
-                                        <?= __('Character:') ?> <strong><?= htmlspecialchars($r['character_name'] ?? 'Account Wide') ?></strong>
+                                        <?= __('Character:') ?> <strong><?= htmlspecialchars(__(bounty_display_character_name($r['character_name'] ?? null, $r['pool'] ?? null))) ?></strong>
                                     </span>
                                 </div>
                                 <div class="voucher-right">
@@ -870,9 +872,39 @@ if ($account_id) {
                     <p style="font-size: 0.8rem; color: rgba(255,255,255,0.55); margin: -0.5rem 0 1rem;"><?= __('Your own bounties, plus other hunters\' bounties you can help with: team bounties, Battle Mode, Challenge Mode and contracts.') ?></p>
                 <?php endif; ?>
                 
-                <?php if (!empty($bounty_board)): ?>
+                <?php
+                    $battle_acc = bounty_pool_scope('battle') === 'account';
+                    $chal_acc = bounty_pool_scope('challenge') === 'account';
+                ?>
+                <?php if (!empty($bounty_board) || (($battle_acc || $chal_acc) && !empty($bounty_account_board['has_any']))): ?>
                     <div class="pso-hud-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
                         <h3 style="margin: 0 0 0.6rem; font-size: 1rem; color: var(--pso-blue);"><?= __('Your Bounty Slots') ?></h3>
+                        <?php if ($battle_acc || $chal_acc): ?>
+                            <?php
+                                $p = $bounty_cfg['pools'];
+                                $acc_cells = [];
+                                if ($battle_acc) {
+                                    $bt = $bounty_account_board['battle'] ?? [0, 0, 0];
+                                    $acc_cells[] = [__('Battle Mode'), __('%d/%d active', $bt[0], $p['battle']['daily']['active']) . (!empty($bt[2]) ? ' · ' . __('%d up next', $bt[2]) : ''), __('earned %d/%d today', $bt[1], $p['battle']['daily']['cap'])];
+                                }
+                                if ($chal_acc) {
+                                    $ch = $bounty_account_board['challenge'] ?? [0, 0, 0];
+                                    $acc_cells[] = [__('Challenge Mode'), __('%d/%d active', $ch[0], $p['challenge']['weekly']['active']) . (!empty($ch[2]) ? ' · ' . __('%d up next', $ch[2]) : ''), __('earned %d/%d this week', $ch[1], $p['challenge']['weekly']['cap'])];
+                                }
+                            ?>
+                            <div style="margin-bottom: 0.75rem;">
+                                <strong style="color: #00ffcc; font-size: 0.85rem;"><?= __('Account Wide') ?></strong>
+                                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                                    <?php foreach ($acc_cells as $cell): ?>
+                                        <div style="flex: 1 1 110px; border: 1px solid rgba(0,255,204,0.22); border-radius: 6px; padding: 5px 8px; font-size: 0.74rem; line-height: 1.45;">
+                                            <div style="color: var(--pso-blue); font-weight: bold;"><?= htmlspecialchars($cell[0]) ?></div>
+                                            <div style="color: #fff;"><?= htmlspecialchars($cell[1]) ?></div>
+                                            <div style="color: rgba(255,255,255,0.55);"><?= htmlspecialchars($cell[2]) ?></div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <?php foreach ($bounty_board as $char_name => $s): ?>
                             <?php
                                 $p = $bounty_cfg['pools'];
@@ -881,10 +913,14 @@ if ($account_id) {
                                     [__('Daily'), __('%d/%d active', $s['daily'][0], $p['standard']['daily']['active']) . ($s['daily'][1] ? ' · ' . __('%d up next', $s['daily'][1]) : ''), __('earned %d/%d today', $s['daily'][2], $p['standard']['daily']['free_cap'])],
                                     [__('Weekly'), __('%d/%d active', $s['weekly'][0], $p['standard']['weekly']['active']) . ($s['weekly'][1] ? ' · ' . __('%d up next', $s['weekly'][1]) : ''), __('earned %d/%d this week', $s['weekly'][2], $p['standard']['weekly']['free_cap'])],
                                     [__('Drops'), __('%d/%d active', $s['drop'][0], $p['drop']['active']), __('%d/%d held', $s['drop'][1], $p['drop']['held_max'])],
-                                    [__('Battle Mode'), __('%d/%d active', $s['battle'][0], $p['battle']['daily']['active']), __('earned %d/%d today', $s['battle'][1], $p['battle']['daily']['cap'])],
-                                    [__('Challenge Mode'), __('%d/%d active', $s['challenge'][0], $p['challenge']['weekly']['active']), __('earned %d/%d this week', $s['challenge'][1], $p['challenge']['weekly']['cap'])],
-                                    [__('Contracts'), __('%d/%d held', $s['contract'][0], $p['contract']['held_max'] ?? 3), __('never expire')],
                                 ];
+                                if (!$battle_acc) {
+                                    $cells[] = [__('Battle Mode'), __('%d/%d active', $s['battle'][0], $p['battle']['daily']['active']), __('earned %d/%d today', $s['battle'][1], $p['battle']['daily']['cap'])];
+                                }
+                                if (!$chal_acc) {
+                                    $cells[] = [__('Challenge Mode'), __('%d/%d active', $s['challenge'][0], $p['challenge']['weekly']['active']), __('earned %d/%d this week', $s['challenge'][1], $p['challenge']['weekly']['cap'])];
+                                }
+                                $cells[] = [__('Contracts'), __('%d/%d held', $s['contract'][0], $p['contract']['held_max'] ?? 3), __('never expire')];
                             ?>
                             <div style="margin-bottom: 0.75rem;">
                                 <strong style="color: #ffaa00; font-size: 0.85rem;"><?= htmlspecialchars($char_name) ?></strong>
@@ -906,7 +942,7 @@ if ($account_id) {
                                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.08);">
                                     <div style="font-size: 0.8rem;">
                                         <?= bounty_card_tags($q) ?>
-                                        <span style="color: rgba(255,255,255,0.6);"><?= htmlspecialchars($q['character_name']) ?> · <?= __('Reward') ?>:</span> <?= bounty_card_reward($q) ?>
+                                        <span style="color: rgba(255,255,255,0.6);"><?= htmlspecialchars(__(bounty_display_character_name($q['character_name'] ?? null, $q['pool'] ?? null))) ?> · <?= __('Reward') ?>:</span> <?= bounty_card_reward($q) ?>
                                     </div>
                                     <button onclick="abandonBounty(<?= $q['pm_id'] ?>, this)" class="dl-btn danger-btn" style="font-size: 0.75rem; padding: 4px 10px; white-space: nowrap;"><?= __('Discard') ?></button>
                                 </div>
@@ -940,7 +976,7 @@ if ($account_id) {
                                 <div class="bounty-header">
                                     <span class="bounty-player" <?= ($is_mine && !$is_team) ? 'style="color:#ffaa00; font-weight:bold;"' : '' ?>>
                                         <?= __('Hunter: ') ?><?= htmlspecialchars($b['hunter_name']) ?> 
-                                        <span style="font-weight:normal; font-size:0.8em; opacity:0.6;">(<?= htmlspecialchars($b['character_name'] ?? 'Account Wide') ?>)</span> 
+                                        <span style="font-weight:normal; font-size:0.8em; opacity:0.6;">(<?= htmlspecialchars(__(bounty_display_character_name($b['character_name'] ?? null, $b['pool'] ?? null))) ?>)</span> 
                                         <?= $is_mine ? '(You)' : '' ?>
                                     </span>
                                     <?php if ($is_contract): ?>
@@ -1007,7 +1043,7 @@ if ($account_id) {
                     <?php if ($bounty_rework): ?>
                         <?= __('Each character has 3 daily and 3 weekly bounty slots. Playing earns new bounties, up to 5 dailies a day and 10 weeklies a week; finishing one earns another. Bounties earned while your slots are full wait under Up next and start as soon as a slot frees.') ?>
                         <br><br>
-                        <?= __('Bosses and rare enemies can drop extra bounties into 5 separate drop slots (10 held at most). Ultra Rare drops need a party of 2 or more; Mythic Rare drops only come when you play alone. Battle Mode earns up to 3 dailies and Challenge Mode up to 3 weeklies.') ?>
+                        <?= __('Bosses and rare enemies can drop extra bounties into 5 separate drop slots (10 held at most). Ultra Rare drops need a party of 2 or more; Mythic Rare drops only come when you play alone. Battle Mode earns up to 3 dailies and Challenge Mode up to 3 weeklies, shared per account.') ?>
                         <br><br>
                         <?= __('A quarter of Ultra Rare and Mythic Rare drops come as contracts: a full run of the episode they dropped in (with a mixed party, carrying newer hunters, or against the clock) or a hunt for a rare creature such as Kondrieu. You can hold 3 contracts; they never expire, and abandoning one is free. When you finish one, everyone else in your game gets a reward one tier lower, picked for them.') ?>
                         <br><br>
@@ -1015,7 +1051,7 @@ if ($account_id) {
                         <br><br>
                         <?= __('Rewards come from the drops of the area a bounty sends you to, at least 10 times as often as a kill would drop them for your Section ID. Weapons get at most two attributes, matched to that area\'s enemies, plus hit. Bounties may also pay Photon Drops, and Ultra Rare and Mythic Rare bounties may pay a Photon Sphere (never more than one).') ?>
                         <br><br>
-                        <?= __('Challenge Mode bounties name a stage and a pace (S pace is the stage\'s share of the S-rank time). Ultra Rare ones span several stages and Mythic Rare ones are full runs, which pay some of the rarest drops in the game. Battle Mode bounties name the rule set to win under.') ?>
+                        <?= __('Challenge Mode bounties name a stage and a pace (S pace is the stage\'s share of the S-rank time). Ultra Rare ones span several stages and Mythic Rare ones are full runs, which pay some of the rarest drops in the game plus guaranteed Photon Spheres (2 for Episode 1, 1 for Episode 2). Battle Mode bounties name the rule set to win under (1–5 wins across Common to Mythic Rare). Both Battle Mode and Challenge Mode bounties are shared per account, ignore character level, always reward Photon Drops, and scale rewards with course/match length and rank pace (beating S-rank speed boosts claim stat rolls).') ?>
                     <?php else: ?>
                     <?= __('Missions are automatically assigned to your characters as you play! You can hold up to 3 active bounties per character at a time. Check back regularly or log into the game to receive your next assignment from the Hunter\'s Guild!') ?>
                     <?php endif; ?>
