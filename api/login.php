@@ -33,6 +33,7 @@ if (!$username || !$password) {
 
 try {
     require_once 'db.php';
+    require_once 'bounty_system.php';
     $db = get_db();
     
     // ----------------------------------------------------------------------
@@ -166,6 +167,14 @@ try {
         $streak_stmt->bindValue(':aid', $user_account['AccountID'], SQLITE3_INTEGER);
         $streak_stmt->bindValue(':date', date('Y-m-d'), SQLITE3_TEXT);
         $streak_stmt->execute();
+
+        // Grant any missing starter bounties for the current daily/weekly periods across all account characters.
+        if (bounty_rework_enabled()) {
+            $loginUserHint = !empty($username)
+                ? $username
+                : (strtolower(trim((string) ($user_account['BBLicenses'][0]['UserName'] ?? ''))) ?: null);
+            bounty_ensure_account_login_starters($db, (int) $user_account['AccountID'], $loginUserHint);
+        }
 
         // Calculate total account playtime across all 4 character files
         $playersDir = get_newserv_players_dir();

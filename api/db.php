@@ -13,7 +13,7 @@ require_once __DIR__ . '/exception_logger.php';
 require_once __DIR__ . '/pso_constants.php';
 
 if (!defined('PSO_DB_SCHEMA_VERSION')) {
-    define('PSO_DB_SCHEMA_VERSION', 1);
+    define('PSO_DB_SCHEMA_VERSION', 2);
 }
 
 /**
@@ -762,6 +762,33 @@ function run_db_migrations(SQLite3 $db): void
                 $db->exec("INSERT OR REPLACE INTO tekker_settings (key, value) VALUES ('migration_fix_challenge_stages_v1', '1');");
                 $db->exec("COMMIT;");
             } catch (Exception $cmMigEx) {
+                @$db->exec("ROLLBACK;");
+            }
+        }
+
+        // --- Idempotent +24h extension for open daily bounties on moving reset to 11:00 AM ET ---
+        $dailyExtMigrated = $db->querySingle("SELECT value FROM tekker_settings WHERE key = 'migration_extend_open_dailies_11am_est_v1'");
+        if (!$dailyExtMigrated) {
+            $hasTable = function (string $tbl) use ($db): bool {
+                $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = :tbl LIMIT 1");
+                $stmt->bindValue(':tbl', $tbl, SQLITE3_TEXT);
+                $res = $stmt->execute();
+                return $res && $res->fetchArray(SQLITE3_NUM) !== false;
+            };
+            $db->exec("BEGIN IMMEDIATE TRANSACTION;");
+            try {
+                if ($hasTable('player_missions') && $hasTable('missions')) {
+                    $db->exec("
+                        UPDATE player_missions
+                        SET expires_at = expires_at + 86400
+                        WHERE status IN ('queued', 'in_progress', 'rerolling')
+                          AND expires_at IS NOT NULL
+                          AND mission_id IN (SELECT id FROM missions WHERE cadence = 'daily');
+                    ");
+                }
+                $db->exec("INSERT OR REPLACE INTO tekker_settings (key, value) VALUES ('migration_extend_open_dailies_11am_est_v1', '1');");
+                $db->exec("COMMIT;");
+            } catch (Exception $dailyExtEx) {
                 @$db->exec("ROLLBACK;");
             }
         }

@@ -35,6 +35,9 @@ if (!$account_id) {
 
 try {
     $db = get_db();
+    if (bounty_rework_enabled()) {
+        bounty_ensure_account_login_starters($db, (int) $account_id, $_SESSION['user']['username'] ?? null);
+    }
     
     // Fetch ALL active bounties for this player (in_progress + ready_to_redeem)
     $stmt = $db->prepare("

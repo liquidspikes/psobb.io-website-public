@@ -68,6 +68,9 @@ function bounty_card_reward(array $b)
 $pending_redemptions = [];
 $account_id = $_SESSION['user']['account_id'] ?? 0;
 if ($account_id) {
+    if ($bounty_rework) {
+        bounty_ensure_account_login_starters($db, (int) $account_id, $_SESSION['user']['username'] ?? null);
+    }
     $pr_res = $db->prepare("SELECT pm.id as pm_id, pm.character_name, pm.status, m.title, m.description, m.goal_type, m.goal_target, m.reward_item_string, m.tier, m.cadence, m.pool, m.reward_spec
                             FROM player_missions pm 
                             JOIN missions m ON pm.mission_id = m.id 

@@ -8,17 +8,18 @@ The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` 
 
 | | Active slots | How they are earned | Limit |
 |---|---|---|---|
-| Daily | 3 | Being logged in (10% chance a minute), plus one for each daily finished | 5 earned per day |
-| Weekly | 3 | Being logged in (3% chance a minute), plus one for each weekly finished | 10 earned per week |
+| Daily | 3 | Full starter set of 3 granted on first login after reset (website or in-game, per character), plus 10% chance/pass into **Up next** & one per daily finished | 5 earned per day |
+| Weekly | 3 | Full starter set of 3 granted on first login after reset (website or in-game, per character), plus 3% chance/pass into **Up next** & one per weekly finished | 10 earned per week |
 | Drop | 5, their own | Boss kills (5–18% chance by difficulty) and rare-enemy kills (10–30%) | At most 10 held (active + waiting); after that nothing drops |
-| Battle Mode | 3 dailies (per account) | Playing Battle Mode (25% chance a minute), Normal/Solo play (10% chance a minute), plus one on completion | 3 per day per account |
-| Challenge Mode | 3 weeklies (per account), any tier | Playing Challenge Mode (25% chance a minute), Normal/Solo play (3% chance a minute), plus one on completion | 3 per week per account |
+| Battle Mode | 3 dailies (per account) | Full starter set of 3 granted on first login after daily reset (website or in-game), or earned while playing (25% Battle / 10% Normal) | 3 per day per account |
+| Challenge Mode | 3 weeklies (per account), any tier | Full starter set of 3 granted on first login after weekly reset (website or in-game), or earned while playing (25% Challenge / 3% Normal) | 3 per week per account |
 | Contract | 3, their own (no waiting) | A quarter of Ultra Rare and Mythic Rare drops | 3 held; with 3 held, such a drop stays a normal weekly drop. Never expire |
 
 - Standard, drop, and contract slots/caps are per character by default (`"limit_scope": "account"` shares all pools across an account). **Battle Mode and Challenge Mode (`pools.battle.scope`, `pools.challenge.scope`) are per account by default**, so any character on the account shares those slots, advances progress, and can claim rewards.
+- On the first login (either on the website / Portal / Bounty Board across all `.psochar` character slots, or logging into the game server) after each reset, `earn.starter_on_login` queues the full starter set (`3` Standard Daily + `3` Standard Weekly per character plus `3` Battle Daily + `3` Challenge Weekly account-wide = `12` total for a single character) and `cron_missions.php` activates them asynchronously (including when `0` players are in-game). Passive login rolls (`10%`/`3%`) and completions continue filling **Up next** up to the `5` daily / `10` weekly caps.
 - A bounty earned while its slots are full waits under **Up next** on the bounty board. When a slot of its kind frees up, the oldest waiting bounty starts. The objective and the story are written at that point, so they are set against the hunter's level and stats on the day it starts.
 - The caps count every bounty earned in the period, whatever happened to it afterwards. Abandoning bounties therefore cannot be used to earn more.
-- Resets come at `reset.daily_hour` (default midnight). The weekly reset comes on `reset.weekly_day` (1 = Monday). Both use the server's time zone, or `reset.timezone`.
+- Resets come at `reset.daily_hour` (default **11:00 AM ET** / `America/New_York`). The weekly reset comes on `reset.weekly_day` (1 = Monday at 11:00 AM ET). Both use `reset.timezone` (default `America/New_York`, falling back to the server's time zone when `null`).
 - At the reset, bounties that are waiting, active or being rerolled **expire**. Finished bounties that haven't been claimed never expire; they stay in the Guild Claim Center. Contracts never expire.
 
 ## Tiers

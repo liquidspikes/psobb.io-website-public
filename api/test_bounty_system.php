@@ -103,6 +103,10 @@ function rows($db, $char, $where = '1')
 $defaults = bounty_default_config();
 check($defaults['enabled'] === false, 'rework is dark-launched (enabled: false) by default');
 check(($defaults['legacy_grace_days'] ?? 0) === 30, 'legacy in_progress grace window defaults to 30 days');
+check(($defaults['reset'] ?? []) === ['daily_hour' => 11, 'weekly_day' => 1, 'timezone' => 'America/New_York'], 'resets default to 11:00 AM America/New_York with Monday weekly reset');
+check(($defaults['earn']['starter_on_login'] ?? false) === true, 'starter_on_login defaults to true');
+check((int) ($defaults['earn']['max_activations_per_pass'] ?? 0) === 6, 'max_activations_per_pass defaults to 6');
+check($db->querySingle("SELECT value FROM tekker_settings WHERE key = 'migration_extend_open_dailies_11am_est_v1'") === '1', 'db migration stamps +24h open daily extension key');
 $loadedCfg = bounty_config();
 check(is_bool(bounty_rework_enabled()), 'bounty_rework_enabled returns a boolean');
 $chChance = (int) ($loadedCfg['earn']['challenge_chance'] ?? -1);
@@ -124,12 +128,12 @@ $flashPayload = json_decode(bounty_build_gemini_payload('test', 'gemini-2.5-flas
 check(!isset($flashPayload['generationConfig']['thinkingConfig']), 'gemini-2.5 payload omits thinkingConfig');
 $fallbackStory = bounty_fallback_story(['selected_target_friendly' => 'Defeat Dark Falz'], 'Irene', 'ep1_ruins', 1, 'Ultimate');
 check(!empty($fallbackStory['title']) && !empty($fallbackStory['description']), 'fallback story generator returns title and description');
-$quiet = ['enabled' => true, 'earn' => ['login_daily_chance' => 0, 'login_weekly_chance' => 0, 'battle_chance' => 0, 'challenge_chance' => 0, 'normal_battle_chance' => 0, 'normal_challenge_chance' => 0]];
+$quiet = ['enabled' => true, 'earn' => ['starter_on_login' => false, 'login_daily_chance' => 0, 'login_weekly_chance' => 0, 'battle_chance' => 0, 'challenge_chance' => 0, 'normal_battle_chance' => 0, 'normal_challenge_chance' => 0]];
 
 // ---------------------------------------------------------------------------
 // 1. Free earning: 3 + 3 active, caps of 5 dailies and 10 weeklies per reset, the rest waits
 // ---------------------------------------------------------------------------
-bounty_config(['enabled' => true, 'earn' => ['login_daily_chance' => 100, 'login_weekly_chance' => 100]]);
+bounty_config(['enabled' => true, 'earn' => ['starter_on_login' => false, 'login_daily_chance' => 100, 'login_weekly_chance' => 100]]);
 $a = client('Aster');
 for ($i = 0; $i < 30; $i++) {
     tick($db, $a);
@@ -1374,8 +1378,186 @@ foreach (['003300', '00AB00'] as $uCode) {
 }
 check($unsealableViolations === 0, 'unsealable weapons (003300/00AB00) never exceed 2 total attributes including Hit');
 
+// ---------------------------------------------------------------------------
+// 13. 11 AM ET Resets, +24h Open Daily Migration, and Full Login Starter Sets
+// ---------------------------------------------------------------------------
+bounty_config([
+    'enabled' => true,
+    'reset' => ['daily_hour' => 11, 'weekly_day' => 1, 'timezone' => 'America/New_York'],
+    'earn' => [
+        'starter_on_login' => true,
+        'max_activations_per_pass' => 6,
+        'login_daily_chance' => 0,
+        'login_weekly_chance' => 0,
+        'battle_chance' => 25,
+        'challenge_chance' => 25,
+        'normal_battle_chance' => 10,
+        'normal_challenge_chance' => 3,
+    ],
+]);
+
+// 13a. 11:00 AM America/New_York reset bounds (EST winter UTC-5 and EDT summer UTC-4)
+$winterBefore = strtotime('2026-11-23 15:59:59 UTC'); // 10:59:59 EST (Monday)
+$winterAfter  = strtotime('2026-11-23 16:00:00 UTC'); // 11:00:00 EST (Monday)
+list($wStartB, $wEndB) = bounty_period_bounds('daily', $winterBefore);
+list($wStartA, $wEndA) = bounty_period_bounds('daily', $winterAfter);
+check(gmdate('Y-m-d H:i:s', $wEndB) === '2026-11-23 16:00:00', 'EST daily period ends at 16:00 UTC (11:00 AM EST)');
+check(gmdate('Y-m-d H:i:s', $wStartA) === '2026-11-23 16:00:00' && gmdate('Y-m-d H:i:s', $wEndA) === '2026-11-24 16:00:00', 'next EST daily period runs 16:00->16:00 UTC');
+list($wkStart, $wkEnd) = bounty_period_bounds('weekly', $winterAfter);
+check(gmdate('Y-m-d H:i:s', $wkStart) === '2026-11-23 16:00:00' && gmdate('Y-m-d H:i:s', $wkEnd) === '2026-11-30 16:00:00', 'EST weekly reset is Monday 11:00 AM EST');
+$summerReset = strtotime('2026-07-06 15:00:00 UTC'); // Monday 11:00:00 EDT
+list($edStart, $edEnd) = bounty_period_bounds('daily', $summerReset);
+check(gmdate('Y-m-d H:i:s', $edStart) === '2026-07-06 15:00:00' && gmdate('Y-m-d H:i:s', $edEnd) === '2026-07-07 15:00:00', 'EDT daily period tracks America/New_York DST at 15:00 UTC');
+
+// 13b. One-time +24h open daily extension migration
+$db->exec("INSERT INTO users (username, email, account_id, language) VALUES ('t13', 't13@x', 9013, 'en')");
+$baseTs = $winterAfter + 600;
+ob_start();
+$pmOpenDaily = bounty_earn($db, 9013, 'MigChar', client('MigChar', 50, ['Account' => ['AccountID' => 9013]]), 'standard', 'daily', 'common', 'login', [], $baseTs);
+$pmReadyDaily = bounty_earn($db, 9013, 'MigChar', client('MigChar', 50, ['Account' => ['AccountID' => 9013]]), 'standard', 'daily', 'uncommon', 'login', [], $baseTs);
+$pmOpenWeekly = bounty_earn($db, 9013, 'MigChar', client('MigChar', 50, ['Account' => ['AccountID' => 9013]]), 'standard', 'weekly', 'rare', 'login', [], $baseTs);
+$pmOpenContract = bounty_earn($db, 9013, 'MigChar', client('MigChar', 50, ['Account' => ['AccountID' => 9013]]), 'contract', 'contract', 'mythic', 'boss', ['episode' => 1], $baseTs);
+ob_end_clean();
+$db->exec("UPDATE player_missions SET status = 'in_progress' WHERE id = $pmOpenDaily");
+$db->exec("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = $pmReadyDaily");
+$oldDailyExp = (int) $db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmOpenDaily");
+$oldReadyExp = (int) $db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmReadyDaily");
+$oldWeeklyExp = (int) $db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmOpenWeekly");
+$db->exec("DELETE FROM tekker_settings WHERE key = 'migration_extend_open_dailies_11am_est_v1'");
+$ext1 = bounty_extend_open_dailies_once($db, 86400);
+$ext2 = bounty_extend_open_dailies_once($db, 86400);
+check($ext1 >= 1 && $ext2 === 0, 'open daily extension applies once and is idempotent on repeat calls');
+check((int) $db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmOpenDaily") === $oldDailyExp + 86400, 'open daily expires_at extended by +24h');
+check((int) $db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmReadyDaily") === $oldReadyExp, 'ready_to_redeem daily expires_at is untouched');
+check((int) $db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmOpenWeekly") === $oldWeeklyExp, 'open weekly expires_at is untouched');
+check($db->querySingle("SELECT expires_at FROM player_missions WHERE id = $pmOpenContract") === null, 'contract expires_at remains null');
+// Clear MigChar rows before starter tests on 9013
+$db->exec("DELETE FROM player_missions WHERE account_id = 9013");
+
+// 13c. in-game newserv login grants full 12 starter bounties (3 std daily + 3 std weekly + 3 battle + 3 challenge) + passive rolls go to Up next
+$nova = client('Nova', 90, ['Account' => ['AccountID' => 9013]]);
+$day1 = strtotime('2026-11-23 18:00:00 UTC'); // 1:00 PM EST Monday
+ob_start();
+bounty_tick_for_client($db, $nova, [
+    'account_id' => 9013, 'char_name' => 'Nova', 'user_lang' => 'en', 'curr_f' => 0,
+    'lobby' => null, 'lobby_map' => [], 'kills' => no_kills(), 'completed' => [],
+    'active_types' => [], 'recent_titles' => 'None', 'max_activations' => 12, 'now' => $day1,
+]);
+ob_end_clean();
+check(bounty_active_count($db, 9013, 'Nova', 'standard', 'daily') === 3, 'in-game login activates 3 Standard Dailies');
+check(bounty_active_count($db, 9013, 'Nova', 'standard', 'weekly') === 3, 'in-game login activates 3 Standard Weeklies');
+check(bounty_active_count($db, 9013, 'Nova', 'battle', 'daily') === 3, 'in-game login activates 3 Battle Dailies (account-wide)');
+check(bounty_active_count($db, 9013, 'Nova', 'challenge', 'weekly') === 3, 'in-game login activates 3 Challenge Weeklies (account-wide)');
+check(count(acc_rows($db, 9013, "pm.status = 'in_progress'")) === 12, '12 total bounties active right on first login');
+
+// Passive login rolls still fill Up next up to free_cap (5 daily, 10 weekly)
+bounty_config(['earn' => ['login_daily_chance' => 100, 'login_weekly_chance' => 100]]);
+for ($i = 0; $i < 8; $i++) {
+    ob_start();
+    bounty_tick_for_client($db, $nova, [
+        'account_id' => 9013, 'char_name' => 'Nova', 'user_lang' => 'en', 'curr_f' => 0,
+        'lobby' => null, 'lobby_map' => [], 'kills' => no_kills(), 'completed' => [],
+        'active_types' => [], 'recent_titles' => 'None', 'now' => $day1,
+    ]);
+    ob_end_clean();
+}
+check(bounty_queued_count($db, 9013, 'Nova', 'standard', 'daily') === 2 && bounty_earned_count($db, 9013, 'Nova', 'standard', 'daily', ['login', 'completion'], $day1) === 5, 'passive login rolls add remaining 2 dailies into Up next (5/5 cap)');
+check(bounty_queued_count($db, 9013, 'Nova', 'standard', 'weekly') === 7 && bounty_earned_count($db, 9013, 'Nova', 'standard', 'weekly', ['login', 'completion'], $day1) === 10, 'passive login rolls add remaining 7 weeklies into Up next (10/10 cap)');
+
+// Re-login or abandoning in same period never re-grants free starters
+bounty_config(['earn' => ['login_daily_chance' => 0, 'login_weekly_chance' => 0]]);
+$db->exec("UPDATE player_missions SET status = 'abandoned' WHERE account_id = 9013 AND status = 'in_progress' AND mission_id IN (SELECT id FROM missions WHERE cadence = 'daily') LIMIT 2");
+ob_start();
+$reGrantSamePeriod = bounty_ensure_account_login_starters($db, 9013, 't13', ['Nova' => $nova], $day1 + 300);
+ob_end_clean();
+check($reGrantSamePeriod === 0, 're-login after abandoning inside same period does not re-grant starters');
+
+// Advancing past next day's 11:00 AM EST expires only dailies and grants 6 new daily starters (3 Std + 3 Battle), preserving weeklies
+$day2 = strtotime('2026-11-24 16:05:00 UTC'); // 11:05 AM EST Tuesday
+ob_start();
+$day2Granted = bounty_ensure_account_login_starters($db, 9013, 't13', ['Nova' => $nova], $day2);
+ob_end_clean();
+check($day2Granted === 6, 'Tuesday 11:05 AM EST daily reset grants 3 Standard Dailies + 3 Battle Dailies (6 new)');
+check(bounty_queued_count($db, 9013, 'Nova', 'standard', 'daily') === 3 && bounty_queued_count($db, 9013, '', 'battle', 'daily') === 3, 'new daily starters wait queued for activation while prior period expired');
+check(bounty_active_count($db, 9013, 'Nova', 'standard', 'weekly') === 3 && bounty_active_count($db, 9013, '', 'challenge', 'weekly') === 3, 'weekly bounties survive Tuesday daily reset');
+
+// Advancing past Monday 11:00 AM EST expires weeklies too and grants all 12 starters (3+3+3+3)
+$week2 = strtotime('2026-11-30 16:05:00 UTC'); // 11:05 AM EST Monday
+ob_start();
+$week2Granted = bounty_ensure_account_login_starters($db, 9013, 't13', ['Nova' => $nova], $week2);
+ob_end_clean();
+check($week2Granted === 12, 'Monday 11:05 AM EST weekly+daily reset expires all unfinished rows and grants full 12 starters');
+
+// 13d. Website login Option C across all .psochar slots + async cron offline activation drain
+$tmpPlayersDir = sys_get_temp_dir() . '/bounty_psochar_test_' . getmypid();
+@mkdir($tmpPlayersDir, 0775, true);
+$GLOBALS['BOUNTY_PLAYERS_DIR_OVERRIDE'] = $tmpPlayersDir;
+$makePsochar = static function (string $charName, int $level, string $className, string $secName, int $playSecs, array $ep1Secs = []): string {
+    $buf = str_repeat("\x00", 0x399C);
+    $rawLvl = max(0, min(199, $level - 1));
+    $classId = (int) array_search($className, PSO_CHAR_CLASSES, true);
+    $secId = (int) array_search($secName, PSO_SECTION_IDS, true);
+    $buf = substr_replace($buf, pack('V', $rawLvl), 852 + 24, 4);
+    $buf = substr_replace($buf, pack('V', 123456), 852 + 28, 4);
+    $buf = substr_replace($buf, pack('V', 50000), 852 + 32, 4);
+    $buf[852 + 36 + 0x30] = chr($secId);
+    $buf[852 + 36 + 0x31] = chr($classId);
+    // Mark Foie (tech 0) as learned at Lv 20 (v1=14, ext1=5)
+    $buf[852 + 0x17C + 0] = chr(14);
+    $buf[8 + 4 + 0 * 28 + 2] = chr(5);
+    // Name UTF-16LE with \tE prefix at offset 0x3C8 (968)
+    $u16 = mb_convert_encoding("\tE" . $charName, 'UTF-16LE', 'UTF-8');
+    $buf = substr_replace($buf, substr($u16, 0, 30), 0x3C8, min(30, strlen($u16)));
+    $buf = substr_replace($buf, pack('V', $playSecs), 8 + 0x04E8, 4);
+    $buf = substr_replace($buf, pack('v4', 4, 2, 0, 0), 8 + 0x2C9C, 8);
+    foreach ($ep1Secs as $idx => $secs) {
+        if ($idx < 9 && $secs > 0) {
+            $mask = 0x0FF0; // 8 one-bits
+            $enc = ($mask << 16) | ($mask ^ ($secs & 0xFFFF));
+            $buf = substr_replace($buf, pack('V', $enc), 8 + 0x2CB8 + 0x04 + ($idx * 4), 4);
+        }
+    }
+    return $buf;
+};
+file_put_contents("$tmpPlayersDir/player_webtest_0.psochar", $makePsochar('Astra', 120, 'FOnewearl', 'Pinkal', 50000, [900, 1200, 1500]));
+file_put_contents("$tmpPlayersDir/player_webtest_1.psochar", $makePsochar('Bram', 45, 'RAmar', 'Viridia', 12000));
+file_put_contents("$tmpPlayersDir/player_webtest_7.psochar", $makePsochar('BankMule', 1, 'HUcast', 'Redria', 60));
+
+$db->exec("INSERT INTO users (username, email, account_id, language) VALUES ('webtest', 'web@x', 9014, 'en')");
+$parsedClients = bounty_load_account_psochar_clients($db, 9014, 'webtest');
+check(count($parsedClients) === 3 && isset($parsedClients['Astra'], $parsedClients['Bram'], $parsedClients['BankMule']), '.psochar loader discovers all 3 saved slots including >4 MoreSaveSlots index 7');
+check(($parsedClients['Astra']['Level'] ?? 0) === 120 && ($parsedClients['Astra']['CharClass'] ?? '') === 'FOnewearl' && ($parsedClients['Astra']['SectionID'] ?? '') === 'Pinkal', '.psochar decodes Level (0->1-based 120), CharClass and SectionID accurately');
+check(($parsedClients['Astra']['TechniqueLevels']['Foie'] ?? 0) === 20, '.psochar decodes extended TechniqueLevels accurately');
+check(array_slice($parsedClients['Astra']['ChallengeTimesEp1Online'] ?? [], 0, 4) === [900, 1200, 1500, 0xFFFF], '.psochar decrypts ChallengeTimesEp1Online accurately');
+
+ob_start();
+$webGranted = bounty_ensure_account_login_starters($db, 9014, 'webtest', [], $week2);
+$webEchoed = ob_get_clean();
+// Even on CLI, ensure expected total count (6 std * 3 chars + 3 battle + 3 challenge = 24)
+check($webGranted === 24, "website login grants starters across all 3 character slots + Battle + Challenge ($webGranted === 24)");
+check(bounty_queued_count($db, 9014, 'Astra', 'standard', 'daily') === 3 && bounty_queued_count($db, 9014, 'Astra', 'standard', 'weekly') === 3, 'slot 0 (Astra) receives 3+3 Standard starters');
+check(bounty_queued_count($db, 9014, 'Bram', 'standard', 'daily') === 3 && bounty_queued_count($db, 9014, 'Bram', 'standard', 'weekly') === 3, 'slot 1 (Bram) receives 3+3 Standard starters');
+check(bounty_queued_count($db, 9014, 'BankMule', 'standard', 'daily') === 3 && bounty_queued_count($db, 9014, 'BankMule', 'standard', 'weekly') === 3, 'slot 7 (BankMule) receives 3+3 Standard starters');
+check(bounty_queued_count($db, 9014, '', 'battle', 'daily') === 3 && bounty_queued_count($db, 9014, '', 'challenge', 'weekly') === 3, 'account shares 3 Battle + 3 Challenge starters');
+
+// Also ensure an Up Next (queued above active limit) bounty for Nova stays queued when draining
+ob_start();
+$drainedFirst = bounty_drain_offline_activations($db, 40, [], null, $week2 + 10);
+$drainedSecond = bounty_drain_offline_activations($db, 6, [], null, $week2 + 10);
+ob_end_clean();
+check($drainedFirst === 36, "offline cron drainer activates all queued starters across offline accounts (drained=$drainedFirst === 36)");
+check(count(acc_rows($db, 9013, "pm.status = 'in_progress'")) === 12, 'offline week-reset starters for 9013 (12) activated too');
+check(count(acc_rows($db, 9014, "pm.status = 'in_progress'")) === 24, 'all 24 website starter bounties for 9014 are now in_progress with objectives and stories');
+check($drainedSecond === 0, 'subsequent offline drain call skips accounts/pools whose active slots are full');
+
+foreach (glob("$tmpPlayersDir/*") ?: [] as $tf) {
+    @unlink($tf);
+}
+@rmdir($tmpPlayersDir);
+unset($GLOBALS['BOUNTY_PLAYERS_DIR_OVERRIDE']);
+
 @unlink($tmp_db);
-foreach ([9001, 9002, 9003, 9004, 9011, 9012] as $acc) {
+foreach ([9001, 9002, 9003, 9004, 9011, 9012, 9013, 9014] as $acc) {
     @unlink(__DIR__ . '/../db/.bounty_' . $acc); // board refresh markers for the test accounts
 }
 @unlink("$tmp_db-wal");
