@@ -32,6 +32,9 @@ if (!$account_id) {
 
 try {
     $db = get_db();
+    if (bounty_rework_enabled()) {
+        bounty_ensure_account_login_starters($db, (int) $account_id, $_SESSION['user']['username'] ?? null);
+    }
     
     // All bounties for this player (in_progress + ready_to_redeem but not yet redeemed)
     // Status lifecycle: in_progress -> ready_to_redeem -> completed (redeemed)

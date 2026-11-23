@@ -32,9 +32,9 @@
         }
     },
     "reset": {
-        "daily_hour": 0,
+        "daily_hour": 11,
         "weekly_day": 1,
-        "timezone": "America/Chicago"
+        "timezone": "America/New_York"
     },
     "pools": {
         "standard": {
@@ -83,6 +83,8 @@
         "reward_scale": { "run": 2.0, "hunt": 1.5 }
     },
     "earn": {
+        "starter_on_login": true,
+        "max_activations_per_pass": 6,
         "login_daily_chance": 10,
         "login_weekly_chance": 3,
         "completion_grants": 1,

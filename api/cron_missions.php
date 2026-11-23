@@ -52,6 +52,14 @@ $state_cache_file = __DIR__ . '/../db/.cron_player_state.json';
 $script_start = time();
 // Loop for up to 55 seconds to fit within a standard 1-minute crontab resolution
 while (time() - $script_start < 55) {
+    $pass_budget = max(1, (int) (bounty_config()['earn']['max_activations_per_pass'] ?? 6));
+    $pass_activated = 0;
+
+    if (bounty_rework_enabled()) {
+        $expired_n = bounty_expire_sweep($db);
+        if ($expired_n) echo "[BOUNTY] Expired {$expired_n} bounties at the reset.\n";
+    }
+
     // 1. Fetch live clients and lobbies
     $clients = newserv_fetch_clients();
     if ($clients === null) {
@@ -60,6 +68,12 @@ while (time() - $script_start < 55) {
     }
 
     if (empty($clients)) {
+        if (bounty_rework_enabled()) {
+            $drained = bounty_drain_offline_activations($db, $pass_budget, [], function () use ($script_start) {
+                return (time() - $script_start) < 46;
+            });
+            if ($drained) echo "[BOUNTY] Activated {$drained} queued offline bounties.\n";
+        }
         sleep(10);
         continue;
     }
@@ -76,10 +90,6 @@ while (time() - $script_start < 55) {
 
     // Room facts (episode, difficulty, mode, party size) for the Bounty System Rework
     $lobby_info_map = bounty_lobby_info_map($lobbies);
-    if (bounty_rework_enabled()) {
-        $expired_n = bounty_expire_sweep($db);
-        if ($expired_n) echo "[BOUNTY] Expired {$expired_n} bounties at the reset.\n";
-    }
 
     // Load state cache each tick to calculate real-time deltas
     $player_states = file_exists($state_cache_file) ? json_decode(file_get_contents($state_cache_file), true) : [];
@@ -866,8 +876,8 @@ foreach ($clients as $client) {
     // 7. New bounties
     $bounty_state = [];
     if (bounty_rework_enabled()) {
-        // Bounty System Rework (api/bounty_system.php): drops, earning under the caps, Battle and
-        // Challenge pools, then at most one activation (one Gemini call) for this player this pass.
+        // Bounty System Rework (api/bounty_system.php): drops, starter login grants, earning under caps,
+        // Battle and Challenge pools, then activating up to the pass budget for this player.
         $bounty_state = bounty_tick_for_client($db, $client, [
             'account_id' => $accId,
             'char_name' => $charName,
@@ -879,6 +889,10 @@ foreach ($clients as $client) {
             'completed' => $completed_this_pass,
             'active_types' => $active_mission_types,
             'recent_titles' => $recent_missions_str,
+            'max_activations' => max(1, min(4, $pass_budget - $pass_activated)),
+            'on_activated' => function () use (&$pass_activated) {
+                $pass_activated++;
+            },
         ]);
     } else {
         // Original flow: below 3 active bounties, a 10% chance each pass (about one a minute) of a
@@ -980,6 +994,14 @@ if (!empty($pending_logins)) {
         echo "[CRON] Daily login batch failed: " . $e->getMessage() . "\n";
     }
 }
+
+    // Drain any queued offline/website-login bounties or alt character slots within the remaining pass budget
+    if (bounty_rework_enabled() && $pass_activated < $pass_budget && (time() - $script_start) < 46) {
+        $drained = bounty_drain_offline_activations($db, $pass_budget - $pass_activated, $clients, function () use ($script_start) {
+            return (time() - $script_start) < 46;
+        });
+        if ($drained) echo "[BOUNTY] Activated {$drained} queued offline bounties.\n";
+    }
 
     // 4. Save state
     file_put_contents($state_cache_file, json_encode($player_states));

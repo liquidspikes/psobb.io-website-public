@@ -48,9 +48,8 @@ function bounty_default_config()
         'legacy_grace_days' => 30,
         // Whose slots and caps: 'character' (each character has its own) or 'account' (shared).
         'limit_scope' => 'character',
-        // Resets, in the server's time zone (or 'timezone', e.g. "America/Chicago").
-        // weekly_day: 1 = Monday ... 7 = Sunday.
-        'reset' => ['daily_hour' => 0, 'weekly_day' => 1, 'timezone' => null],
+        // Resets at 11:00 AM America/New_York (EST/EDT); weekly_day: 1 = Monday ... 7 = Sunday.
+        'reset' => ['daily_hour' => 11, 'weekly_day' => 1, 'timezone' => 'America/New_York'],
         'pools' => [
             // Points 3-4: 3 + 3 active; free earning capped at 5 dailies a day and 10 weeklies a week.
             'standard' => [
@@ -66,6 +65,10 @@ function bounty_default_config()
             'contract' => ['held_max' => 3],
         ],
         'earn' => [
+            // Grant a full active starter set at first login in each period (website or in-game).
+            'starter_on_login' => true,
+            // Maximum queued/rerolling activations processed per cron pass.
+            'max_activations_per_pass' => 6,
             // Chance per cron pass (about once a minute) while logged in, if under the cap.
             'login_daily_chance' => 10,
             'login_weekly_chance' => 3,
@@ -498,10 +501,10 @@ function bounty_queued_count($db, $acc, $char, $pool, $cadence = null)
 /**
  * Bounties of a pool earned in the current period (counts every one earned, whatever became of it).
  */
-function bounty_earned_count($db, $acc, $char, $pool, $cadence, array $sources = [])
+function bounty_earned_count($db, $acc, $char, $pool, $cadence, array $sources = [], $now = null)
 {
     $where = "m.pool = :pool AND m.cadence = :cad AND pm.period_key = :pk";
-    $b = [':pool' => [$pool, SQLITE3_TEXT], ':cad' => [$cadence, SQLITE3_TEXT], ':pk' => [bounty_period_key($cadence), SQLITE3_TEXT]];
+    $b = [':pool' => [$pool, SQLITE3_TEXT], ':cad' => [$cadence, SQLITE3_TEXT], ':pk' => [bounty_period_key($cadence, $now), SQLITE3_TEXT]];
     if ($sources) {
         $in = [];
         foreach (array_values($sources) as $i => $s) {
@@ -697,10 +700,10 @@ function bounty_roll_reward_string(array $spec)
  *
  * @return int|null player_missions id
  */
-function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $source, array $meta = [])
+function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $source, array $meta = [], $now = null)
 {
     // The reward is chosen when the bounty starts (bounty_fill()), once its area is known.
-    $now = time();
+    $now = $now ?? time();
     // Contracts never expire and belong to no reset period
     list(, $expires) = ($cadence === 'contract') ? [null, null] : bounty_period_bounds($cadence, $now);
     $period = ($cadence === 'contract') ? null : bounty_period_key($cadence, $now);
@@ -728,34 +731,36 @@ function bounty_earn($db, $acc, $char, array $client, $pool, $cadence, $tier, $s
     $pm->execute();
     $id = $db->lastInsertRowID();
     $display = ($stored_char === '') ? 'Account Wide' : $stored_char;
-    echo "[BOUNTY] {$display}: earned " . bounty_tier_label($tier) . " " . bounty_kind_label($pool, $cadence) . " bounty ($source)\n";
+    if (PHP_SAPI === 'cli') {
+        echo "[BOUNTY] {$display}: earned " . bounty_tier_label($tier) . " " . bounty_kind_label($pool, $cadence) . " bounty ($source)\n";
+    }
     return $id;
 }
 
 /**
  * Point 4: a free standard bounty, if this period's cap allows it.
  */
-function bounty_try_free_earn($db, $acc, $char, array $client, $cadence, $source)
+function bounty_try_free_earn($db, $acc, $char, array $client, $cadence, $source, $now = null)
 {
     $cap = (int) (bounty_config()['pools']['standard'][$cadence]['free_cap'] ?? 0);
-    if (bounty_earned_count($db, $acc, $char, 'standard', $cadence, ['login', 'completion']) >= $cap) {
+    if (bounty_earned_count($db, $acc, $char, 'standard', $cadence, ['login', 'completion'], $now) >= $cap) {
         return null;
     }
-    return bounty_earn($db, $acc, $char, $client, 'standard', $cadence, bounty_roll_free_tier(), $source);
+    return bounty_earn($db, $acc, $char, $client, 'standard', $cadence, bounty_roll_free_tier(), $source, [], $now);
 }
 
 /**
  * Point 13: a Battle (daily) or Challenge (weekly) bounty, earned per account by playing that mode.
  */
-function bounty_try_mode_earn($db, $acc, $char, array $client, $pool)
+function bounty_try_mode_earn($db, $acc, $char, array $client, $pool, $now = null)
 {
     $cadence = ($pool === 'challenge') ? 'weekly' : 'daily';
     $cap = (int) (bounty_config()['pools'][$pool][$cadence]['cap'] ?? 0);
-    if (bounty_earned_count($db, $acc, $char, $pool, $cadence) >= $cap) {
+    if (bounty_earned_count($db, $acc, $char, $pool, $cadence, [], $now) >= $cap) {
         return null;
     }
     $tier = ($pool === 'challenge') ? bounty_roll_challenge_tier() : bounty_roll_battle_tier();
-    return bounty_earn($db, $acc, $char, $client, $pool, $cadence, $tier, $pool);
+    return bounty_earn($db, $acc, $char, $client, $pool, $cadence, $tier, $pool, [], $now);
 }
 
 /**
@@ -1537,28 +1542,32 @@ function bounty_fill($db, array $row, array $client, array $ctx)
     $u->bindValue(':mid', (int) $row['mission_id'], SQLITE3_INTEGER);
     $u->execute();
     $p = $db->prepare("UPDATE player_missions SET status = 'in_progress', activated_at = :now, progress = '{}' WHERE id = :id");
-    $p->bindValue(':now', time(), SQLITE3_INTEGER);
+    $p->bindValue(':now', (int) ($ctx['now'] ?? time()), SQLITE3_INTEGER);
     $p->bindValue(':id', (int) $row['id'], SQLITE3_INTEGER);
     $p->execute();
 
     $label = bounty_tier_label($row['tier']) . ' · ' . bounty_kind_label($row['pool'], $row['cadence']);
-    $obj_text = getClearObjective($obj['selected_goal'], (string) $obj['selected_target_id'], $story['title'], $story['description'], $obj['min_difficulty'] ?? null);
-    $reward = renderRewardString($row['reward_item_string']);
-    $srv = get_server_address();
-    $lang = $ctx['user_lang'];
-    if ($lang === 'jp') {
-        $msg = "新ミッション【{$label}】「{$story['title']}」\n目標: {$obj_text}\n報酬: {$reward}（能力値は受取時に決定）\n{$srv}";
-        send_personal_mail($ctx['account_id'], "ハンターズギルド", $msg);
-    } elseif ($lang === 'ru') {
-        $msg = "Новый заказ [{$label}]: {$story['title']}\nЦель: {$obj_text}\nНаграда: {$reward} (характеристики при получении)\n{$srv}";
-        send_personal_mail($ctx['account_id'], "Гильдия Охотников", $msg);
-    } else {
-        $msg = "New Bounty [{$label}]: {$story['title']}\nObjective: {$obj_text}\nReward: {$reward} (stats roll when claimed)\n\n" . mb_strimwidth($story['description'], 0, 200, '...');
-        send_personal_mail($ctx['account_id'], "Hunters Guild", $msg);
+    if (empty($ctx['suppress_mail'])) {
+        $obj_text = getClearObjective($obj['selected_goal'], (string) $obj['selected_target_id'], $story['title'], $story['description'], $obj['min_difficulty'] ?? null);
+        $reward = renderRewardString($row['reward_item_string']);
+        $srv = get_server_address();
+        $lang = $ctx['user_lang'];
+        if ($lang === 'jp') {
+            $msg = "新ミッション【{$label}】「{$story['title']}」\n目標: {$obj_text}\n報酬: {$reward}（能力値は受取時に決定）\n{$srv}";
+            send_personal_mail($ctx['account_id'], "ハンターズギルド", $msg);
+        } elseif ($lang === 'ru') {
+            $msg = "Новый заказ [{$label}]: {$story['title']}\nЦель: {$obj_text}\nНаграда: {$reward} (характеристики при получении)\n{$srv}";
+            send_personal_mail($ctx['account_id'], "Гильдия Охотников", $msg);
+        } else {
+            $msg = "New Bounty [{$label}]: {$story['title']}\nObjective: {$obj_text}\nReward: {$reward} (stats roll when claimed)\n\n" . mb_strimwidth($story['description'], 0, 200, '...');
+            send_personal_mail($ctx['account_id'], "Hunters Guild", $msg);
+        }
     }
     @touch(__DIR__ . '/../db/.bounty_' . $ctx['account_id']);
-    echo "[BOUNTY] {$client['Name']}: activated {$label} \"{$story['title']}\" ({$obj['selected_goal']} {$obj['selected_target_id']})\n";
-    return true;
+    if (PHP_SAPI === 'cli') {
+        echo "[BOUNTY] {$client['Name']}: activated {$label} \"{$story['title']}\" ({$obj['selected_goal']} {$obj['selected_target_id']})\n";
+    }
+    return ['goal_type' => $obj['selected_goal'], 'title' => $story['title']];
 }
 
 /**
@@ -1616,6 +1625,8 @@ function bounty_apply_challenge_speed_bonus($db, int $pmId, int $missionId, stri
  */
 function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
 {
+    $onlyPool = $ctx['only_pool'] ?? null;
+    $nowTs = (int) ($ctx['now'] ?? time());
     $base = "SELECT pm.id, pm.mission_id, pm.status, m.tier, m.cadence, m.pool, m.meta, m.reward_item_string, m.reward_spec
              FROM player_missions pm JOIN missions m ON pm.mission_id = m.id";
     $fetch = function ($where, array $binds = []) use ($db, $base) {
@@ -1627,13 +1638,17 @@ function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
     };
 
     if (bounty_pool_scope() === 'account') {
-        $rerollWhere = "pm.account_id = :acc AND pm.status = 'rerolling' ORDER BY pm.id LIMIT 1";
+        $rerollWhere = "pm.account_id = :acc AND pm.status = 'rerolling'";
         $rerollBinds = [':acc' => [(int) $acc, SQLITE3_INTEGER]];
     } else {
-        $rerollWhere = "pm.account_id = :acc AND (pm.character_name = :cname OR pm.character_name = '' OR m.pool IN ('battle', 'challenge')) AND pm.status = 'rerolling' ORDER BY pm.id LIMIT 1";
+        $rerollWhere = "pm.account_id = :acc AND (pm.character_name = :cname OR pm.character_name = '' OR m.pool IN ('battle', 'challenge')) AND pm.status = 'rerolling'";
         $rerollBinds = [':acc' => [(int) $acc, SQLITE3_INTEGER], ':cname' => [(string) $char, SQLITE3_TEXT]];
     }
-    $row = $fetch($rerollWhere, $rerollBinds);
+    if ($onlyPool !== null) {
+        $rerollWhere .= " AND m.pool = :opool";
+        $rerollBinds[':opool'] = [$onlyPool, SQLITE3_TEXT];
+    }
+    $row = $fetch("$rerollWhere ORDER BY pm.id LIMIT 1", $rerollBinds);
     if ($row) {
         return bounty_fill($db, $row, $client, $ctx);
     }
@@ -1647,11 +1662,14 @@ function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
         ['contract', 'contract', $cfg['contract']['held_max'] ?? 3],
     ];
     foreach ($order as list($pool, $cadence, $limit)) {
+        if ($onlyPool !== null && $pool !== $onlyPool) {
+            continue;
+        }
         if (bounty_active_count($db, $acc, $char, $pool, $cadence) >= (int) $limit) {
             continue;
         }
         list($pscope, $psb) = bounty_scope($acc, $char, $pool);
-        $binds = $psb + [':pool' => [$pool, SQLITE3_TEXT], ':now' => [time(), SQLITE3_INTEGER]];
+        $binds = $psb + [':pool' => [$pool, SQLITE3_TEXT], ':now' => [$nowTs, SQLITE3_INTEGER]];
         $tail = "AND pm.status = 'queued' AND m.pool = :pool AND (pm.expires_at IS NULL OR pm.expires_at > :now)";
         if ($cadence !== null) {
             $tail .= " AND m.cadence = :cad";
@@ -1663,6 +1681,603 @@ function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
         }
     }
     return false;
+}
+
+// ---------------------------------------------------------------------------
+// Offline .psochar loading, +24h daily extension & login starter sets
+// ---------------------------------------------------------------------------
+
+/**
+ * Decodes a 32-bit encrypted ChallengeTime entry from a .psochar record (see PSOEncryption.cc).
+ */
+function bounty_decrypt_challenge_time(int $value): int
+{
+    $value = $value & 0xFFFFFFFF;
+    $mask = ($value >> 16) & 0xFFFF;
+    $ones = substr_count(decbin($mask), '1');
+    return ($ones < 4 || $ones > 12) ? 0xFFFF : (($mask ^ $value) & 0xFFFF);
+}
+
+/**
+ * Parses a PSOBB character (.psochar) binary into the client array shape expected by bounty helpers.
+ */
+function bounty_client_from_psochar(string $charData, int $accId, ?int $slot = null): ?array
+{
+    if (strlen($charData) < 0x399C) {
+        return null;
+    }
+    $name = decode_psochar_name($charData);
+    if (trim($name) === '') {
+        return null;
+    }
+
+    $invOffset = 8;
+    $numItems = min(30, ord($charData[$invOffset]));
+    $hpMats = ord($charData[$invOffset + 1]) >> 1;
+    $tpMats = ord($charData[$invOffset + 2]) >> 1;
+
+    $invItems = [];
+    for ($i = 0; $i < $numItems; $i++) {
+        $off = $invOffset + 4 + $i * 28;
+        if (ord($charData[$off]) !== 0) {
+            $invItems[] = [
+                'Flags' => (int) unpack('V', substr($charData, $off + 4, 4))[1],
+                'Data' => strtoupper(bin2hex(substr($charData, $off + 8, 16))),
+            ];
+        }
+    }
+
+    $powMats = ord($charData[$invOffset + 4 + 8 * 28 + 3]);
+    $mindMats = ord($charData[$invOffset + 4 + 9 * 28 + 3]);
+    $evdMats = ord($charData[$invOffset + 4 + 10 * 28 + 3]);
+    $defMats = ord($charData[$invOffset + 4 + 11 * 28 + 3]);
+    $luckMats = ord($charData[$invOffset + 4 + 12 * 28 + 3]);
+
+    $dispOffset = 852; // 8 + 0x34C
+    $rawLevel = (int) unpack('V', substr($charData, $dispOffset + 24, 4))[1];
+    $level = max(1, min(200, $rawLevel + 1));
+    $exp = (int) unpack('V', substr($charData, $dispOffset + 28, 4))[1];
+    $meseta = (int) unpack('V', substr($charData, $dispOffset + 32, 4))[1];
+    $sectionId = PSO_SECTION_IDS[ord($charData[$dispOffset + 36 + 0x30])] ?? 'Viridia';
+    $charClass = PSO_CHAR_CLASSES[ord($charData[$dispOffset + 36 + 0x31])] ?? 'HUmar';
+
+    $techLevels = [];
+    for ($z = 0; $z < 19; $z++) {
+        $tName = PSO_TECHNIQUES[$z] ?? null;
+        if ($tName === null) {
+            continue;
+        }
+        $v1 = ord($charData[$dispOffset + 0x17C + $z]);
+        $ext1 = ord($charData[$invOffset + 4 + $z * 28 + 2]);
+        $techLevels[$tName] = ($v1 === 0xFF) ? null : ($v1 + $ext1 + 1);
+    }
+
+    $playTime = (int) unpack('V', substr($charData, 8 + 0x04E8, 4))[1];
+    $battlePlaceCounts = array_values(unpack('v4', substr($charData, 8 + 0x2C9C, 8)));
+
+    $ep1Online = array_map(
+        'bounty_decrypt_challenge_time',
+        array_values(unpack('V9', substr($charData, 8 + 0x2CB8 + 0x04, 36)))
+    );
+    $ep2Online = array_map(
+        'bounty_decrypt_challenge_time',
+        array_values(unpack('V5', substr($charData, 8 + 0x2CB8 + 0x28, 20)))
+    );
+
+    return [
+        'Account' => ['AccountID' => $accId],
+        'BBCharacterIndex' => $slot,
+        'Name' => $name,
+        'Level' => $level,
+        'EXP' => $exp,
+        'Meseta' => $meseta,
+        'SectionID' => $sectionId,
+        'CharClass' => $charClass,
+        'PlayTimeSeconds' => $playTime,
+        'InventoryItems' => $invItems,
+        'TechniqueLevels' => $techLevels,
+        'NumHPMaterialsUsed' => $hpMats,
+        'NumTPMaterialsUsed' => $tpMats,
+        'NumPowerMaterialsUsed' => $powMats,
+        'NumMindMaterialsUsed' => $mindMats,
+        'NumEvadeMaterialsUsed' => $evdMats,
+        'NumDefMaterialsUsed' => $defMats,
+        'NumLuckMaterialsUsed' => $luckMats,
+        'BattlePlaceCounts' => $battlePlaceCounts,
+        'ChallengeTimesEp1Online' => $ep1Online,
+        'ChallengeTimesEp2Online' => $ep2Online,
+        'LocationFloor' => 0,
+        'LobbyID' => null,
+        'EnemyKillCount' => 0,
+        'RareEnemyKillCount' => 0,
+    ];
+}
+
+/**
+ * Loads all saved character snapshots (.psochar) for an account, keyed by character name.
+ */
+function bounty_load_account_psochar_clients($db, int $accId, ?string $usernameHint = null, ?string $playersDirOverride = null): array
+{
+    $playersDir = $playersDirOverride ?? ($GLOBALS['BOUNTY_PLAYERS_DIR_OVERRIDE'] ?? (function_exists('get_newserv_players_dir') ? get_newserv_players_dir() : ''));
+    $playersDir = rtrim((string) $playersDir, "/\\") . '/';
+    if ($playersDir === '/' || !@is_dir($playersDir)) {
+        return [];
+    }
+
+    $candidates = [];
+    if ($usernameHint !== null && trim($usernameHint) !== '') {
+        $candidates[] = strtolower(trim($usernameHint));
+    }
+    try {
+        $stmt = $db->prepare("SELECT username FROM users WHERE account_id = :acc LIMIT 1");
+        $stmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
+        $uRow = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+        if ($uRow && trim((string) $uRow['username']) !== '') {
+            $uDb = strtolower(trim((string) $uRow['username']));
+            if (!in_array($uDb, $candidates, true)) {
+                $candidates[] = $uDb;
+            }
+        }
+    } catch (Exception $e) {
+        // Proceed with usernameHint only if users query fails.
+    }
+    if (empty($candidates)) {
+        return [];
+    }
+
+    $entries = @scandir($playersDir);
+    if (!is_array($entries)) {
+        return [];
+    }
+
+    $matches = [];
+    foreach ($entries as $fname) {
+        if (!preg_match('/^player_(.+)_(\d+)\.psochar$/i', $fname, $fm)) {
+            continue;
+        }
+        $slot = (int) $fm[2];
+        if ($slot < 0 || $slot > 127) {
+            continue;
+        }
+        $fileUser = strtolower($fm[1]);
+        if (!in_array($fileUser, $candidates, true)) {
+            continue;
+        }
+        $matches[] = ['slot' => $slot, 'path' => $playersDir . $fname];
+    }
+    usort($matches, static fn($a, $b) => $a['slot'] <=> $b['slot']);
+
+    $byName = [];
+    foreach ($matches as $m) {
+        $buf = @file_get_contents($m['path']);
+        if (!is_string($buf)) {
+            continue;
+        }
+        $client = bounty_client_from_psochar($buf, $accId, $m['slot']);
+        if (!$client) {
+            continue;
+        }
+        $cName = $client['Name'];
+        if (!isset($byName[$cName])) {
+            $byName[$cName] = $client;
+            continue;
+        }
+        $prev = $byName[$cName];
+        if (($client['Level'] > $prev['Level'])
+            || ($client['Level'] === $prev['Level'] && $client['PlayTimeSeconds'] > $prev['PlayTimeSeconds'])) {
+            $byName[$cName] = $client;
+        }
+    }
+    return $byName;
+}
+
+/**
+ * Picks the highest-level/playtime character as account primary and merges best Challenge clear times.
+ */
+function bounty_merge_account_primary_client(array $charClients): array
+{
+    $primary = null;
+    foreach ($charClients as $c) {
+        if ($primary === null
+            || (($c['Level'] ?? 0) > ($primary['Level'] ?? 0))
+            || ((($c['Level'] ?? 0) === ($primary['Level'] ?? 0)) && (($c['PlayTimeSeconds'] ?? 0) > ($primary['PlayTimeSeconds'] ?? 0)))) {
+            $primary = $c;
+        }
+    }
+    if ($primary === null) {
+        return [];
+    }
+    $ep1 = array_fill(0, 9, 0xFFFF);
+    $ep2 = array_fill(0, 5, 0xFFFF);
+    foreach ($charClients as $c) {
+        foreach (array_values($c['ChallengeTimesEp1Online'] ?? []) as $i => $t) {
+            if ($i < 9) {
+                $t = (int) $t;
+                if ($t > 0 && $t < $ep1[$i]) {
+                    $ep1[$i] = $t;
+                }
+            }
+        }
+        foreach (array_values($c['ChallengeTimesEp2Online'] ?? []) as $i => $t) {
+            if ($i < 5) {
+                $t = (int) $t;
+                if ($t > 0 && $t < $ep2[$i]) {
+                    $ep2[$i] = $t;
+                }
+            }
+        }
+    }
+    $primary['ChallengeTimesEp1Online'] = $ep1;
+    $primary['ChallengeTimesEp2Online'] = $ep2;
+    return $primary;
+}
+
+/**
+ * One-time idempotent migration: extends expires_at on open daily bounties when moving resets to 11 AM ET.
+ */
+function bounty_extend_open_dailies_once($db, int $seconds = 86400, bool $inTransaction = false): int
+{
+    $hasSettings = $db->querySingle("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'tekker_settings' LIMIT 1");
+    if ($hasSettings && $db->querySingle("SELECT value FROM tekker_settings WHERE key = 'migration_extend_open_dailies_11am_est_v1'") === '1') {
+        return 0;
+    }
+
+    $startedTx = false;
+    if (!$inTransaction) {
+        try {
+            $db->exec("BEGIN IMMEDIATE");
+            $startedTx = true;
+        } catch (Exception $e) {
+            // Caller already holds a transaction (e.g. unit tests); proceed inline.
+        }
+    }
+
+    try {
+        $stmt = $db->prepare("UPDATE player_missions
+                              SET expires_at = expires_at + :sec
+                              WHERE status IN ('queued', 'in_progress', 'rerolling')
+                                AND expires_at IS NOT NULL
+                                AND mission_id IN (SELECT id FROM missions WHERE cadence = 'daily')");
+        $stmt->bindValue(':sec', $seconds, SQLITE3_INTEGER);
+        $stmt->execute();
+        $changed = (int) $db->changes();
+        if ($hasSettings) {
+            $db->exec("INSERT OR REPLACE INTO tekker_settings (key, value) VALUES ('migration_extend_open_dailies_11am_est_v1', '1')");
+        }
+        if ($startedTx) {
+            $db->exec("COMMIT");
+        }
+        return $changed;
+    } catch (Exception $e) {
+        if ($startedTx) {
+            @$db->exec("ROLLBACK");
+        }
+        throw $e;
+    }
+}
+
+/**
+ * Ensures an account has its full active starter set for the current daily and weekly periods.
+ * Safe to invoke during website login, portal board views, and newserv login ticks: skips write locks
+ * when nothing is expired/missing, and queues rows quickly so cron_missions.php activates them async.
+ */
+function bounty_ensure_account_login_starters($db, int $accId, ?string $usernameHint = null, array $liveClientsByName = [], ?int $now = null): int
+{
+    if ($accId <= 0 || !bounty_rework_enabled()) {
+        return 0;
+    }
+    $cfg = bounty_config();
+    if (empty($cfg['earn']['starter_on_login'])) {
+        return 0;
+    }
+    $now = $now ?? time();
+
+    $charClients = bounty_load_account_psochar_clients($db, $accId, $usernameHint);
+    foreach ($liveClientsByName as $cName => $cArr) {
+        if ($cName !== '' && is_array($cArr)) {
+            $charClients[$cName] = $cArr;
+        }
+    }
+    if (empty($charClients)) {
+        return 0;
+    }
+
+    $primaryClient = bounty_merge_account_primary_client($charClients);
+    $battle_on = ((int) ($cfg['earn']['battle_chance'] ?? 0) > 0) || ((int) ($cfg['earn']['normal_battle_chance'] ?? 0) > 0);
+    $challenge_on = ((int) ($cfg['earn']['challenge_chance'] ?? 0) > 0) || ((int) ($cfg['earn']['normal_challenge_chance'] ?? 0) > 0);
+    $battleTarget = min((int) ($cfg['pools']['battle']['daily']['active'] ?? 0), (int) ($cfg['pools']['battle']['daily']['cap'] ?? 0));
+    $challengeTarget = min((int) ($cfg['pools']['challenge']['weekly']['active'] ?? 0), (int) ($cfg['pools']['challenge']['weekly']['cap'] ?? 0));
+    $stdDailyTarget = min((int) ($cfg['pools']['standard']['daily']['active'] ?? 0), (int) ($cfg['pools']['standard']['daily']['free_cap'] ?? 0));
+    $stdWeeklyTarget = min((int) ($cfg['pools']['standard']['weekly']['active'] ?? 0), (int) ($cfg['pools']['standard']['weekly']['free_cap'] ?? 0));
+
+    $stdTargets = (bounty_pool_scope('standard') === 'account') ? ['' => $primaryClient] : $charClients;
+
+    $heldCount = static function ($char, $pool, $cadence) use ($db, $accId, $now): int {
+        list($scope, $sb) = bounty_scope($accId, $char, $pool);
+        $stmt = $db->prepare("SELECT COUNT(*) FROM player_missions pm JOIN missions m ON pm.mission_id = m.id
+                              WHERE $scope AND m.pool = :pool AND m.cadence = :cad
+                                AND pm.status IN ('queued', 'in_progress', 'rerolling')
+                                AND (pm.expires_at IS NULL OR pm.expires_at > :now)");
+        foreach ($sb + [':pool' => [$pool, SQLITE3_TEXT], ':cad' => [$cadence, SQLITE3_TEXT], ':now' => [(int) $now, SQLITE3_INTEGER]] as $k => $v) {
+            $stmt->bindValue($k, $v[0], $v[1]);
+        }
+        $row = $stmt->execute()->fetchArray(SQLITE3_NUM);
+        return (int) ($row[0] ?? 0);
+    };
+
+    $poolMissingCount = static function ($char, $pool, $cadence, int $target, array $sources = []) use ($db, $accId, $now, $heldCount): int {
+        if ($target <= 0) {
+            return 0;
+        }
+        $held = $heldCount($char, $pool, $cadence);
+        if ($held >= $target) {
+            return 0;
+        }
+        $earned = bounty_earned_count($db, $accId, $char, $pool, $cadence, $sources, $now);
+        if ($earned >= $target) {
+            return 0;
+        }
+        return min($target - $held, $target - $earned);
+    };
+
+    // Fast read-only pre-check to avoid taking a SQLite write lock on every page view / cron tick.
+    $expCheck = $db->prepare("SELECT 1 FROM player_missions
+                              WHERE account_id = :acc
+                                AND status IN ('queued', 'in_progress', 'rerolling')
+                                AND expires_at IS NOT NULL
+                                AND expires_at <= :now
+                              LIMIT 1");
+    $expCheck->bindValue(':acc', $accId, SQLITE3_INTEGER);
+    $expCheck->bindValue(':now', (int) $now, SQLITE3_INTEGER);
+    $hasExpired = (bool) $expCheck->execute()->fetchArray(SQLITE3_NUM);
+
+    $needsAny = $hasExpired;
+    if (!$needsAny && $battle_on && $poolMissingCount('', 'battle', 'daily', $battleTarget) > 0) {
+        $needsAny = true;
+    }
+    if (!$needsAny && $challenge_on && $poolMissingCount('', 'challenge', 'weekly', $challengeTarget) > 0) {
+        $needsAny = true;
+    }
+    if (!$needsAny) {
+        foreach ($stdTargets as $cKey => $_cData) {
+            if ($poolMissingCount($cKey, 'standard', 'daily', $stdDailyTarget, ['login', 'completion']) > 0
+                || $poolMissingCount($cKey, 'standard', 'weekly', $stdWeeklyTarget, ['login', 'completion']) > 0) {
+                $needsAny = true;
+                break;
+            }
+        }
+    }
+    if (!$needsAny) {
+        return 0;
+    }
+
+    $startedTx = false;
+    try {
+        $db->exec("BEGIN IMMEDIATE");
+        $startedTx = true;
+    } catch (Exception $e) {
+        // Proceed inline when caller already opened a transaction.
+    }
+
+    $granted = 0;
+    try {
+        bounty_expire_sweep($db, $now);
+
+        if ($battle_on) {
+            $missing = $poolMissingCount('', 'battle', 'daily', $battleTarget);
+            for ($i = 0; $i < $missing; $i++) {
+                if (bounty_earn($db, $accId, '', $primaryClient, 'battle', 'daily', bounty_roll_battle_tier(), 'login', [], $now)) {
+                    $granted++;
+                }
+            }
+        }
+        if ($challenge_on) {
+            $missing = $poolMissingCount('', 'challenge', 'weekly', $challengeTarget);
+            for ($i = 0; $i < $missing; $i++) {
+                if (bounty_earn($db, $accId, '', $primaryClient, 'challenge', 'weekly', bounty_roll_challenge_tier(), 'login', [], $now)) {
+                    $granted++;
+                }
+            }
+        }
+        foreach ($stdTargets as $cKey => $cClient) {
+            $charNameForRow = ($cKey !== '') ? (string) $cKey : ($cClient['Name'] ?? '');
+            $missingDaily = $poolMissingCount($cKey, 'standard', 'daily', $stdDailyTarget, ['login', 'completion']);
+            for ($i = 0; $i < $missingDaily; $i++) {
+                if (bounty_earn($db, $accId, $charNameForRow, $cClient, 'standard', 'daily', bounty_roll_free_tier(), 'login', [], $now)) {
+                    $granted++;
+                }
+            }
+            $missingWeekly = $poolMissingCount($cKey, 'standard', 'weekly', $stdWeeklyTarget, ['login', 'completion']);
+            for ($i = 0; $i < $missingWeekly; $i++) {
+                if (bounty_earn($db, $accId, $charNameForRow, $cClient, 'standard', 'weekly', bounty_roll_free_tier(), 'login', [], $now)) {
+                    $granted++;
+                }
+            }
+        }
+
+        if ($startedTx) {
+            $db->exec("COMMIT");
+        }
+        return $granted;
+    } catch (Exception $e) {
+        if ($startedTx) {
+            @$db->exec("ROLLBACK");
+        }
+        error_log("[BOUNTY] starter grant failed for account {$accId}: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Activates queued/rerolling bounties for offline accounts and offline alt slots within a cron pass budget.
+ */
+function bounty_drain_offline_activations($db, int $maxActivations = 6, array $onlineClients = [], ?callable $canContinue = null, ?int $now = null): int
+{
+    if ($maxActivations <= 0 || !bounty_rework_enabled()) {
+        return 0;
+    }
+    $now = $now ?? time();
+
+    $onlineCharMap = [];
+    $onlineAccMap = [];
+    foreach ($onlineClients as $oc) {
+        $oAcc = (int) ($oc['Account']['AccountID'] ?? 0);
+        if ($oAcc <= 0) {
+            continue;
+        }
+        $onlineAccMap[$oAcc] = true;
+        $oName = (string) ($oc['Name'] ?? '');
+        if ($oName !== '') {
+            $onlineCharMap[$oAcc . "\0" . $oName] = true;
+        }
+    }
+
+    $stmt = $db->prepare("SELECT pm.account_id, pm.character_name, pm.status, m.pool, m.cadence,
+                                 MIN(COALESCE(pm.earned_at, pm.id)) AS first_ts, MIN(pm.id) AS first_id
+                          FROM player_missions pm
+                          JOIN missions m ON pm.mission_id = m.id
+                          WHERE pm.status = 'rerolling'
+                             OR (pm.status = 'queued' AND (pm.expires_at IS NULL OR pm.expires_at > :now))
+                          GROUP BY pm.account_id, pm.character_name, pm.status, m.pool, m.cadence
+                          ORDER BY CASE WHEN pm.status = 'rerolling' THEN 0 ELSE 1 END, first_ts ASC, first_id ASC");
+    $stmt->bindValue(':now', (int) $now, SQLITE3_INTEGER);
+    $res = $stmt->execute();
+
+    $candidates = [];
+    while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+        $candidates[] = $r;
+    }
+    if (empty($candidates)) {
+        return 0;
+    }
+
+    $recentTitles = [];
+    $rm = $db->query("SELECT title FROM missions WHERE title != '' ORDER BY id DESC LIMIT 15");
+    if ($rm) {
+        while ($row = $rm->fetchArray(SQLITE3_ASSOC)) {
+            $recentTitles[] = $row['title'];
+        }
+        $rm->finalize();
+    }
+    $recentTitlesStr = empty($recentTitles) ? 'None' : implode(', ', $recentTitles);
+
+    $poolsCfg = bounty_config()['pools'];
+    $slotLimitFor = static function ($pool, $cadence) use ($poolsCfg): int {
+        if ($pool === 'standard') {
+            return (int) ($poolsCfg['standard'][$cadence]['active'] ?? 3);
+        }
+        if ($pool === 'drop') {
+            return (int) ($poolsCfg['drop']['active'] ?? 5);
+        }
+        if ($pool === 'battle') {
+            return (int) ($poolsCfg['battle']['daily']['active'] ?? 3);
+        }
+        if ($pool === 'challenge') {
+            return (int) ($poolsCfg['challenge']['weekly']['active'] ?? 3);
+        }
+        if ($pool === 'contract') {
+            return (int) ($poolsCfg['contract']['held_max'] ?? 3);
+        }
+        return 3;
+    };
+
+    $charCache = [];
+    $langCache = [];
+    $done = 0;
+
+    foreach ($candidates as $cand) {
+        if ($done >= $maxActivations || ($canContinue !== null && !$canContinue())) {
+            break;
+        }
+        $accId = (int) $cand['account_id'];
+        $charName = (string) ($cand['character_name'] ?? '');
+        $status = (string) $cand['status'];
+        $pool = (string) ($cand['pool'] ?? 'standard');
+        $cadence = $cand['cadence'] ?? null;
+
+        if ($charName !== '' && isset($onlineCharMap[$accId . "\0" . $charName])) {
+            continue;
+        }
+        if ($charName === '' && isset($onlineAccMap[$accId])) {
+            continue;
+        }
+
+        if ($status !== 'rerolling') {
+            $active = bounty_active_count($db, $accId, $charName, $pool, $pool === 'drop' ? null : $cadence);
+            if ($active >= $slotLimitFor($pool, $cadence)) {
+                continue;
+            }
+        }
+
+        if (!isset($charCache[$accId])) {
+            $charCache[$accId] = bounty_load_account_psochar_clients($db, $accId);
+        }
+        $charClients = $charCache[$accId];
+        $client = ($charName !== '' && isset($charClients[$charName]))
+            ? $charClients[$charName]
+            : (($charName === '' && !empty($charClients)) ? bounty_merge_account_primary_client($charClients) : []);
+        if (empty($client)) {
+            $client = [
+                'Account' => ['AccountID' => $accId],
+                'Name' => ($charName !== '' ? $charName : 'Hunter'),
+                'Level' => 1,
+                'CharClass' => 'HUmar',
+                'SectionID' => 'Viridia',
+                'LocationFloor' => 0,
+                'EnemyKillCount' => 0,
+                'RareEnemyKillCount' => 0,
+            ];
+        }
+
+        if (!isset($langCache[$accId])) {
+            $lStmt = $db->prepare("SELECT language FROM users WHERE account_id = :acc LIMIT 1");
+            $lStmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
+            $lRow = $lStmt->execute()->fetchArray(SQLITE3_ASSOC);
+            $langCache[$accId] = strtolower(trim((string) ($lRow['language'] ?? 'en'))) ?: 'en';
+        }
+
+        $activeTypes = [];
+        list($tScope, $tBinds) = bounty_scope($accId, $charName, $pool);
+        $atStmt = $db->prepare("SELECT DISTINCT m.goal_type FROM player_missions pm JOIN missions m ON pm.mission_id = m.id
+                                WHERE $tScope AND pm.status IN ('in_progress', 'rerolling')");
+        foreach ($tBinds as $k => $v) {
+            $atStmt->bindValue($k, $v[0], $v[1]);
+        }
+        $atRes = $atStmt->execute();
+        while ($atRow = $atRes->fetchArray(SQLITE3_ASSOC)) {
+            $activeTypes[] = $atRow['goal_type'];
+        }
+
+        $targetChar = ($charName !== '') ? $charName : (string) $client['Name'];
+        $ctx = [
+            'account_id' => $accId,
+            'char_name' => $targetChar,
+            'user_lang' => $langCache[$accId],
+            'curr_f' => 0,
+            'active_types' => $activeTypes,
+            'recent_titles' => $recentTitlesStr,
+            'suppress_mail' => true,
+            'only_pool' => ($status === 'rerolling') ? null : $pool,
+            'now' => $now,
+        ];
+
+        while ($done < $maxActivations && ($canContinue === null || $canContinue())) {
+            $filled = bounty_activate_next($db, $accId, $targetChar, $client, $ctx);
+            if (!$filled) {
+                break;
+            }
+            $done++;
+            if (is_array($filled)) {
+                $ctx['active_types'][] = $filled['goal_type'];
+                $recentTitlesStr = ($recentTitlesStr === 'None' || $recentTitlesStr === '')
+                    ? $filled['title']
+                    : ($filled['title'] . ', ' . $recentTitlesStr);
+                $ctx['recent_titles'] = $recentTitlesStr;
+            }
+        }
+    }
+
+    return $done;
 }
 
 // ---------------------------------------------------------------------------
@@ -1721,6 +2336,8 @@ function bounty_tick_for_client($db, array $client, array $ctx)
         }
     }
 
+    $now = $ctx['now'] ?? null;
+
     // Completing bounties earns more (point 4)
     $battle_on = ((int) ($cfg['earn']['battle_chance'] ?? 0) > 0) || ((int) ($cfg['earn']['normal_battle_chance'] ?? 0) > 0);
     $challenge_on = ((int) ($cfg['earn']['challenge_chance'] ?? 0) > 0) || ((int) ($cfg['earn']['normal_challenge_chance'] ?? 0) > 0);
@@ -1728,44 +2345,61 @@ function bounty_tick_for_client($db, array $client, array $ctx)
         $mpool = $m['pool'] ?? null;
         if ($mpool === 'standard' && in_array($m['cadence'] ?? null, ['daily', 'weekly'], true)) {
             for ($i = 0; $i < (int) $cfg['earn']['completion_grants']; $i++) {
-                bounty_try_free_earn($db, $acc, $char, $client, $m['cadence'], 'completion');
+                bounty_try_free_earn($db, $acc, $char, $client, $m['cadence'], 'completion', $now);
             }
         } elseif ($mpool === 'battle' && $battle_on) {
             for ($i = 0; $i < (int) $cfg['earn']['completion_grants']; $i++) {
-                bounty_try_mode_earn($db, $acc, $char, $client, 'battle');
+                bounty_try_mode_earn($db, $acc, $char, $client, 'battle', $now);
             }
         } elseif ($mpool === 'challenge' && $challenge_on) {
             for ($i = 0; $i < (int) $cfg['earn']['completion_grants']; $i++) {
-                bounty_try_mode_earn($db, $acc, $char, $client, 'challenge');
+                bounty_try_mode_earn($db, $acc, $char, $client, 'challenge', $now);
             }
         }
     }
 
+    // Ensure full starter sets on first in-game login in this period (before login rolls into Up next)
+    bounty_ensure_account_login_starters($db, (int) $acc, null, [(string) $char => $client], $now);
+
     // Being logged in earns more (point 4)
     if (mt_rand(1, 100) <= (int) $cfg['earn']['login_daily_chance']) {
-        bounty_try_free_earn($db, $acc, $char, $client, 'daily', 'login');
+        bounty_try_free_earn($db, $acc, $char, $client, 'daily', 'login', $now);
     }
     if (mt_rand(1, 100) <= (int) $cfg['earn']['login_weekly_chance']) {
-        bounty_try_free_earn($db, $acc, $char, $client, 'weekly', 'login');
+        bounty_try_free_earn($db, $acc, $char, $client, 'weekly', 'login', $now);
     }
 
     // Playing Battle, Challenge, or Normal/Solo games earns those pools' bounties within caps
     if ($lobby && !empty($lobby['is_game'])) {
         if ($lobby['mode'] === 'Battle' && mt_rand(1, 100) <= (int) $cfg['earn']['battle_chance']) {
-            bounty_try_mode_earn($db, $acc, $char, $client, 'battle');
+            bounty_try_mode_earn($db, $acc, $char, $client, 'battle', $now);
         } elseif ($lobby['mode'] === 'Challenge' && mt_rand(1, 100) <= (int) $cfg['earn']['challenge_chance']) {
-            bounty_try_mode_earn($db, $acc, $char, $client, 'challenge');
+            bounty_try_mode_earn($db, $acc, $char, $client, 'challenge', $now);
         } elseif (in_array($lobby['mode'], ['Normal', 'Solo'], true)) {
             if (mt_rand(1, 100) <= (int) ($cfg['earn']['normal_battle_chance'] ?? 0)) {
-                bounty_try_mode_earn($db, $acc, $char, $client, 'battle');
+                bounty_try_mode_earn($db, $acc, $char, $client, 'battle', $now);
             }
             if (mt_rand(1, 100) <= (int) ($cfg['earn']['normal_challenge_chance'] ?? 0)) {
-                bounty_try_mode_earn($db, $acc, $char, $client, 'challenge');
+                bounty_try_mode_earn($db, $acc, $char, $client, 'challenge', $now);
             }
         }
     }
 
-    bounty_activate_next($db, $acc, $char, $client, $ctx);
+    $maxAct = max(1, (int) ($ctx['max_activations'] ?? 1));
+    for ($i = 0; $i < $maxAct; $i++) {
+        $filled = bounty_activate_next($db, $acc, $char, $client, $ctx);
+        if (!$filled) {
+            break;
+        }
+        if (!empty($ctx['on_activated']) && is_callable($ctx['on_activated'])) {
+            ($ctx['on_activated'])();
+        }
+        if (is_array($filled)) {
+            $ctx['active_types'][] = $filled['goal_type'];
+            $rt = (string) ($ctx['recent_titles'] ?? '');
+            $ctx['recent_titles'] = ($rt === 'None' || $rt === '') ? $filled['title'] : ($filled['title'] . ', ' . $rt);
+        }
+    }
     return $kills['state'];
 }
 
