@@ -105,7 +105,8 @@ check($defaults['enabled'] === false, 'rework is dark-launched (enabled: false) 
 check(($defaults['legacy_grace_days'] ?? 0) === 30, 'legacy in_progress grace window defaults to 30 days');
 check(($defaults['reset'] ?? []) === ['daily_hour' => 11, 'weekly_day' => 1, 'timezone' => 'America/New_York'], 'resets default to 11:00 AM America/New_York with Monday weekly reset');
 check(($defaults['earn']['starter_on_login'] ?? false) === true, 'starter_on_login defaults to true');
-check((int) ($defaults['earn']['max_activations_per_pass'] ?? 0) === 6, 'max_activations_per_pass defaults to 6');
+check((int) ($defaults['earn']['max_activations_per_pass'] ?? 0) === 2, 'max_activations_per_pass defaults to 2');
+check((int) ($defaults['earn']['max_lore_upgrades_per_pass'] ?? 0) === 2, 'max_lore_upgrades_per_pass defaults to 2');
 check($db->querySingle("SELECT value FROM tekker_settings WHERE key = 'migration_extend_open_dailies_11am_est_v1'") === '1', 'db migration stamps +24h open daily extension key');
 $loadedCfg = bounty_config();
 check(is_bool(bounty_rework_enabled()), 'bounty_rework_enabled returns a boolean');
@@ -1556,8 +1557,72 @@ foreach (glob("$tmpPlayersDir/*") ?: [] as $tf) {
 @rmdir($tmpPlayersDir);
 unset($GLOBALS['BOUNTY_PLAYERS_DIR_OVERRIDE']);
 
+// ---------------------------------------------------------------------------
+// 14. RPM 429 cooldowns, lore board spread & automatic fallback story upgrades
+// ---------------------------------------------------------------------------
+check(bounty_gemini_429_cooldown_seconds('{"error":{"message":"Quota exceeded for quota metric free_tier_requests"}}') === 65, 'RPM free_tier_requests 429 cools down for 65s instead of 1h');
+check(bounty_gemini_429_cooldown_seconds('{"details":[{"retryDelay":"22.1s"}]}') === 28, '429 with RetryInfo retryDelay adds 5s buffer');
+check(bounty_gemini_429_cooldown_seconds('{"error":{"message":"GenerateRequestsPerDayPerProjectPerModel exceeded"}}') === 3600, 'daily RPD 429 keeps 3600s cooldown');
+check(bounty_clean_recent_titles('Guild Posting: Forest (Normal), Quiet Watch, Guild Posting: Lab (Hard)') === 'Quiet Watch', 'recent titles cleaner excludes temporary Guild Posting fallbacks');
+$balancedHub = bounty_pick_hub_setting(null, ['ep4_pioneer2', 'ep4_pioneer2', 'ep1_pioneer2']);
+check($balancedHub[1] === 'ep2_lab', 'hub selector picks least-used hub setting across active board');
+
+// Simulated Gemini exhaustion -> fallback story marked & later auto-upgraded preserving mechanics
+$db->exec("INSERT INTO users (username, email, account_id, language) VALUES ('t15', 't15@x', 9015, 'en')");
+bounty_config(['enabled' => true, 'earn' => ['starter_on_login' => false, 'login_daily_chance' => 0, 'login_weekly_chance' => 0]]);
+$ivy = client('Ivy', 85, ['Account' => ['AccountID' => 9015]]);
+ob_start();
+$fbPm1 = bounty_earn($db, 9015, 'Ivy', $ivy, 'standard', 'daily', 'common', 'login', [], $week2);
+$fbPm2 = bounty_earn($db, 9015, 'Ivy', $ivy, 'battle', 'daily', 'rare', 'login', [], $week2);
+$fbPm3 = bounty_earn($db, 9015, 'Ivy', $ivy, 'challenge', 'weekly', 'uncommon', 'login', [], $week2);
+$GLOBALS['BOUNTY_FORCE_FALLBACK'] = true;
+for ($i = 0; $i < 3; $i++) {
+    tick($db, $ivy, null, null, []);
+}
+$duringOutage = bounty_upgrade_fallback_stories($db, 10);
+unset($GLOBALS['BOUNTY_FORCE_FALLBACK']);
+ob_end_clean();
+
+check($duringOutage === 0, 'fallback story upgrader stays idle while Gemini models are unavailable');
+$fbRows = acc_rows($db, 9015);
+check(count($fbRows) === 3, 'all 3 fallback bounties activated during simulated outage');
+$beforeSnapshot = [];
+foreach ($fbRows as $r) {
+    $mMeta = json_decode((string) ($db->querySingle("SELECT meta FROM missions WHERE id = " . (int) $r['mission_id'])), true);
+    check(strpos($r['title'], 'Guild Posting:') === 0 && !empty($mMeta['lore_fallback']), "outage bounty #{$r['mission_id']} saved fallback title and lore_fallback flag");
+    $beforeSnapshot[(int) $r['mission_id']] = [
+        'goal_type' => $r['goal_type'],
+        'goal_target' => $r['goal_target'],
+        'reward_item_string' => $r['reward_item_string'],
+        'reward_spec' => $r['reward_spec'],
+    ];
+}
+// Also insert a legacy-style Guild Posting row without lore_fallback flag in meta, and test ready_to_redeem preservation
+$db->exec("UPDATE player_missions SET progress = '{\"count\":2}' WHERE id = $fbPm2");
+$db->exec("UPDATE player_missions SET status = 'ready_to_redeem' WHERE id = $fbPm3");
+ob_start();
+$legacyFbPm = bounty_earn($db, 9015, 'Ivy', $ivy, 'standard', 'weekly', 'common', 'login', [], $week2);
+$legacyMid = (int) $db->querySingle("SELECT mission_id FROM player_missions WHERE id = $legacyFbPm");
+$db->exec("UPDATE missions SET title = 'Guild Posting: Caves (Normal)', description = 'Static placeholder.', goal_type = 'BOSS_HUNT', goal_target = '3@Normal', reward_item_string = 'MESETA:1000', meta = '{}' WHERE id = $legacyMid");
+$db->exec("UPDATE player_missions SET status = 'in_progress', activated_at = $week2 WHERE id = $legacyFbPm");
+$upgradedFirst = bounty_upgrade_fallback_stories($db, 10, [$ivy]);
+$upgradedSecond = bounty_upgrade_fallback_stories($db, 10, [$ivy]);
+ob_end_clean();
+
+check($upgradedFirst === 4 && $upgradedSecond === 0, "fallback auto-upgrader rewrote all 4 fallback bounties once Gemini recovered (first=$upgradedFirst, second=$upgradedSecond)");
+foreach ($beforeSnapshot as $mid => $snap) {
+    $afterM = $db->querySingle("SELECT title, description, goal_type, goal_target, reward_item_string, reward_spec, meta FROM missions WHERE id = $mid", true);
+    $afterMeta = json_decode((string) ($afterM['meta'] ?? ''), true) ?: [];
+    check(strpos($afterM['title'], 'Guild Posting:') !== 0 && empty($afterMeta['lore_fallback']) && !empty($afterMeta['quest_giver']), "upgraded mission #$mid now has creative title and cleared lore_fallback flag");
+    check($afterM['goal_type'] === $snap['goal_type'] && $afterM['goal_target'] === $snap['goal_target'] && $afterM['reward_item_string'] === $snap['reward_item_string'] && $afterM['reward_spec'] === $snap['reward_spec'], "upgraded mission #$mid preserved mechanics and rewards identically");
+}
+$legacyAfter = $db->querySingle("SELECT title, goal_type, goal_target, reward_item_string, meta FROM missions WHERE id = $legacyMid", true);
+check(strpos($legacyAfter['title'], 'Guild Posting:') !== 0 && $legacyAfter['goal_type'] === 'BOSS_HUNT' && $legacyAfter['goal_target'] === '3@Normal', 'legacy Guild Posting row without meta.lore_fallback also auto-upgraded safely');
+check($db->querySingle("SELECT progress FROM player_missions WHERE id = $fbPm2") === '{"count":2}', 'progress JSON preserved untouched during story upgrade');
+check($db->querySingle("SELECT status FROM player_missions WHERE id = $fbPm3") === 'ready_to_redeem', 'ready_to_redeem status preserved untouched during story upgrade');
+
 @unlink($tmp_db);
-foreach ([9001, 9002, 9003, 9004, 9011, 9012, 9013, 9014] as $acc) {
+foreach ([9001, 9002, 9003, 9004, 9011, 9012, 9013, 9014, 9015] as $acc) {
     @unlink(__DIR__ . '/../db/.bounty_' . $acc); // board refresh markers for the test accounts
 }
 @unlink("$tmp_db-wal");
