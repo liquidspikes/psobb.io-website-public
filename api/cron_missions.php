@@ -52,7 +52,8 @@ $state_cache_file = __DIR__ . '/../db/.cron_player_state.json';
 $script_start = time();
 // Loop for up to 55 seconds to fit within a standard 1-minute crontab resolution
 while (time() - $script_start < 55) {
-    $pass_budget = max(1, (int) (bounty_config()['earn']['max_activations_per_pass'] ?? 6));
+    $pass_budget = max(1, (int) (bounty_config()['earn']['max_activations_per_pass'] ?? 2));
+    $upgrade_budget = max(1, (int) (bounty_config()['earn']['max_lore_upgrades_per_pass'] ?? 2));
     $pass_activated = 0;
 
     if (bounty_rework_enabled()) {
@@ -73,6 +74,12 @@ while (time() - $script_start < 55) {
                 return (time() - $script_start) < 46;
             });
             if ($drained) echo "[BOUNTY] Activated {$drained} queued offline bounties.\n";
+            if ($drained < $pass_budget && (time() - $script_start) < 46) {
+                $upgraded = bounty_upgrade_fallback_stories($db, min($upgrade_budget, $pass_budget - $drained), [], function () use ($script_start) {
+                    return (time() - $script_start) < 46;
+                });
+                if ($upgraded) echo "[BOUNTY] Upgraded {$upgraded} fallback bounty stories via Gemini.\n";
+            }
         }
         sleep(10);
         continue;
@@ -996,11 +1003,20 @@ if (!empty($pending_logins)) {
 }
 
     // Drain any queued offline/website-login bounties or alt character slots within the remaining pass budget
+    $drained = 0;
     if (bounty_rework_enabled() && $pass_activated < $pass_budget && (time() - $script_start) < 46) {
         $drained = bounty_drain_offline_activations($db, $pass_budget - $pass_activated, $clients, function () use ($script_start) {
             return (time() - $script_start) < 46;
         });
         if ($drained) echo "[BOUNTY] Activated {$drained} queued offline bounties.\n";
+    }
+
+    // Automatically upgrade any temporary fallback stories ("Guild Posting: ...") once Gemini is off cooldown
+    if (bounty_rework_enabled() && ($pass_activated + $drained) < $pass_budget && (time() - $script_start) < 46) {
+        $upgraded = bounty_upgrade_fallback_stories($db, min($upgrade_budget, $pass_budget - $pass_activated - $drained), $clients, function () use ($script_start) {
+            return (time() - $script_start) < 46;
+        });
+        if ($upgraded) echo "[BOUNTY] Upgraded {$upgraded} fallback bounty stories via Gemini.\n";
     }
 
     // 4. Save state

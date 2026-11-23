@@ -163,7 +163,7 @@ function bounty_setting_for_ep1_floor($floor)
  *
  * @param int|null $seed When set, selects deterministically instead of randomly.
  */
-function bounty_pick_hub_setting($seed = null)
+function bounty_pick_hub_setting($seed = null, array $activeSettings = [])
 {
     $lore = bounty_lore();
     $hubs = $lore['world']['hubs'] ?? ['1' => 'ep1_pioneer2', '2' => 'ep2_lab', '4' => 'ep4_pioneer2'];
@@ -180,6 +180,22 @@ function bounty_pick_hub_setting($seed = null)
         ksort($available);
         $eps = array_keys($available);
         $ep = $eps[abs((int) $seed) % count($eps)];
+        return [$ep, $available[$ep]];
+    }
+    if (!empty($activeSettings)) {
+        $counts = [];
+        foreach ($available as $ep => $sid) {
+            $c = 0;
+            foreach ($activeSettings as $used) {
+                if ((string) $used === (string) $sid) {
+                    $c++;
+                }
+            }
+            $counts[$ep] = $c;
+        }
+        $minCount = min($counts);
+        $leastUsed = array_keys(array_filter($counts, static fn($c) => $c === $minCount));
+        $ep = $leastUsed[array_rand($leastUsed)];
         return [$ep, $available[$ep]];
     }
     $ep = array_rand($available);
@@ -234,12 +250,36 @@ function bounty_pick_giver_seeded($setting_id, $seed = null)
 }
 
 /**
- * Picks a quest giver from the setting's era-appropriate cast.
+ * Picks a quest giver from the setting's era-appropriate cast, avoiding recently used names when possible.
  *
  * @return array|null ['id'=>ns_id, ...card] or null if the setting has no cast.
  */
-function bounty_pick_giver($setting_id)
+function bounty_pick_giver($setting_id, array $avoidNames = [])
 {
+    if (!empty($avoidNames)) {
+        $lore = bounty_lore();
+        $setting = $lore['settings'][$setting_id] ?? null;
+        if ($setting && !empty($setting['cast'])) {
+            $fresh = [];
+            foreach ($setting['cast'] as $id) {
+                $name = (string) ($lore['cast'][$id]['name'] ?? '');
+                $used = false;
+                foreach ($avoidNames as $av) {
+                    if ($name !== '' && strcasecmp($name, (string) $av) === 0) {
+                        $used = true;
+                        break;
+                    }
+                }
+                if (!$used && isset($lore['cast'][$id])) {
+                    $fresh[] = $id;
+                }
+            }
+            if ($fresh) {
+                $pick = $fresh[array_rand($fresh)];
+                return ['id' => $pick] + $lore['cast'][$pick];
+            }
+        }
+    }
     return bounty_pick_giver_seeded($setting_id, null);
 }
 
@@ -631,7 +671,7 @@ function bounty_clean_recent_titles($recent_titles)
     $seen = [];
     foreach ($parts as $part) {
         $t = trim(preg_replace('/^(?:Operation|Protocol|Project|Directive|Contract)\s*:\s*/iu', '', (string) $part));
-        if ($t === '' || strcasecmp($t, 'None') === 0) {
+        if ($t === '' || strcasecmp($t, 'None') === 0 || stripos($t, 'Guild Posting:') === 0) {
             continue;
         }
         $key = function_exists('mb_strtolower') ? mb_strtolower($t, 'UTF-8') : strtolower($t);
@@ -685,7 +725,7 @@ THE JOB (the server has fixed the mechanics; do not change them):
 - The client is " . preg_replace_callback('/^(A|An|The) /', fn($m) => strtolower($m[0]), $job['quest_giver']) . ". Tell it from their side, in their voice.{$job['hex_twist']}
 - Give the client a believable, specific reason to want exactly this objective done now (a client who never explains themselves can set terms instead). Weave the hunter's name in naturally once (do not always put it in the opening clause, and never open with \"Listen up\", \"Listen here\", \"Listen closely\", \"Listen to me\" or \"Attention\").
 - The objective names its target for the hunter's records only. If the setting card says people do not yet know a creature's name or nature, the client must describe it only as people would at this moment (for example, \"whatever waits at the heart of the ruins\").
-- Description: 2 to 4 sentences, under 600 characters, opening straight in the client's situation, complaint, observation or terms with varied sentence structure. Title: 2 to 6 words, specific, grounded in PSO's Hunter's Guild style (like 'Missing Partner', 'A Debt in the Caves', 'Samples from Below', 'Quiet Watch'), and NEVER prefixed with 'Operation:', 'Protocol:', 'Project:', 'Directive:' or 'Contract:'.
+- Description: 2 to 4 sentences, under 600 characters, opening straight in the client's situation, complaint, observation or terms with varied sentence structure — grounded in concrete personal stakes (a debt, private wager, salvage dispute, lab/medical shortage, missing partner, or field rumour). Title: 2 to 6 words, specific, grounded in PSO's Hunter's Guild style (like 'Missing Partner', 'A Debt in the Caves', 'Samples from Below', 'Quiet Watch'), NEVER prefixed with 'Operation:', 'Protocol:', 'Project:', 'Directive:' or 'Contract:', and NEVER generic training/bureaucracy clichés like 'Testing ...', 'Combat Readiness ...', 'Readiness Check', '... Assessment', or '... Evaluation'.
 - Recently posted titles on this server: [ {$clean_recent} ]. Do not repeat their words, sentence shapes, plots or tropes.
 ";
     return $prompt;

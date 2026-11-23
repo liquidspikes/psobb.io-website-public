@@ -68,7 +68,9 @@ function bounty_default_config()
             // Grant a full active starter set at first login in each period (website or in-game).
             'starter_on_login' => true,
             // Maximum queued/rerolling activations processed per cron pass.
-            'max_activations_per_pass' => 6,
+            'max_activations_per_pass' => 2,
+            // Maximum fallback stories ("Guild Posting: ...") upgraded via Gemini per cron pass when idle.
+            'max_lore_upgrades_per_pass' => 2,
             // Chance per cron pass (about once a minute) while logged in, if under the cap.
             'login_daily_chance' => 10,
             'login_weekly_chance' => 3,
@@ -1328,28 +1330,153 @@ function bounty_pick_rework_objective(array $client, array $row, $curr_f, array 
         $obj['difficulty'] = $diff;
     }
 
-    $obj['extra_lines'] = [
+    $obj['extra_lines'] = bounty_extra_lines_for_row($row, $pool, $cadence, $tier);
+    return $obj;
+}
+
+/**
+ * Shared prompt extra-lines builder for new activations and fallback story upgrades.
+ */
+function bounty_extra_lines_for_row(array $row, string $pool, ?string $cadence, string $tier): array
+{
+    $lines = [
         'Bounty tier: ' . bounty_tier_label($tier) . ' (' . strtolower(bounty_kind_label($pool, $cadence)) . '). '
         . (in_array($tier, ['ultra', 'mythic'], true) ? 'An exceptional job: let the client and the stakes be worthy of it.' : 'Let the stakes fit the tier.'),
     ];
     if ($pool === 'challenge' && $tier === 'mythic') {
-        $obj['extra_lines'][] = 'Its reward is one of the rarest finds on Ragol, kept for hunters who complete a full trial run.';
+        $lines[] = 'Its reward is one of the rarest finds on Ragol, kept for hunters who complete a full trial run.';
     }
     if ($cadence === 'weekly' && $pool !== 'challenge') {
-        $obj['extra_lines'][] = 'It runs for the rest of the week, so it is a longer piece of work than a day job.';
+        $lines[] = 'It runs for the rest of the week, so it is a longer piece of work than a day job.';
     }
     if ($pool === 'contract') {
-        $obj['extra_lines'][] = 'It is a contract: one of the biggest jobs the guild posts, with no deadline.';
+        $lines[] = 'It is a contract: one of the biggest jobs the guild posts, with no deadline.';
     }
     if ($pool === 'drop' && !empty($row['meta'])) {
-        $meta = json_decode($row['meta'], true) ?: [];
+        $meta = json_decode((string) $row['meta'], true) ?: [];
         // Rare-enemy drops name the creature. It may belong to another area or a later time than
         // this setting, so the story may use it only when the setting card lists it.
         if (!empty($meta['dropped_by']) && $meta['dropped_by'] !== 'a boss') {
-            $obj['extra_lines'][] = 'The hunter came by this job after defeating a rare creature, ' . $meta['dropped_by'] . '. Mention it only if the setting card lists that creature; otherwise leave it out.';
+            $lines[] = 'The hunter came by this job after defeating a rare creature, ' . $meta['dropped_by'] . '. Mention it only if the setting card lists that creature; otherwise leave it out.';
         }
     }
-    return $obj;
+    return $lines;
+}
+
+/**
+ * Reconstructs story-generation objective context for an existing bounty row (used to upgrade fallback stories).
+ */
+function bounty_build_objective_for_existing_row(array $row, array $client, array $activeHubSettings = []): array
+{
+    $goal = (string) ($row['goal_type'] ?? '');
+    $target = (string) ($row['goal_target'] ?? '');
+    $pool = (string) ($row['pool'] ?? 'standard');
+    $cadence = (string) ($row['cadence'] ?? 'daily');
+    $tier = (string) ($row['tier'] ?? 'common');
+    $level = max(1, (int) ($client['Level'] ?? 1));
+    $classStr = pso_resolve_class_name($client['CharClass'] ?? ($client['Class'] ?? 0), 'Hunter');
+    $meta = json_decode((string) ($row['meta'] ?? ''), true) ?: [];
+    $minDiff = $meta['min_difficulty'] ?? null;
+
+    $loreCtx = bounty_lore_setting_for_objective($goal, $target, '', '');
+    $ep = (int) ($loreCtx['episode'] ?? 1);
+    $sid = (string) ($loreCtx['setting_id'] ?? 'ep1_pioneer2');
+    $isLoc = (bool) ($loreCtx['is_location_goal'] ?? false);
+    $locOv = $loreCtx['location_override'] ?? null;
+    $diff = $minDiff ?: (($cadence === 'weekly') ? bounty_weekly_difficulty($level, $tier) : bounty_recommended_difficulty($level));
+    $friendly = '';
+
+    if ($pool === 'battle' || $goal === 'BATTLE_RULE_WINS') {
+        list($q) = bounty_parse_battle_target($target);
+        $rules = bounty_battle_rule_summary($q);
+        list($ep, $sid) = bounty_pick_hub_setting(null, $activeHubSettings);
+        $isLoc = false;
+        $friendly = bounty_battle_objective_text($target);
+        $locOv = "This job is won in sanctioned battle-simulation bouts between hunters, fought in a simulator rather than on Ragol, under these rules: {$rules['name']} ({$rules['rules']}). Do not set it in a field area.";
+    } elseif ($pool === 'challenge' || $goal === 'CHALLENGE_RUN') {
+        $c = bounty_parse_challenge_target($target);
+        $ep = max(1, (int) ($c['episode'] ?: 1));
+        $sid = bounty_lore()['world']['hubs'][(string) $ep] ?? (($ep === 2) ? 'ep2_lab' : 'ep1_pioneer2');
+        $total = bounty_challenge_stage_total($ep);
+        $full = ($c['first'] === 1 && $c['last'] >= $total);
+        $isLoc = false;
+        $diff = 'Normal';
+        $friendly = bounty_challenge_objective_text($target);
+        $locOv = 'This job is a Challenge Mode trial: a set course where the team starts over with basic, issued gear and must clear it against the clock. '
+            . ($full ? "It is the whole Episode {$ep} course, start to finish, a long and demanding run." : 'Name the course only in general terms.');
+    } elseif (in_array($goal, ['AREA_SWEEP', 'BOSS_HUNT', 'ENEMY_HUNT', 'RARE_HUNT'], true)) {
+        list($wFirst, $wDiff) = bounty_parse_weekly_target($target);
+        $diff = $wDiff ?: $diff;
+        $friendly = bounty_weekly_objective_text($goal, $target);
+        $at = ($diff === 'Ultimate') ? 'on Ultimate' : "on {$diff} or higher";
+        $isLoc = false;
+        if ($goal === 'AREA_SWEEP') {
+            $ep = max(1, (int) ($wFirst ?: 1));
+            $sid = bounty_episode_setting($ep);
+            $locOv = "This is a week-long job that takes the hunter through every area of Episode {$ep} (" . bounty_episode_area_names($ep) . ") {$at}; the client should have a reason to want all of them visited.";
+        } else {
+            list($ep, $sid) = bounty_pick_hub_setting(null, $activeHubSettings);
+            $locOv = "This is a week-long job done wherever the hunter fights on Ragol {$at}; do not tie it to one particular area.";
+        }
+    } elseif (in_array($goal, ['RARE_TARGET', 'EPISODE_RUN'], true)) {
+        $isLoc = false;
+        $parts = explode('@', $target, 2);
+        $diff = $parts[1] ?? $diff;
+        $at = ($diff === 'Ultimate') ? 'on Ultimate' : "on {$diff} or higher";
+        $never = 'A contract never expires: the client will wait for the right hunter, however long it takes.';
+        if ($goal === 'RARE_TARGET') {
+            $segs = explode(':', $parts[0]);
+            $tid = $segs[0] ?? '';
+            $n = max(1, (int) ($segs[1] ?? 1));
+            $ep = max(1, (int) ($segs[2] ?? ($meta['episode'] ?? 1)));
+            $info = bounty_rare_enemy_data()[$tid] ?? null;
+            $epi = $info['episodes']['Ep' . $ep] ?? null;
+            $setting = $epi['settings'][0] ?? null;
+            $sid = ($setting && isset(bounty_lore()['settings'][$setting])) ? $setting : bounty_episode_setting($ep);
+            $friendly = bounty_contract_objective_text($goal, $target);
+            if ($info && $epi) {
+                $where = array_map(static fn($s) => bounty_lore()['settings'][$s]['name'] ?? $s, $epi['settings'] ?? []);
+                $locOv = "This is a contract to hunt a rare creature, the {$info['label']}, which shows itself only rarely (" . implode(', ', $where) . ") {$at}. "
+                    . "The hunter must defeat " . ($n === 1 ? 'one' : $n) . ". It is the creature itself the client wants: name it. {$never}";
+            } else {
+                $locOv = "This is a contract to track down and defeat a rare target {$at}. {$never}";
+            }
+        } else {
+            $segs = explode(':', $parts[0]);
+            $ep = max(1, (int) ($segs[0] ?: 1));
+            $sid = bounty_episode_setting($ep);
+            $friendly = bounty_contract_objective_text($goal, $target);
+            $locOv = "This is a contract for a full Episode {$ep} expedition (" . bounty_episode_area_names($ep) . ") {$at}. {$never}";
+        }
+    } else {
+        if ($goal === 'PLAY_HOURS') {
+            $secs = (int) explode(':', $target)[0];
+            $hours = max(1, (int) round($secs / 3600));
+            $friendly = ($hours === 1) ? '1 hour of play' : "{$hours} hours of play";
+        } elseif ($goal === 'LEVEL') {
+            $friendly = 'Level ' . $target;
+        } else {
+            $friendly = html_entity_decode(strip_tags(getClearObjective($goal, $target, '', '', $minDiff)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+        if (!$isLoc) {
+            list($ep, $sid) = bounty_pick_hub_setting(null, $activeHubSettings);
+        }
+    }
+
+    return [
+        'selected_goal' => $goal,
+        'selected_target_id' => $target,
+        'selected_target_friendly' => $friendly,
+        'mission_episode' => $ep,
+        'setting_id' => $sid,
+        'is_location_goal' => $isLoc,
+        'level' => $level,
+        'class' => $classStr,
+        'difficulty' => $diff,
+        'min_difficulty' => $minDiff,
+        'location_override' => $locOv,
+        'extra_lines' => bounty_extra_lines_for_row($row, $pool, $cadence, $tier),
+    ];
 }
 
 // ---------------------------------------------------------------------------
@@ -1503,11 +1630,47 @@ function bounty_objective_reward_area(array $obj, array $row)
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns active hub settings and quest-giver names currently on the player's board to spread lore variety.
+ */
+function bounty_active_lore_diversity($db, int $accId, string $charName): array
+{
+    $settings = [];
+    $givers = [];
+    $stmt = $db->prepare("SELECT m.meta FROM player_missions pm
+                          JOIN missions m ON pm.mission_id = m.id
+                          WHERE pm.account_id = :acc
+                            AND (pm.character_name = :cname OR pm.character_name = '')
+                            AND pm.status = 'in_progress'");
+    $stmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
+    $stmt->bindValue(':cname', $charName, SQLITE3_TEXT);
+    $res = $stmt->execute();
+    while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+        $m = json_decode((string) ($r['meta'] ?? ''), true);
+        if (!is_array($m)) {
+            continue;
+        }
+        if (!empty($m['setting_id'])) {
+            $settings[] = (string) $m['setting_id'];
+        }
+        if (!empty($m['quest_giver'])) {
+            $givers[(string) $m['quest_giver']] = true;
+        }
+    }
+    return ['settings' => $settings, 'givers' => array_keys($givers)];
+}
+
+/**
  * Gives a queued or rerolling bounty its objective and story, and makes it active.
  */
 function bounty_fill($db, array $row, array $client, array $ctx)
 {
     $obj = bounty_pick_rework_objective($client, $row, $ctx['curr_f'], $ctx['active_types']);
+    $diversity = bounty_active_lore_diversity($db, (int) $ctx['account_id'], (string) ($ctx['char_name'] ?? ($client['Name'] ?? '')));
+    if (empty($obj['is_location_goal'])
+        && !in_array($row['pool'] ?? '', ['challenge', 'contract'], true)
+        && ($obj['selected_goal'] ?? '') !== 'AREA_SWEEP') {
+        list($obj['mission_episode'], $obj['setting_id']) = bounty_pick_hub_setting(null, $diversity['settings']);
+    }
     $story = bounty_write_story($client, $obj, [
         'db' => $db,
         'account_id' => $ctx['account_id'],
@@ -1516,6 +1679,7 @@ function bounty_fill($db, array $row, array $client, array $ctx)
         'completed_any' => false,
         'extra_lines' => $obj['extra_lines'],
         'location_override' => $obj['location_override'],
+        'avoid_givers' => $diversity['givers'],
     ]);
     if (!$story) {
         return false; // stays queued/rerolling; tried again next pass
@@ -1527,9 +1691,18 @@ function bounty_fill($db, array $row, array $client, array $ctx)
         $row['reward_item_string'] = bounty_reward_display($spec);
     }
     $meta = json_decode((string) ($row['meta'] ?? ''), true) ?: [];
-    unset($meta['min_difficulty']);
+    unset($meta['min_difficulty'], $meta['lore_fallback']);
     if (!empty($obj['min_difficulty'])) {
         $meta['min_difficulty'] = $obj['min_difficulty'];
+    }
+    if (!empty($story['setting_id'])) {
+        $meta['setting_id'] = (string) $story['setting_id'];
+    }
+    if (!empty($story['quest_giver'])) {
+        $meta['quest_giver'] = (string) $story['quest_giver'];
+    }
+    if (!empty($story['is_fallback'])) {
+        $meta['lore_fallback'] = true;
     }
     $u = $db->prepare("UPDATE missions SET title = :t, description = :d, goal_type = :g, goal_target = :gt, reward_spec = :spec, reward_item_string = :ri, meta = :meta WHERE id = :mid");
     $u->bindValue(':meta', $meta ? json_encode($meta) : null, $meta ? SQLITE3_TEXT : SQLITE3_NULL);
@@ -2278,6 +2451,161 @@ function bounty_drain_offline_activations($db, int $maxActivations = 6, array $o
     }
 
     return $done;
+}
+
+/**
+ * Automatically upgrades fallback stories ("Guild Posting: ...") once a Gemini model is off cooldown,
+ * preserving goal_type, goal_target, rewards, status, and progress.
+ */
+function bounty_upgrade_fallback_stories($db, int $maxUpgrades = 2, array $onlineClients = [], ?callable $canContinue = null): int
+{
+    if ($maxUpgrades <= 0 || !bounty_rework_enabled() || !bounty_gemini_has_available_model()) {
+        return 0;
+    }
+
+    $stmt = $db->prepare("SELECT pm.id AS pm_id, pm.account_id, pm.character_name, pm.status,
+                                 m.id AS mission_id, m.title, m.goal_type, m.goal_target,
+                                 m.tier, m.cadence, m.pool, m.meta
+                          FROM player_missions pm
+                          JOIN missions m ON pm.mission_id = m.id
+                          WHERE pm.status IN ('in_progress', 'ready_to_redeem')
+                            AND m.cadence IS NOT NULL
+                            AND m.goal_type != 'PENDING'
+                            AND (m.title LIKE 'Guild Posting:%'
+                                 OR COALESCE(json_extract(m.meta, '$.lore_fallback'), 0) = 1)
+                          ORDER BY CASE WHEN pm.status = 'in_progress' THEN 0 ELSE 1 END, pm.id DESC
+                          LIMIT :lim");
+    $stmt->bindValue(':lim', $maxUpgrades * 3, SQLITE3_INTEGER);
+    $res = $stmt->execute();
+
+    $rows = [];
+    while ($r = $res->fetchArray(SQLITE3_ASSOC)) {
+        $rows[] = $r;
+    }
+    if (empty($rows)) {
+        return 0;
+    }
+
+    $onlineByAccChar = [];
+    $onlineByAcc = [];
+    foreach ($onlineClients as $oc) {
+        $oAcc = (int) ($oc['Account']['AccountID'] ?? 0);
+        if ($oAcc <= 0) {
+            continue;
+        }
+        $oName = (string) ($oc['Name'] ?? '');
+        if ($oName !== '') {
+            $onlineByAccChar[$oAcc . "\0" . $oName] = $oc;
+        }
+        $onlineByAcc[$oAcc][$oName] = $oc;
+    }
+
+    $recentTitles = [];
+    $rm = $db->query("SELECT title FROM missions WHERE title != '' AND title NOT LIKE 'Guild Posting:%' ORDER BY id DESC LIMIT 15");
+    if ($rm) {
+        while ($row = $rm->fetchArray(SQLITE3_ASSOC)) {
+            $recentTitles[] = $row['title'];
+        }
+        $rm->finalize();
+    }
+    $recentTitlesStr = empty($recentTitles) ? 'None' : implode(', ', $recentTitles);
+
+    $charCache = [];
+    $langCache = [];
+    $upgraded = 0;
+
+    foreach ($rows as $row) {
+        if ($upgraded >= $maxUpgrades || ($canContinue !== null && !$canContinue())) {
+            break;
+        }
+        if (!bounty_gemini_has_available_model()) {
+            break;
+        }
+
+        $accId = (int) $row['account_id'];
+        $charName = (string) ($row['character_name'] ?? '');
+
+        $client = ($charName !== '' && isset($onlineByAccChar[$accId . "\0" . $charName]))
+            ? $onlineByAccChar[$accId . "\0" . $charName]
+            : [];
+        if (empty($client)) {
+            if (!isset($charCache[$accId])) {
+                $charCache[$accId] = bounty_load_account_psochar_clients($db, $accId);
+                foreach (($onlineByAcc[$accId] ?? []) as $oName => $oc) {
+                    if ($oName !== '') {
+                        $charCache[$accId][$oName] = $oc;
+                    }
+                }
+            }
+            $charClients = $charCache[$accId];
+            $client = ($charName !== '' && isset($charClients[$charName]))
+                ? $charClients[$charName]
+                : (!empty($charClients) ? bounty_merge_account_primary_client($charClients) : []);
+        }
+        if (empty($client)) {
+            $client = [
+                'Account' => ['AccountID' => $accId],
+                'Name' => ($charName !== '' ? $charName : 'Hunter'),
+                'Level' => 1,
+                'CharClass' => 'HUmar',
+                'SectionID' => 'Viridia',
+            ];
+        }
+
+        if (!isset($langCache[$accId])) {
+            $lStmt = $db->prepare("SELECT language FROM users WHERE account_id = :acc LIMIT 1");
+            $lStmt->bindValue(':acc', $accId, SQLITE3_INTEGER);
+            $lRow = $lStmt->execute()->fetchArray(SQLITE3_ASSOC);
+            $langCache[$accId] = strtolower(trim((string) ($lRow['language'] ?? 'en'))) ?: 'en';
+        }
+
+        $diversity = bounty_active_lore_diversity($db, $accId, $charName !== '' ? $charName : (string) $client['Name']);
+        $obj = bounty_build_objective_for_existing_row($row, $client, $diversity['settings']);
+        $story = bounty_write_story($client, $obj, [
+            'db' => $db,
+            'account_id' => $accId,
+            'user_lang' => $langCache[$accId],
+            'recent_titles' => $recentTitlesStr,
+            'completed_any' => false,
+            'extra_lines' => $obj['extra_lines'],
+            'location_override' => $obj['location_override'],
+            'avoid_givers' => $diversity['givers'],
+            'require_live_gemini' => true,
+        ]);
+        if (!$story || !empty($story['is_fallback'])) {
+            break;
+        }
+
+        $meta = json_decode((string) ($row['meta'] ?? ''), true);
+        if (!is_array($meta)) {
+            $meta = [];
+        }
+        unset($meta['lore_fallback']);
+        if (!empty($story['setting_id'])) {
+            $meta['setting_id'] = (string) $story['setting_id'];
+        }
+        if (!empty($story['quest_giver'])) {
+            $meta['quest_giver'] = (string) $story['quest_giver'];
+        }
+
+        $u = $db->prepare("UPDATE missions SET title = :t, description = :d, meta = :meta WHERE id = :mid");
+        $u->bindValue(':t', $story['title'], SQLITE3_TEXT);
+        $u->bindValue(':d', $story['description'], SQLITE3_TEXT);
+        $u->bindValue(':meta', $meta ? json_encode($meta) : null, $meta ? SQLITE3_TEXT : SQLITE3_NULL);
+        $u->bindValue(':mid', (int) $row['mission_id'], SQLITE3_INTEGER);
+        $u->execute();
+
+        @touch(__DIR__ . '/../db/.bounty_' . $accId);
+        if (PHP_SAPI === 'cli') {
+            echo "[BOUNTY] Upgraded fallback mission #{$row['mission_id']}: \"{$story['title']}\"\n";
+        }
+        $recentTitlesStr = ($recentTitlesStr === 'None' || $recentTitlesStr === '')
+            ? $story['title']
+            : ($story['title'] . ', ' . $recentTitlesStr);
+        $upgraded++;
+    }
+
+    return $upgraded;
 }
 
 // ---------------------------------------------------------------------------

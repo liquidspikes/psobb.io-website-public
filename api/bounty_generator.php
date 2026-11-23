@@ -345,12 +345,31 @@ function bounty_write_story(array $client, array $obj, array $ctx)
     $extra_lines = $ctx['extra_lines'] ?? [];
     $location_override = $ctx['location_override'] ?? null;
 
+    $avoidGivers = array_values(array_filter(array_map('strval', (array) ($ctx['avoid_givers'] ?? [])), static fn($n) => $n !== ''));
+
     $lore = bounty_lore();
     $use_lore = $lore && isset($lore['settings'][$setting_id]);
-    $giver = $use_lore ? bounty_pick_giver($setting_id) : null;
+    $giver = $use_lore ? bounty_pick_giver($setting_id, $avoidGivers) : null;
     if ($use_lore && $giver === null) {
         $use_lore = false; // a setting with no cast falls back to the generic prompt
     }
+
+    $pickGeneric = static function (array $pool) use ($avoidGivers): string {
+        if ($avoidGivers) {
+            $filtered = array_values(array_filter($pool, static function ($name) use ($avoidGivers) {
+                foreach ($avoidGivers as $av) {
+                    if (strcasecmp($name, $av) === 0) {
+                        return false;
+                    }
+                }
+                return true;
+            }));
+            if ($filtered) {
+                $pool = $filtered;
+            }
+        }
+        return $pool[array_rand($pool)];
+    };
 
     $quest_giver = "Hunter's Guild";
     $ep_lore_instruction = "";
@@ -358,15 +377,15 @@ function bounty_write_story(array $client, array $obj, array $ctx)
         $quest_giver = $giver['name'];
     } elseif ($mission_episode == 1) {
         $ep1_chars = ['Ash', 'Bernie', 'Sue', 'Kireek', 'Principal Tyrell', 'Irene', 'Nol', 'Alicia Baz', 'Donoph', 'Zoke', 'a WORKS Military Officer', 'a Civilian Refugee'];
-        $quest_giver = $ep1_chars[array_rand($ep1_chars)];
+        $quest_giver = $pickGeneric($ep1_chars);
         $ep_lore_instruction = "The mission takes place during Episode 1. The narrative should heavily involve exploring Ragol, the recent explosion, or the mystery of Red Ring Rico (she is missing, do not make her the quest giver).";
     } elseif ($mission_episode == 2) {
         $ep2_chars = ['Natasha Milarose', 'Elenor', 'Dr. Montague', 'Elly Person', 'Calus', 'a Pioneer 2 Lab Researcher', 'a VR Simulation Engineer'];
-        $quest_giver = $ep2_chars[array_rand($ep2_chars)];
+        $quest_giver = $pickGeneric($ep2_chars);
         $ep_lore_instruction = "The mission takes place during Episode 2. The narrative should heavily involve Gal Da Val Island, the VR spaceships, hidden laboratories, or the dark legacy of Heathcliff Flowen (he is missing/mutated, do not make him the quest giver).";
     } elseif ($mission_episode == 4) {
         $ep4_chars = ['Leo Grahart', 'Momoka', 'Rupika', 'a Pioneer 2 Military Commander', 'a Crater Exploration Surveyor'];
-        $quest_giver = $ep4_chars[array_rand($ep4_chars)];
+        $quest_giver = $pickGeneric($ep4_chars);
         $ep_lore_instruction = "The mission takes place during Episode 4. The narrative should heavily involve the newly discovered Crater, the Subterranean Desert, the impact of the meteorite, and the mysterious new mutants that have appeared.";
     }
 
@@ -431,15 +450,25 @@ The overarching mechanical objective is PRE-LOCKED as follows:
     }
 
     $prompt .= bounty_prompt_tail($user_lang, $selected_goal, $selected_target_id);
-    echo "[CRON] Bounty setting: {$setting_id} (Episode {$mission_episode}), client: {$quest_giver}" . ($use_lore ? "" : " [generic prompt]") . "\n";
+    if (PHP_SAPI === 'cli') {
+        echo "[CRON] Bounty setting: {$setting_id} (Episode {$mission_episode}), client: {$quest_giver}" . ($use_lore ? "" : " [generic prompt]") . "\n";
+    }
 
+    $is_fallback = false;
     $questData = bounty_gemini_json($prompt);
     if (!$questData || !isset($questData['title'], $questData['description'])) {
-        if (isset($GLOBALS['BOUNTY_GEMINI_STUB'])) {
-            echo "[CRON] Failed to generate Gemini response.\n";
+        if (!empty($ctx['require_live_gemini'])) {
             return null;
         }
-        echo "[CRON] Gemini unavailable; using lore-grounded fallback story.\n";
+        if (isset($GLOBALS['BOUNTY_GEMINI_STUB']) && empty($GLOBALS['BOUNTY_FORCE_FALLBACK'])) {
+            if (PHP_SAPI === 'cli') {
+                echo "[CRON] Failed to generate Gemini response.\n";
+            }
+            return null;
+        }
+        if (PHP_SAPI === 'cli') {
+            echo "[CRON] Gemini unavailable; using lore-grounded fallback story.\n";
+        }
         $questData = bounty_fallback_story(
             $obj,
             (string) $quest_giver,
@@ -447,6 +476,7 @@ The overarching mechanical objective is PRE-LOCKED as follows:
             (int) $mission_episode,
             (string) $difficulty
         );
+        $is_fallback = true;
     }
     return [
         'title' => $questData['title'],
@@ -454,6 +484,7 @@ The overarching mechanical objective is PRE-LOCKED as follows:
         'quest_giver' => $quest_giver,
         'setting_id' => $setting_id,
         'episode' => $mission_episode,
+        'is_fallback' => $is_fallback,
     ];
 }
 
@@ -574,12 +605,68 @@ function bounty_parse_gemini_response_json(?string $rawResult): ?array
 }
 
 /**
+ * Computes HTTP 429 cooldown seconds from the API error payload (short backoff for RPM, 3600s for daily quota).
+ */
+function bounty_gemini_429_cooldown_seconds(string $rawBody): int
+{
+    if (preg_match('/per[_\s-]*day|PerDay/i', $rawBody)) {
+        return 3600;
+    }
+    if (preg_match('/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/i', $rawBody, $rm)) {
+        return max(15, min(180, (int) ceil((float) $rm[1]) + 5));
+    }
+    return 65;
+}
+
+/**
+ * Returns true if at least one candidate Gemini/Gemma model is configured and not in cooldown.
+ */
+function bounty_gemini_has_available_model(): bool
+{
+    if (!empty($GLOBALS['BOUNTY_FORCE_FALLBACK'])) {
+        return false;
+    }
+    if (isset($GLOBALS['BOUNTY_GEMINI_STUB']) && is_callable($GLOBALS['BOUNTY_GEMINI_STUB'])) {
+        return true;
+    }
+    global $GEMINI_API_KEY, $GEMINI_MODEL;
+    if (empty($GEMINI_API_KEY)) {
+        return false;
+    }
+    if (!empty($_ENV['GEMINI_API_BASE'])) {
+        return true;
+    }
+    $cooldownFile = __DIR__ . '/../db/.gemini_model_cooldowns.json';
+    $now = time();
+    $cooldowns = [];
+    if (is_readable($cooldownFile)) {
+        $decoded = json_decode((string) @file_get_contents($cooldownFile), true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $k => $until) {
+                if ((int) $until > $now) {
+                    $cooldowns[(string) $k] = (int) $until;
+                }
+            }
+        }
+    }
+    foreach (bounty_gemini_model_candidates($GEMINI_MODEL ?? '') as $model) {
+        if (($cooldowns[$model] ?? 0) <= $now) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Sends one prompt to Gemini and returns the decoded JSON object it answers with, or null.
  * GEMINI_API_BASE in .env can point the call elsewhere (a proxy, or a stub for testing).
  */
 function bounty_gemini_json($prompt)
 {
     global $GEMINI_API_KEY, $GEMINI_MODEL;
+    if (!empty($GLOBALS['BOUNTY_FORCE_FALLBACK'])) {
+        return null;
+    }
     // Test seam: api/test_bounty_system.php answers prompts itself instead of calling Gemini.
     if (isset($GLOBALS['BOUNTY_GEMINI_STUB']) && is_callable($GLOBALS['BOUNTY_GEMINI_STUB'])) {
         return ($GLOBALS['BOUNTY_GEMINI_STUB'])($prompt);
@@ -647,7 +734,7 @@ function bounty_gemini_json($prompt)
         }
 
         if ($code === 429) {
-            $ttl = (stripos((string) $result, 'per day') !== false || stripos((string) $result, 'free_tier_requests') !== false) ? 3600 : 900;
+            $ttl = bounty_gemini_429_cooldown_seconds((string) $result);
             $cooldowns[$model] = $now + $ttl;
             @file_put_contents($cooldownFile, json_encode($cooldowns), LOCK_EX);
             error_log("[BOUNTY] Gemini model {$model} returned HTTP 429; cooling down {$ttl}s and trying fallback.");

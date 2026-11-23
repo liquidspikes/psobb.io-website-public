@@ -84,7 +84,8 @@
     },
     "earn": {
         "starter_on_login": true,
-        "max_activations_per_pass": 6,
+        "max_activations_per_pass": 2,
+        "max_lore_upgrades_per_pass": 2,
         "login_daily_chance": 10,
         "login_weekly_chance": 3,
         "completion_grants": 1,
