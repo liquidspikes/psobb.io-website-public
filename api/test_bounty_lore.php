@@ -71,7 +71,7 @@ if (is_array($lore)) {
         $needed[] = $b[4];
     }
     foreach (range(1, 10) as $f) {
-        $needed[] = bounty_setting_for_ep1_floor($f);
+        $needed[] = bounty_setting_for_floor(1, $f);
     }
     foreach (array_unique($needed) as $sid) {
         check(isset($lore['settings'][$sid]), "setting '$sid' exists");

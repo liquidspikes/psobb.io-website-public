@@ -2,7 +2,7 @@
 
 This implements the [Bounty System Rework](https://feedback.psobb.io/posts/12/bounty-system-rework) feedback post: bounty tiers, daily and weekly bounties, slots and earning caps, bounties that drop from bosses and rare enemies, Battle and Challenge Mode pools, expiry at the reset, a free reroll for team bounties, and rewards by tier whose stats stay hidden until the claim. On top of the post: **contracts**, big Ultra Rare and Mythic Rare jobs that never expire (full episode runs and rare-creature hunts).
 
-The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` and the rewards in `api/bounty_rewards.php`. The numbers are in `bounty_default_config()` and `bounty_reward_defaults()` and can be overridden in `config/bounties.json` (rewards under `reward_engine`); `config/bounties.example.json` shows the format. Setting `"enabled": false` brings back the original flow: up to 3 bounties, with a 10% chance of a new one each minute.
+The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` and the rewards in `api/bounty_rewards.php`. The numbers are in `bounty_default_config()` and `bounty_reward_defaults()` and can be overridden in `config/bounties.json` and the gitignored runtime override `config/bounties.local.json` (managed via `/admin/site_settings.php`; rewards live under `reward_engine`); `config/bounties.example.json` shows the format. Setting `"enabled": false` brings back the original flow: up to 3 bounties, with a 10% chance of a new one each minute.
 
 ## At a glance
 
@@ -16,7 +16,8 @@ The flow is in `api/bounty_system.php`, contracts in `api/bounty_contracts.php` 
 | Contract | 3, their own (no waiting) | A quarter of Ultra Rare and Mythic Rare drops | 3 held; with 3 held, such a drop stays a normal weekly drop. Never expire |
 
 - Standard, drop, and contract slots/caps are per character by default (`"limit_scope": "account"` shares all pools across an account). **Battle Mode and Challenge Mode (`pools.battle.scope`, `pools.challenge.scope`) are per account by default**, so any character on the account shares those slots, advances progress, and can claim rewards.
-- On the first login (either on the website / Portal / Bounty Board across all `.psochar` character slots, or logging into the game server) after each reset, `earn.starter_on_login` queues the full starter set (`3` Standard Daily + `3` Standard Weekly per character plus `3` Battle Daily + `3` Challenge Weekly account-wide = `12` total for a single character) and `cron_missions.php` activates them asynchronously within `earn.max_activations_per_pass` (`2` per pass, including when `0` players are in-game). If Gemini hits a transient quota cooldown and uses a temporary fallback posting, `cron_missions.php` automatically upgrades it with a full lore-grounded story once a model recovers. Passive login rolls (`10%`/`3%`) and completions continue filling **Up next** up to the `5` daily / `10` weekly caps.
+- On the first login (either on the website / Portal / Bounty Board across all `.psochar` character slots, or logging into the game server) after each reset, `earn.starter_on_login` queues the full starter set (`3` Standard Daily + `3` Standard Weekly per character plus `3` Battle Daily + `3` Challenge Weekly account-wide = `12` total for a single character) and `cron_missions.php` activates them asynchronously within shared `earn.max_activations_per_pass` (`2`) and `earn.max_lore_upgrades_per_pass` (`2`) budgets (including draining queued offline/website-login rows when `0` players are in-game). `bounty_gemini_json()` tries the configured `$GEMINI_MODEL` primary Gemma 4 model followed by `gemini-2.5-flash-lite` → `gemini-2.5-flash` (with `thinkingLevel: MINIMAL` on Gemma 4 / Gemini 3 and short HTTP 429 cooldowns cached in `db/.gemini_model_cooldowns.json`); if all models are unavailable or cooling down, a temporary `"Guild Posting: ..."` story (`meta.lore_fallback = 1`) is stored and automatically upgraded by `bounty_upgrade_fallback_stories()` once a model recovers. Passive login rolls (`10%`/`3%`) and completions continue filling **Up next** up to the `5` daily / `10` weekly caps.
+- When resets moved to 11:00 AM ET, schema migration `migration_extend_open_dailies_11am_est_v1` in `api/db.php` extended existing open dailies by +24h once idempotently (`PRAGMA user_version = 2`).
 - A bounty earned while its slots are full waits under **Up next** on the bounty board. When a slot of its kind frees up, the oldest waiting bounty starts. The objective and the story are written at that point, so they are set against the hunter's level and stats on the day it starts.
 - The caps count every bounty earned in the period, whatever happened to it afterwards. Abandoning bounties therefore cannot be used to earn more.
 - Resets come at `reset.daily_hour` (default **11:00 AM ET** / `America/New_York`). The weekly reset comes on `reset.weekly_day` (1 = Monday at 11:00 AM ET). Both use `reset.timezone` (default `America/New_York`, falling back to the server's time zone when `null`).
@@ -146,8 +147,8 @@ Bounties started before this update keep their old reward and roll it with `roll
 
     | Tier | Objectives | Counts on |
     |---|---|---|
-    | Common | Visit a floor, patrol it for 10 minutes, find an item, learn a technique, play for 1 hour | any difficulty |
-    | Uncommon | Defeat a boss, clear a floor in a time, reach a level | one difficulty below the Rare one (none below Hard) |
+    | Common | Visit a floor (Ep 1, 2, or 4), patrol it for 10 minutes, find an item, learn a technique, play for 1 hour | any difficulty |
+    | Uncommon | Defeat a boss, clear a floor (Ep 1, 2, or 4) in a time, reach a level | one difficulty below the Rare one (none below Hard) |
     | Rare | Defeat a boss in a time, with a newer hunter, in a hardcore party or in a party of different classes | the difficulty weeklies use for the hunter's level: Hard from 20, Very Hard from 40 (Ultimate is for Mythic Rare weeklies) |
 
     An objective type the table doesn't list (one set back on in `excluded_goal_types`) is Common. The difficulty is saved in `missions.meta` (`min_difficulty`) when the bounty starts, the story is set on it, and the board adds it to the objective, for example "Defeat the Dragon (on Very Hard or higher)". Visits, patrols and floor times count only in a game of that difficulty or higher, and a boss kill only when its own game was.
@@ -174,7 +175,7 @@ Bounties started before this update keep their old reward and roll it with `roll
 
   > Win 2 Battle Mode matches of Battle 3: Warp Battle (Spaceship, everyone at Lv5 (+3 per death), start with nothing, no Mags, techniques up to Lv1, 10 lives, no Meseta, 10 of each slow/confuse/freeze trap, 10 min)
 
-  The rules come from the battle quests' own scripts (`api/data/battle_rule_sets.json`). Blue Burst reports battle records when the player leaves the game, so a win is credited to the battle quest (501–508) the character was last seen in. Both Battle Mode and Challenge Mode bounties ignore character level, always reward Photon Drops (`100%`), and scale rewards monotonically with wins/duration/rank pace.
+  The rules come from the battle quests' own scripts (`api/data/battle_rule_sets.json`). NewServ reports Battle Mode lobbies with quest numbers **`88001–88008`**, while internal rule sets and `missions.goal_target` use **`501–508`**; `bounty_normalize_battle_quest()` maps `88001–88008` ↔ `501–508` (`quest - 87500`). Blue Burst reports battle records when the player leaves the game, and `bounty_battle_win_deltas()` tracks `BattlePlaceCounts[0]` and the last battle quest **per `BBCharacterIndex` slot** so same-name slots on an account do not collide. Both Battle Mode and Challenge Mode bounties ignore character level, always reward Photon Drops (`100%`), and scale rewards monotonically with wins/duration/rank pace.
 - **Challenge Mode** bounties (`CHALLENGE_RUN`, target `episode:first-last:limit_seconds:pace`) share 3 weekly slots per account and name stages and a pace:
 
   | Tier | Objective | Example |
@@ -193,7 +194,7 @@ Bounties started before this update keep their old reward and roll it with `roll
   - All stages are played on Normal with fixed levels and gear, so the objective has no difficulty.
 - **Carries measure levels when each player joined the game.** "Carry a lower-level player (5+ levels lower)" and the Hardcore Carry (3 players 10+ levels lower) compare the levels the bounty holder and the other players had when they joined that game, not their levels when the boss falls. Carried players level up on the way to the boss, and used to drop out of range just before the kill. The cron keeps each player's level from the first pass it sees them in a game (`game_join_level` in its player state).
 - **Reroll:** a bounty that needs a particular party (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`) can be rerolled once for free from the board (`api/reroll_bounty.php`). It keeps its tier, reward and slot. It gets a new objective and story the next time the character is online. The new objective is never another team objective, and it cannot be rerolled again.
-- Gemini still writes every story through the lore-grounded prompt (`api/bounty_lore.php`). The prompt now also gives the tier and kind ("Rare (weekly)"), and for drops what the hunter defeated. Weekly hunts aren't tied to one area.
+- Gemini still writes every story through the lore-grounded prompt (`api/bounty_lore.php`). The prompt now also gives the tier and kind ("Rare (weekly)"), and for drops what the hunter defeated. Daily floor objectives (`EXPLORATION`, `PATROL`, `SPEEDRUN_FLOOR`) use episode-qualified targets (`floor@ep` / `floor@ep_seconds`, parsed by `parse_floor_target()`) across Episodes I, II, and IV. `bounty_active_lore_diversity()`, `bounty_pick_hub_setting()`, and `bounty_pick_giver()` spread hub cards and avoid repeating active quest givers across a hunter's board. Weekly hunts aren't tied to one area.
 - A job that crosses a whole episode (a weekly visit to every area, a full-run contract) is told from the card of the episode's deepest area (`bounty_episode_setting()`: the Ruins, the Seabed, the Subterranean Desert), whose moment comes after every area the job crosses was found. The episode hub cards come earlier (Episode 4's is set before anyone knew of the Subterranean Desert, where a full run ends), so a story told from them could not name where the job goes. A run's guardians are named as people of that moment know them: Episode 1's as the Dragon beneath the Dome, the giant worm of the underground waterway, the Mines' main computer and whatever was let loose at the heart of the ruins, since its cards keep the names Vol Opt and Dark Falz hidden.
 
 ## Contracts
@@ -250,7 +251,7 @@ A quarter (`contracts.drop_share`) of dropped Ultra Rare and Mythic Rare bountie
   - A **Your Bounty Slots** panel shows, for each character, the active slots, how much of each cap has been earned, and the **Up next** list. Waiting bounties can be discarded from that list.
   - The public feed shows all of your own active bounties. Of other hunters' bounties it shows only those you can help with: team bounties (`MENTOR_BOSS`, `HARDCORE_MENTOR`, `DIVERSE_PARTY_BOSS`), Battle Mode, Challenge Mode and contracts, the 30 newest.
   - The slot panel has a Contracts cell (held of 3, never expire). The Claim Center marks a finished contract and a share.
-- **JSON endpoints.** `api/my_bounties.php` and `api/my_bounties_all.php` return the new fields: `tier_label`, `kind`, `expires_in`, `progress_text`, `stats_hidden` and `can_reroll`. They also include waiting and rerolling bounties and a `slots` summary. `api/bot_api.php` adds `tier_label`, `kind` and `progress_text` to each mission.
+- **JSON endpoints.** `api/my_bounties.php` and `api/my_bounties_all.php` return the rework fields: `tier_label`, `kind`, `expires_in`, `progress_text`, `stats_hidden`, `can_reroll`, `min_difficulty_text`, `objective_text`, `reward_decoded`, and `"Account Wide"` `character_name` normalization for account-scoped pools. They also include waiting and rerolling bounties and a `slots` summary. `api/bot_api.php` adds `tier_label`, `kind`, `progress_text`, and `"Account Wide"` normalization to each mission.
 - **Reward names.** `renderRewardString()` drops the `x1` that `item_map.json` puts on stackable items ("Telepipe x4", not "Telepipe X1 x4"). For the few codes whose `item_map.json` name is a bare number (030E15 showed as "3"), it uses newserv's `names-v4.json` instead.
 
 ## Kill and clear tracking: the newserv patches
@@ -303,20 +304,25 @@ New columns, added by `api/db.php` on first load:
 - `missions`: `tier`, `cadence`, `pool`, `source`, `reward_spec` (JSON: item bases and roll profiles, plus `rolled` after the claim), `meta`.
 - `player_missions`: `period_key`, `expires_at`, `earned_at`, `activated_at`, `rerolled`, `progress`.
 
-Bounties from before the rework have no cadence. They keep working as before: they never expire and don't use the new slots.
+Bounties from before the rework have no cadence (`missions.cadence IS NULL`). Once rework `"enabled": true`, `bounty_expire_sweep()` stamps unfinished pre-rework `in_progress` bounties with a one-time **`legacy_grace_days`** (default `30` days) expiry window without consuming any new Daily/Weekly slots; completed `ready_to_redeem` rewards never expire.
 
 ## Cron flow (`api/cron_missions.php`, each pass)
 
-1. Expire anything past its reset.
-2. Note who is in each game (with the levels they joined at), and what each game killed since the last pass (its players' new kills, and the boss kills the tracker recorded there), for whole-game credit and contracts.
-3. For each online player:
-   1. Work out kills, Challenge clears and Battle wins since the last pass.
-   2. Evaluate active bounties. Weeklies go through `bounty_evaluate_weekly()` and contracts through `bounty_evaluate_contract()` (a finished contract pays the rest of the game their shares). A daily with a `min_difficulty` skips the pass when the game is easier, and sees only boss kills made in a game of that difficulty.
+`cron_missions.php` loops within a 55s window (~10s sleep) sharing `earn.max_activations_per_pass` (`2`) and `earn.max_lore_upgrades_per_pass` (`2`), stopping new AI work past 46s:
+
+1. Expire anything past its reset (`bounty_expire_sweep()`, runs every pass even when `0` players are online).
+2. If **`0` players are online**, drain queued offline/website-login starters via `bounty_drain_offline_activations()` up to `pass_budget`, and spend any remaining budget in `bounty_upgrade_fallback_stories()` to replace temporary `"Guild Posting: ..."` fallback stories once a Gemini/Gemma model is off cooldown.
+3. Note who is in each game (with the levels they joined at), and what each game killed since the last pass (its players' new kills, and the boss kills the tracker recorded there), for whole-game credit and contracts.
+4. For each online player:
+   1. Work out kills, Challenge clears, and per-slot Battle wins (`bounty_battle_win_deltas()` / `bounty_normalize_battle_quest()`) since the last pass.
+   2. Evaluate active bounties (`bounty_evaluate_weekly()` and `bounty_evaluate_contract()`; finished contracts pay teammates their shares). A daily with `min_difficulty` skips easier games.
    3. Then `bounty_tick_for_client()`:
+      - ensure login starters (`bounty_ensure_account_login_starters()`);
       - roll drops for new boss and rare-enemy kills;
-      - earn bounties for completions, being logged in and Battle/Challenge play (each under its cap);
-      - start at most one waiting or rerolling bounty: its objective, story (one Gemini call) and reward.
-4. Kill counters are saved in the cron's player state file. Kills from before a character was first seen don't count.
+      - roll passive login/Battle/Challenge bounties and completions (each under its cap);
+      - activate waiting or rerolling bounties up to `max(1, min(4, pass_budget - pass_activated))` within the pass budget.
+5. After processing online clients, spend remaining pass budget draining offline/alt starters (`bounty_drain_offline_activations()`) and upgrading fallback stories (`bounty_upgrade_fallback_stories()`).
+6. Kill counters are saved in the cron's player state file. Kills from before a character was first seen don't count.
 
 ## Data
 
@@ -342,9 +348,12 @@ Episode 2's rare Rag Rappy is the Love Rappy all year (newserv's `rare_type()`);
 ## Testing
 
 ```
-php api/test_bounty_system.php        # caps, queue, drops, tier rules, pools, objectives, expiry, reroll, rewards, contracts
-php api/test_bounty_lore.php          # the lore-grounded prompt
-php tools/bounty_data/pool_report.php # every reward pool: sizes and the 10x rule
+php api/test_bounty_system.php                 # caps, queue, drops, tier rules, pools, objectives, expiry, reroll, rewards, contracts
+php api/test_bounty_lore.php                   # lore-grounded prompt, setting cards, floor/boss target parsing
+php tests/test_battle_mode_bounty_tracking.php # Battle 88001-88008 <-> 501-508 normalization & per-slot win tracking
+php tests/test_portal_bounty_display.php       # bounty display helpers, "Account Wide" normalization & slot views
+php tests/test_sqlite_wal_snapshot_locks.php   # SQLite WAL concurrent cursor-finalization regression tests
+php tools/bounty_data/pool_report.php          # every reward pool: sizes and the 10x rule
 ```
 
 `test_bounty_system.php` uses a throwaway database and answers Gemini prompts itself, so it needs no game server or API key. `GEMINI_API_BASE` in `.env` can point the Gemini call at a stub server when running the real cron against a test game server.
