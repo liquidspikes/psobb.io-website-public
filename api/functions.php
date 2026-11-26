@@ -1535,7 +1535,7 @@ function parse_and_drop_items($accountId, $itemString, $characterName = null)
             }
         }
 
-        // Canonical BB V4 exact name lookup (avoids legacy V1/V2 shifted codes from item_hex.txt)
+        // Canonical BB V4 exact name lookup (avoids legacy V1/V2 shifted codes)
         $bbMaps = get_bb_item_name_maps();
         $firstWord = explode(' ', $baseItemName)[0];
         if (!ctype_xdigit($firstWord) || strlen($firstWord) < 6) {

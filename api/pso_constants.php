@@ -290,28 +290,6 @@ if (!function_exists('pso_class_archetype')) {
     }
 }
 
-if (!function_exists('pso_resolve_section_id')) {
-    /**
-     * Normalize a Section ID index or spelling variant (e.g. newserv 'Greennill') to canonical name.
-     */
-    function pso_resolve_section_id($raw, string $default = 'Viridia'): string
-    {
-        if ($raw !== null && $raw !== '' && is_numeric($raw)) {
-            return PSO_SECTION_IDS[(int) $raw] ?? $default;
-        }
-        $s = strtolower(trim((string) $raw));
-        if ($s === 'greennill') {
-            return 'Greenill';
-        }
-        foreach (PSO_SECTION_IDS as $canon) {
-            if (strtolower($canon) === $s) {
-                return $canon;
-            }
-        }
-        return $default;
-    }
-}
-
 if (!function_exists('pso_tech_map_lower')) {
     /**
      * Cached lowercase technique name -> ID map derived from PSO_TECHNIQUES.

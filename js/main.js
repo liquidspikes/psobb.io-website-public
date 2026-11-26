@@ -137,9 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
     }
 
-    // Initialize Star Stream
-    // initStarStream();
-
     // Scroll Animation Observer
     const observerOptions = {
         threshold: 0.1,
@@ -926,238 +923,6 @@ window.confirmPromptEmail = async function () {
     }
 };
 
-async function loadActiveCharacterSectionId(accountId) {
-    const secIdContainer = document.getElementById('section-id-change-container');
-    if (!secIdContainer) return;
-
-    secIdContainer.innerHTML = '<p>' + _t('Checking for online characters...') + '</p>';
-
-    try {
-        const response = await fetch('/api/summary.php');
-        const data = await response.json();
-
-        // Allow picking Section ID even if offline as a fallback for the admin/user
-        let activeCharacter = null;
-        if (data.Clients) {
-            activeCharacter = data.Clients.find(c => c.AccountID === accountId && c.Name);
-        }
-
-        let html = '';
-        if (activeCharacter) {
-            html += `<p>Character: <strong>${escapeHtml(activeCharacter.Name)}</strong> (Level ${activeCharacter.Level})</p>
-                     <p>Current Section ID: <strong class="section-id id-${(activeCharacter.SectionID || 'none').toLowerCase()}">${activeCharacter.SectionID}</strong></p>`;
-            if (activeCharacter.Level > 50) {
-                html += `<p style="color: #ff4444; margin-top: 10px;">Only characters level 50 and below can change their Section ID.</p>`;
-                secIdContainer.innerHTML = html;
-                return;
-            }
-        } else {
-            html += `<p style="color: #ffaa00; margin-bottom: 15px;">Warning: You must be logged into a character in-game to apply a Section ID change immediately. You can still pre-select one here.</p>`;
-        }
-
-        const secIdInfo = {
-            'Viridia': 'Partisans, Shots',
-            'Greenill': 'Daggers, Rifles',
-            'Skyly': 'Swords, Sealed J-Sword',
-            'Bluefull': 'Partisans, Spread',
-            'Purplenum': 'Mechguns, Units',
-            'Pinkal': 'Wands, Force Weapons',
-            'Redria': 'Slicers, Armors, Balanced',
-            'Oran': 'Daggers, Handguns',
-            'Yellowboze': 'All Weapons, Meseta',
-            'Whitill': 'Slicers, High-end Rares'
-        };
-        const secIds = Object.keys(secIdInfo);
-
-        html += `
-            <div style="margin-top: 15px; border: 1px solid rgba(0,255,255,0.2); background: rgba(0,0,0,0.5); padding: 15px; border-radius: 4px;">
-                <h4 style="margin-top: 0; color: #00ffff;">Select New Section ID</h4>
-                <div class="section-id-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px;">
-                    ${secIds.map((id, index) => `
-                        <label class="secid-option-lbl" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; border: 1px solid ${index === 0 ? '#00ffff' : 'rgba(0,255,255,0.1)'}; padding: 6px 2px; border-radius: 4px; background: ${index === 0 ? 'rgba(0,255,255,0.1)' : 'transparent'}; transition: all 0.2s;" onclick="document.querySelectorAll('.secid-option-lbl').forEach(el=>{el.style.background='transparent';el.style.borderColor='rgba(0,255,255,0.1)'});this.style.background='rgba(0,255,255,0.1)';this.style.borderColor='#00ffff';">
-                            <input type="radio" name="new-section-id" value="${id}" style="display: none;" ${index === 0 ? 'checked' : ''}>
-                            <img src="/img/section_ids/${id}.png" alt="${id}" style="width: 32px; height: 32px; margin-bottom: 3px;">
-                            <span style="font-size: 0.7em; font-weight: bold; color: #eee;">${id}</span>
-                            <span style="font-size: 0.55em; color: #999; margin-top: 2px; line-height: 1.2;">${secIdInfo[id]}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <button id="btn-change-secid" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 12px; font-weight: bold; font-family: 'Share Tech Mono', 'Segoe UI', sans-serif;">${_t('Change Section ID')}</button>
-                <div id="secid-message" style="margin-top: 10px; display: none; font-weight: bold;"></div>
-            </div>
-        `;
-
-        secIdContainer.innerHTML = html;
-
-        const changeBtn = document.getElementById('btn-change-secid');
-        if (changeBtn) {
-            changeBtn.addEventListener('click', () => submitSectionIdChange(activeCharacter ? activeCharacter.Name : ''));
-        }
-
-    } catch (e) {
-        secIdContainer.innerHTML = '<p style="color: #ff4444;">' + _t('Failed to load active character data.') + '</p>';
-    }
-}
-
-async function submitSectionIdChange(characterName) {
-    const newSecId = document.querySelector('input[name="new-section-id"]:checked').value;
-    const msgEl = document.getElementById('secid-message');
-    const btn = document.getElementById('btn-change-secid');
-
-    btn.disabled = true;
-    btn.textContent = _t("Processing...");
-    msgEl.style.display = 'none';
-
-    try {
-        const response = await fetch('/api/change_section_id.php', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': window.getCSRFToken()
-            },
-            body: JSON.stringify({ character_name: characterName, new_section_id: newSecId })
-        });
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            msgEl.textContent = data.message;
-            msgEl.style.color = '#00C851';
-            msgEl.style.display = 'block';
-            btn.textContent = _t("Success");
-
-            // Reload the character data after 2 seconds
-            setTimeout(() => {
-                const userStr = sessionStorage.getItem('psobb_user');
-                if (userStr) {
-                    const user = JSON.parse(userStr);
-                    loadActiveCharacterSectionId(user.AccountID);
-                }
-            }, 2500);
-        } else {
-            msgEl.textContent = data.error || _t("Failed to change Section ID.");
-            msgEl.style.color = '#ff4444';
-            msgEl.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = _t("Change Section ID");
-        }
-    } catch (e) {
-        msgEl.textContent = _t("Connection error: ") + e.message;
-        msgEl.style.color = '#ff4444';
-        msgEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = _t("Change Section ID");
-    }
-}
-
-async function loadCharacterBankSwitcher(accountId) {
-    const bankContainer = document.getElementById('bank-swap-container');
-    if (!bankContainer) return;
-
-    bankContainer.innerHTML = '<p>' + _t('Checking for online characters...') + '</p>';
-
-    try {
-        const response = await fetch('/api/summary.php');
-        const data = await response.json();
-
-        let activeCharacter = null;
-        if (data.Clients) {
-            activeCharacter = data.Clients.find(c => c.AccountID === accountId && c.Name);
-        }
-
-        let html = '';
-        if (!activeCharacter) {
-            html += `<p style="color: #ffaa00; margin-bottom: 15px;">Warning: You must be logged into a character in-game to apply a bank switch immediately. You can still pre-select one here.</p>`;
-        }
-
-        html += `
-            <div style="border: 1px solid rgba(0,255,255,0.2); background: rgba(0,0,0,0.5); padding: 15px; border-radius: 4px;">
-                <h4 style="margin-top: 0; color: #00ffff;">Bank Management</h4>
-                <p style="font-size: 0.9em; margin-bottom: 15px;">
-                    Select a bank to swap out your current bank with in-game. To view items in these banks, you must access the counter in the game lobby.
-                </p>
-                <select id="target-bank-index" style="width: 100%; padding: 10px; margin-bottom: 15px; background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 4px; box-sizing: border-box;">
-                    <option value="-1" style="background:#111; color:#fff;">Shared Bank</option>
-                    ${Array.from({ length: 20 }, (_, i) => `<option value="${i}" style="background:#111; color:#fff;">Slot ${i + 1} Character Bank</option>`).join('')}
-                </select>
-                <button id="btn-swap-bank" class="dl-btn" style="width: 100%; border-color: #00ffff; background: rgba(0, 255, 255, 0.15); color: #00ffff; padding: 12px; font-weight: bold; font-family: 'Share Tech Mono', 'Segoe UI', sans-serif;">${_t('Swap Bank In-Game')}</button>
-                <div id="bank-message" style="margin-top: 10px; display: none; font-weight: bold;"></div>
-            </div>
-        `;
-
-        bankContainer.innerHTML = html;
-
-        const swapBtn = document.getElementById('btn-swap-bank');
-        if (swapBtn) {
-            swapBtn.addEventListener('click', () => submitBankSwap(activeCharacter ? activeCharacter.Name : ''));
-        }
-
-    } catch (e) {
-        bankContainer.innerHTML = '<p style="color: #ff4444;">' + _t('Failed to load active character data for bank swapping.') + '</p>';
-    }
-}
-
-async function submitBankSwap(characterName) {
-    const targetBank = document.getElementById('target-bank-index').value;
-    const msgEl = document.getElementById('bank-message');
-    const btn = document.getElementById('btn-swap-bank');
-
-    btn.disabled = true;
-    btn.textContent = _t("Processing...");
-    msgEl.style.display = 'none';
-
-    try {
-        const response = await fetch('/api/bank_swap.php', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': window.getCSRFToken()
-            },
-            body: JSON.stringify({ character_name: characterName, target_bank_index: parseInt(targetBank) })
-        });
-
-        let data;
-        const rawText = await response.text();
-        try {
-            data = JSON.parse(rawText);
-        } catch (parseErr) {
-            msgEl.textContent = "Server returned invalid response: " + rawText.substring(0, 200);
-            msgEl.style.color = '#ff4444';
-            msgEl.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = _t("Swap Bank In-Game");
-            return;
-        }
-
-        if (response.ok && data.success) {
-            msgEl.textContent = data.message;
-            msgEl.style.color = '#00C851';
-            msgEl.style.display = 'block';
-            btn.textContent = _t("Success");
-
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = _t("Swap Bank In-Game");
-                msgEl.style.display = 'none';
-            }, 3000);
-        } else {
-            msgEl.textContent = data.error || _t("Failed to swap bank.");
-            msgEl.style.color = '#ff4444';
-            msgEl.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = _t("Swap Bank In-Game");
-        }
-    } catch (e) {
-        msgEl.textContent = _t("Connection error: ") + e.message;
-        msgEl.style.color = '#ff4444';
-        msgEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = _t("Swap Bank In-Game");
-    }
-}
-
-
 window.logout = function () {
     sessionStorage.removeItem('psobb_user');
     window.location.reload();
@@ -1324,8 +1089,6 @@ function renderGameList(games) {
         list.appendChild(row);
     });
 }
-
-// Star stream removed for stability
 
 window.requestDeleteAccount = function () {
     const modal = document.getElementById('delete-modal');
@@ -1502,14 +1265,6 @@ window.confirmChangePass = async function () {
     }
 };
 
-// Enhanced to update rates from the new fields in /api/server.php
-async function updateUIRates(data) {
-    if (data.EXPDisplay) updateElement('rate-exp', data.EXPDisplay);
-    else if (data.EXP) updateElement('rate-exp', parseFloat(data.EXP) + 'x');
-    if (data.DropDisplay) updateElement('rate-drop', data.DropDisplay);
-    else if (data.Drop) updateElement('rate-drop', parseFloat(data.Drop) + 'x');
-}
-
 // ==========================================================================
 // Player Guide Modal Actions & Tab Toggling
 // ==========================================================================
@@ -1625,8 +1380,7 @@ window.installPortalApp = async function () {
         return;
     }
     window.deferredPrompt.prompt();
-    const { outcome } = await window.deferredPrompt.userChoice;
-    console.log(`[PWA] Install prompt outcome: ${outcome}`);
+    await window.deferredPrompt.userChoice;
     window.deferredPrompt = null;
     const installCard = document.getElementById('pwa-install-card');
     if (installCard) {
@@ -1975,10 +1729,6 @@ function renderInventory() {
             }
         }
     });
-
-    // --- Legacy equipped grid (hidden, kept for tooltip compatibility) ---
-    const equippedBox = document.getElementById('viewer-equipped-grid');
-    if (equippedBox) equippedBox.style.display = 'none';
 
     // --- Backpack Grid ---
     const backpackGrid = document.getElementById('viewer-backpack-grid');
@@ -3089,7 +2839,6 @@ window.toggleSystemMailPref = async function () {
         if (response.ok && data.success) {
             user.receive_system_mail = enabled ? 1 : 0;
             sessionStorage.setItem('psobb_user', JSON.stringify(user));
-            console.log(`[Preferences] System mail toggled successfully: ${enabled}`);
         } else {
             throw new Error(data.error);
         }
@@ -3134,7 +2883,6 @@ window.toggleDiscordStreakPref = async function () {
         if (response.ok && data.success) {
             user.receive_discord_streak_msg = enabled ? 1 : 0;
             sessionStorage.setItem('psobb_user', JSON.stringify(user));
-            console.log(`[Preferences] Discord streak DM alerts toggled successfully: ${enabled}`);
         } else {
             throw new Error(data.error);
         }
@@ -3166,10 +2914,6 @@ function describeBountyObjective(goalType, goalTarget) {
             ? ep2BossFloorMap[m[1]]
             : (bossFloorMap[m[1]] || `Boss (Floor ${m[1]})`);
         return { ep, name };
-    };
-    const bossNameFor = (t) => {
-        const info = bossInfoFor(t);
-        return info.ep ? `[Ep ${info.ep}] ${info.name}` : info.name;
     };
 
     // Episode-aware Floor ID -> Area Name mapping matching api/pso_constants.php
@@ -4783,14 +4527,6 @@ window.submitTekkerClaim = async function () {
                 });
             }
         }, 1000);
-    }
-};
-
-window.claimTekkerToken = function (tokenId) {
-    const cb = document.querySelector(`.tekker-select-cb[value="${tokenId}"]`);
-    if (cb) {
-        cb.checked = true;
-        window.updateTekkerSelection();
     }
 };
 

@@ -218,7 +218,8 @@ if (!function_exists('get_portal_module_visibility')) {
                 return $val;
             }
         }
-        return 'everyone';
+        $regDefault = strtolower(trim((string)($GLOBALS['PORTAL_MODULES'][$moduleKey]['default'] ?? 'everyone')));
+        return in_array($regDefault, ['everyone', 'admin_only', 'disabled'], true) ? $regDefault : 'everyone';
     }
 }
 

@@ -150,14 +150,6 @@ function bounty_setting_for_floor($episode, $floor)
 }
 
 /**
- * The Episode I setting for an Episode I field floor (Forest 1 ... Ruins 3).
- */
-function bounty_setting_for_ep1_floor($floor)
-{
-    return bounty_setting_for_floor(1, $floor);
-}
-
-/**
  * A setting for an objective with no place of its own (Meseta, levels, materials...):
  * one of the episodes' hubs (Pioneer 2 in 3084-85, the Lab in 3085, Pioneer 2 in 3086).
  *

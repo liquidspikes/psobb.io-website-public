@@ -575,12 +575,6 @@ function bounty_roll_drop_tier($lobby)
 // Rewards (points 15-19)
 // ---------------------------------------------------------------------------
 
-function bounty_random_class()
-{
-    $classes = PSO_CHAR_CLASSES;
-    return $classes[array_rand($classes)];
-}
-
 /**
  * The reward tables pre-roll some stats into their 32-hex payloads (attributes on common
  * weapons; slots, DEF and EVP on armor and shields). A bounty's stats are rolled on claim
@@ -1819,8 +1813,9 @@ function bounty_apply_challenge_speed_bonus($db, int $pmId, int $missionId, stri
 }
 
 /**
- * One activation per player per cron pass (each needs a Gemini call): a pending reroll first,
- * then the oldest waiting bounty of any pool with a free slot.
+ * Activates one waiting bounty (a pending reroll first, then the oldest waiting
+ * bounty of any pool with a free slot). Callers pass budgets (e.g. max_activations_per_pass)
+ * across passes to respect rate limits.
  */
 function bounty_activate_next($db, $acc, $char, array $client, array $ctx)
 {

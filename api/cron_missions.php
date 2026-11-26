@@ -245,11 +245,11 @@ foreach ($clients as $client) {
     //   4 | Cave 2          | VR Ship Beta    | Crater Route 4
     //   5 | Cave 3          | CCA             | Crater Interior
     //   6 | Mine 1          | Jungle North    | Desert 1
-    //   7 | Mine 2          | Jungle South    | Desert 2
+    //   7 | Mine 2          | Jungle East     | Desert 2
     //   8 | Ruins 1         | Mountain        | Desert 3
     //   9 | Ruins 2         | Seaside         | *Saint-Milion*
     //  10 | Ruins 3         | Seabed Upper    | —
-    //  11 | *Dragon*        | Seabed Lower    | *Sil Dragon*
+    //  11 | *Dragon*        | Seabed Lower    | —
     //  12 | *De Rol Le*     | *Gal Gryphon*   | —
     //  13 | *Vol Opt*       | *Olga Flow*     | —
     //  14 | *Dark Falz*     | *Barba Ray*     | —
@@ -674,15 +674,6 @@ foreach ($clients as $client) {
                 //
                 // On completion, ALL other party members (excluding the bounty owner)
                 // receive a class-appropriate rare reward auto-injected as 'ready_to_redeem'.
-                //
-                // Class detection uses string prefix matching ('HU', 'RA', 'FO') on the
-                // CharClass field. Newserv always returns class names like 'HUmar', 'RAcast',
-                // 'FOnewearl' etc. (verified in StaticGameData.cc:294-297).
-                // The numeric fallback handles edge cases where the API might return null.
-                //
-                // NOTE: The numeric ID ranges in the fallback do NOT match newserv's internal
-                // class ordering (newserv: 0=HUmar,3=RAmar,6=FOmarl,9=HUcaseal,10=FOmar,11=RAmarl).
-                // This is acceptable because the string path is always taken in production.
                 // =====================================================================
                 } elseif ($m['goal_type'] === 'DIVERSE_PARTY_BOSS') {
                     $party_classes = [];
