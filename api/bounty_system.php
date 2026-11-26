@@ -893,21 +893,46 @@ function bounty_challenge_clear_deltas(array $client, array $prev_state)
  * was last seen playing. Blue Burst reports battle records when the player leaves the game, so a
  * win shows up after the battle room is left.
  *
+ * State is tracked per BBCharacterIndex when available so different characters sharing the same
+ * account+name do not collide under cron_missions.php's AccountID_Name cache key.
+ *
  * @return array [['quest' => n|null, 'wins' => n], state to save]
  */
 function bounty_battle_win_deltas(array $client, array $prev_state, $lobby)
 {
-    $quest = $prev_state['bounty_battle_quest'] ?? null;
+    $slot = isset($client['BBCharacterIndex']) ? (string) (int) $client['BBCharacterIndex'] : 'default';
+    $firsts_by_slot = is_array($prev_state['bounty_battle_firsts_by_slot'] ?? null) ? $prev_state['bounty_battle_firsts_by_slot'] : [];
+    $quest_by_slot = is_array($prev_state['bounty_battle_quest_by_slot'] ?? null) ? $prev_state['bounty_battle_quest_by_slot'] : [];
+    $same_legacy_slot = !isset($prev_state['bounty_battle_slot']) || (string) $prev_state['bounty_battle_slot'] === $slot;
+
+    $quest = bounty_normalize_battle_quest($quest_by_slot[$slot] ?? ($same_legacy_slot ? ($prev_state['bounty_battle_quest'] ?? null) : null));
     if ($lobby && !empty($lobby['is_game']) && ($lobby['mode'] ?? '') === 'Battle' && !empty($lobby['quest_number'])) {
-        $quest = (int) $lobby['quest_number'];
+        $norm = bounty_normalize_battle_quest($lobby['quest_number']);
+        if ($norm !== null) {
+            $quest = $norm;
+        }
     }
     $cur = (int) ($client['BattlePlaceCounts'][0] ?? 0);
     $wins = 0;
-    if (isset($prev_state['bounty_battle_firsts'])) {
+    if (isset($firsts_by_slot[$slot])) {
+        $prev = (int) $firsts_by_slot[$slot];
+        $wins = ($cur > $prev) ? $cur - $prev : 0;
+    } elseif ($same_legacy_slot && isset($prev_state['bounty_battle_firsts'])) {
         $prev = (int) $prev_state['bounty_battle_firsts'];
         $wins = ($cur > $prev) ? $cur - $prev : 0;
     }
-    return [['quest' => $quest, 'wins' => $wins], ['bounty_battle_firsts' => $cur, 'bounty_battle_quest' => $quest]];
+    $firsts_by_slot[$slot] = $cur;
+    $quest_by_slot[$slot] = $quest;
+    return [
+        ['quest' => $quest, 'wins' => $wins],
+        [
+            'bounty_battle_firsts' => $cur,
+            'bounty_battle_quest' => $quest,
+            'bounty_battle_slot' => $slot,
+            'bounty_battle_firsts_by_slot' => $firsts_by_slot,
+            'bounty_battle_quest_by_slot' => $quest_by_slot,
+        ],
+    ];
 }
 
 /**
@@ -1123,7 +1148,8 @@ function bounty_evaluate_weekly($db, array $m, array $client, $lobby, array $kil
         case 'BATTLE_RULE_WINS':
             list($quest, $need_wins) = bounty_parse_battle_target($m['goal_target']);
             $bw = $kills['battle_wins'] ?? ['quest' => null, 'wins' => 0];
-            if ($bw['wins'] > 0 && (int) $bw['quest'] === $quest) {
+            $bw_quest = bounty_normalize_battle_quest($bw['quest'] ?? null);
+            if ($bw['wins'] > 0 && $bw_quest !== null && $bw_quest === $quest) {
                 $p['count'] = (int) ($p['count'] ?? 0) + (int) $bw['wins'];
                 $changed = true;
             }

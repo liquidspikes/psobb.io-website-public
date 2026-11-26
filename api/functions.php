@@ -526,12 +526,32 @@ function bounty_battle_rule_summary($quest)
 }
 
 /**
+ * Map a Battle Mode quest number between newserv's filename/lobby index (88001-88008)
+ * and the internal quest script number (501-508).
+ */
+function bounty_normalize_battle_quest($quest)
+{
+    if ($quest === null || $quest === '') {
+        return null;
+    }
+    $q = (int) $quest;
+    if ($q >= 88001 && $q <= 88008) {
+        return $q - 87500;
+    }
+    if ($q >= 501 && $q <= 508) {
+        return $q;
+    }
+    return null;
+}
+
+/**
  * Battle target "quest:wins" ("503:2").
  */
 function bounty_parse_battle_target($target)
 {
     $p = explode(':', (string) $target);
-    return [(int) ($p[0] ?? 501), max(1, (int) ($p[1] ?? 1))];
+    $quest = bounty_normalize_battle_quest($p[0] ?? 501) ?? (int) ($p[0] ?? 501);
+    return [$quest, max(1, (int) ($p[1] ?? 1))];
 }
 
 /**
